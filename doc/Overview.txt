@@ -1,3 +1,4 @@
+
 This is tdl (Tom's Data Language, or maybe Tiny Data Language).
 
 Tdl is a data processing language written in python and designed to be 
@@ -135,29 +136,24 @@ Features:
        f.column_labels
 
  - on-line help:
-    well, ok, this is sort of lacking at the moment.  But it will happen.
+    still in progress.
 
  - easy to add your python functions, including getting access to all  
    the 'data groups' inside your python function.
 
     ....
-   see tdl_read_ascii in tdl/Lib.py
+   see tdl_read_ascii in tdl/TdlLib.py
 
 === Differences between tdl and Python:
 
 -  tdl has many builtins and assumes Numerical data. 
 -  tdl has no tuples. Lists are used in their place.
 -  indentation does not matter. blocks are ended with 'end***' 
-   (if / endif , for /endfor, def/enddef)
+   (if / endif , fo/endfor, def/enddef)
 
 -  when in doubt, assignment makes a copy, and does not give a reference
--  data types are NOT objects, and so have no methods.  You must use
-   procedural approaches 
+-  data types are not generally objects, and have no methods associated
+   with them.  Tdl use procedural approaches:
      x = arange(100)
      reshape(x,[10,10])   instead of x.shape = (10,10)
-
--  array slicing is very much simplified:  only  x[i:j] and x[i] are supported, 
-   not x[:j], x[j:],  x[:], or x[i:j:k]
--  multidimensional arrays must be accessed as x[i][j], not x[i,j]
--  tdl has fewer data types, and no objects.
 
