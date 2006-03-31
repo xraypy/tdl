@@ -346,10 +346,7 @@ def tdl_import(lib='', tdl=None,debug=False,reloadAll=False,clearAll=False,**kw)
         tdl.symbolTable.initialize(clearAll=clearAll)
         
     tdl.symbolTable.import_lib(lib)
-    # if lib: tdl.lib.append(lib)
-    # tdl.init_lib_symbols()
     if debug: print 'import done.'
-
 
 def tdl_eval(expr, tdl=None,debug=False,**kw):
     " evaluate tdl expression"
