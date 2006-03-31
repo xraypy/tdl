@@ -12,7 +12,7 @@ import Help
 from Expression import Expression, opcodes
 from Symbol import Symbol, SymbolTable
 from Util import split_delim,  find_unquoted_char, parens_matched, split_list, trimstring
-from Util import EvalException, Command2Expr
+from Util import EvalException, Command2Expr,PrintShortExcept
 
 class Evaluator:
     """ main evaluation class for tdl language.
@@ -378,7 +378,7 @@ class Evaluator:
                 ret.append( self.expr_compile("[%s]" % s))
             else:
                 ret.append('')
-
+            
         elif key in ('break', 'continue'):
             # break and continure are closely related,
             # and at parse stage do nothing.
@@ -396,12 +396,12 @@ class Evaluator:
                     if stack[0] != opcodes.function:
                         raise EvalException, 'syntax error: weird error with commad '
                     stack[0] = opcodes.command
-                    return  ['eval', stack]
+                    return  ['eval', stack, s]
             # wasn't a command!
             status,s1,s2 = split_delim(s,delim='=')
             if status == -1: return None
             if s2 == '': # Eval
-                return  ['eval', self.expr_compile(s1)]
+                return  ['eval', self.expr_compile(s1), s]
             else: # Assignment
                 stack = self.expr_compile(s1)
                 tok = stack.pop(0)
@@ -444,7 +444,7 @@ class Evaluator:
             x[tuple(lhs)] = rhs
         if sym.constant:
             self.raise_error('cannot re-assign value of constant %s ' % varname)
-        elif sym.type in ('defvar','defproc','variable'):
+        elif sym.type in ('defvar','defpro','variable'):
             sym.value  = x
             sym.code   = None
             sym.type   = 'variable'
@@ -570,8 +570,9 @@ class Evaluator:
         if len(args) != len(proc.args):
             raise EvalException, 'not enough arguments for procedure %s' % name
 
+
         savegroup = self.symbolTable.getDataGroup()
-        group = self.symbolTable.addRandomGroup()
+        group = self.symbolTable.addRandomGroup(prefix=name,nlen=4)
         if group == None:
             raise EvalException, 'cannot run procedure %s (cannot create group??)' % name
         self.symbolTable.setDataGroup(group)
@@ -581,15 +582,24 @@ class Evaluator:
         kvals = {}
         kvals.update(proc.kws)
         kvals.update(kws)
-        for k,v in kvals.items():  self.symbolTable.setVariable(k,v)
+        
+        for k,v in kvals.items():
+            self.symbolTable.setVariable(k,v)
 
         ret = None
-        for i in proc.code:
-            self.interpret(i)
-            if self.interrupt == 3:
-                ret = self.retval
-                self.interrupt = 0
-                break
+        # for i in  proc.code: print i
+            
+        try:
+            for i in proc.code:
+                self.interpret(i)
+                if self.interrupt == 3:
+                    ret = self.retval
+                    self.interrupt = 0
+                    break
+        except:
+            s = 'Error in procedure %s\n    %s' % (name, i[-1])
+            PrintShortExcept(s) 
+
         try:
             if len(ret) == 1: ret= ret[0]
         except TypeError:
