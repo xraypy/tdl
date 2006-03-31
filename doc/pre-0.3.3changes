@@ -1,7 +1,8 @@
 
 ==Using numpy 0.9.6
    numpy 0.9.6 is now required. This is sort of big step, but it definitely
-   helps with multi-dimensional code.
+   helps with multi-dimensional code.  We'll soon add a requirement for
+   scipy too.
 
 ==Fixed array slicing.
  The following slicings work (compatible with numpy):
