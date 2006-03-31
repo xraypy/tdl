@@ -417,20 +417,24 @@ class SymbolTable:
         self.setBuiltin('func_group',group)
         return group
 
-    def addRandomGroup(self,nlen = 8):
+    def addRandomGroup(self,prefix='',nlen= 8):
         """
-        add a randomly generated, unique group name
+        add a quasi-randomly generated group name that is
+        'guaranteed' to be unique.
+        If prefix is provided, the group name begins with
+        that string
         returns the group name or None.
         """
         rand = random.randrange
         def randomName(n=8):
             chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
             return "_%s" % ''.join([chars[rand(0,len(chars))] for i in range(n)])
-        group = randomName(n = nlen)
+        if prefix == None: prefix = ''
+        group = "%s%s" % (prefix,randomName(n = nlen))
         if self.hasGroup(group):
             ntry = 0
             while ntry<100:
-                group = randomName(n=nlen)
+                group = "%s%s" % (prefix,randomName(n = nlen))                
                 if not self.hasGroup(group):break
                 ntry = ntry + 1
                 if (ntry % 20 == 0): nlen = nlen+1
