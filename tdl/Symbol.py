@@ -47,7 +47,7 @@ class Symbol:
        defvar     defined variable (expression stack)
     ** FUNC
        pyfunc     python function
-       defproc    defined procedure (sequence of statement code)
+       defpro     defined procedure (sequence of statement code)
     ** CMD
        pycmd      python function called using command syntax
        defmac     string-substitution sequence of statements   
