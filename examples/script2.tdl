@@ -1,0 +1,21 @@
+print 'TDL script 2: for loops, while loops, if/else/endif'
+
+n = 2.7
+print ' n = ', n
+for i in arange(7):
+    n = n + 0.65
+    print i, n
+endfor
+
+while n>0:
+    print 'n: ', n
+    n = n - 0.5 - sqrt(n)/3.
+endwhile
+
+n = n+0.5
+if n>0:
+    print 'xn: ', n
+else:
+    print 'xxx ', n
+endif
+

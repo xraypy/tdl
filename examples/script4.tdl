@@ -1,0 +1,23 @@
+print 'TDL script 4: defined procedures, and namespaces'
+
+
+x = 100
+t  =  2.3
+
+def f1(a,b,c=1):
+    print  '> this is f1 ', a, b,c 
+    if c < 0:  c = -c
+    x = a*b*c
+    _main.x = sqrt(c )
+    if _main.x != c and a<b:
+        print 'f1 return : ', _main.x/3
+        return _main.x/3
+    endif
+    print ' f1 return... x= ', x
+    return x
+enddef
+
+t = f1(2,sqrt(6.),c = -5)
+c0.t  = 3.4
+print 'c0.t, _main.t, t = ', c0.t, _main.t, t
+print 'x, t  = ', x, t

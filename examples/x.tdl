@@ -1,0 +1,49 @@
+print '---- TDL test 1'
+x = sqrt(11)
+y = cos(x)
+
+
+print 'x = sqrt(11) = ', x
+print 'y = cos(x)   = ',y
+
+n = 1
+while n<10:
+   print 'While Loop', n
+   n = n + 1
+endwhile
+
+for i in arange(10):
+    n = 2
+    m = n + 3j
+    y = cos(m)
+    z0 = sqrt(n*i)
+    z = 3 * log(i+2.3444)
+    print "------- ", i, y
+    while n < i:
+        y = y + n/3.
+        z = z *9.4*(n+0.6) % 2.
+        n = n + 1
+        print 'n,y,z= ',  n, i,  y, z
+    endwhile
+endfor
+
+
+x = 3
+
+def f1(a,b,c=1):
+    print  ' this is f1 ', a, b,c 
+    if c < 0:  c = -c
+    x = a*b*c
+
+    print ' in f1 : ', x, _main.x
+    
+    return x
+enddef
+
+c0.xx  = 3.4
+print 'c0.xx = ' , c0.xx
+
+a = 2
+b = 3
+y = f1(a,sqrt(b/a),c=2.01)
+print y, x, 3+4

@@ -1,0 +1,8 @@
+include README.txt LICENSE.txt ChangeLog MANIFEST.in
+recursive-include tdl *
+recursive-include examples *
+recursive-include doc *
+recursive-include Lib *
+recursive-include pyMods *
+recursive-include tests *
+include *.py tdl.*

@@ -1,0 +1,14 @@
+#
+#
+print 'this is t.tdl'
+
+x = 100
+_main.x = 101
+_new.x = 102
+
+def sfunc(x):
+    "this is a simple function"
+    y = x * sqrt(x)
+    if y< 1: y = 1/y
+    return y
+enddef

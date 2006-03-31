@@ -1,0 +1,12 @@
+print 'TDL script 5'
+print 'dictionary lookup:'
+x = {'a':1,  'b': 3}
+print "x = ", x
+print "x['b'] = ", x['b']
+
+files  = ls('*.py')
+print "simple for loop over files from ls('*.py'):"
+
+for i in files:
+   print  '    :  ', i
+endfor
