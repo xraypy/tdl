@@ -5,17 +5,17 @@ Tdl is a data processing language written in python and designed to be
   - easy to use for novices.
   - complete enough for intermediate to advanced data processing.
   - data-centric, so that arrays of data are easy to manage and use.
-  - easily extendable with python.
+  - easily extensible with python.
  
-Tdl uses Numeric Python for all its numerical functionality, so processing
-arrays of data is easy.  At some point, tdl will switch to use scipy
-instead of Numeric.  This will easily allow 'advanced numeric
-capabilities', including non-linear least squares minimization and ffts.
+Tdl uses numpy (version 0.9.6 or higher) for all its numerical
+functionality, so processing arrays of data is easy.  Tdl will also soon
+require scipy, as this will allow 'advanced numeric capabilities',
+including non-linear least squares minimization and ffts.
 
 Features:
  - simple undecorated variable names that can contain any of the following
    data types: ints, floats, complex, strings, lists, dictionaries
-   (hashes), or Numeric arrays. Multi-dimensional data can be accessed
+   (hashes), or numpy arrays. Multi-dimensional data can be accessed
    either element-by-element or with slices:
 
       tdl> x   = 1             # int
@@ -32,7 +32,7 @@ Features:
       tdl> print str[0:6]
       here i
 
-   the underlying data types are all Python (or Numeric Python) types.
+   the underlying data types are all Python (or numpy) types.
 
  - Namespaces.  Each variable has two parts to its name: a Group Name and 
    Variable Name.  The fully qualified name includes a '.': Group.Var.
@@ -146,7 +146,7 @@ Features:
 
 === Differences between tdl and Python:
 
--  tdl has many builtins and assumes Numerical data. 
+-  tdl has many builtins and assumes numerical data (that is, arrays of numbers).
 -  tdl has no tuples. Lists are used in their place.
 -  indentation does not matter. blocks are ended with 'end***' 
    (if / endif , fo/endfor, def/enddef)
