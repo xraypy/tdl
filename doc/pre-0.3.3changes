@@ -5,7 +5,8 @@
    scipy too.
 
 ==Fixed array slicing.
- The following slicings work (compatible with numpy):
+ The following slicings work (compatible with numpy, though numpy has
+ some additional options that tdl does not support):
    1-D arrays:
       x[1]     x[:3]     x[2:]    x[2:10]    x[2:10:2] 
 
