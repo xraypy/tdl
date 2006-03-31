@@ -1,5 +1,4 @@
 
-
 ==Using numpy 0.9.6
    numpy 0.9.6 is now required. This is sort of big step, but it definitely
    helps with multi-dimensional code.
@@ -138,4 +137,3 @@
 
     Typing 'help', 'help topics', and 'help show' gives the basic
     introduction to help.
-
