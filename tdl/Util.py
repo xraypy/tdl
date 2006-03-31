@@ -312,6 +312,18 @@ def PrintExceptErr(err_str,print_trace=True):
         print '*****Error printing exception error******'
 
 
+def PrintShortExcept(err_str):
+    " print error on exceptions" 
+    try:
+        print '\n***********************************'
+        print err_str
+        xx, yy, zz = sys.exc_info()
+        sys.excepthook(xx,yy,None)
+        print '***********************************\n'
+    except:
+        print '*****Error printing exception error******'
+
+
 def show_list(lst,ncol=None,textwidth=80):
     "formatted list of stuff in a list or dict"
     nmax = -1
