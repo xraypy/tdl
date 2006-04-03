@@ -10,6 +10,9 @@
 # Modifications
 # -------------
 #
+# 4-2-06 T2
+# Modified symbolTable.initialize and symbolTable.import_lib
+#
 # * 2-12-06 T2
 # Added new methods for getting/putting to symbol table
 # back to a single dictionary of symbols
@@ -48,9 +51,6 @@ class Symbol:
     ** FUNC
        pyfunc     python function
        defpro     defined procedure (sequence of statement code)
-    ** CMD
-       pycmd      python function called using command syntax
-       defmac     string-substitution sequence of statements   
     """
     
     constant = False
