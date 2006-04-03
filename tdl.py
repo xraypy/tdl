@@ -55,8 +55,10 @@ if startup:
         INI_file = os.path.join(os.environ['TDL_PATH'],'tdl.ini')
         config = ConfigParser.ConfigParser()
         config.read('tdl.ini')
-        l = config.get('LibModule','Lib')
-        libs = l.split(',')
+        libs = []
+        for libname in config.get('LibModule','Lib').split(','):
+            l = libname.strip()
+            if len(l) > 0: libs.append(l)
     else:
         libs = []
 
