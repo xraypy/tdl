@@ -33,7 +33,7 @@ HelpShow =  """
    = Show options =
     show groups    (-g)   # list currently defined groups
     show group <name>     # list functions and variables in named group
-    show functions (-g)   # list functions, organized by group
+    show functions (-f)   # list functions, organized by group
     show variables (-v)   # list variables, organized by group
     show <name>           # show details on specific function, or variable
   (see also: 'help' and 'help topics')
