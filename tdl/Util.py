@@ -263,6 +263,17 @@ def Command2Expr(key, s):
     s = ', '.join([i.strip() for i in split_list(s, delim=' ')])    
     return "%s(%s)" % (key,s)
     
+def int2bin(x):
+    """ convert integer to list of booleans: gauranteed to return 12 'bits'"""
+    keys = ('000','001','010','011','100','101','110','111')
+    o = []
+    for i in list(''.join([keys[int(i)] for i in oct(x)])):
+        o.append(i=='1')
+    o.reverse()
+    if len(o)<= 12:
+        for i in range(12-len(o)): o.append(False)
+    return o
+
 def mod_import(name):
     """
     wrapper for imports/reloads
