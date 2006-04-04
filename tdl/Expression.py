@@ -221,9 +221,9 @@ class ExpressionParser:
             raise ParseException, s
         # reversing the stack is the default...
         # set reverse=True to NOT reverse the stack
-        # print 'compile done : ', self.exprStack
         if not reverse: self.exprStack.reverse()
-        if self.debug>=8:    print ' ExprParse: compile: ', s, ' -> ', self.exprStack
+        if self.debug>=8:
+            print ' ExprParse: compile: ', s, ' -> ', self.exprStack
         return self.exprStack
 
     def CountArgs(self, s, loc, toks ):
@@ -298,11 +298,14 @@ class ExpressionParser:
                     n = n + 1
                 elif i != '[' and paren_level==0:
                     t.append(i)
+        if self.debug>=16:
+            print ' ExprParse: pushSymbol ', op, na, n, t
+            
         if op == opcodes.function and n==0:  # regular function call
-            # print 'Reg Fcn Call : ', t, na
             return self.pushFirst(s,loc,t,op=op,count=na)
         elif op == opcodes.function and n>0: # "array function"
             return self.pushFirst(s,loc,t,op=opcodes.arrayfunc,count=na,count2=n)
+        
         elif op == opcodes.array and n==0:   # scalar variable / variable name
             return self.pushFirst(s,loc,t,op=opcodes.variable)            
         else:                                # general variable slice case
@@ -352,7 +355,8 @@ class ExpressionParser:
     def pushFirst(self, s, loc, toks,op=None,count=None,count2=None,reset=False):
         if self.debug>=32:
             print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
-        if toks:  self.exprStack.append(toks[0])
+        if toks:
+            self.exprStack.append(toks[0])                
         if op:    self.pushOp(op,count,count2=count2,reset=reset)
         return toks
 
@@ -395,6 +399,7 @@ class Expression:
         self.debug   = debug
         self.run_procedure = run_procedure
         self.Parser  = ExpressionParser()
+        self.Parser.debug = debug
         self.text    = ''
 
 
@@ -450,13 +455,14 @@ class Expression:
             self.raise_error('cannot evaluate expression %s, %s' % (stack,expr))
         
         if expr != '': self.text = expr
-       
+        
         work = []        
         code = stack[:]
         if self.debug>=8:        print ' evaluate ', expr, '\n -> ', code
+
         while len(code)> 0:
             val = tok = code.pop()
-            if self.debug>=16: print 'TOK ', tok
+            if self.debug>=64: print 'TOK ', tok
             
             if tok==None:
                 self.raise_error( 'evaluation error (unrecognized expression)')
@@ -578,7 +584,7 @@ class Expression:
                 elif tok == 'and': x = work.pop() ; val = work.pop() and x
                 #
             work.append(val)
-            if self.debug >=8: print ' work ', work
+            if self.debug >=32: print ' work ', work
         #
         if len(work)==1:                   work = self.check_retval(work[0])
         if type(work) == types.StringType: work = trimstring(work)
@@ -587,7 +593,7 @@ class Expression:
         return work
 
 if __name__ == '__main__':
-    p = Expression()
+    p = Expression(debug=4)
     s = p.symbolTable
     s.addVariable('a',Num.arange(30.))
     s.addVariable('b',Num.arange(15.))
@@ -606,12 +612,11 @@ if __name__ == '__main__':
          " format1  % dlist",
          )
     t = (' sqrt(x+1)', 'sqrt((x+1)) ' ,
-         'sqrt((a+1)/3)',
-         'sqrt((a+1)/3)[3]' )
+         'sqrt((a+1)/3)',)
+    t = (     'sqrt((a+1)/4)[3]' , )
          
     for i in t:
         print '========================\n< ', i , ' > '
         x = p.compile(i)
-        print ' -- > ', x
         y = p.eval(x)
         print ' = ', y
