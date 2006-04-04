@@ -22,7 +22,7 @@ from pyparsing import Word, Combine, Optional, Literal, CaselessLiteral
 from pyparsing import OneOrMore, ZeroOrMore, Forward, Or
 from pyparsing import QuotedString, StringEnd, ParseException
 
-from Util import trimstring, list2array
+from Util import trimstring, list2array, int2bin
 from Util import ParseException, EvalException
 from Symbol import SymbolTable
 
@@ -142,7 +142,7 @@ class ExpressionParser:
     based on the demonstration program fourFn.py from pyparsing.
     """ 
     def __init__(self,**kw):
-        debug = 0
+        self.debug = 0
         expr, term        = Forward(), Forward()
         _slice,arg_list   = Forward(), Forward()
         lit_list,lit_dict = Forward(), Forward()
@@ -223,9 +223,11 @@ class ExpressionParser:
         # set reverse=True to NOT reverse the stack
         # print 'compile done : ', self.exprStack
         if not reverse: self.exprStack.reverse()
+        if self.debug>=8:    print ' ExprParse: compile: ', s, ' -> ', self.exprStack
         return self.exprStack
 
     def CountArgs(self, s, loc, toks ):
+        if self.debug>=16:    print ' ExprParse: CountArgs ', len(toks)
         self.argcount = len(toks)
 
     def pushSubArray(self, s, loc, toks ):
@@ -280,21 +282,24 @@ class ExpressionParser:
         t.append(toks[0])
         op = opcodes.array
         n,na  = 0,None
+        if self.debug>=16:
+            print ' ExprParse: pushSymbol ', toks, self.argcount, self.exprStack
         if len(toks)>1:
-            skip_fcn_args = False
+            paren_level = 0
             for i in toks[1:]:
-                if i == '(':
-                    skip_fcn_args = True
+                if i == '(' and paren_level==0:
+                    paren_level = 1
                     op = opcodes.function
                     na = self.argcount
                     self.argcount  = 0
                 elif i == ')':
-                    skip_fcn_args = False
+                    paren_level = 0
                 elif i in (']',','):
                     n = n + 1
-                elif i != '[' and not skip_fcn_args:
+                elif i != '[' and paren_level==0:
                     t.append(i)
         if op == opcodes.function and n==0:  # regular function call
+            # print 'Reg Fcn Call : ', t, na
             return self.pushFirst(s,loc,t,op=op,count=na)
         elif op == opcodes.function and n>0: # "array function"
             return self.pushFirst(s,loc,t,op=opcodes.arrayfunc,count=na,count2=n)
@@ -345,11 +350,15 @@ class ExpressionParser:
         if reset:  self.argcount=0
         
     def pushFirst(self, s, loc, toks,op=None,count=None,count2=None,reset=False):
+        if self.debug>=32:
+            print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
         if toks:  self.exprStack.append(toks[0])
         if op:    self.pushOp(op,count,count2=count2,reset=reset)
         return toks
 
     def pushLast(self, s, loc, toks,op=None,count=None,count2=None,reset=False):
+        if self.debug>=32:
+            print ' ExprParse: pushLast ', toks, op, count, count2, reset, self.exprStack
         if toks:  self.exprStack.insert(0,toks[0])
         if op:    self.pushOp(op,count,count2=count2,reset=reset)
         return toks    
@@ -393,8 +402,10 @@ class Expression:
         if len(expr)<1: return None
         self.text = expr
         r =self.Parser.compile(expr,reverse=reverse)
-        # print 'expr compile = %s ' % expr
-        # print 'expr compile -> ', r
+        if self.debug>=4:
+            print 'expr compile = %s ' % expr
+            print 'expr compile -> ', r
+            
         return r
 
     def set_debug(self,n):
@@ -442,10 +453,10 @@ class Expression:
        
         work = []        
         code = stack[:]
-        if self.debug>1:        print ' evaluate ', expr, '\n -> ', code
+        if self.debug>=8:        print ' evaluate ', expr, '\n -> ', code
         while len(code)> 0:
             val = tok = code.pop()
-            if self.debug>2: print 'TOK ', tok
+            if self.debug>=16: print 'TOK ', tok
             
             if tok==None:
                 self.raise_error( 'evaluation error (unrecognized expression)')
@@ -567,7 +578,7 @@ class Expression:
                 elif tok == 'and': x = work.pop() ; val = work.pop() and x
                 #
             work.append(val)
-            if self.debug > 5: print ' work ', work
+            if self.debug >=8: print ' work ', work
         #
         if len(work)==1:                   work = self.check_retval(work[0])
         if type(work) == types.StringType: work = trimstring(work)
@@ -582,6 +593,7 @@ if __name__ == '__main__':
     s.addVariable('b',Num.arange(15.))
     s.addVariable('format1',' %s = %f ')
     s.addVariable('dlist',['b',12])
+    s.addVariable('x',2.2)
         
     t = ('a', 'a[2]', 'a[:7]', 'a[4:10]', 'b[9:]')
     t = ('a', 'a[2]',
@@ -593,8 +605,12 @@ if __name__ == '__main__':
          " format1  % ['a',3.3]",
          " format1  % dlist",
          )
+    t = (' sqrt(x+1)', 'sqrt((x+1)) ' ,
+         'sqrt((a+1)/3)',
+         'sqrt((a+1)/3)[3]' )
+         
     for i in t:
-        print '< ', i , ' > '
+        print '========================\n< ', i , ' > '
         x = p.compile(i)
         print ' -- > ', x
         y = p.eval(x)
