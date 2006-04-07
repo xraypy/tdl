@@ -1,17 +1,12 @@
 # M. Newville Univ of Chicago (2005)
 #
 # -------------
-# Todo:
-# -------------
-#
-# - Add cmd stuff 
-#
-# -------------
 # Modifications
 # -------------
 #
 # 4-2-06 T2
 # Modified symbolTable.initialize and symbolTable.import_lib
+# to correctly handle strings as module names
 #
 # * 2-12-06 T2
 # Added new methods for getting/putting to symbol table
@@ -29,11 +24,11 @@ import re
 from copy import deepcopy
 
 from Num import Num
-from Util import find_unquoted_char, split_delim, mod_import, datalen
+from Util import find_unquoted_char, split_delim, datalen
 
 random.seed(time.time())
 
-# Move to _common?
+# should these be moved to a more common place?
 DataTypes = ('variable','constant','defvar')
 FuncTypes = ('pyfunc','defpro')
 SymbolTypes = DataTypes + FuncTypes
@@ -52,7 +47,7 @@ class Symbol:
        pyfunc     python function
        defpro     defined procedure (sequence of statement code)
     """
-    
+
     constant = False
     def __init__(self, name, value=None, desc=None, group=None,
                  help=None, type='variable',
@@ -147,15 +142,12 @@ class SymbolTable:
         self.tdl    = tdl
         self.writer = writer
 
-        import TdlBuiltins
-        import TdlNumLib
-        self.load_libs = [TdlBuiltins,TdlNumLib]
+        self.load_libs = []
+        libs = ('TdlBuiltins','TdlNumLib')
 
-        # holds group to search for symbols
         self.initialize(libs,clearAll=True)
 
     def initialize(self,libs=None,clearAll=False):
-
         if clearAll:
             self.sym    = {builtinGroup: {}, mainGroup: {}}
             self.dataGroup = mainGroup
@@ -163,52 +155,60 @@ class SymbolTable:
             self.addBuiltin('data_group',mainGroup)
             self.addBuiltin('func_group',mainGroup)
             self.setSearchGroups()
-       
         if libs:
-            for lib in libs: self.load_libs.append(lib)
-
-        for lib in self.load_libs: self.import_lib(lib)
+            for lib in libs: self.import_lib(lib)
 
     def import_lib(self,lib):
-        if type(lib) != types.ModuleType: return None
+        " import or reload module given module name or object"
+        if lib == None: return None
+        if type(lib) == types.StringType:
+            try: 
+                mod = __import__(lib)
+                components = lib.split('.')
+                for comp in components[1:]:
+                    mod = getattr(mod, comp)
+            except:
+                s = 'Error loading module %s' % lib
+                PrintExceptErr(s) 
+        elif type(lib) == types.ModuleType:
+            try:
+                mod = reload(lib)
+            except:
+                s = 'Error loading module %s' % lib
+                PrintExceptErr(s)
+        else:
+            return None
         
-        if lib not in self.load_libs: self.load_libs.append(lib)
-
-        s = str(lib).split()
-        title = getattr(lib,'title',s[1][1:-1])
+        title = getattr(mod,'title',mod.__name__)
         self.writer.write("    loading %s ..." % title)
         self.writer.flush()
 
+        # mod is now a Module, not a string of the module name
+        if mod not in self.load_libs: self.load_libs.append(mod)
+        
         try:
-            mod_import(lib)
-            reload(lib)
             for nam,val in getattr(lib,'_consts_',{}).items():
                 self.addBuiltin(nam,val)
             for nam,val in getattr(lib,'_var_',{}).items():
                 self.addSymbol(nam,value=val,type='variable')
-
             for nam,val in getattr(lib,'_func_',{}).items():
                 cmdOut = None
                 asCmd  = True
-                func    = val
+                func   = val
                 if type(val) == types.TupleType:
                     func = val[0]
                     if len(val) > 1: cmdOut = val[1]
-                    if len(val) > 2: isCmd  = val[3]
+                    if len(val) > 2: asCmd  = val[3]
                 x =self.addFunction(nam,func,cmd_out=cmdOut,as_cmd=asCmd)
-
             if self.tdl:
                 for nam,val in getattr(lib,'_help_',{}).items():
                     self.tdl.help.add_topic(nam,val)
             import_msg = 'ok.'
-            
         except ImportError:
             import_msg = 'import failed!'                
 
         self.writer.write(" %s\n" % import_msg)
 
-
-        
     ### Name/type/util functions
     def parseName(self,name,group=None,use_default=True):
         """
