@@ -187,11 +187,11 @@ class SymbolTable:
         if mod not in self.load_libs: self.load_libs.append(mod)
         
         try:
-            for nam,val in getattr(lib,'_consts_',{}).items():
+            for nam,val in getattr(mod,'_consts_',{}).items():
                 self.addBuiltin(nam,val)
-            for nam,val in getattr(lib,'_var_',{}).items():
+            for nam,val in getattr(mod,'_var_',{}).items():
                 self.addSymbol(nam,value=val,type='variable')
-            for nam,val in getattr(lib,'_func_',{}).items():
+            for nam,val in getattr(mod,'_func_',{}).items():
                 cmdOut = None
                 asCmd  = True
                 func   = val
@@ -201,7 +201,7 @@ class SymbolTable:
                     if len(val) > 2: asCmd  = val[3]
                 x =self.addFunction(nam,func,cmd_out=cmdOut,as_cmd=asCmd)
             if self.tdl:
-                for nam,val in getattr(lib,'_help_',{}).items():
+                for nam,val in getattr(mod,'_help_',{}).items():
                     self.tdl.help.add_topic(nam,val)
             import_msg = 'ok.'
         except ImportError:

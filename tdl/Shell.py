@@ -124,7 +124,17 @@ class shell(cmd.Cmd):
         if len(args) > 0:  key = args.pop(0).strip()
         
         if key is None:
-            print self.help('show')
+            form = "\nDefault Data group = %s\nDefault Func group = %s"
+            print form % (self.tdl.symbolTable.dataGroup,self.tdl.symbolTable.funcGroup)
+            f = self.tdl.symbolTable.listFunc()
+            d = self.tdl.symbolTable.listData()
+            for grp in self.tdl.symbolTable.listGroups():
+                print "\n===Group: %s" % grp
+                for t,name in ((f,'functions'),(d,'variables')):
+                    n = 0
+                    if t.has_key(grp):  n = len(t[grp])
+                    print "   %i %s " % (n,name)
+            
         elif key  in ( '-f', 'functions','function'):
             self.show_function(args)
 
