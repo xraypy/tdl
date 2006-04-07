@@ -65,7 +65,7 @@ class shell(cmd.Cmd):
                 else:
                     lout = "%s:  %s\n" % (sym.name, sym)
                     for i in sym.desc.split('\n'): lout = "%s    %s\n" %(lout,i)
-        show_more(lout)
+        show_more(lout,writer=self.stdout)
 
     def show_variable(self,args):
         lout = ''
@@ -84,13 +84,13 @@ class shell(cmd.Cmd):
                 else:
                     lout = " %s:  %s\n" % (sym.name, sym)
                     # for i in sym.desc.split('\n'): lout = "%s    %s\n" %(lout,i)
-        show_more(lout)
+        show_more(lout,writer=self.stdout)
 
     def show_groups(self,args=None):
         " print list of groups"
         l = self.tdl.symbolTable.listGroups()
         print "   Currently defined groups: "
-        show_more(show_list(l))        
+        show_more(show_list(l),writer=self.stdout)
         print "   Default Data     Group = '%s'" % self.tdl.symbolTable.dataGroup
         print "   Default Function Group = '%s'" % self.tdl.symbolTable.funcGroup
 
@@ -111,7 +111,7 @@ class shell(cmd.Cmd):
                 lout = "%s\n%s" % (lout,show_list(data))
             else:
                 lout = "%s\n==No Variables in '%s'\b" % (lout,grp)
-            show_more(lout)
+            show_more(lout,writer=self.stdout)
         else:
             print " No group %s.  Try 'show groups'" % grp
     def do_shell(self, arg):
@@ -151,11 +151,11 @@ class shell(cmd.Cmd):
         elif key == 'topic' :
             topic = args[0].strip()
             if topic in self.help_topics:
-                show_more(self.help(topic))
+                show_more(self.help(topic),writer=self.stdout)
             else:
                 print "  No help on topic %s. Try 'help topics'" % (topic)
         elif key in self.help_topics:
-            show_more(self.help(key))
+            show_more(self.help(key),writer=self.stdout)
         else:
             args.insert(0,key)
             self.do_show_symbols(args,msg='help')

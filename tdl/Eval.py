@@ -31,7 +31,9 @@ class Evaluator:
         self.output      = output      or sys.stdout
 
         self.help        = Help.Help()
-        self.symbolTable = symbolTable or SymbolTable(libs=libs,tdl=self)
+        self.symbolTable = symbolTable or SymbolTable(libs=libs,
+                                                      tdl=self,
+                                                      writer=self.output)
 
         self.Expression  = Expression(symbolTable=self.symbolTable,
                                       run_procedure = self.run_procedure)
