@@ -24,7 +24,7 @@ import re
 from copy import deepcopy
 
 from Num import Num
-from Util import find_unquoted_char, split_delim, datalen
+from Util import find_unquoted_char, split_delim, datalen, PrintExceptErr
 
 random.seed(time.time())
 
@@ -91,7 +91,7 @@ class Symbol:
     def __cmdout__(self,val,**kws):
         if self.cmd_out:
             return self.cmd_out(val,**kws)
-        elif val==None:
+        elif val is None:
             return None
         return str(val)
         
@@ -143,8 +143,8 @@ class SymbolTable:
         self.writer = writer
 
         self.load_libs = []
-        libs = ('TdlBuiltins','TdlNumLib')
-
+        import TdlBuiltins, TdlNumLib
+        libs = (TdlBuiltins,TdlNumLib)
         self.initialize(libs,clearAll=True)
 
     def initialize(self,libs=None,clearAll=False):
@@ -160,7 +160,7 @@ class SymbolTable:
 
     def import_lib(self,lib):
         " import or reload module given module name or object"
-        if lib == None: return None
+        if lib is None: return None
         if type(lib) == types.StringType:
             try: 
                 mod = __import__(lib)
@@ -169,16 +169,19 @@ class SymbolTable:
                     mod = getattr(mod, comp)
             except:
                 s = 'Error loading module %s' % lib
-                PrintExceptErr(s) 
+                PrintExceptErr(s)
+
         elif type(lib) == types.ModuleType:
             try:
                 mod = reload(lib)
             except:
                 s = 'Error loading module %s' % lib
                 PrintExceptErr(s)
-        else:
+
+        if mod is None: 
             return None
         
+
         title = getattr(mod,'title',mod.__name__)
         self.writer.write("    loading %s ..." % title)
         self.writer.flush()
@@ -380,13 +383,13 @@ class SymbolTable:
 
     def getDataGroup(self,group=None,create=True):
         "return group name, or default (self.dataGroup), and makes sure the group exist"
-        if group == None: group = self.dataGroup
+        if group is None: group = self.dataGroup
         if create:        group = self.addGroup(group)
         return group
 
     def getFuncGroup(self,group=None,create=True):
         "return group name, or default (self.dataGroup), and makes sure the group exist"
-        if group == None: group = self.funcGroup
+        if group is None: group = self.funcGroup
         if create:        group = self.addGroup(group)
         return group
 
@@ -429,7 +432,7 @@ class SymbolTable:
         def randomName(n=8):
             chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
             return "_%s" % ''.join([chars[rand(0,len(chars))] for i in range(n)])
-        if prefix == None: prefix = ''
+        if prefix is None: prefix = ''
         group = "%s%s" % (prefix,randomName(n = nlen))
         if self.hasGroup(group):
             ntry = 0
@@ -471,7 +474,7 @@ class SymbolTable:
     def getData(self,name):
         "get data symbol"
         sym = self.getSymbol(name,groups=None,create=False)
-        if sym == None: return None
+        if sym is None: return None
         if sym.type in DataTypes:
             return sym
         else:
@@ -480,7 +483,7 @@ class SymbolTable:
     def getAllData(self,group=None):
         """ if group = None get all data, otherwise get all data in group """
         data = []
-        if group == None:
+        if group is None:
             for group in self.sym.keys():
                 for name in self.sym[group].keys():
                     if self.sym[group][name].type in DataTypes:
@@ -496,7 +499,7 @@ class SymbolTable:
         " delete data "
         # work on how this should operate...
         doomed = []
-        if group == None:
+        if group is None:
             doomed = self.sym.keys()
         elif self.hasGroup(group):
             doomed = [group]
@@ -565,7 +568,7 @@ class SymbolTable:
     def getFunc(self,name):
         "get func symbol"
         sym = self.getSymbol(name,groups=None,create=False)
-        if sym == None: return None
+        if sym is None: return None
         if sym.type in FuncTypes:
             return sym
         else:
@@ -574,7 +577,7 @@ class SymbolTable:
     def getAllFunc(self,group=None):
         """ if group = None get all data, otherwise get all data in group """
         func = {}
-        if group == None:
+        if group is None:
             for group in self.sym.keys():
                 for name in self.sym[group].keys:
                     if self.sym[group][name].type in FuncTypes:
@@ -591,7 +594,7 @@ class SymbolTable:
     def clearAllFunc(self,group=None):
         " delete data "
         doomed = []
-        if group == None:
+        if group is None:
             doomed = self.sym.keys()
         elif self.hasGroup(group):
             doomed = [group]
@@ -616,7 +619,7 @@ class SymbolTable:
     def getVariable(self,name,create=False):
         """ get variable (or const) """
         sym = self.getSymbol(name,create=create)
-        if sym != None:
+        if sym is not None:
             if sym.type not in ('variable','constant','defvar'):
                 sym = None
         return sym
@@ -628,7 +631,7 @@ class SymbolTable:
         this should be used to lookup symbols for assignments
         """
         sym = self.getSymbol(name,groups=(self.dataGroup,),create=True)
-        if sym != None:
+        if sym is not None:
             if sym.type not in ('variable','constant','defvar'):
                 sym = None
         return sym
@@ -668,7 +671,7 @@ class SymbolTable:
     # defined procedures    
     def addDefPro(self, name, code,desc=None, **kws):
         " add defined procedure "
-        if desc == None: desc = name
+        if desc is None: desc = name
         return self.addSymbol(name,value=name,group=self.funcGroup,
                               type='defpro',code=code,desc=desc,**kws)
 
@@ -723,7 +726,7 @@ class SymbolTable:
 
     def listDataGroup(self,group=None):
         "return a list of Data names in a group"
-        if group == None: group = self.getDataGroup(group)
+        if group is None: group = self.getDataGroup(group)
         all = self.listData()
         if group in all.keys():
             return all[group]
@@ -732,7 +735,7 @@ class SymbolTable:
     
     def listFuncGroup(self,group=None):
         "return a list of Func names in a group"
-        if group == None: group = self.getFuncGroup(group)
+        if group is None: group = self.getFuncGroup(group)
         all = self.listFunc()
         if group in all.keys():
             return all[group]
