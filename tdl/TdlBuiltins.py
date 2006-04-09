@@ -5,7 +5,7 @@
 # Modifications
 # --------------
 # 8-4-2006 T2:
-# - fix (hack) to _cwd for win32
+# - fix (hack) to cwd, pwd and ls for win32
 # - added **kws to _ls.  is this the right way to make sure __cmdout can get
 #   additional kw arguments not used by the function?
 #
@@ -220,9 +220,13 @@ def _ls(arg= '.',**kws):
     arg.strip()
     if type(arg) != types.StringType or len(arg)==0: arg = '.'
     if os.path.isdir(arg):
-        return os.listdir(arg)
+        ret = os.listdir(arg)
     else:
-        return glob(arg)
+        ret = glob(arg)
+    if sys.platform == 'win32':
+        for j in range(len(ret)):
+            ret[j] = ret[j].replace('\\','/')
+    return ret
 
 def _ls_cmdout(x,ncol=None):
     " output for ls "
