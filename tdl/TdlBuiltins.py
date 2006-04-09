@@ -277,10 +277,14 @@ def _type(x):
 
 
 def _path(add=None):
-    "modify python path"
-    if add is None:
-        for l in sys.path:
-            print l
+    "modify or show python path"
+    add = add.strip()
+    if not add:
+        pth = sys.path
+        if sys.platform == 'win32':
+            for j in range(len(pth)):
+                pth[j] = pth[j].replace('\\','/')
+        return show_list(pth)
     else:
         sys.path.append(add)
     return

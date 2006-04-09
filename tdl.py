@@ -75,6 +75,7 @@ if startup:
 
     if use_wxGUI == False:
         t = tdl.shell(libs=libs,debug=debug,intro=None)
+        t.tdl.symbolTable.addBuiltin('GUI','TkAgg')
         t.cmdloop()
     elif use_wxGUI == True:
         # tdl gets started from within the wxGUI

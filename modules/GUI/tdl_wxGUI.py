@@ -37,6 +37,7 @@ class tdl_wxGUI(model.Background):
         #redir stdio
         #sys.stdin  = self.readline
         self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,intro=intro,debug=debug)
+        self.shell.tdl.symbolTable.addBuiltin('GUI','WXAgg')
         self.run_tdl()
         # when done we've quit  
         sys.__stdout__.write("\nExiting TDL\n")

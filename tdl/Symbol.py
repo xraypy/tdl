@@ -330,6 +330,14 @@ class SymbolTable:
             return self.sym[group][name]
         return None
 
+    def getSymbolValue(self,name,groups=None):
+        sym = self.getSymbol(name,groups=groups,create=False)
+        if sym:
+            return sym.value
+        else:
+            return None
+
+
     #### Group manipulation and symbol checking
     def hasSymbol(self,name,group=None):
         "see if a symbol exists"
