@@ -209,13 +209,16 @@ def _strstrip(var,delim=None):
     else: 
         return var.strip(delim)
 
-def _ls(arg = '*'):
+def _ls(arg= '.'):
     " return list of files in the current directory "
     from glob import glob
-    if arg != None and type(arg)==types.StringType:
-        return glob(arg)
+    arg.strip()
+    if type(arg) != types.StringType or len(arg)==0: arg = '.'
+    if os.path.isdir(arg):
+        return os.listdir(arg)
     else:
-        return os.listdir(os.getcwd())
+        return glob(arg)
+    
 
 def _ls_cmdout(x,ncol=None):
     " output for ls "
