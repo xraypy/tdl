@@ -238,7 +238,7 @@ def parens_matched(s):
         i = i + 1
     return (depth == 0)
 
-def Command2Expr(key, s):
+def Command2Expr(s,symtable=None):
     """ convert command like syntax to function syntax:
     in a command, commas are optional / superfluous, and
     there may be extra space are key=val arguments:
@@ -247,22 +247,62 @@ def Command2Expr(key, s):
     =>
        cmd(arg1, arg2, key1=val, key2=val)
     """
+    key = s.split()[0].lower()
     s = s[len(key):]
-    a = split_list(s, delim = ' ')
-    for i in range(len(a)):
-        if a[i].startswith(','): a[i] = a[i][1:]
-        if a[i].endswith(','):   a[i] = a[i][:-1]
-        a[i].strip()
-    b = []
-    for i in a:
-        if i.strip() != '': b.append(i)
-    s = ' '.join(b)
+    words = split_list(s, delim = ' ')
+
+    tmp = []
+    for i in range(len(words)):
+        if words[i].startswith(','): words[i] = words[i][1:]
+        if words[i].endswith(','):   words[i] = words[i][:-1]
+        words[i].strip()
+        if words[i] != '': tmp.append(words[i])
+    s = ' '.join(tmp)
+
     if s.find('=') > -1:
         s = '='.join([i.strip() for i in split_list(s, delim='=')])
 
+    # if a symboltable is included, decide which strings need quotes
+    if symtable is not None:
+        def needs_quote(w):
+            'word is not a literal string, number, or a named symbol'
+            if  (w.startswith('"') or w.startswith("'")): return False
+            try:
+                x = float(w)
+                return False
+            except ValueError:
+                pass
+            return not symtable.hasSymbol(w)
+
+        words = split_list(s,delim=' ')
+        tmp = []
+        for i in words:
+            out = i
+            if i.find('=')>0:
+                k,v = i.split('=')
+                if needs_quote(v): out = '%s="%s"'% (k,v)
+            elif needs_quote(i):
+                out ='"%s"' % i
+            tmp.append(out)
+        s = ' '.join(tmp)
+    #
     s = ', '.join([i.strip() for i in split_list(s, delim=' ')])    
-    return "%s(%s)" % (key,s)
+    expr = "%s(%s)" % (key,s)
+    return expr
     
+# 
+#             for j in range(len(args)):
+#                 if (args[j].find('=') == -1) and (args[j][0] not in '0123456789'):
+#                     # if an arg is not a symbol, and not quoted, add quotes
+#                     if not self.symbolTable.hasSymbol(args[j]):
+#                         #(ok,f,e) = find_matching_quote(args[j])
+#                         #if not ok:
+#                         #    args[j] = '"%s"' % args[j]
+#                         if args[j][0] not in ('"',"'"):
+#                             args[j] = '"%s"' % args[j]
+#             sarg = ','.join(args[:])
+# 
+
 def int2bin(x):
     """ convert integer to list of booleans: gauranteed to return 12 'bits'"""
     keys = ('000','001','010','011','100','101','110','111')
@@ -362,6 +402,15 @@ def show_list(lst,ncol=None,textwidth=80):
     return  pstr 
 
 
+def testCommand2Expr():
+    import Symbol
+    s  = Symbol.SymbolTable()
+    s.addVariable('avar',3)
+    s.addVariable('bvar',3)
+    print Command2Expr('func avar, bvar cvar, dvar=3',symtable=s)
+    print Command2Expr('func *.*  cvar, dvar=3',symtable=s)
+    
 
 if __name__ == '__main__':
     print 'tdl utility functions.'
+    

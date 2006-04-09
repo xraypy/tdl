@@ -394,7 +394,7 @@ class Evaluator:
             # check if command-like interpretation is reasonable
             if key.find('(')==-1  and key.find(',')==-1 and key.find('=')==-1:
                 if self.symbolTable.hasFunc(key):
-                    stack= self.expr_compile(Command2Expr(key,s))
+                    stack= self.expr_compile(Command2Expr(s,symtable=self.symbolTable))
                     if stack[0] != opcodes.function:
                         raise EvalException, 'syntax error: weird error with commad '
                     stack[0] = opcodes.command
