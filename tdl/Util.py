@@ -331,7 +331,7 @@ def mod_import(name):
         try:
             reload(name)
             return name
-        except:
+        except ImportError:
             s = 'Error loading module %s' % name
             PrintExceptErr(s) 
             return None
@@ -342,7 +342,7 @@ def mod_import(name):
             for comp in components[1:]:
                 mod = getattr(mod, comp)
             return mod 
-        except:
+        except ImportError:
             s = 'Error loading module %s' % name
             PrintExceptErr(s) 
             return None

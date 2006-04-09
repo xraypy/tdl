@@ -144,8 +144,10 @@ class SymbolTable:
 
         self.load_libs = []
         import TdlBuiltins, TdlNumLib
-        libs = (TdlBuiltins,TdlNumLib)
-        self.initialize(libs,clearAll=True)
+        init_libs = [TdlBuiltins,TdlNumLib]
+        if libs:
+            for lib in libs: init_libs.append(lib)
+        self.initialize(init_libs,clearAll=True)
 
     def initialize(self,libs=None,clearAll=False):
         if clearAll:
@@ -167,21 +169,25 @@ class SymbolTable:
                 components = lib.split('.')
                 for comp in components[1:]:
                     mod = getattr(mod, comp)
-            except:
+            except ImportError:
+                mod=None
                 s = 'Error loading module %s' % lib
                 PrintExceptErr(s)
 
         elif type(lib) == types.ModuleType:
             try:
                 mod = reload(lib)
-            except:
+            except ImportError:
+                mod = None
                 s = 'Error loading module %s' % lib
                 PrintExceptErr(s)
+        else:
+            print 'Invalid module:', lib
+            mod = None
 
         if mod is None: 
             return None
         
-
         title = getattr(mod,'title',mod.__name__)
         self.writer.write("    loading %s ..." % title)
         self.writer.flush()
@@ -263,7 +269,9 @@ class SymbolTable:
         if isValidName(group) and isValidName(name):
             if group not in self.sym.keys():self.sym[group]={}
             if name in self.sym[group].keys():
-                if self.sym[group][name].constant:  return (None,None)
+                if self.sym[group][name].constant:
+                    #print "%s.%s is Constant type, cannot overwrite" % (group,name)
+                    return (None,None)
             self.sym[group][name] = Symbol(name,value=value,type=type,code=code,
                                            desc=desc,group=group,**kws)
             return (group,name)

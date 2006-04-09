@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+############################################################################
+#
+# -------------
+# Modifications
+# -------------
+# 4-8-06 T2
+# small tweak to setting stdin/stdout so tdl_wxGUI will work.
+# small change to do_show_symbols, checks if key is a group.
+#
+############################################################################
 
 from Num import Num
 
@@ -27,8 +37,19 @@ class shell(cmd.Cmd):
 
         cmd.Cmd.__init__(self,completekey='tab')
 
-        self.stdin  = stdin  or sys.stdin
-        self.stdout = stdout or sys.stdout
+        if stdin is not None:
+            sys.stdin = self.stdin = stdin
+            self.use_rawinput = False
+        else:
+            self.stdin = sys.stdin
+            self.use_rawinput = True
+        if stdout is not None:
+            sys.stdout = self.stdout = stdout
+            #sys.stderr = stdout
+        else:
+            self.stdout = sys.stdout
+        #self.stdin  = stdin  or sys.stdin
+        #self.stdout = stdout or sys.stdout
 
         print self.banner % version.version
 
@@ -89,10 +110,10 @@ class shell(cmd.Cmd):
     def show_groups(self,args=None):
         " print list of groups"
         l = self.tdl.symbolTable.listGroups()
-        print "   Currently defined groups: "
-        show_more(show_list(l),writer=self.stdout)
         print "   Default Data     Group = '%s'" % self.tdl.symbolTable.dataGroup
         print "   Default Function Group = '%s'" % self.tdl.symbolTable.funcGroup
+        print "   ==Currently defined groups: "
+        show_more(show_list(l),writer=self.stdout)
 
     def show_group(self,grp):
         " list all contents of a group "
@@ -143,8 +164,10 @@ class shell(cmd.Cmd):
 
         elif key in ('-g', 'groups'):
             self.show_groups()
+            
         elif key in ('group') and len(args)>0:
             self.show_group(args[0].strip())
+
         else:
             args.insert(0,key)
             self.do_show_symbols(args)
@@ -179,6 +202,8 @@ class shell(cmd.Cmd):
                     self.show_function([key])
                 elif self.tdl.symbolTable.getVariable(key):
                     self.show_variable([key])
+                elif self.tdl.symbolTable.hasGroup(key):
+                    self.show_group(key)
                 elif msg == 'show':
                     print " cannot find %s (try 'help show' or 'show groups')" % key
                 else:

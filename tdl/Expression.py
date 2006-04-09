@@ -530,7 +530,7 @@ class Expression:
                                 if type(i) == types.FloatType: i = int(i)
                                 val = val[i]
                         if tok == opcodes.command:
-                            val = fcn.__cmdout__(val)
+                            val = fcn.__cmdout__(val,**kws)
                             
                     elif tok in (opcodes.uminus,opcodes.uplus):
                         val = work.pop()

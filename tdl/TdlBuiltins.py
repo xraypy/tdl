@@ -4,6 +4,11 @@
 # --------------
 # Modifications
 # --------------
+# 8-4-2006 T2:
+# - fix (hack) to _cwd for win32
+# - added **kws to _ls.  is this the right way to make sure __cmdout can get
+#   additional kw arguments not used by the function?
+#
 # 20-Mar-06 MN:  much rearranging, so that this modules holds all "builtins",
 #             including some numeric stuff (sin,  pi, etc)
 #         - eliminated 'delvar', as 'del' is now a real keyword
@@ -209,7 +214,7 @@ def _strstrip(var,delim=None):
     else: 
         return var.strip(delim)
 
-def _ls(arg= '.'):
+def _ls(arg= '.',**kws):
     " return list of files in the current directory "
     from glob import glob
     arg.strip()
@@ -218,7 +223,6 @@ def _ls(arg= '.'):
         return os.listdir(arg)
     else:
         return glob(arg)
-    
 
 def _ls_cmdout(x,ncol=None):
     " output for ls "
@@ -226,12 +230,18 @@ def _ls_cmdout(x,ncol=None):
 
 def _cwd(x=None):
     "return current working directory"
-    return os.getcwd()
+    ret = os.getcwd()
+    if sys.platform == 'win32':
+        ret = ret.replace('\\','/')
+    return ret
 
 def _cd(name):
     "change directorty"
     os.chdir(name)
-    return os.getcwd()    
+    ret = os.getcwd()
+    if sys.platform == 'win32':
+        ret = ret.replace('\\','/')
+    return ret
 
 def _more(name,pagesize=24):
     "list file contents"
@@ -338,7 +348,7 @@ def tdl_import(lib='', tdl=None,debug=False,reloadAll=False,clearAll=False,**kw)
     """
     import python modules that define tdl functions,
     import()               # re-imports all previously defined modules
-    load('x.py')           # re-imports all modules and include new module x.py
+    import('x.py')         # imports new module x.py
     import(clearAll=True)  # re-imports modules AND clears all data  
     """
     if tdl is None:
@@ -346,9 +356,9 @@ def tdl_import(lib='', tdl=None,debug=False,reloadAll=False,clearAll=False,**kw)
         return None
     if debug: print 'loading function modules.... '
     if lib=='' or reloadAll:
-        tdl.symbolTable.initialize(clearAll=clearAll)
-        
-    tdl.symbolTable.import_lib(lib)
+        tdl.symbolTable.initialize(libs=tdl.symbolTable.load_libs,clearAll=clearAll)
+    elif lib:
+        tdl.symbolTable.import_lib(lib)
     if debug: print 'import done.'
 
 def tdl_eval(expr, tdl=None,debug=False,**kw):

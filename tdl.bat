@@ -14,7 +14,7 @@ REM below are the paths to search for modules
 set TDL_PATH=%TDL_DIR%
 set TDL_PATH=%TDL_PATH%;%TDL_DIR%\\%TDL%
 set TDL_PATH=%TDL_PATH%;%TDL_DIR%\\modules
-set TDL_PATH=%TDL_PATH%;%TDL_DIR%\\modules\\xray
+set TDL_PATH=%TDL_PATH%;%TDL_DIR%\\modules\\IO
 set TDL_PATH=%TDL_PATH%;%TDL_DIR%\\modules\\GUI
 
 set TDL_INI_PATH=%TDL_DIR%
