@@ -347,8 +347,8 @@ class ExpressionParser:
         self.dictcount = 0
 
     def pushOp(self,op,count,count2=None,reset=False):
-        if count  != None: self.exprStack.append(count)
-        if count2 != None: self.exprStack.append(count2)
+        if count  is not None: self.exprStack.append(count)
+        if count2 is not None: self.exprStack.append(count2)
         if op:     self.exprStack.append(op)            
         if reset:  self.argcount=0
         
@@ -394,7 +394,7 @@ class Expression:
     
     def __init__(self,symbolTable=None,run_procedure=None,debug=0):
         self.symbolTable = symbolTable
-        if self.symbolTable == None: self.symbolTable = SymbolTable()
+        if self.symbolTable is None: self.symbolTable = SymbolTable()
 
         self.debug   = debug
         self.run_procedure = run_procedure
@@ -450,8 +450,8 @@ class Expression:
 
         if type(stack)==types.StringType and expr=='':  stack,expr = None,stack
 
-        if stack==None: stack = self.compile(expr)
-        if stack==None or len(stack)<1 or type(stack) != types.ListType:
+        if stack is None: stack = self.compile(expr)
+        if stack is None or len(stack)<1 or type(stack) != types.ListType:
             self.raise_error('cannot evaluate expression %s, %s' % (stack,expr))
         
         if expr != '': self.text = expr
@@ -464,7 +464,7 @@ class Expression:
             val = tok = code.pop()
             if self.debug>=64: print 'TOK ', tok
             
-            if tok==None:
+            if tok is None:
                 self.raise_error( 'evaluation error (unrecognized expression)')
 
             # numeric types get pushed immediately

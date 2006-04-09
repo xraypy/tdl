@@ -60,7 +60,7 @@ class shell(cmd.Cmd):
         else:
             for nam in args:
                 sym = self.tdl.symbolTable.getFunc(nam)
-                if sym == None:
+                if sym is None:
                     lout =" cannot find function %s " % nam
                 else:
                     lout = "%s:  %s\n" % (sym.name, sym)
@@ -79,7 +79,7 @@ class shell(cmd.Cmd):
         else:
             for nam in args:
                 sym = self.tdl.symbolTable.getData(nam)
-                if sym == None:
+                if sym is None:
                     lout =" cannot find variable %s " % nam
                 else:
                     lout = " %s:  %s\n" % (sym.name, sym)
@@ -216,7 +216,7 @@ class shell(cmd.Cmd):
             except:
                 x = 'unknown error'
             if not self._status and x is not None:
-                if detail==None: detail = s
+                if detail is None: detail = s
                 print x
                 print '='*60
                 traceback.print_exc()

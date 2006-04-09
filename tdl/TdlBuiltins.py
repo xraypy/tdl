@@ -204,7 +204,7 @@ def _strstrip(var,delim=None):
     if type(var) != types.StringType:
         print ' %s is not a string ' % var
         return None
-    if delim==None:
+    if delim is None:
         return var.strip()
     else: 
         return var.strip(delim)
@@ -264,7 +264,7 @@ def _type(x):
 
 def _path(add=None):
     "modify python path"
-    if add == None:
+    if add is None:
         for l in sys.path:
             print l
     else:
@@ -313,9 +313,9 @@ def tdl_tell(file,offset,whence=None,tdl=None,**kw):
     if type(file) == types.FileType: return file.tell()
 
 def tdl_set_debug(debug=None,tdl=None,**kw):
-    if tdl == None:
+    if tdl is None:
         return None
-    if debug == None:
+    if debug is None:
         debug = not tdl.debug
         
     tdl.set_debug(debug)
@@ -323,7 +323,7 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
 
 def tdl_load(fname, tdl=None,debug=False,**kw):
     " load file of tdl code"
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot run file %s ' % fname
         return None
     if debug: print 'load .... ', fname
@@ -341,7 +341,7 @@ def tdl_import(lib='', tdl=None,debug=False,reloadAll=False,clearAll=False,**kw)
     load('x.py')           # re-imports all modules and include new module x.py
     import(clearAll=True)  # re-imports modules AND clears all data  
     """
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot load function modules ' 
         return None
     if debug: print 'loading function modules.... '
@@ -353,7 +353,7 @@ def tdl_import(lib='', tdl=None,debug=False,reloadAll=False,clearAll=False,**kw)
 
 def tdl_eval(expr, tdl=None,debug=False,**kw):
     " evaluate tdl expression"
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot eval %s ' % expr
         return None
     return tdl.do_eval(expr)
@@ -361,7 +361,7 @@ def tdl_eval(expr, tdl=None,debug=False,**kw):
 def tdl_setvar(name,val,tdl=None,group=None,debug=False,**kws):
     "set default group"
     # print 'This is tdl setvar ', name, val, tdl, group, kws
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot setvar %s ' % expr
         return None
     name.strip()
@@ -374,7 +374,7 @@ def tdl_setvar(name,val,tdl=None,group=None,debug=False,**kws):
 
 def tdl_delvar(name,tdl=None,group=None,debug=False,**kw):
     "delete a variable or group"
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot setvar %s ' % expr
         return None
     name.strip()
@@ -388,10 +388,10 @@ def tdl_delvar(name,tdl=None,group=None,debug=False,**kw):
 
 def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
     "convert all data in a group to a single dictionary"
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot setgroup %s ' % expr
         return None
-    if gname == None: gname = tdl.symbolTable.getDataGroup()
+    if gname is None: gname = tdl.symbolTable.getDataGroup()
     gname = gname.strip()
     dict = {}
     dat = tdl.symbolTable.getAllData(group=gname)
@@ -403,27 +403,27 @@ def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
 
 def tdl_setdatagroup(gname=None,tdl=None,debug=False,**kw):
     "set default group"
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot setgroup %s ' % expr
         return None
-    if gname == None:
+    if gname is None:
         return tdl.symbolTable.getDataGroup()
     g = gname.strip()
     return tdl.symbolTable.setDataGroup(g)
 
 def tdl_setfuncgroup(gname=None,tdl=None,debug=False,**kw):
     "set default group"
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot setgroup %s ' % expr
         return None
-    if gname == None:
+    if gname is None:
         return tdl.symbolTable.getFuncGroup()
     g = gname.strip()
     return tdl.symbolTable.setFuncGroup(g)
 
 def tdl_func_as_cmd(name,tdl=None):
     "allow functions to act as commands"
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot setgroup %s ' % expr
         return None
     if tdl.symbolTable.hasFunc(name):
@@ -435,7 +435,7 @@ def tdl_func_as_cmd(name,tdl=None):
 def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     " read ascii file of tdl code"
     from ASCIIFile import ASCIIFile
-    if tdl == None:
+    if tdl is None:
         if debug: print 'cannot read file %s ' % fname
         return None
     if debug: print 'reading.... ', fname
@@ -450,7 +450,7 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     
     # save current group name
     savegroup = tdl.symbolTable.getDataGroup()
-    if group == None:
+    if group is None:
         group = savegroup
     else:
         group = tdl.symbolTable.setDataGroup(group)
@@ -508,10 +508,10 @@ def _range(x,stop=None,step=None,shape=None,dtype='d'):
                                      [ 12.  13.  14.  15.]
                                      [ 16.  17.  18.  19.]]
     """
-    if stop==None and step==None:         t = Num.arange(x,dtype=dtype)
-    elif stop != None and step == None:   t = Num.arange(x,stop,dtype=dtype)
-    elif stop != None and step != None:   t = Num.arange(x,stop,step,dtype=dtype)
-    elif stop == None and step != None:   t = Num.arange(0, x,step,dtype=dtype)
+    if stop is None and step is None:             t = Num.arange(x,dtype=dtype)
+    elif stop is not None and step is None:       t = Num.arange(x,stop,dtype=dtype)
+    elif stop is not None and step is not None:   t = Num.arange(x,stop,step,dtype=dtype)
+    elif stop is None     and step is not None:   t = Num.arange(0, x,step,dtype=dtype)
 
     if shape is None: return t
     reshaped = False

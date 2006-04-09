@@ -194,7 +194,7 @@ def list2array(s):
 
 def strip_ending_comma(s):
     " strip ending comma from a string"
-    if type(s)==types.StringType and s.endswith(','):  return s[:-1]
+    if type(s)== types.StringType and s.endswith(','):  return s[:-1]
     return s
 
 def find_matching_quote(s,quote='"',match=None):
@@ -203,7 +203,7 @@ def find_matching_quote(s,quote='"',match=None):
     """
     esc = "\\"
     j = s.find(quote)
-    if match == None: match = quote
+    if match is None: match = quote
     if j > -1 and s[j:j+len(quote)] == quote:
         p,k = (None,j)
         while k < j+len(s[j+1:]):
@@ -379,7 +379,7 @@ def show_list(lst,ncol=None,textwidth=80):
     "formatted list of stuff in a list or dict"
     nmax = -1
     if len(lst) == 0: return ""
-    if ncol == None:
+    if ncol is None:
         ncol = 1
         if type(lst) == types.ListType:        
             ncol = textwidth / (2 + max([len(i) for i in lst]))

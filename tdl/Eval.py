@@ -129,7 +129,7 @@ class Evaluator:
     def get_next_statement(self,s = None):
         " get and pre-process next program statement"
 
-        if s == None:  s,nline,fname = self.get_next_textline()
+        if s is None:  s,nline,fname = self.get_next_textline()
         # handle the case of triple quotes:
         #    join strings with a '\n' instead of ' '
         if s.find("'''")>-1   and not self.triple_dquote:
@@ -575,7 +575,7 @@ class Evaluator:
 
         savegroup = self.symbolTable.getDataGroup()
         group = self.symbolTable.addRandomGroup(prefix=name,nlen=4)
-        if group == None:
+        if group is None:
             raise EvalException, 'cannot run procedure %s (cannot create group??)' % name
         self.symbolTable.setDataGroup(group)
 
