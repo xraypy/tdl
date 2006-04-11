@@ -143,10 +143,10 @@ class SymbolTable:
         self.writer = writer
 
         self.load_libs = []
-        import TdlBuiltins, TdlNumLib
-        init_libs = [TdlBuiltins,TdlNumLib]
-        if libs:
-            for lib in libs: init_libs.append(lib)
+        import TdlBuiltins, TdlNumLib, Plotter
+        init_libs = [TdlBuiltins,TdlNumLib,Plotter]
+        if libs is not None:
+            init_libs.extend(libs)
         self.initialize(init_libs,clearAll=True)
 
     def initialize(self,libs=None,clearAll=False):
@@ -157,12 +157,13 @@ class SymbolTable:
             self.addBuiltin('data_group',mainGroup)
             self.addBuiltin('func_group',mainGroup)
             self.setSearchGroups()
-        if libs:
+        if libs is not None:
             for lib in libs: self.import_lib(lib)
 
     def import_lib(self,lib):
         " import or reload module given module name or object"
         if lib is None: return None
+        mod = None
         if type(lib) == types.StringType:
             try: 
                 mod = __import__(lib)
@@ -170,7 +171,6 @@ class SymbolTable:
                 for comp in components[1:]:
                     mod = getattr(mod, comp)
             except ImportError:
-                mod=None
                 s = 'Error loading module %s' % lib
                 PrintExceptErr(s)
 
@@ -178,21 +178,18 @@ class SymbolTable:
             try:
                 mod = reload(lib)
             except ImportError:
-                mod = None
                 s = 'Error loading module %s' % lib
                 PrintExceptErr(s)
-        else:
-            print 'Invalid module:', lib
-            mod = None
 
-        if mod is None: 
+        if mod is None:
+            self.writer.write("  cannot load module %s\n" % lib)
             return None
         
+        # mod is now a real module, not a string of the module name
+
         title = getattr(mod,'title',mod.__name__)
         self.writer.write("    loading %s ..." % title)
         self.writer.flush()
-
-        # mod is now a Module, not a string of the module name
         if mod not in self.load_libs: self.load_libs.append(mod)
         
         try:
