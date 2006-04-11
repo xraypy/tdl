@@ -129,7 +129,7 @@ def _getPlot(tdl=None):
 
 def tdl_plot(x,y=None,tdl=None,**kw):
     p = _getPlot(tdl=tdl)
-    if p is not None:  p.plot(x,y=y,**kw)
+    if p is not None:  p.oplot(x,y=y,**kw)
     else:       print 'cannot plot?'
 
 def tdl_newplot(x,y=None,tdl=None,**kw):
