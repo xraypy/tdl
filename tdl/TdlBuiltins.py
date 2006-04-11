@@ -486,74 +486,13 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     return ret
     
 
-def _int(x):
-    "wrap builtin int or Numpy astype(int)"
-    if type(x) == Num.ArrayType:
-        return x.astype(int)
-    else:
-        return int(x)
-
-def _float(x):
-    "wrap builtin float or numpy astype(float)"
-    if type(x) == Num.ArrayType:
-        return x.astype(float)
-    else:
-        return float(x)
-
-def _complex(x):
-    "wrap builtin complex or numpy astype(complex)"
-    if type(x) == Num.ArrayType:
-        return x.astype(complex)
-    else:
-        return complex(x)
-
-
-def _range(x,stop=None,step=None,shape=None,dtype='d'):
-    """create an array of evenly spaced values:
-        range(x, [stop=stop, [step=step, [shape=shape, [dtype='d']]]])
-
-    Thus,
-       range(10)
-    returns [0. 1. 2. 3. 4. 5. 6. 7. 8. 9.] (the first 10 numers, as double precision)
-    other variations: 
-       range(2,5)               -> [2. 3. 4.]
-       range(2,10,2)            -> [2. 4. 6. 8.]
-       range(2,10,2,dtype='i')  -> [2 4 6 8]
-
-       range(20,shape=[5,4])    ->  [[  0.   1.   2.   3.]
-                                     [  4.   5.   6.   7.]
-                                     [  8.   9.  10.  11.]
-                                     [ 12.  13.  14.  15.]
-                                     [ 16.  17.  18.  19.]]
-    """
-    if stop is None and step is None:             t = Num.arange(x,dtype=dtype)
-    elif stop is not None and step is None:       t = Num.arange(x,stop,dtype=dtype)
-    elif stop is not None and step is not None:   t = Num.arange(x,stop,step,dtype=dtype)
-    elif stop is None     and step is not None:   t = Num.arange(0, x,step,dtype=dtype)
-
-    if shape is None: return t
-    reshaped = False
-    if type(shape) in  (types.ListType,types.TupleType):
-        npts = 1
-        for i in shape: npts = npts*int(i)
-        if npts == len(t):
-            try:
-                t = Num.array(t)
-                t.shape = tuple(shape)
-                return t
-            except ValueError:
-                pass
-    # if we got here, there's a value error
-    raise ValueError, ' could not re-shape array to shape = %s ' % repr(shape)
-            
 
 #################################################################
 # Load the functions
 #################################################################
 
 # constants to go into _builtin name space
-_consts_ = {"True": True, "False":False, "None":None,
-            "pi":Num.pi, "e":Num.e}            
+_consts_ = {"_builtin.True": True, "_builtin.False":False, "_builtin.None":None}
 
 _help_  = {'builtins': HelpBuiltins,
            'i/o':HelpIO,
@@ -591,27 +530,12 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.dictkeys":(_dictkeys,None),
           "_builtin.dictvals":(_dictvals,None),
           "_builtin.dictitems":(_dictitems,None),
-          "_builtin.array":Num.array,
-          "_builtin.sin":Num.sin,
-          "_builtin.cos":Num.cos,
-          "_builtin.tan":Num.tan,          
-          "_builtin.exp":Num.exp,
-          "_builtin.ln":Num.log,
-          "_builtin.log":Num.log,
-          "_builtin.log10":Num.log10,
-          "_builtin.sqrt":Num.sqrt,
-          "_builtin.int": _int,
-          "_builtin.float": _float,
-          "_builtin.complex": _complex,
-          "_builtin.range":_range,
-          "_builtin.arange":_range,
           "_builtin.open":tdl_open,
           "_builtin.close":tdl_close,
           "_builtin.write":tdl_write,
           "_builtin.read":tdl_read,
           "_builtin.readlines":tdl_readlines,
           "_builtin.group2dict":tdl_group2dict,
-          
           }
 
 
