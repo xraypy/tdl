@@ -7,7 +7,7 @@ import types
 import Tkinter
 import matplotlib
 import matplotlib.numerix as numpy
-matplotlib.use('TKAgg')
+matplotlib.use('TkAgg')
 
 import PlotFrame, PlotPanel
 PlotFrame = PlotFrame.PlotFrame

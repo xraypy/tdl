@@ -57,7 +57,7 @@ Matt Newville <newville@cars.uchicago.edu>"""
 
 
     def __init__(self, parent, messenger=None,report_xy = None,
-                 size=(6.00,3.70), dpi=96, **kwds):
+                 size=(8.00,5.00), dpi=100, **kwds):
 
         self.is_macosx = False
         if os.name == 'posix':
@@ -99,6 +99,19 @@ Matt Newville <newville@cars.uchicago.edu>"""
         self.dpi     = dpi
         self.__BuildPanel(**kwds)
 
+    def get_array(self,x):
+        " coerce data into Num.ArrayType -- as is the wrong version of numerix is in use!!"
+        if type(x) is Num.ArrayType:  return x
+        xd = Num.array([0])
+        try:
+            xd = Num.array(x.tolist())
+        except AttributeError:
+            try:
+                xd = Num.array(x)
+            except:
+                print 'cannot plot data... type mismatch!!!'
+        return xd
+            
     def plot(self,xdata,ydata=None, label=None,
              color=None,  style =None, linewidth=None,
              marker=None,   markersize=None,
@@ -133,17 +146,19 @@ Matt Newville <newville@cars.uchicago.edu>"""
         if ydata is None:
             ydata = xdata
             xdata = Num.arange(len(ydata))
-            
+
         yscale = 'linear'
         if (self.ylog_scale and min(ydata) > 0):  yscale = 'log'
         self.axes.set_yscale(yscale, basey=10)
 
+        xd = self.get_array(xdata)
+        yd = self.get_array(ydata)
 
-        self._lines = self.axes.plot(xdata,ydata)
-        self.data_range    = [min(self.data_range[0],min(xdata)),
-                              max(self.data_range[1],max(xdata)),
-                              min(self.data_range[2],min(ydata)),
-                              max(self.data_range[3],max(ydata))]
+        self._lines = self.axes.plot(xd,yd)
+        self.data_range    = [min(self.data_range[0],min(xd)),
+                              max(self.data_range[1],max(xd)),
+                              min(self.data_range[2],min(yd)),
+                              max(self.data_range[3],max(yd))]
 
 
         cnf  = self.conf

@@ -65,8 +65,11 @@ att Newville <newville@cars.uchicago.edu>"""
     balloonhelp     = 0
     busyCursor = 'watch'
     
-    def __init__(self, root=None, size=(650,375), exit_callback=None, **kwds):
-        self.exit_callback = exit_callback
+    def __init__(self, root=None, size=(650,375),
+                 cursor_callback=None,
+                 exit_callback=None, **kwds):
+        self.exit_callback   = exit_callback
+        self.cursor_callback = cursor_callback
         if root is None: root = Tk.Tk()
         self.root = root
         optiondefs = (
@@ -292,10 +295,11 @@ att Newville <newville@cars.uchicago.edu>"""
         self.statusmsg.configure(text=val)
 
     def setXYtext(self,val):
-        x,y = val.split('&')
-        self.status_x.configure(text="X: %12.6g" % float(x))
-        self.status_y.configure(text="Y: %12.6g" % float(y))
-        self.cursor = (float(x),float(y))
+        x,y = [float(i) for i in val.split('&')]
+        self.status_x.configure(text="X: %12.6g" % x)
+        self.status_y.configure(text="Y: %12.6g" % y)
+        self.cursor = (x,y)
+        if self.cursor_callback is not None: self.cursor_callback(x,y)        
 
     def createMenuBar(self):
         self.menuBar = Pmw.MenuBar(self._hull,
