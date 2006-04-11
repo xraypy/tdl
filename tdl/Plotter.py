@@ -11,50 +11,63 @@ plot_group = '_plot'
 plot_obj   = 'plotter'
 _plotter   = "%s.%s" % (plot_group,plot_obj)
 class Plotter:
-    def __init__(self, root=None, tdl=None,
+    plot_attribs = {'title':'set_title',
+                    'xlabel':'set_xlabel',
+                    'ylabel':'set_ylabel'}
+    def __init__(self, tdl, root=None,
                  exit_callback=None,
                  cursor_callback=None,
                  **kwds):
         self.plotter= None
+        
         self.tdl  = tdl
         self.root = root
         self.kwds = kwds
         self.exit_callback = exit_callback
         self.cursor_callback = cursor_callback
-
-    def createPlotter(self,**kwds):
-        if self.plotter is None:
-            self.plotter= TkPlotter.PlotFrame(self.root,
-                                              exit_callback=self.onExit,
-                                              cursor_callback=self.onCursor,
-                                              **kwds)
-            self.root = self.plotter.root
-            self.tdl.symbolTable.addVariable(_plotter,value=self,constant=True)
+        self.symtable = self.tdl.symbolTable
+        self.symtable.addVariable(_plotter,value=self,constant=True)
+        
+        self.plotter= TkPlotter.PlotFrame(self.root,
+                                          exit_callback=self.onExit,
+                                          cursor_callback=self.onCursor,
+                                          **kwds)
+        self.root = self.plotter.root
 
             
     def onCursor(self,x=None,y=None,event=None):
-        if self.tdl is not None:
-            self.tdl.symbolTable.setVariable('%s.x'%plot_group,x)
-            self.tdl.symbolTable.setVariable('%s.y'%plot_group,y)
-
+        self.symtable.setVariable('%s.cursor_x'%plot_group,x)
+        self.symtable.setVariable('%s.cursor_y'%plot_group,y)
         
     def onExit(self,event=None):
         self.plotter.destroy()
         self.plotter = self.root = None
-        if self.tdl is not None:
-            self.tdl.symbolTable.deleteSymbol(_plotter,override=True)
+        self.symtable.deleteSymbol(_plotter,override=True)
 
-        
+
+    def setPlotOptions(self):
+        " sets plotting options based on tdl variables (all in the _plot group)"
+        if self.tdl is None: return
+        getval = self.symtable.getSymbolValue
+        for name,method in self.plot_attribs.items():
+            val = getval("%s.%s" % (plot_group,name),default=None)
+            if val is not None:
+                val = r"%s" % val
+                getattr(self.plotter,method)(val)
+    
     def plot(self,x,y=None,**kw):
         """plot after cleaing current plot """        
+        self.setPlotOptions()
         self.plotter.plot(x,y=y,**kw)
         
     def oplot(self,x,y=None,**kw):
         """generic plotting method, overplotting any existing plot """
+        self.setPlotOptions()
         self.plotter.oplot(x,y=y,**kw)
 
     def show_map(self,z, **kw):
         """generic plotting method, overplotting any existing plot """
+        self.setPlotOptions()
         self.plotter.show_map(z,**kw)
 
     def update_line(self,t,x,y,**kw):
@@ -105,26 +118,19 @@ class Plotter:
 
 
 
-def _initPlot(tdl=None):
-    if tdl is None: return None
-    p = Plotter(tdl=tdl)
-    p.createPlotter()
-
 def _getPlot(tdl=None):
     if tdl is None: return None
     p = tdl.symbolTable.getSymbol(_plotter)
     if p is None or p.value is None:
-        _initPlot(tdl=tdl)
-        p = tdl.symbolTable.getSymbol(_plotter)
+        px = Plotter(tdl)
+        p  = tdl.symbolTable.getSymbol(_plotter)
         if p is None: return None
     return p.value
 
 def tdl_plot(x,y=None,tdl=None,**kw):
     p = _getPlot(tdl=tdl)
-    if p is not None:
-        p.plot(x,y=y,**kw)
-    else:
-        print 'cannot plot?'
+    if p is not None:  p.plot(x,y=y,**kw)
+    else:       print 'cannot plot?'
 
 def tdl_newplot(x,y=None,tdl=None,**kw):
     tdl_plot(x,y=y,tdl=tdl,new=True,**kw)
