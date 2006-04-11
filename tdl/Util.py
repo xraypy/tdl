@@ -188,7 +188,7 @@ def list2array(s):
         try:
             for i in s:  x = abs(i)
             s = Num.array(s)
-        except TypeError:
+        except (TypeError,AttributeError):
             pass
     return s
 

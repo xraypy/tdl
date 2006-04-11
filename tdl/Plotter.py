@@ -2,26 +2,47 @@
 ##
 ## A simple plotting frame, wrapping Tk and matplotlib
 
-import TkPlotter
 
+import TkPlotter
+import Tkinter as Tk
+import Pmw
+
+plot_group = '_plot'
+plot_obj   = 'plotter'
+_plotter   = "%s.%s" % (plot_group,plot_obj)
 class Plotter:
-    def __init__(self, root=None, exit_callback=None, **kwds):
+    def __init__(self, root=None, tdl=None,
+                 exit_callback=None,
+                 cursor_callback=None,
+                 **kwds):
         self.plotter= None
+        self.tdl  = tdl
         self.root = root
         self.kwds = kwds
         self.exit_callback = exit_callback
+        self.cursor_callback = cursor_callback
 
     def createPlotter(self,**kwds):
         if self.plotter is None:
             self.plotter= TkPlotter.PlotFrame(self.root,
                                               exit_callback=self.onExit,
+                                              cursor_callback=self.onCursor,
                                               **kwds)
             self.root = self.plotter.root
+            self.tdl.symbolTable.addVariable(_plotter,value=self,constant=True)
+
             
+    def onCursor(self,x=None,y=None,event=None):
+        if self.tdl is not None:
+            self.tdl.symbolTable.setVariable('%s.x'%plot_group,x)
+            self.tdl.symbolTable.setVariable('%s.y'%plot_group,y)
+
+        
     def onExit(self,event=None):
         self.plotter.destroy()
         self.plotter = self.root = None
-        if self.exit_callback is not None: self.exit_callback()
+        if self.tdl is not None:
+            self.tdl.symbolTable.deleteSymbol(_plotter,override=True)
 
         
     def plot(self,x,y=None,**kw):
@@ -84,41 +105,68 @@ class Plotter:
 
 
 
-plotter_symbol = '_plot.plotter'
 def _initPlot(tdl=None):
     if tdl is None: return None
-    def _onClosePlot():
-        tdl.symbolTable.deleteSymbol(plotter_symbol,override=True)
-
-    p = Plotter(exit_callback=_onClosePlot)
+    p = Plotter(tdl=tdl)
     p.createPlotter()
-    tdl.symbolTable.addVariable(plotter_symbol,value=p,constant=True)
 
 def _getPlot(tdl=None):
     if tdl is None: return None
-    p = tdl.symbolTable.getSymbol(plotter_symbol)
+    p = tdl.symbolTable.getSymbol(_plotter)
     if p is None or p.value is None:
         _initPlot(tdl=tdl)
-        p = tdl.symbolTable.getSymbol(plotter_symbol)
+        p = tdl.symbolTable.getSymbol(_plotter)
         if p is None: return None
-
     return p.value
 
-def tdl_plot(x,y=None,tdl=None,new=False,**kw):
+def tdl_plot(x,y=None,tdl=None,**kw):
     p = _getPlot(tdl=tdl)
-    if p is None:
+    if p is not None:
+        p.plot(x,y=y,**kw)
+    else:
         print 'cannot plot?'
-        return None
-    plotfcn = p.plot
-    if not new: plotfcn = p.oplot
-    plotfcn(x,y=y,**kw)
 
 def tdl_newplot(x,y=None,tdl=None,**kw):
-    tdl_plot(x,y=y,tdl=None,new=True,**kw)
+    tdl_plot(x,y=y,tdl=tdl,new=True,**kw)
 
-# functions to add to namespace
+##########################
+# todo:
+#  -  control of legend, titles, etc  (tdl functions??)
+#  -  draw box on zooming
+#  -  GUI config
+
+title = 'Tk Plotting library'
+
 HelpPlot = """
-  Plotting in TDL (simple plots)
+  Simple Plotting in tdl:  there are two basic plotting commands:
+     plot(x,y, ....)
+  to add a trace to the existing plot, or the slight variation
+     newplot(x,y, ....)
+  which will clear the existing plot before plotting x and y
+
+  There are several options to set line color, size, marker type, etc,
+  that all come in keyword=value pairs  (say, color='red')
+      option      meaning           example arguments
+      ---------------------------------------------------------
+      color       line color       'red', 'blue', '#EE00DD'
+      style       line style       'solid','dashed', 'dotted'
+      linewidth   width of line    1,2,3,4, 0 = 'no line'
+      marker      plot symbol      '+','.','o','square',....
+      markersize  size of marker   1,2,3,4, 0 = 'no marker'
+      label       text label       'trace 1'
+      yaxis       side for yaxis   'left', 'right'
+      
+  examples:
+     x = arange(100)
+     y = sin(x/5)
+     z = cos(x/4)
+
+     newplot(x,y,color='red')
+     plot(x,z,color='black')
+     plot(x,z,color='blue',style='dotted',linewidth=5)
+     plot(x,z,color='green',linewidth=0,marker='+')           
+
+   
 """
 
 _help_ = {'plotting': HelpPlot}

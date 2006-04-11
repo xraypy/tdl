@@ -24,7 +24,8 @@ import re
 from copy import deepcopy
 
 from Num import Num
-from Util import find_unquoted_char, split_delim, datalen, PrintExceptErr
+from Util import find_unquoted_char, split_delim, datalen
+from Util import PrintExceptErr, PrintShortExcept
 
 random.seed(time.time())
 
@@ -143,8 +144,9 @@ class SymbolTable:
         self.writer = writer
 
         self.load_libs = []
-        import TdlBuiltins, TdlNumLib, Plotter
-        init_libs = [TdlBuiltins,TdlNumLib,Plotter]
+        init_libs = []
+        sys.path.append(os.path.join(os.getcwd(),'tdl'))
+        init_libs = ['TdlBuiltins','TdlNumLib','Plotter']
         if libs is not None:
             init_libs.extend(libs)
         self.initialize(init_libs,clearAll=True)
@@ -163,7 +165,7 @@ class SymbolTable:
     def import_lib(self,lib):
         " import or reload module given module name or object"
         if lib is None: return None
-        mod = None
+        mod, msg = None, None
         if type(lib) == types.StringType:
             try: 
                 mod = __import__(lib)
@@ -171,18 +173,18 @@ class SymbolTable:
                 for comp in components[1:]:
                     mod = getattr(mod, comp)
             except ImportError:
-                s = 'Error loading module %s' % lib
-                PrintExceptErr(s)
+                msg = '    Error loading module %s:' % lib
+
 
         elif type(lib) == types.ModuleType:
             try:
                 mod = reload(lib)
             except ImportError:
-                s = 'Error loading module %s' % lib
-                PrintExceptErr(s)
+                msg = '    Error loading module %s:' % lib
 
         if mod is None:
-            self.writer.write("  cannot load module %s\n" % lib)
+            self.writer.write("    cannot load module %s !" % lib)
+            if msg is not None: PrintShortExcept(msg)
             return None
         
         # mod is now a real module, not a string of the module name
