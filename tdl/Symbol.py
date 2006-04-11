@@ -17,7 +17,6 @@
 import types
 import os
 import random
-import time
 import sys
 import inspect
 import re
@@ -27,14 +26,25 @@ from Num import Num
 from Util import find_unquoted_char, split_delim, datalen
 from Util import PrintExceptErr, PrintShortExcept
 
-random.seed(time.time())
+random.seed(0)
 
 # should these be moved to a more common place?
 DataTypes = ('variable','constant','defvar')
 FuncTypes = ('pyfunc','defpro')
 SymbolTypes = DataTypes + FuncTypes
 SymbolTypeError = """SymbolTypeError: Valid type are:\n%s """ % str(SymbolTypes)
-NameError = """Invalid variable/function name"""
+
+## NameError = """Invalid variable/function name"""
+
+# Default data groups
+#  search order will bw dataGroup,funcGroup,mainGroup,builtinGroup,mathGroup
+builtinGroup   = '_builtin'
+mainGroup    = '_main'
+mathGroup    = '_math'
+plotGroup    = '_plot'
+
+isValidName = re.compile(r'[a-zA-Z_\$][a-zA-Z0-9_]*').match
+
 
 class Symbol:
     """
@@ -128,12 +138,7 @@ class Symbol:
             return "<Procedure %s: args='%s'>" % (name,args)
         return "<Symbol %s: %s : %s>" % (name, self.type,repr(self.value))
     
-#Default data groups
-#search order should be dataGroup,funcGroup,mainGroup,builtinGroup
-builtinGroup   = '_builtin'
-mainGroup    = '_main'
 
-isValidName = re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*').match
 class SymbolTable:
     """
     table of symbols and namespaces storing all functions and variables
@@ -153,7 +158,10 @@ class SymbolTable:
 
     def initialize(self,libs=None,clearAll=False):
         if clearAll:
-            self.sym    = {builtinGroup: {}, mainGroup: {}}
+            self.sym    = {builtinGroup: {},
+                           mathGroup: {},
+                           plotGroup: {},                           
+                           mainGroup: {}}
             self.dataGroup = mainGroup
             self.funcGroup = mainGroup
             self.addBuiltin('data_group',mainGroup)
@@ -196,7 +204,7 @@ class SymbolTable:
         
         try:
             for nam,val in getattr(mod,'_consts_',{}).items():
-                self.addBuiltin(nam,val)
+                self.addVariable(nam,val,constant=True)
             for nam,val in getattr(mod,'_var_',{}).items():
                 self.addSymbol(nam,value=val,type='variable')
             for nam,val in getattr(mod,'_func_',{}).items():
@@ -329,12 +337,12 @@ class SymbolTable:
             return self.sym[group][name]
         return None
 
-    def getSymbolValue(self,name,groups=None):
+    def getSymbolValue(self,name,groups=None,default=None):
         sym = self.getSymbol(name,groups=groups,create=False)
         if sym:
             return sym.value
         else:
-            return None
+            return default
 
 
     #### Group manipulation and symbol checking
@@ -410,7 +418,7 @@ class SymbolTable:
 
     def setSearchGroups(self):
         self.searchGroups = [self.dataGroup]
-        for i in (self.funcGroup,mainGroup,builtinGroup):
+        for i in (self.funcGroup,mainGroup,builtinGroup,mathGroup,plotGroup):
             if i not in self.searchGroups: self.searchGroups.append(i)
         return self.searchGroups
     
@@ -657,7 +665,8 @@ class SymbolTable:
     # builtins
     def addBuiltin(self,name,value,desc=None):
         " add a symbol to the _builtin group, and make it a 'constant'"
-        if name.find('.') > -1: raise NameError
+        if name.find('.') > -1:
+            raise NameError, name
         return self.addSymbol(name,value=value,group=builtinGroup,type='constant')
 
     def setBuiltin(self,name,value,desc=None):

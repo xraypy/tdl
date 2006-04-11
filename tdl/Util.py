@@ -167,18 +167,20 @@ def unescape_string(s):
     for i,j in escapes: s = s.replace(i,j)
     return s
 
-def trimstring(s):
+def trimstring(s,use_raw=False):
     " trim leading 'quotes' from string variables"
     # print 'trim string inp: ', s
-
     if type(s) != types.StringType: return s
-    if  ((s.startswith("'''")  and s.endswith("'''")) or
-         (s.startswith('"""')  and s.endswith('"""'))):
-        s = s[3:-3]
-    elif ((s.startswith("'")  and s.endswith("'")) or
-          (s.startswith("\"") and s.endswith("\"")) ):
-        s = s[1:-1]
-    return unescape_string(s)
+    if (s.startswith("'''")  and s.endswith("'''")):
+        s = r'%s' % s[3:-3]
+    elif (s.startswith('"""')  and s.endswith('"""')):
+        s = unescape_string(s[3:-3])
+    elif (s.startswith("'")  and s.endswith("'")):
+        s = r'%s' % s[1:-1]
+    elif (s.startswith("\"") and s.endswith("\"")):
+        s = unescape_string(s[1:-1])
+    return s
+    #  return unescape_string(s)
 
 
 def list2array(s):

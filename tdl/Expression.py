@@ -316,6 +316,7 @@ class ExpressionParser:
         return toks[0]
 
     def pushDictArg(self, s, loc, toks ):
+        print ' push Dict Arg ', toks
         t = [trimstring(toks[0]), toks[1]]
         self.pushFirst(s,loc,t,op=opcodes.assign)
         self.dictcount = self.dictcount + 1
@@ -333,10 +334,14 @@ class ExpressionParser:
         return self.pushFirst(s,loc,[cast(toks[0])])
 
     def pushString(self, s, loc, toks ):
-        if loc == 0 and (s.startswith('"""') or s.startswith("'''")):
-            t = ["'''%s'''" % trimstring(i) for i in toks]
+        if loc == 0 and s.startswith('"""'):
+            t = ['"""%s"""' % trimstring(i) for i in toks]
+        elif loc == 0 and s.startswith("'''"):
+            t = ['"""%s"""' % trimstring(i) for i in toks]            
+        elif s.startswith('"'):
+            t = ['"%s"' % trimstring(i) for i in toks]
         else:
-            t = ["'%s'" % trimstring(i) for i in toks]
+            t = ["'%s'" % trimstring(i) for i in toks]            
         return self.pushFirst(s,loc,t,op=opcodes.string)
     
     def pushList(self, s, loc, toks ):
@@ -537,7 +542,8 @@ class Expression:
                         if tok == opcodes.uminus: val = - val
 
                     elif tok == opcodes.string:
-                        val = trimstring(work.pop())
+                        x = work.pop()
+                        val = trimstring(x)
 
                     elif tok == opcodes.list:
                         nx  = work.pop()
