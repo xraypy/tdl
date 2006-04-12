@@ -12,7 +12,7 @@ setup(
     author_email = email,
     description = desc,
     package_dir = {'tdl': 'lib'},
-    packages = ['tdl'],
+    packages = ['tdl','tdl.TkPlotter'],
     license = 'Python',
     data_files  = [('bin',['tdl'])]
 )

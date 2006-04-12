@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 ############################################################################
 # T. Trainor
 #
@@ -15,7 +15,7 @@ import os, string, sys, getopt
 import ConfigParser
 try:
     import lib as tdl
-    sys.path.append('lib')
+    sys.path.append(os.path.abspath('lib'))
 except:
     import tdl
 
@@ -78,7 +78,7 @@ if startup:
         print libs
 
     if use_wxGUI == False:
-        t = tdl.Shell.shell(libs=libs,debug=debug,intro=None)
+        t = tdl.shell(libs=libs,debug=debug,intro=None)
         t.tdl.symbolTable.addBuiltin('GUI','TkAgg')
         t.cmdloop()
     elif use_wxGUI == True:

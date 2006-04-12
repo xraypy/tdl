@@ -23,6 +23,7 @@ import Expression
 import Help
 import Util
 import Symbol
+import Plotter
 import Shell
 shell = Shell.shell
 
