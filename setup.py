@@ -11,7 +11,8 @@ setup(
     author =  author,
     author_email = email,
     description = desc,
-    package_dir = {'tdl': 'tdl'},
+    package_dir = {'tdl': 'lib'},
     packages = ['tdl'],
     license = 'Python',
+    data_files  = [('bin',['tdl'])]
 )
