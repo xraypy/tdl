@@ -215,11 +215,11 @@ class ExpressionParser:
         self.argcount  = 0
         self.dictcount = 0
         s = s.strip()
-        try:
+        if True: # try:
             self.expr.parseString(s)
-        except ParseException:
-            self.exprStack = []
-            raise ParseException, s
+        # except ParseException:
+        #self.exprStack = []
+        #    raise ParseException, s
         # reversing the stack is the default...
         # set reverse=True to NOT reverse the stack
         if not reverse: self.exprStack.reverse()
@@ -243,6 +243,7 @@ class ExpressionParser:
         return []
 
     def pushSlice2(self, s, loc, toks ):
+        # print 'push Slice 2 ', s, toks, self.exprStack
         p1  = self.exprStack.pop()
         if len(toks)==0:
             if p1 != opcodes.colon:
@@ -287,10 +288,11 @@ class ExpressionParser:
             print ' ExprParse: pushSymbol ', toks, self.argcount, self.exprStack
         if len(toks)>1:
             paren_level = 0
+            if toks[1] == '(': op = opcodes.function
             for i in toks[1:]:
                 if i == '(' and paren_level==0:
                     paren_level = 1
-                    op = opcodes.function
+                    # op = opcodes.function
                     na = self.argcount
                     self.argcount  = 0
                 elif i == ')':
@@ -299,7 +301,7 @@ class ExpressionParser:
                     n = n + 1
                 elif i != '[' and paren_level==0:
                     t.append(i)
-        if self.debug>=16:
+        if self.debug>=5:
             print ' ExprParse: pushSymbol ', op, na, n, t
             
         if op == opcodes.function and n==0:  # regular function call
@@ -468,7 +470,9 @@ class Expression:
         
         work = []        
         code = stack[:]
+
         if self.debug>=8:        print ' evaluate ', expr, '\n -> ', code
+        # print ' evaluate ', expr, '\n -> ', code        
 
         while len(code)> 0:
             val = tok = code.pop()
@@ -480,12 +484,14 @@ class Expression:
             # numeric types get pushed immediately
             if type(tok) == types.StringType:
                 if tok.startswith(opcodes.prefix):
-                    if tok == opcodes.empty:
+                    if tok == opcodes.colon:
+                        continue
+                    elif tok == opcodes.empty:
                         pass
                     ## special case for assignments...
                     elif tok == opcodes.symbol:
                         return work
-
+                    
                     elif tok == opcodes.variable: # simple variable reference
                         nam = work.pop()
                         sym = self.get_symbol(nam)
@@ -603,13 +609,15 @@ class Expression:
         return work
 
 if __name__ == '__main__':
-    p = Expression(debug=4)
+    p = Expression(debug=7)
     s = p.symbolTable
     s.addVariable('a',Num.arange(30.))
     s.addVariable('b',Num.arange(15.))
     s.addVariable('format1',' %s = %f ')
     s.addVariable('dlist',['b',12])
     s.addVariable('x',2.2)
+    s.addVariable('ix',4)
+    s.addVariable('st','a long string here')
         
     t = ('a', 'a[2]', 'a[:7]', 'a[4:10]', 'b[9:]')
     t = ('a', 'a[2]',
@@ -622,8 +630,7 @@ if __name__ == '__main__':
          " format1  % dlist",
          )
     t = (' sqrt(x+1)', 'sqrt((x+1)) ' ,
-         'sqrt((a+1)/3)',)
-    t = (     'sqrt((a+1)/4)[3]' , )
+         'sqrt((a+1)/4)[3]' , 'cos(x)' , 'a[2:]', 'st[2:8]', 'st[2:len(st)-7]')
          
     for i in t:
         print '========================\n< ', i , ' > '
