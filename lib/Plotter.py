@@ -3,7 +3,7 @@
 ## A simple plotting frame, wrapping Tk and matplotlib
 
 
-import tdl.TkPlotter as TkPlotter
+import TkPlotter 
 import Tkinter as Tk
 import Pmw
 import types

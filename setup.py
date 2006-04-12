@@ -4,7 +4,7 @@
 import distutils
 from distutils.core import setup, Extension
 
-from  tdl.version import name,version,author,email,desc
+from  lib.version import name,version,author,email,desc
 setup(
     name = name,
     version = version,

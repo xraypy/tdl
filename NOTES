@@ -1,0 +1,35 @@
+
+This file contains Notes, Issues, and Bugs.
+
+Apr-12-06 MN
+
+- Moved around layout and setup.py / distutils.  The main executable script
+  is now just 'tdl' and gets installed on Unix systems.
+
+- Changed string handling so that 'single quote' strings have literal \*
+  escape sequences, and "double quote" strings have interpreted \* escape
+  sequences.  
+  tdl> print 'a\nb'
+  a\nb
+  tdl> print "a\nb"
+  a
+  b
+
+Apr-11-06 MN 
+
+- Added (and played much with) simple plotting with TkPlotter 
+  over the past couple days.  The plot and newplot functions added, with 
+  key/val args for color, style, etc.  In addition, the _plot namespace
+  is used for interacting with the plotter:
+    _plot.cursor_x, _plot.cursor_y    cursor values
+    _plot.xlabel, _plot.ylabel, _plot.title   x-, y-labels, title.
+
+
+4-8-06 T2
+- In order for a fcn__cmdout to recieve additional keyword arguments, 
+two small changes are needed: 1) in Expression.py the call to __cmdout__
+needs to pass **kws, and the function it self must have **kws defined.  
+Is there a better way to do that (see the ls example).
+
+- Unfortunatley still get funky output for path like strings on windows... 
+
