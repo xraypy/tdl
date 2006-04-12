@@ -16,6 +16,7 @@ import ConfigParser
 try:
     import lib as tdl
     sys.path.append(os.path.abspath('lib'))
+    print '  ############## This is TDL devel ##############'
 except:
     import tdl
 
