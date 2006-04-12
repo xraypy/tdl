@@ -92,7 +92,7 @@ Matt Newville <newville@cars.uchicago.edu>"""
         self.view_lim  = (None,None,None,None)
         self.zoom_lims = [self.view_lim]
         self.old_zoomdc= (None,(0,0),(0,0))
-        self.data_range  = [0,0,0,0]
+        self.data_range  = [None,None,None,None]
 
         self.parent    = parent
         self.figsize = size
@@ -123,8 +123,7 @@ Matt Newville <newville@cars.uchicago.edu>"""
 
         self.axes.cla()
         self.conf.ntraces  = -1
-        self.data_range    = [min(xdata),max(xdata),
-                              min(ydata),max(ydata)]
+
         if xlabel != None:   self.set_xlabel(xlabel)
         if ylabel != None:   self.set_ylabel(ylabel)            
         if title  != None:   self.set_title(title)
@@ -155,10 +154,7 @@ Matt Newville <newville@cars.uchicago.edu>"""
         yd = self.get_array(ydata)
 
         self._lines = self.axes.plot(xd,yd)
-        self.data_range    = [min(self.data_range[0],min(xd)),
-                              max(self.data_range[1],max(xd)),
-                              min(self.data_range[2],min(yd)),
-                              max(self.data_range[3],max(yd))]
+        self.set_data_range(xd,yd)
 
 
         cnf  = self.conf
@@ -217,16 +213,16 @@ Matt Newville <newville@cars.uchicago.edu>"""
     def set_xylims(self, xyrange,autoscale=True):
         """ update xy limits of a plot, as used with .update_line() """
 
-        try:
-            self.axes.set_xlim((xyrange[0],xyrange[1]),emit=True)
-            self.axes.set_ylim((xyrange[2],xyrange[3]),emit=True)
-            self.axes.update_datalim(((xyrange[0],xyrange[2]),
+        if not autoscale:
+            try:
+                self.axes.set_xlim((xyrange[0],xyrange[1]),emit=True)
+                self.axes.set_ylim((xyrange[2],xyrange[3]),emit=True)
+                self.axes.update_datalim(((xyrange[0],xyrange[2]),
                                       (xyrange[1],xyrange[3])))
-        except:
-            autoscale = True
+            except:
+                autoscale = True
 
-        if autoscale:
-            self.axes.autoscale_view()            
+        if autoscale: self.axes.autoscale_view()            
 
     def update_line(self,trace,xdata,ydata):
         """ update a single trace, for faster redraw """
@@ -243,12 +239,29 @@ Matt Newville <newville@cars.uchicago.edu>"""
         self.conf.ylabel = ''
         self.conf.title  = ''
 
+    def set_data_range(self,xd,yd):
+        r = self.data_range[:]
+        if r[0] is None: r[0] = min(xd)
+        if r[1] is None: r[1] = max(xd)
+        if r[2] is None: r[2] = min(yd)
+        if r[3] is None: r[3] = max(yd)
+        
+        self.data_range[0] = min(r[0],min(xd))
+        self.data_range[1] = max(r[1],max(xd))
+        self.data_range[2] = min(r[2],min(yd))
+        self.data_range[3] = max(r[3],max(yd))
+
     def unzoom_all(self,event=None):
         """ zoom out full data range """
-        self.zoom_lims = [(None,None,None,None)]
 
-        self.set_xylims(self.data_range,autoscale=False)
-        self.unzoom(event)
+        self.zoom_lims = [(None,None,None,None)]
+        self.data_range = [None,None,None,None]
+        for l in self.axes.lines:
+            self.set_data_range(l.get_xdata(),l.get_ydata())
+
+        self.axes.set_xlim(self.data_range[:2])
+        self.axes.set_ylim(self.data_range[2:])
+        self.draw('unzoom')
         
     def unzoom(self,event=None):
         """ zoom out 1 level, or to full data range """
@@ -256,7 +269,7 @@ Matt Newville <newville@cars.uchicago.edu>"""
             lims = self.zoom_lims.pop()
             if (len( self.zoom_lims ) < 1 or
                 lims == (None,None,None,None)):
-                lims = self.zoom_lims(pop)
+                # lims = self.zoom_lims.pop()
                 self.axes.autoscale_view()
             else:
                 self.axes.set_xlim(lims[:2])
@@ -304,7 +317,7 @@ Matt Newville <newville@cars.uchicago.edu>"""
                                            initialfile='plot.png',parent=self.parent)
         if f != '':
             self.canvas.print_figure(f,dpi=300)
-        print 'CANVAS Print ', f
+
         self.setStatusText('Saved plot to %s' % f)
 
 #     def copy_to_clipboard(self, event=None):
