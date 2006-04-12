@@ -163,6 +163,7 @@ def split_delim(s,delim='='):
 
 def unescape_string(s):
     escapes =(("\\n","\n"), ("\\r","\r"), ("\\a","\a"),("\\f","\f"),
+              ("\\\\","\\"),
               ("\\b","\b"), ("\\v","\v"), ("\\t","\t"))
     for i,j in escapes: s = s.replace(i,j)
     return s

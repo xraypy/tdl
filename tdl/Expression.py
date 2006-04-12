@@ -160,10 +160,10 @@ class ExpressionParser:
                                Optional(CaselessLiteral("e") + Word("+-"+nums, nums)) +
                                Optional(CaselessLiteral("j"))) )
         
-        _str  = ( QuotedString("'''", multiline=True,  escChar=None).setParseAction(self.pushString_SM) |
-                  QuotedString('"""', multiline=True,  escChar=None).setParseAction(self.pushString_DM) |                  
-                  QuotedString("'",   multiline=False, escChar='\'').setParseAction(self.pushString_SS) |
-                  QuotedString('"',   multiline=False, escChar=None).setParseAction(self.pushString_DS) )
+        _str  = ( QuotedString("'''", multiline=True).setParseAction(self.pushString_SM) |
+                  QuotedString('"""', multiline=True).setParseAction(self.pushString_DM) |
+                  QuotedString("'").setParseAction(self.pushString_SS) |
+                  QuotedString('"').setParseAction(self.pushString_DS) )
 
         _num  = fnum.setParseAction(self.pushNum) 
         _sym  = (name + Optional(_lpar + arg_list + _rpar)
