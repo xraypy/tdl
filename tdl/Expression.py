@@ -363,8 +363,8 @@ class ExpressionParser:
         if reset:  self.argcount=0
         
     def pushFirst(self, s, loc, toks,op=None,count=None,count2=None,reset=False):
-        # if self.debug>=32:
-        print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
+        if self.debug>=32:
+            print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
         if toks:
             self.exprStack.append(toks[0])                
         if op:    self.pushOp(op,count,count2=count2,reset=reset)
