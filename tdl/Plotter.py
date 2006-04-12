@@ -6,6 +6,7 @@
 import TkPlotter
 import Tkinter as Tk
 import Pmw
+import types
 
 plot_group = '_plot'
 plot_obj   = 'plotter'
@@ -85,6 +86,7 @@ class Plotter:
     def clear(self):
         """clear plot """
         self.plotter.clear()
+        self.plotter.draw()
 
     def unzoom_all(self,event=None):
         """zoom out full data range """
@@ -132,7 +134,15 @@ def tdl_plot(x,y=None,new=False,tdl=None,**kw):
     if p is not None:
         pfunc = p.oplot
         if new: pfunc = p.plot
-        pfunc(x,y=y,**kw)
+        # eval expression arguments here
+        if type(x) is types.StringType: x = tdl.eval(x)
+        if type(y) is types.StringType: y = tdl.eval(y)
+        if x is not None:
+            pfunc(x,y=y,**kw)
+        else:
+            print 'clear: ' 
+            p.clear()
+        
     else:       print 'cannot plot?'
 
 def tdl_newplot(x,y=None,tdl=None,**kw):
