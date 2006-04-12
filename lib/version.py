@@ -1,5 +1,5 @@
 # tdl version information
-version = '0.3.3'
+version = '0.3.4'
 date    = '2006-April-12'
 year    = '2006'
 author  = 'Matthew Newville, Tom Trainor'
