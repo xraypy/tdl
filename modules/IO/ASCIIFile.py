@@ -11,7 +11,7 @@
 
 import os
 import types, re
-from Num import Num
+import numpy as Num
 
 class ASCIIFile:
     def __init__(self,fname=None,label=None,delim=None):

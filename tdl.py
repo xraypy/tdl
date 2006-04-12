@@ -74,7 +74,7 @@ if startup:
         print libs
 
     if use_wxGUI == False:
-        t = tdl.shell(libs=libs,debug=debug,intro=None)
+        t = tdl.Shell.shell(libs=libs,debug=debug,intro=None)
         t.tdl.symbolTable.addBuiltin('GUI','TkAgg')
         t.cmdloop()
     elif use_wxGUI == True:
