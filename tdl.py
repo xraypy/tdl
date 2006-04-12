@@ -13,7 +13,11 @@
 
 import os, string, sys, getopt
 import ConfigParser
-import tdl
+try:
+    import lib as tdl
+    sys.path.append('lib')
+except:
+    import tdl
 
 ##############################################################
 # test for command line switches
