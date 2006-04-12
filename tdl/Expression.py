@@ -160,9 +160,10 @@ class ExpressionParser:
                                Optional(CaselessLiteral("e") + Word("+-"+nums, nums)) +
                                Optional(CaselessLiteral("j"))) )
         
-        _str  = ((QuotedString("'''", multiline=True)|
-                  QuotedString('"""', multiline=True)|
-                  quotedString)).setParseAction(self.pushString)
+        _str  = ( QuotedString("'''", multiline=True,  escChar=None).setParseAction(self.pushString_SM) |
+                  QuotedString('"""', multiline=True,  escChar=None).setParseAction(self.pushString_DM) |                  
+                  QuotedString("'",   multiline=False, escChar='\'').setParseAction(self.pushString_SS) |
+                  QuotedString('"',   multiline=False, escChar=None).setParseAction(self.pushString_DS) )
 
         _num  = fnum.setParseAction(self.pushNum) 
         _sym  = (name + Optional(_lpar + arg_list + _rpar)
@@ -316,7 +317,6 @@ class ExpressionParser:
         return toks[0]
 
     def pushDictArg(self, s, loc, toks ):
-        print ' push Dict Arg ', toks
         t = [trimstring(toks[0]), toks[1]]
         self.pushFirst(s,loc,t,op=opcodes.assign)
         self.dictcount = self.dictcount + 1
@@ -333,17 +333,22 @@ class ExpressionParser:
         if toks[0].endswith('j'): cast = complex
         return self.pushFirst(s,loc,[cast(toks[0])])
 
-    def pushString(self, s, loc, toks ):
-        if loc == 0 and s.startswith('"""'):
-            t = ['"""%s"""' % trimstring(i) for i in toks]
-        elif loc == 0 and s.startswith("'''"):
-            t = ['"""%s"""' % trimstring(i) for i in toks]            
-        elif s.startswith('"'):
-            t = ['"%s"' % trimstring(i) for i in toks]
-        else:
-            t = ["'%s'" % trimstring(i) for i in toks]            
+    def pushString(self, s, loc, toks ,format='"%s"'):
+        t= [format % i for i in toks]  # t= [format % trimstring(i) for i in toks]
         return self.pushFirst(s,loc,t,op=opcodes.string)
-    
+
+    def pushString_SM(self, s, loc, toks ):
+        self.pushString(s,loc,toks, format="'''%s'''")
+
+    def pushString_DM(self, s, loc, toks ):
+        self.pushString(s,loc,toks, format='"""%s"""')
+
+    def pushString_SS(self, s, loc, toks ):
+        self.pushString(s,loc,toks, format="'%s'")
+
+    def pushString_DS(self, s, loc, toks ):
+        self.pushString(s,loc,toks, format='"%s"')
+
     def pushList(self, s, loc, toks ):
         self.pushOp(opcodes.list, self.argcount,reset=True)
 
@@ -358,8 +363,8 @@ class ExpressionParser:
         if reset:  self.argcount=0
         
     def pushFirst(self, s, loc, toks,op=None,count=None,count2=None,reset=False):
-        if self.debug>=32:
-            print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
+        # if self.debug>=32:
+        print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
         if toks:
             self.exprStack.append(toks[0])                
         if op:    self.pushOp(op,count,count2=count2,reset=reset)
@@ -542,8 +547,7 @@ class Expression:
                         if tok == opcodes.uminus: val = - val
 
                     elif tok == opcodes.string:
-                        x = work.pop()
-                        val = trimstring(x)
+                        val = trimstring(work.pop())
 
                     elif tok == opcodes.list:
                         nx  = work.pop()

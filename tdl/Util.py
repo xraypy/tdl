@@ -169,19 +169,12 @@ def unescape_string(s):
 
 def trimstring(s,use_raw=False):
     " trim leading 'quotes' from string variables"
-    # print 'trim string inp: ', s
     if type(s) != types.StringType: return s
-    if (s.startswith("'''")  and s.endswith("'''")):
-        s = r'%s' % s[3:-3]
-    elif (s.startswith('"""')  and s.endswith('"""')):
-        s = unescape_string(s[3:-3])
-    elif (s.startswith("'")  and s.endswith("'")):
-        s = r'%s' % s[1:-1]
-    elif (s.startswith("\"") and s.endswith("\"")):
-        s = unescape_string(s[1:-1])
+    if (s.startswith("'''")   and s.endswith("'''")):  return r'%s' % s[3:-3]
+    elif (s.startswith('"""') and s.endswith('"""')):  return unescape_string(s[3:-3])
+    elif (s.startswith("'")   and s.endswith("'")):    return r'%s' % s[1:-1]
+    elif (s.startswith("\"")  and s.endswith("\"")):   return unescape_string(s[1:-1])
     return s
-    #  return unescape_string(s)
-
 
 def list2array(s):
     """ attempt to convert a list to a NumPy array.
