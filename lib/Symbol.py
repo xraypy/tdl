@@ -33,7 +33,6 @@ DataTypes = ('variable','constant','defvar')
 FuncTypes = ('pyfunc','defpro')
 SymbolTypes = DataTypes + FuncTypes
 SymbolTypeError = """SymbolTypeError: Valid type are:\n%s """ % str(SymbolTypes)
-
 ## NameError = """Invalid variable/function name"""
 
 # Default data groups
@@ -150,11 +149,7 @@ class SymbolTable:
 
         self.load_libs = []
         init_libs = []
-        sys.path.append(os.getcwd())
-        sys.path.append(os.path.dirname(os.getcwd()))
-        sys.path.append(os.path.join(os.getcwd(),'lib'))
-
-        init_libs = ['tdl.TdlBuiltins','tdl.TdlNumLib','tdl.Plotter']
+        init_libs = ['TdlBuiltins','TdlNumLib','Plotter']
         if libs is not None:
             init_libs.extend(libs)
         self.initialize(init_libs,clearAll=True)

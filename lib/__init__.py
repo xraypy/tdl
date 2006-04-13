@@ -24,6 +24,10 @@ import Help
 import Util
 import Symbol
 import Plotter
+import TdlBuiltins
+import TdlNumLib
 import Shell
 shell = Shell.shell
-
+TdlBuiltins = TdlBuiltins
+TdlNumLib = TdlNumLib
+Plotter = Plotter
