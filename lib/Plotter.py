@@ -3,9 +3,7 @@
 ## A simple plotting frame, wrapping Tk and matplotlib
 
 
-import TkPlotter 
-import Tkinter as Tk
-import Pmw
+
 import types
 
 plot_group = '_plot'
@@ -20,6 +18,10 @@ class Plotter:
                  cursor_callback=None,
                  **kwds):
         self.plotter= None
+        
+        import TkPlotter 
+        import Tkinter as Tk
+        import Pmw
         
         self.tdl  = tdl
         self.root = root
@@ -47,7 +49,8 @@ class Plotter:
 
 
     def setPlotOptions(self):
-        " sets plotting options based on tdl variables (all in the _plot group)"
+        """ sets plotting options based on tdl variables
+        (all in the _plot group)"""
         if self.tdl is None: return
         getval = self.symtable.getSymbolValue
         for name,method in self.plot_attribs.items():
@@ -117,8 +120,9 @@ class Plotter:
 
     def setStatusText(self,text,**kw):
         self.plotter.setStatusText(text,**kw)
-
-
+##
+##---------------------
+##
 
 def _getPlot(tdl=None):
     if tdl is None: return None
