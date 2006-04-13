@@ -154,9 +154,8 @@ Matt Newville <newville@cars.uchicago.edu>"""
         yd = self.get_array(ydata)
 
         self._lines = self.axes.plot(xd,yd)
-        self.set_data_range(xd,yd)
-
-
+        
+        
         cnf  = self.conf
         cnf.ntraces += 1
         n = cnf.ntraces
@@ -172,16 +171,13 @@ Matt Newville <newville@cars.uchicago.edu>"""
         # self.axes.yaxis.set_major_formatter(ScalarFormatter()) # (self.__yformatter))
         self.axes.xaxis.set_major_formatter(FuncFormatter(self.__xformatter))
         self.axes.yaxis.set_major_formatter(FuncFormatter(self.__yformatter))
-
+        
         xa = self.axes.xaxis
         if (refresh):
             cnf.refresh_trace(n)
             cnf.relabel()
 
-        if (autoscale):
-            self.axes.autoscale_view()
-            self.view_lim = (None,None,None,None)
-            self.zoom_lims = [self.view_lim]
+        if (autoscale): self.unzoom_all()
         if (self.conf.show_grid):
             # I'm sure there's a better way...
             for i in self.axes.get_xgridlines()+self.axes.get_ygridlines():
@@ -258,10 +254,22 @@ Matt Newville <newville@cars.uchicago.edu>"""
         self.data_range = [None,None,None,None]
         for l in self.axes.lines:
             self.set_data_range(l.get_xdata(),l.get_ydata())
-
-        self.axes.set_xlim(self.data_range[:2])
-        self.axes.set_ylim(self.data_range[2:])
+        dx1,dx2,dy1,dy2= self.data_range
+        
+        corners = (dx1,dy1),(dx2,dy2)
+        self.axes.update_datalim(corners)
+        self.axes.set_xlim(dx1,dx2)
+        self.axes.set_ylim(dy1,dy2)
         self.draw('unzoom')
+        # self.axes.autoscale_view()
+        # print 'data range ', self.data_range
+        # print 'xbounds ', self.axes.dataLim.intervalx().get_bounds()
+        # print 'ybounds ', self.axes.dataLim.intervaly().get_bounds()
+        # print 'x view ', self.axes.get_xlim()
+        # print 'y view ', self.axes.get_ylim()
+        
+        self.view_lim = (None,None,None,None)
+        self.zoom_lims = [self.view_lim]
         
     def unzoom(self,event=None):
         """ zoom out 1 level, or to full data range """
