@@ -248,11 +248,16 @@ def Command2Expr(s,symtable=None):
     words = split_list(s, delim = ' ')
 
     tmp = []
-    for i in range(len(words)):
-        if words[i].startswith(','): words[i] = words[i][1:]
-        if words[i].endswith(','):   words[i] = words[i][:-1]
-        words[i].strip()
-        if words[i] != '': tmp.append(words[i])
+    for word in words:
+        if word.startswith(','): word = word[1:]
+        if word.endswith(','):   word = word[:-1]
+        word.strip()
+        if word != '':
+            if word.find(',')==-1: 
+                tmp.append(word)
+            else:
+                subwords = split_list(word,delim=',')
+                for s in subwords: tmp.append(s)
     s = ' '.join(tmp)
 
     if s.find('=') > -1:
