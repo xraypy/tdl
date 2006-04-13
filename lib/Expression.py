@@ -80,7 +80,9 @@ def take_subarray(val,elems):
     if type(el0) == types.FloatType: el0 = int(el0)
     if el0 != opcodes.empty: val = val[el0]
 
-    if type(val) == Num.arraytype:
+    if type(val) == types.StringType:
+        for el in elems: val = val[el.start:el.stop]
+    elif type(val) == Num.arraytype:
         j = 0
         for el in elems:
             j = j + 1
@@ -89,7 +91,9 @@ def take_subarray(val,elems):
             elif el != opcodes.empty:
                 val = val.swapaxes(0,j)[int(el)]
     else:
-        for el in elems: val = val[int(el)]
+        for el in elems:
+            if type(el) == types.FloatType: el  = int(el)
+            if el != opcodes.empty:         val = val[el]
     return val
 
 ########################################################
@@ -301,7 +305,7 @@ class ExpressionParser:
                     n = n + 1
                 elif i != '[' and paren_level==0:
                     t.append(i)
-        if self.debug>=5:
+        if self.debug>=8:
             print ' ExprParse: pushSymbol ', op, na, n, t
             
         if op == opcodes.function and n==0:  # regular function call
@@ -506,6 +510,7 @@ class Expression:
                         
                         sym   = self.get_symbol(nam)
                         if sym.type == 'defvar': sym.value = self.eval(sym.code)
+                        # print '--> take subarray 1', sym.value, type(sym.value), elems
                         val   = take_subarray(sym.value,elems)
 
                     elif tok == opcodes.subarray:
@@ -514,6 +519,7 @@ class Expression:
                         # the values in the current work array
                         ndim  = work.pop()
                         elems = make_array(ndim,work)
+                        # print '--> take subarray 2'                        
                         val   = take_subarray(work.pop(),elems)
 
                     elif tok in (opcodes.function,opcodes.arrayfunc,opcodes.command):
@@ -614,7 +620,8 @@ if __name__ == '__main__':
     s.addVariable('a',Num.arange(30.))
     s.addVariable('b',Num.arange(15.))
     s.addVariable('format1',' %s = %f ')
-    s.addVariable('dlist',['b',12])
+    s.addVariable('dlist',['abcdefghijklmnop',12,'xyz'])
+    s.addVariable('adict',{'key1': 'abcdefghijklmnop','key2':3.1})
     s.addVariable('x',2.2)
     s.addVariable('ix',4)
     s.addVariable('st','a long string here')
@@ -630,7 +637,12 @@ if __name__ == '__main__':
          " format1  % dlist",
          )
     t = (' sqrt(x+1)', 'sqrt((x+1)) ' ,
-         'sqrt((a+1)/4)[3]' , 'cos(x)' , 'a[2:]', 'st[2:8]', 'st[2:len(st)-7]')
+         'sqrt((a+1)/4)[3]' , 'cos(x)' ,
+         'st[2:8]',
+         'st[2:len(st)-7]',
+         'a[2]',
+         'adict["key1"][1:4]',
+         'dlist[0,1:4]')
          
     for i in t:
         print '========================\n< ', i , ' > '
