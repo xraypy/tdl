@@ -16,6 +16,7 @@ import ConfigParser
 try:
     import lib as tdl
     sys.path.append(os.path.abspath('lib'))
+    sys.path.append(os.path.abspath('.'))
     print '  ############## This is TDL devel ##############'
 except:
     import tdl
@@ -81,6 +82,8 @@ if startup:
     if use_wxGUI == False:
         t = tdl.shell(libs=libs,debug=debug,intro=None)
         t.tdl.symbolTable.addBuiltin('GUI','TkAgg')
+        if args is not None:
+            for i in args: t.default("load %s" %i)
         t.cmdloop()
     elif use_wxGUI == True:
         # tdl gets started from within the wxGUI
