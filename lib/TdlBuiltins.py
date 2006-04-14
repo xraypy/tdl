@@ -32,7 +32,7 @@ import os
 import sys
 import types
 
-from Util import show_list, show_more, datalen, unescape_string
+from Util import show_list, show_more, datalen, unescape_string, list2array
 
 title = "builtin library functions"
 
@@ -179,14 +179,14 @@ def _dictvals(x):
         return []    
 
 def _pop(x,item=None):
-    "join two lists"    
-    "return list of dictionary items"
+    "???  pop last element from a list"
+    print 'this is pop ', x, type(x)
     if type(x) == Num.ArrayType: x = x.tolist()
-    if type(x) in types.ListType:
-        x.pop()
-    elif type(x) in types.DictType:
-        x.pop(item)
-    return x
+    print 'this is pop ', x, type(x)    
+    if type(x) == types.ListType:
+        out = x.pop()
+        x = x
+    return out, x
 
 def _len(x):
     "return length of data"
@@ -199,12 +199,14 @@ def _list(x):
     except TypeError:
         return x
 
-
 def _listappend(x,val):
     "append a value to a list"
+    print 'append ', x, type(x)
     if type(x) == Num.ArrayType: x = x.tolist()
+    print 'append ', x, type(x)
     if type(x) == types.ListType:
-        return x.append(val)
+        x.append(val)
+        return list2array(x)
     
 
 def _listjoin(x,y):
@@ -212,15 +214,20 @@ def _listjoin(x,y):
     "return list of dictionary items"
     if type(x) == Num.ArrayType: x = x.tolist()
     if type(x) == types.ListType:
-        return x.extend(y)
-
+        if type(y) == Num.ArrayType: y = y.tolist()
+        if type(y) == types.ListType:
+            x.extend(y)
+        elif datalen(y) == 1:
+            x.append(y)
+        return list2array(x)
+    
 def _listreverse(x):
     "join two lists"    
     "return list of dictionary items"
     if type(x) == Num.ArrayType: x = x.tolist()
     if type(x) == types.ListType:
         x.reverse()
-        return x
+        return list2array(x)
 
 def _listsort(x):
     "join two lists"    
@@ -228,7 +235,7 @@ def _listsort(x):
     if type(x) == Num.ArrayType: x = x.tolist()
     if type(x) == types.ListType:
         x.sort()
-        return x    
+        return list2array(x)
 
 def _strsplit(var,sep=' '):
     "split a string"
@@ -578,12 +585,13 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.dictkeys":(_dictkeys,None),
           "_builtin.dictvals":(_dictvals,None),
           "_builtin.dictitems":(_dictitems,None),
-          "_builtin.dictpop":(_dictpop,None),
           "_builtin.append":(_listappend,None),
           "_builtin.join":(_listjoin,None),
           "_builtin.reverse":(_listreverse,None),
           "_builtin.sort":(_listsort,None),
-          "_builtin.pop":(_pop,None),          
+          # these may never actually work.....
+          #"_builtin.pop":(_pop,None),          
+          #"_builtin.dictpop":(_dictpop,None),
           "_builtin.open":tdl_open,
           "_builtin.close":tdl_close,
           "_builtin.write":tdl_write,
