@@ -34,7 +34,7 @@ def datalen(x):
 
 
 
-def show_more(text,filename=None,writer=sys.stdout,pagesize=24):
+def show_more(text,filename=None,writer=sys.stdout,pagesize=30):
     """ show lines of text in the style of more """
     txt = text[:]
     if type(txt)== types.StringType:  txt = txt.split('\n')        
@@ -376,7 +376,7 @@ def PrintShortExcept(err_str):
         print '*****Error printing exception error******'
 
 
-def show_list(lst,ncol=None,textwidth=80):
+def show_list(lst,ncol=None,textwidth=72):
     "formatted list of stuff in a list or dict"
     nmax = -1
     if len(lst) == 0: return ""

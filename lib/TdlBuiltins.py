@@ -164,12 +164,29 @@ def _dictitems(x):
     else:
         return []
     
+def _dictpop(x,key):
+    "return list of dictionary keys"
+    if type(x) == types.DictType:
+        return x.pop(key)
+    else:
+        return ''
+
 def _dictvals(x):
     "return list of dictionary keys"
     if type(x) == types.DictType:
         return x.values()
     else:
         return []    
+
+def _pop(x,item=None):
+    "join two lists"    
+    "return list of dictionary items"
+    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) in types.ListType:
+        x.pop()
+    elif type(x) in types.DictType:
+        x.pop(item)
+    return x
 
 def _len(x):
     "return length of data"
@@ -181,6 +198,37 @@ def _list(x):
         return list(x)
     except TypeError:
         return x
+
+
+def _listappend(x,val):
+    "append a value to a list"
+    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == types.ListType:
+        return x.append(val)
+    
+
+def _listjoin(x,y):
+    "join two lists"    
+    "return list of dictionary items"
+    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == types.ListType:
+        return x.extend(y)
+
+def _listreverse(x):
+    "join two lists"    
+    "return list of dictionary items"
+    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == types.ListType:
+        x.reverse()
+        return x
+
+def _listsort(x):
+    "join two lists"    
+    "return list of dictionary items"
+    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == types.ListType:
+        x.sort()
+        return x    
 
 def _strsplit(var,sep=' '):
     "split a string"
@@ -530,6 +578,12 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.dictkeys":(_dictkeys,None),
           "_builtin.dictvals":(_dictvals,None),
           "_builtin.dictitems":(_dictitems,None),
+          "_builtin.dictpop":(_dictpop,None),
+          "_builtin.append":(_listappend,None),
+          "_builtin.join":(_listjoin,None),
+          "_builtin.reverse":(_listreverse,None),
+          "_builtin.sort":(_listsort,None),
+          "_builtin.pop":(_pop,None),          
           "_builtin.open":tdl_open,
           "_builtin.close":tdl_close,
           "_builtin.write":tdl_write,
