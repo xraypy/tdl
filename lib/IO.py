@@ -5,6 +5,7 @@
 import os
 import sys
 import types
+from Util import datalen
 import FileIO.ASCIIFile as ASCIIFile
 
 ##
@@ -51,19 +52,32 @@ def tdl_write_ascii(fname,  *arr,**kw):
     labels =''
     group = tdl.symbolTable.getDataGroup()
     npts = []
-    for i in arr:
-        o = tdl.symbolTable.getVariable(i).value
-        try:
-            n = len(o)
-        except TypeError:
-            n = 0
-        if n<=1:
-            sca_nam.append(i)
-            sca_val.append(o)
+    for item in arr:
+        n     = datalen(item)
+        dtype = type(item)
+        itype = 'literal'
+        iname = ' '        
+        ival  = item
+        if n<=1 and type(item) is types.StringType:
+            try:
+                sym   = tdl.symbolTable.getVariable(item)
+                n     = datalen(o)
+                dtype = sym.type
+                ival  = sym.value
+                iname = sym.name
+                itype = 'symbol'
+            except:
+                itype = 'unknown'
+                print ' cannot handle ', item
+        if itype == 'unknown': continue
+        if n == 1:
+            sca_nam.append(iname)
+            sca_val.append(ival)            
         else:
-            labels = "%s %s" % (labels,i)
-            arr_out.append(list(o))
-            npts.append(len(o))
+            labels = "%s %s" % (labels,iname)
+            arr_out.append(list(ival))
+            npts.append(len(ival))
+            
                  
     f = open(fname,'w')
     f.write("# file written by tdl write_ascii() \n")

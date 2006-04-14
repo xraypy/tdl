@@ -36,11 +36,13 @@ SymbolTypeError = """SymbolTypeError: Valid type are:\n%s """ % str(SymbolTypes)
 ## NameError = """Invalid variable/function name"""
 
 # Default data groups
-#  search order will bw dataGroup,funcGroup,mainGroup,builtinGroup,mathGroup
-builtinGroup   = '_builtin'
+#  search order will bw dataGroup,funcGroup,mainGroup,builtinGroup,mathGroup,plotGroup
+builtinGroup = '_builtin'
 mainGroup    = '_main'
 mathGroup    = '_math'
 plotGroup    = '_plot'
+# groups that must always be present, and default search order
+requiredGroups = (mainGroup,builtinGroup,mathGroup,plotGroup)
 
 isValidName = re.compile(r'[a-zA-Z_\$][a-zA-Z0-9_]*').match
 
@@ -157,10 +159,9 @@ class SymbolTable:
 
     def initialize(self,libs=None,clearAll=False):
         if clearAll:
-            self.sym    = {builtinGroup: {},
-                           mathGroup: {},
-                           plotGroup: {},                           
-                           mainGroup: {}}
+            
+            self.sym    = {}
+            for i in requiredGroups:   self.sym[i] = {}
             self.dataGroup = mainGroup
             self.funcGroup = mainGroup
             self.addBuiltin('data_group',mainGroup)
@@ -300,7 +301,7 @@ class SymbolTable:
         if self.sym[group][name].constant and not override:   return
 
         self.sym[group].pop(name)
-        if len(self.sym[group]) == 0 and group not in (mainGroup,builtinGroup):
+        if len(self.sym[group]) == 0 and group not in requiredGroups:
             self.deleteGroup(group)
             if self.dataGroup == group: self.dataGroup = mainGroup
 
@@ -397,10 +398,8 @@ class SymbolTable:
         " delete a group and all its symbols (except default groups)"
         group = group.strip()
         #if not group in (builtinGroup,globalGroup) and self.sym.has_key(group):
-        if not group in (builtinGroup,) and self.sym.has_key(group):
+        if not group in requiredGroups and self.sym.has_key(group):
             self.sym.pop(group)
-            if group == mainGroup:
-                self.sym[mainGroup] = {}
         return None
 
     def getDataGroup(self,group=None,create=True):
@@ -417,7 +416,8 @@ class SymbolTable:
 
     def setSearchGroups(self):
         self.searchGroups = [self.dataGroup]
-        for i in (self.funcGroup,mainGroup,builtinGroup,mathGroup,plotGroup):
+        if self.funcGroup != self.dataGroup: self.searchGroups.append(self.funcGrouop)
+        for i in requiredGroups:
             if i not in self.searchGroups: self.searchGroups.append(i)
         return self.searchGroups
     
