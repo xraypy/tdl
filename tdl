@@ -13,12 +13,12 @@
 
 import os, string, sys, getopt
 import ConfigParser
-try:
+if True: #try:
     import lib as tdl
     sys.path.append(os.path.abspath('lib'))
     sys.path.append(os.path.abspath('.'))
     print '  ############## This is TDL devel ##############'
-except:
+else: # except:
     import tdl
 
 ##############################################################

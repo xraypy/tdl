@@ -39,17 +39,17 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     # return default group to original
     tdl.symbolTable.setDataGroup(savegroup)
     return ret
-
 #
-def tdl_write_ascii(fname, *arr, **kw):
+def tdl_write_ascii(fname,  *arr,**kw):
     " write ascii file of tdl code -- could be a lot better! "
-        
+    print 'write ascii ', fname
+    tdl = kw['tdl']
+    if tdl is None: return None
     arr_out=[]
     sca_val = []
     sca_nam = []
     labels =''
-    tdl = kw['tdl']
-    group = tdl.symbolTable.getGroup()
+    group = tdl.symbolTable.getDataGroup()
     npts = []
     for i in arr:
         o = tdl.symbolTable.getVariable(i).value

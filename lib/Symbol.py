@@ -93,6 +93,7 @@ class Symbol:
         if self.type in ('pyfunc', 'pycmd'):
             x = {}
             x.update(self.kws) ; x.update(kws)
+            # print 'CALL ', self.value,len(args), x
             val = self.value(*args,**x)
             return val
         else:
@@ -563,7 +564,8 @@ class SymbolTable:
             # look for 'tdl' argument --
             #    if present, add kw-arg to pass to function
             try:
-                if 'tdl' in inspect.getargspec(func)[0]:
+                if (func.__name__.startswith('tdl') or 
+                    'tdl' in inspect.getargspec(func)[0]):
                     fcn_kws = {'kws':{'tdl':self.tdl}}
             except TypeError:  # numpy ufuncs will raise a TypeError here...
                 pass
