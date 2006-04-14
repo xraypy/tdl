@@ -149,7 +149,7 @@ class SymbolTable:
 
         self.load_libs = []
         init_libs = []
-        init_libs = ['TdlBuiltins','TdlNumLib','Plotter']
+        init_libs = ['TdlBuiltins','TdlNumLib','Plotter','IO']
         if libs is not None:
             init_libs.extend(libs)
         self.initialize(init_libs,clearAll=True)
@@ -657,8 +657,8 @@ class SymbolTable:
                 sym = None
         return sym
 
-    def setVariable(self,name,value):
-        return self.addSymbol(name,value=value,type='variable')
+    def setVariable(self,name,value,group=None):
+        return self.addSymbol(name,value=value,type='variable',group=group)
 
     # builtins
     def addBuiltin(self,name,value,desc=None):

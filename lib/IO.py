@@ -2,13 +2,14 @@
 ##
 ## IO functionality
 
+import os
+import sys
 import types
 import FileIO.ASCIIFile as ASCIIFile
 
 ##
 def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     " read ascii file of tdl code"
-    from ASCIIFile import ASCIIFile
     if tdl == None:
         if debug: print 'cannot read file %s ' % fname
         return None
@@ -21,13 +22,12 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     except:
         print 'read_ascii: error reading file %s ' % fname        
         return None
-    
     # save current group name
-    savegroup = tdl.symbolTable.getGroup()
+    savegroup = tdl.symbolTable.getDataGroup()
     if group == None:
         group = savegrup
     else:
-        group = tdl.symbolTable.setGroup(group)
+        group = tdl.symbolTable.setDataGroup(group)
         
     tdl.symbolTable.setVariable('titles', f.get_titles(), group=group)
     tdl.symbolTable.setVariable('column_labels', f.labels, group=group)        
@@ -37,7 +37,7 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
         tdl.symbolTable.setVariable(i, f.get_array(i), group=group)
     if debug: print 'read done.'
     # return default group to original
-    tdl.symbolTable.setGroup(savegroup)
+    tdl.symbolTable.setDataGroup(savegroup)
     return ret
 
 #
