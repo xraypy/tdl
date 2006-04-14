@@ -9,7 +9,7 @@
 
 """
 Tiny Data Language
-"""
+""" 
 import version
 __version__ = version.version
 
@@ -27,7 +27,9 @@ import Plotter
 import TdlBuiltins
 import TdlNumLib
 import Shell
+import IO
 shell = Shell.shell
 TdlBuiltins = TdlBuiltins
 TdlNumLib = TdlNumLib
 Plotter = Plotter
+IO = IO
