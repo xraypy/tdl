@@ -54,7 +54,7 @@ class shell(cmd.Cmd):
         print self.banner % version.version
 
         self.tdl       = Evaluator(interactive= True, debug= debug,
-                                  output = self.stdout, libs= libs, GUI='TkAgg')
+                                  output = self.stdout, libs= libs, GUI=GUI)
 
 
         self.help      = self.tdl.help.get_help

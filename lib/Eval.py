@@ -34,7 +34,7 @@ class Evaluator:
         self.symbolTable = symbolTable or SymbolTable(libs=libs,
                                                       tdl=self,
                                                       writer=self.output,
-                                                      GUI='TkAgg')
+                                                      GUI=GUI)
 
         self.Expression  = Expression(symbolTable=self.symbolTable,
                                       run_procedure = self.run_procedure)
