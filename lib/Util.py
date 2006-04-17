@@ -3,8 +3,10 @@
 # -------------
 # Modifications
 # -------------
+# 4-16-2006 T2:
+# - added set_path and associated functions
 #
-# * 1-3-06 T2:
+# 1-3-06 T2:
 #  - added mod_importer and a few other functions
 #  - moved selftest into new TdlTest module.
 #
@@ -14,6 +16,7 @@ import types
 import exceptions
 import sys
 import string
+import os
 
 class ParseException(exceptions.Exception):
     def __init__(self,args=None):
@@ -402,7 +405,49 @@ def show_list(lst,ncol=None,textwidth=72):
         num = num + 1
     return  pstr 
 
+def set_path(pth=None,recurse=False,verbose=False,clean=True):
+    "modify or return python path"
+    if type(pth) == types.StringType: pth = pth.strip()
+    if not pth:
+        return 
+    pth = os.path.abspath(pth)
+    if os.path.exists(pth):
+        if verbose: print 'add->', pth
+        if pth not in sys.path: sys.path.append(pth)
+        if recurse == True:
+            dirs = sub_dirs(pth,skip_txt='.')
+            for d in dirs:
+                if d not in sys.path:
+                    if os.path.exists(d):
+                        if verbose: print 'add->', d
+                        sys.path.append(d)
+    else:
+        print "Path '%s' doesnt exist" % pth
+    if clean: clean_path()
+    return 
 
+def clean_path():
+    temp = []
+    for p in sys.path:
+        if p not in temp:
+            temp.append(p)
+    temp.sort()
+    sys.path = temp
+
+def sub_dirs(pth,skip_txt=None):
+    sub_dirs = []
+    if os.path.exists(pth):
+        for root,dirs,files in os.walk(pth):
+            for d in dirs:
+                temp = os.path.abspath(os.path.join(root,d))
+                if skip_txt:
+                    if skip_txt not in temp:
+                        sub_dirs.append(temp)
+                else:
+                    sub_dirs.append(temp)
+    return sub_dirs
+
+###################################################################
 def testCommand2Expr():
     import Symbol
     s  = Symbol.SymbolTable()

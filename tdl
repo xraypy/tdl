@@ -5,6 +5,11 @@
 # -------------
 # Modifications
 # -------------
+# 4-16-06 T2:
+# - A bunch of changes to hadle setting default paths and default
+#   startup files
+# - also a bit of work on startup switches
+#
 # 4-8-06 T2
 # Added verbose option.  note -f doesnt do anything, ie shell
 # doesnt accept file on init.
@@ -12,93 +17,124 @@
 ############################################################################
 
 import os, string, sys, getopt
-import ConfigParser
-if True: #try:
-    import lib as tdl
-    sys.path.append(os.path.abspath('lib'))
-    sys.path.append(os.path.abspath('.'))
-    print '  ############## This is TDL devel ##############'
-else: # except:
-    import tdl
+#import ConfigParser
 
 ##############################################################
 # test for command line switches
 startup   = True
 use_wxGUI = False
-fname     = ''
-debug = False
-verbose = False
+files     = []
+debug     = False
+verbose   = False
+libs      = []
 
-opts, args = getopt.getopt(sys.argv[1:], "wvhnfd:")
+opts, args = getopt.getopt(sys.argv[1:], "wdvhl:")
+#print opts
+#print args
 for o, a in opts:
     if o == '-w':
         use_wxGUI = True
-    elif o == '-n':
-        use_wxGUI = False
-    elif o == '-f':
-        fname = a
     elif o == '-d':
         debug = True
     elif o == '-v':
         verbose = True
+    elif o == '-l':
+        libs.append(a)
     elif o == '-h':
         print 'Startup options for tdl:'
         print '-h:  help'
         print '-w:  use wx GUI'
-        print '-n:  no GUI, plot with tk'
-        print '-ffname: execute fname on startup'
         print '-d: debug on'
+        print '-l: load library'
         print '-v: verbose'
+        print 'Examples (combine the various options):'
+        print '>tdl -v                  #verbose startup'
+        print '>tdl -vd                 #verbose startup and debug on'
+        print '>tdl -w                  #use wx GUI'
+        print '>tdl -v  fname1 fname2   #verbose and execute files'
+        print '>tdl fname1 fname2       #defaults and execute files'
+        print '>tdl -l Lib1 -l Lib2     # load libraries at startup'
         startup = False
-        
+
+if startup == False: sys.exit()
+
+#################################################################
+# import and set default paths
+# additional paths should be set in the startup.tdl files
+if True: #try:
+    import lib as tdl
+    lib_path    = os.path.abspath(tdl.__path__[0])
+    tdl_root    = os.path.split(lib_path)[0]
+    module_path = os.path.join(tdl_root,'modules')
+    print '  ############## This is TDL devel ##############'
+else: # except:
+    import tdl
+    lib_path    = os.path.abspath(tdl.__path__[0])
+    tdl_root    = os.path.split(lib_path)[0]
+    module_path = os.path.join(tdl_root,'tdl_modules')
+
+try:
+    if verbose: print 'tdl_root:   ', tdl_root
+    if verbose: print 'lib_path:   ', lib_path
+    if verbose: print 'module_path:', module_path
+    tdl.Util.set_path(lib_path,verbose=verbose)
+    tdl.Util.set_path(module_path,recurse=True,verbose=verbose)
+    tdl.Util.set_path('.',verbose=verbose)
+except:
+    print "Error setting paths"
+    pass
+
+
 ##############################################################
 # startup
-msg = ''
-if startup:
-    #### get TDL_PATH if it exist and append to sys.path
-    if os.environ.has_key('TDL_PATH'):
-        msg = "Tdl path settings:\n"
-        p = os.environ['TDL_PATH']
-        tmp = string.split(p,os.pathsep)
-        for s in tmp:
-            sys.path.append(s)
-            msg = "%s%s\n" % (msg,s)
-        sys.path.append('.')
-        INI_file = os.path.join(os.environ['TDL_PATH'],'tdl.ini')
-        config = ConfigParser.ConfigParser()
-        config.read('tdl.ini')
-        libs = []
-        for libname in config.get('LibModule','Lib').split(','):
-            l = libname.strip()
-            if len(l) > 0: libs.append(l)
-    else:
-        libs = []
 
-    if verbose:
-        print msg
-        print "External modules:"
-        print libs
+if verbose:
+    print "Command line Libraries:"
+    for l in libs: print l
 
-    if use_wxGUI == False:
-        t = tdl.shell(libs=libs,debug=debug,intro=None)
-        t.tdl.symbolTable.addBuiltin('GUI','TkAgg')
-        if args is not None:
-            for i in args: t.default("load %s" %i)
-        t.cmdloop()
-    elif use_wxGUI == True:
-        # tdl gets started from within the wxGUI
-        import tdl_wxGUI
-        tdl_wxGUI.tdl = tdl
-        tdl_wxGUI.libs = libs
-        tdl_wxGUI.intro = None
-        tdl_wxGUI.debug = debug
-        # this needs to be fixed bf compile
-        rsrc = os.environ['WX_RSRC']
-        # looks like dir gets reset when call application
-        work_dir = os.getcwd()
-        # the wxGUI code handles creation of dsi and plot_init...
-        gui = tdl_wxGUI.model.Application(tdl_wxGUI.tdl_wxGUI, aFileName=rsrc)
-        os.chdir(work_dir)
-        gui.MainLoop()
+# default site startup file
+site_startup = os.path.join(module_path,'startup.tdl')
+if os.path.isfile(site_startup):
+    files.append(site_startup)
+
+# default user startup file
+user_home = os.path.expanduser('~')
+user_startup = os.path.join(user_home,'startup.tdl')
+if os.path.isfile(user_startup):
+    files.append(user_startup)
+
+# the rest of the arg line are added files
+if args is not None:
+    for f in args: files.append(f)
+
+if verbose:
+    print "Startup files:"
+    for f in files: print f
+
+# run it 
+if use_wxGUI == False:
+    t = tdl.shell(libs=libs,debug=debug,intro=None)
+    t.tdl.symbolTable.addBuiltin('GUI','TkAgg')
+    for f in files:
+        if os.path.exists(f):
+            t.default("load('%s')" % f)
+        else:
+            print "\n   ***Cant find startup file: %s" % f
+    t.cmdloop()
+elif use_wxGUI == True:
+    # tdl gets started from within the wxGUI
+    # looks like dir gets reset when call application
+    work_dir = os.getcwd()
+    import tdl_wxGUI
+    tdl_wxGUI.tdl = tdl
+    tdl_wxGUI.libs = libs
+    tdl_wxGUI.intro = None
+    tdl_wxGUI.debug = debug
+    tdl_wxGUI.files = files
+    rsrc = os.path.join(module_path,'GUI','tdl_wxGUI.rsrc.py')
+    # the wxGUI code handles creation of dsi and plot_init...
+    gui = tdl_wxGUI.model.Application(tdl_wxGUI.tdl_wxGUI, aFileName=rsrc)
+    os.chdir(work_dir)
+    gui.MainLoop()
 
 

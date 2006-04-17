@@ -1,7 +1,7 @@
 #/usr/bin/python
     
-import ASCIIFile, ReadSpec
+import ASCIIFile
 ASCIIFile = ASCIIFile.ASCIIFile
-SpecFile = ReadSpec.SpecFile
+
 
 

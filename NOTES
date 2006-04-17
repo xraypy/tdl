@@ -1,5 +1,44 @@
-
 This file contains Notes, Issues, and Bugs.
+For additional details on changes, Todo list and bugs see the tdl wiki:
+http://cars9.uchicago.edu/iffwiki/tdl
+-------------------------------------------------------------------------
+
+Apr-16-06 T2
+- Proposal for layout.  Continue with the idea of 2 different layouts
+
+1. development and standalone (essentially as is):
+TDL_DIR/tdl                            # startup script
+TDL_DIR/lib/...                        # contains core library and standard modules
+TDL_DIR/modules/...                    # contains addon/optional modules
+TDL_DIR/modules/startup.tdl            # startup tdl commands
+TDL_DIR/examples/...                   # examples
+TDL_DIR/tests/...                      # tests 
+
+1. site packages (installed via TDL_DIR//setup.py):
+~python/bin/tdl                                        # startup script
+~python/.../site-packages/tdl/...                      # contains core library and standard modules
+~python/.../site-packages/tdl_modules/...              # contains addon/optional modules
+~python/.../site-packages/tdl_modules/startup.tdl      # startup tdl commands
+
+
+The users 'path' should include the directory with the tdl script and python executable for either case.
+
+The tdl script should identify each case. The folowing should be added to python path:
+.                                      # current working directory
+~tdl/                                  # core library directory 
+                                       # (will be on pythonpath already if its in site-packages)
+                                       # otherwise add TDL_DIR/lib
+~modules                               # or ~tdl_modules
+~modules/*                             # all directories under ~modules (or ~tdl_modules)
+  
+
+It should also find the file ~modules/startup.tdl and pass that to get executed on startup.  
+
+Finally it should find if there is a 'HOME' or 'TDL_HOME' environment variable, and pass
+HOME/startup.tdl for execution as well if it exists (ie user specific options).
+
+
+
 
 Apr-12-06 MN
 

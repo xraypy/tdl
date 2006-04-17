@@ -6,6 +6,9 @@
 # --------------
 # Modifications:
 # --------------
+# 4-16-2006 T2:
+# - handle startup files
+#
 #
 ############################################################################
 
@@ -17,7 +20,7 @@ tdl   = None
 libs  = []
 intro = None
 debug = False
-fname = ''
+files = []
 
 #####################################################
 
@@ -38,6 +41,11 @@ class tdl_wxGUI(model.Background):
         #sys.stdin  = self.readline
         self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,intro=intro,debug=debug)
         self.shell.tdl.symbolTable.addBuiltin('GUI','WXAgg')
+        for f in files:
+            if os.path.exists(f):
+                t.default("load('%s')" % f)
+            else:
+                print "\n   ***Cant find startup file: %s" % f
         self.run_tdl()
         # when done we've quit  
         sys.__stdout__.write("\nExiting TDL\n")

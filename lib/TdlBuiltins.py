@@ -4,7 +4,14 @@
 # --------------
 # Modifications
 # --------------
-# 8-4-2006 T2:
+# 4-16-06 T2:
+# - modified the path function: moved most of it to Utils and
+#   added a recursive option
+#
+# - note it looks like output is fixed for windows path like stuff, so could
+#   remove the 4-8-2006 hacks (although printing paths with / always aint bad?)
+#
+# 4-8-2006 T2:
 # - fix (hack) to cwd, pwd and ls for win32
 # - added **kws to _ls.  is this the right way to make sure __cmdout can get
 #   additional kw arguments not used by the function?
@@ -33,6 +40,7 @@ import sys
 import types
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
+from Util import set_path
 
 title = "builtin library functions"
 
@@ -331,17 +339,12 @@ def _type(x):
     return 'unknown'             
 
 
-def _path(add=None):
+def _path(pth=None,recurse=False):
     "modify or show python path"
-    add = add.strip()
-    if not add:
-        pth = sys.path
-        if sys.platform == 'win32':
-            for j in range(len(pth)):
-                pth[j] = pth[j].replace('\\','/')
-        return show_list(pth)
+    if not pth:
+        return show_list(sys.path)
     else:
-        sys.path.append(add)
+        set_path(pth=pth,recurse=recurse)
     return
 
 def tdl_open(filename,mode='r',tdl=None,**kw):
@@ -390,17 +393,17 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
         return None
     if debug is None:
         debug = not tdl.debug
-        
     tdl.set_debug(debug)
     return None
 
 def tdl_load(fname, tdl=None,debug=False,**kw):
     " load file of tdl code"
+    #print fname
     if tdl is None:
         if debug: print 'cannot run file %s ' % fname
         return None
     if debug: print 'load .... ', fname
-    if not os.path.exists(fname):
+    if not os.path.isfile(fname):
         print 'file error: cannot find file %s ' % fname
         return None        
     tdl.load_file(fname)
