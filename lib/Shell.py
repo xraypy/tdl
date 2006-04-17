@@ -33,7 +33,7 @@ class shell(cmd.Cmd):
     max_save_lines = 500
 
     def __init__(self, completekey='tab', libs=None, debug=False,
-                 stdin=None, stdout=None, intro=None):
+                 stdin=None, stdout=None, intro=None, GUI='TkAgg'):
 
         cmd.Cmd.__init__(self,completekey='tab')
 
@@ -54,7 +54,7 @@ class shell(cmd.Cmd):
         print self.banner % version.version
 
         self.tdl       = Evaluator(interactive= True, debug= debug,
-                                  output = self.stdout, libs= libs)
+                                  output = self.stdout, libs= libs, GUI='TkAgg')
 
 
         self.help      = self.tdl.help.get_help

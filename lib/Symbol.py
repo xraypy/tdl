@@ -145,21 +145,23 @@ class SymbolTable:
     """
     table of symbols and namespaces storing all functions and variables
     """
-    def __init__(self,libs=None,writer=sys.stdout,tdl=None,**kws):
+    def __init__(self,libs=None,writer=sys.stdout,tdl=None,GUI='TkAgg',**kws):
 
         self.tdl    = tdl
         self.writer = writer
-
         self.load_libs = []
         init_libs = []
-        init_libs = ['TdlBuiltins','TdlNumLib','Plotter','IO']
+        self.GUI = GUI
+        if self.GUI == 'TkAgg':
+            init_libs = ['TdlBuiltins','TdlNumLib','Plotter','IO']
+        else:
+            init_libs = ['TdlBuiltins','TdlNumLib','IO'] 
         if libs is not None:
             init_libs.extend(libs)
         self.initialize(init_libs,clearAll=True)
 
     def initialize(self,libs=None,clearAll=False):
         if clearAll:
-            
             self.sym    = {}
             for i in requiredGroups:   self.sym[i] = {}
             self.dataGroup = mainGroup
@@ -167,6 +169,7 @@ class SymbolTable:
             self.addBuiltin('data_group',mainGroup)
             self.addBuiltin('func_group',mainGroup)
             self.setSearchGroups()
+            self.addBuiltin('GUI',self.GUI)
         if libs is not None:
             for lib in libs: self.import_lib(lib)
 

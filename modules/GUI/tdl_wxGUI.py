@@ -39,8 +39,8 @@ class tdl_wxGUI(model.Background):
         self.cmd_idx = 0
         #redir stdio
         #sys.stdin  = self.readline
-        self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,intro=intro,debug=debug)
-        self.shell.tdl.symbolTable.addBuiltin('GUI','WXAgg')
+        self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,GUI='WXAgg',debug=debug)
+        #self.shell.tdl.symbolTable.addBuiltin('GUI','WXAgg')
         for f in files:
             if os.path.exists(f):
                 self.shell.default("load('%s')" % f)

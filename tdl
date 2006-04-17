@@ -113,8 +113,7 @@ if verbose:
 
 # run it 
 if use_wxGUI == False:
-    t = tdl.shell(libs=libs,debug=debug,intro=None)
-    t.tdl.symbolTable.addBuiltin('GUI','TkAgg')
+    t = tdl.shell(libs=libs,debug=debug,GUI='TkAgg')
     for f in files:
         if os.path.exists(f):
             t.default("load('%s')" % f)

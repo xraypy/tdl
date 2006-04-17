@@ -23,7 +23,7 @@ class Evaluator:
     EOF      = opcodes.eof
     __interrupts = ['pass','continue','break','return']
     def __init__(self,symbolTable = None, output=None,
-                 interactive = False,libs=None,debug=0):
+                 interactive = False,libs=None,debug=0,GUI='TkAgg'):
 
         self.debug       = debug
         self.interactive = interactive
@@ -33,7 +33,8 @@ class Evaluator:
         self.help        = Help.Help()
         self.symbolTable = symbolTable or SymbolTable(libs=libs,
                                                       tdl=self,
-                                                      writer=self.output)
+                                                      writer=self.output,
+                                                      GUI='TkAgg')
 
         self.Expression  = Expression(symbolTable=self.symbolTable,
                                       run_procedure = self.run_procedure)
