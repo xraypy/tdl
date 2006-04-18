@@ -61,27 +61,22 @@ for o, a in opts:
 #################################################################
 # import and set default paths
 # additional paths should be set in the startup.tdl files
-devel  = False
 try:
     import lib as tdl
-    devel = True
+    print '  ############## This is TDL devel ##############'
 except ImportError:
     import tdl
     
 lib_path    = os.path.abspath(tdl.__path__[0])
 tdl_root    = os.path.dirname(lib_path)
-
-if devel:
-    print '  ############## This is TDL devel ##############'
-    module_path = os.path.join(tdl_root,'modules')
-else:
-    module_path = os.path.join(lib_path,'modules')
-
+module_path = os.path.join(tdl_root,'modules')
     
 try:
     if verbose:
-        print ' == tdl paths:  | root | lib | module | '
-        print '    | %s | %s | %s | ' % (tdl_root, lib_path, module_path)
+        print ' == tdl paths:'
+        print '   tddl_root   = %s  ' % tdl_root
+        print '   module_path = %s  ' % module_path
+
     tdl.Util.set_path(lib_path,verbose=verbose)
     tdl.Util.set_path(module_path,recurse=True,verbose=verbose)
     tdl.Util.set_path('.',verbose=verbose)

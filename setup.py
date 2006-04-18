@@ -6,9 +6,16 @@ from distutils.core import setup, Extension
 
 from  lib.version import name,version,author,email,desc
 
-import os, glob
-package_dir = {'tdl': 'lib', 'tdl.modules': 'modules'}
-packages = ['tdl','tdl.TkPlotter','tdl.FileIO','tdl.modules','tdl.modules.GUI','tdl.modules.IO']
+# still not sure where to look for
+# domain-specific modules and user modules
+# environmental variables??
+
+package_dir = {'tdl': 'lib'}
+
+## , 'tdl.modules': 'modules'}
+
+packages = ['tdl','tdl.TkPlotter','tdl.FileIO']
+## ,'tdl.modules','tdl.modules.GUI','tdl.modules.IO']
 
 
 setup(
