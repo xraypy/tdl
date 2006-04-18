@@ -145,17 +145,14 @@ class SymbolTable:
     """
     table of symbols and namespaces storing all functions and variables
     """
-    def __init__(self,libs=None,writer=sys.stdout,tdl=None,GUI='TkAgg',**kws):
+    def __init__(self,libs=None,writer=sys.stdout,tdl=None, **kws):
 
         self.tdl    = tdl
         self.writer = writer
         self.load_libs = []
         init_libs = []
-        self.GUI = GUI
-        if self.GUI == 'TkAgg':
-            init_libs = ['TdlBuiltins','TdlNumLib','Plotter','IO']
-        else:
-            init_libs = ['TdlBuiltins','TdlNumLib','IO'] 
+        init_libs = ['TdlBuiltins','TdlNumLib','IO','Plotter']
+
         if libs is not None:
             init_libs.extend(libs)
         self.initialize(init_libs,clearAll=True)
@@ -169,7 +166,6 @@ class SymbolTable:
             self.addBuiltin('data_group',mainGroup)
             self.addBuiltin('func_group',mainGroup)
             self.setSearchGroups()
-            self.addBuiltin('GUI',self.GUI)
         if libs is not None:
             for lib in libs: self.import_lib(lib)
 
@@ -229,7 +225,7 @@ class SymbolTable:
         self.writer.write(" %s\n" % import_msg)
 
     ### Name/type/util functions
-    def parseName(self,name,group=None,use_default=True):
+    def split_name(self,name,group=None,use_default=True):
         """
         split symbol name into (group,name) tuple.
 
@@ -243,10 +239,10 @@ class SymbolTable:
         will be supplied as group.
 
         common cases:
-           g,n = parseName('dat1.x')               => 'dat1', 'x'
-           g,n = parseName('x')                    => self.dataGroup, 'x'
-           g,n = parseName('x',group='dat2')       => 'dat2', 'x'
-           g,n = parseName('x',use_default=False)  => None, 'x'
+           g,n = split_name('dat1.x')               => 'dat1', 'x'
+           g,n = split_name('x')                    => self.dataGroup, 'x'
+           g,n = split_name('x',group='dat2')       => 'dat2', 'x'
+           g,n = split_name('x',use_default=False)  => None, 'x'
         """
         try:
             name.strip()
@@ -264,7 +260,6 @@ class SymbolTable:
         # default group name for group == None
         # always defaults to current data group
         if group is None and use_default: group = self.dataGroup
-        # print 'parseName ', group, name
         return (group, name)
 
     ### symbol manipulation functions
@@ -275,7 +270,7 @@ class SymbolTable:
         name = group.name or  use name=name, group=group
         """
         # print 'Add Symbol ', name, value, code        
-        group, name = self.parseName(name,group=group)
+        group, name = self.split_name(name,group=group)
         if isValidName(group) and isValidName(name):
             if group not in self.sym.keys():self.sym[group]={}
             if name in self.sym[group].keys():
@@ -294,12 +289,7 @@ class SymbolTable:
         to specify which group you can either use
         name = group.name or  use name=name, group=group
         """
-        try:
-            group, name = self.hasSymbolName(name,group=group)
-        except NameError:
-            return
-        
-        
+        group, name = self.hasSymbolName(name,group=group)
         if group in (None, builtinGroup): return
         if self.sym[group][name].constant and not override:   return
 
@@ -317,7 +307,7 @@ class SymbolTable:
         creation puts symbol in the first group listed
         """
         # get group,name
-        group, name = self.parseName(name,group=None,use_default=False)
+        group, name = self.split_name(name,group=None,use_default=False)
         create_group = group
 
         # see if it exists, ie simple case with full name qualification:
@@ -347,25 +337,15 @@ class SymbolTable:
         else:
             return default
 
-
     #### Group manipulation and symbol checking
     def hasSymbol(self,name,group=None):
-        "see if a symbol exists"
-        try:
-            group, name = self.parseName(name,group=group,use_default=False)
-        except NameError:
-            return False
-        if self.hasGroup(group):
-            return name in self.sym[group].keys()
-
-        for group in self.searchGroups:
-            if name in self.sym[group].keys(): return True
-        return False
+        " returns whether a symbol exists or not"
+        return (None,None) != self.hasSymbolName(name,group=group)
 
     def hasSymbolName(self, name, group=None):
-        "  ret (group,name) or (None,None) if not exist "
+        " sees if a symbol exists, returning (group,name) if it does exist, or (None,None) if not."
         try:
-            group, name = self.parseName(name,group=group,use_default=False)
+            group, name = self.split_name(name,group=group,use_default=False)
         except NameError:
             return (None,None)
         if self.hasGroup(group):
@@ -375,16 +355,6 @@ class SymbolTable:
                 if name in self.sym[grp].keys(): return (grp,name)
         return (None,None)
 
-    def SymbolType(name,group=None):
-        try:
-            group, name = self.hasSymbolName(name,group=group)
-        except NameError:
-            return (None,None,None)
-        if group:
-            ty = self.sym[group][name].type
-            return (group, name, ty)
-        else:
-            return (None, None, None)
 
     def hasGroup(self, group):
         " does this group exist? "
@@ -401,7 +371,7 @@ class SymbolTable:
         " delete a group and all its symbols (except default groups)"
         group = group.strip()
         #if not group in (builtinGroup,globalGroup) and self.sym.has_key(group):
-        if not group in requiredGroups and self.sym.has_key(group):
+        if self.sym.has_key(group) and group not in requiredGroups:
             self.sym.pop(group)
         return None
 
@@ -471,40 +441,6 @@ class SymbolTable:
         self.sym[group] = {}
         return group
     
-    # generic add/delete/get data
-    def hasData(self,name,group=None):
-        "add data"
-        try:
-            group, name = self.hasSymbolName(name,group=group)
-        except NameError:
-            return False
-        if group:
-            if self.sym[group][data].type in DataTypes:
-                return True
-        else:
-            return False
-
-    def addData(self,name,value=None,code=None,type='variable'):
-        "add data"
-        if type not in DataTypes: raise SymbolTypeError
-        return self.addSymbol(name,value=value,group=self.groupName,code=code,type=type)
-        
-    def deleteData(self,name):
-        "delete a data entry"
-        (group, name, type) = self.SymbolType(name)
-        if group and name:
-            if type in DataTypes:
-                return self.deleteSymbol(name)
-
-    def getData(self,name):
-        "get data symbol"
-        sym = self.getSymbol(name,groups=None,create=False)
-        if sym is None: return None
-        if sym.type in DataTypes:
-            return sym
-        else:
-            return None
-
     def getAllData(self,group=None):
         """ if group = None get all data, otherwise get all data in group """
         data = []
@@ -585,14 +521,14 @@ class SymbolTable:
                                   as_cmd=as_cmd,cmd_out=cmd_out)
             
     def deleteFunc(self,name):
-        "delete a func entry"
-        (group,name,type) = self.SymbolType(name)
-        if group and name:
-            if type in FuncTypes:
+        "delete a function symbol"
+        sym = self.getSymbol(name)
+        if sym is not None:
+            if sym.type in FuncTypes:
                 return self.deleteSymbol(name)
 
     def getFunc(self,name):
-        "get func symbol"
+        "get a function symbol"
         sym = self.getSymbol(name,groups=None,create=False)
         if sym is None: return None
         if sym.type in FuncTypes:
@@ -645,10 +581,10 @@ class SymbolTable:
     def getVariable(self,name,create=False):
         """ get variable (or const) """
         sym = self.getSymbol(name,create=create)
-        if sym is not None:
-            if sym.type not in ('variable','constant','defvar'):
-                sym = None
+        if sym is not None: 
+            if sym.type not in DataTypes:   sym = None
         return sym
+
 
     def getVariableCurrentGroup(self,name):
         """
@@ -769,3 +705,18 @@ class SymbolTable:
         else:
             return []
 
+    # obsolete functions:
+    def hasData(self,name,group=None):
+        PrintShortExcept('symbolTable.hasData is obsolete')        
+
+    def addData(self,name,value=None,code=None,type='variable'):
+        PrintShortExcept('symbolTable.addData is obsolete')                
+        
+    def deleteData(self,name):
+        PrintShortExcept('symbolTable.deleteData is obsolete')
+
+    def getData(self,name):
+        PrintShortExcept('symbolTable.getData is obsolete')        
+
+    def SymbolType(name,group=None):
+        PrintShortExcept('symbolTable.SymbolType is obsolete')

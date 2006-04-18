@@ -17,10 +17,11 @@
 from Num import Num
 import types
 
+import pyparsing
 from pyparsing import nums, alphas, quotedString, restOfLine
 from pyparsing import Word, Combine, Optional, Literal, CaselessLiteral
 from pyparsing import OneOrMore, ZeroOrMore, Forward, Or
-from pyparsing import QuotedString, StringEnd, ParseException
+from pyparsing import QuotedString, StringEnd
 
 from Util import trimstring, list2array, int2bin
 from Util import ParseException, EvalException
@@ -219,11 +220,10 @@ class ExpressionParser:
         self.argcount  = 0
         self.dictcount = 0
         s = s.strip()
-        if True: # try:
+        try:
             self.expr.parseString(s)
-        # except ParseException:
-        #self.exprStack = []
-        #    raise ParseException, s
+        except (ParseException,pyparsing.ParseException):
+            raise ParseException, s
         # reversing the stack is the default...
         # set reverse=True to NOT reverse the stack
         if not reverse: self.exprStack.reverse()

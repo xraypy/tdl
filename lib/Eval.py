@@ -33,9 +33,9 @@ class Evaluator:
         self.help        = Help.Help()
         self.symbolTable = symbolTable or SymbolTable(libs=libs,
                                                       tdl=self,
-                                                      writer=self.output,
-                                                      GUI=GUI)
+                                                      writer=self.output)
 
+        self.symbolTable.addBuiltin('GUI',GUI)
         self.Expression  = Expression(symbolTable=self.symbolTable,
                                       run_procedure = self.run_procedure)
         self.expr_eval   = self.Expression.eval

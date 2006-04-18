@@ -99,7 +99,7 @@ class shell(cmd.Cmd):
                 lout = "%s\n%s" % (lout,show_list(f[grp]))
         else:
             for nam in args:
-                sym = self.tdl.symbolTable.getData(nam)
+                sym = self.tdl.symbolTable.getVariable(nam)
                 if sym is None:
                     lout =" cannot find variable %s " % nam
                 else:
@@ -167,7 +167,6 @@ class shell(cmd.Cmd):
             
         elif key in ('group') and len(args)>0:
             self.show_group(args[0].strip())
-
         else:
             args.insert(0,key)
             self.do_show_symbols(args)
@@ -209,6 +208,9 @@ class shell(cmd.Cmd):
                 else:
                     print "  No help on %s.  Try 'help' or 'help topics'" % key
 
+    def tdl_execute(self,s_inp):
+        self.default(s_inp)
+        
     def default(self,s_inp):
         s = s_inp.strip()
         words = s.split()
@@ -243,9 +245,10 @@ class shell(cmd.Cmd):
             if not self._status and x is not None:
                 if detail is None: detail = s
                 print x
-                print '='*60
-                traceback.print_exc()
-                print '='*60
+                if self.debug or x == 'unknown error':
+                    print '='*60
+                    traceback.print_exc()
+                    print '='*60
 
             elif ret is not None:
                 print ret

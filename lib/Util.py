@@ -276,7 +276,7 @@ def Command2Expr(s,symtable=None):
                 return False
             except ValueError:
                 pass
-            return not symtable.hasSymbol(w)
+            return not symtable.hasSymbol(w) 
 
         words = split_list(s,delim=' ')
         tmp = []
