@@ -6,10 +6,13 @@
 
 import types
 
+gui_holder = '_builtin.GUI'
+gui_tkagg  = 'TkAgg'
 plot_group = '_plot'
 plot_obj   = 'plotter'
 _plotter   = "%s.%s" % (plot_group,plot_obj)
-class Plotter:
+
+class Plotter_TkAgg:
     plot_attribs = {'title':'set_title',
                     'xlabel':'set_xlabel',
                     'ylabel':'set_ylabel'}
@@ -128,7 +131,13 @@ def _getPlot(tdl=None):
     if tdl is None: return None
     p = tdl.symbolTable.getSymbol(_plotter)
     if p is None or p.value is None:
-        px = Plotter(tdl)
+        gui = tdl.symbolTable.getSymbolValue(gui_holder)
+        if gui == gui_tkagg:
+            px = Plotter_TkAgg(tdl)
+        else:
+            msg = 'plotting for %s is not yet supported (%s)' % (gui,gui_holder)
+            raise NotImplementedError, msg
+            
         p  = tdl.symbolTable.getSymbol(_plotter)
         if p is None: return None
     return p.value
@@ -146,7 +155,6 @@ def tdl_plot(x,y=None,new=False,tdl=None,**kw):
         else:
             print 'clear: ' 
             p.clear()
-        
     else:       print 'cannot plot?'
 
 def tdl_newplot(x,y=None,tdl=None,**kw):
