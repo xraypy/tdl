@@ -5,6 +5,8 @@
 # -------------
 # Modifications
 # -------------
+# 4-18-06 MN:
+# - several tweaks to startup paths and files stuff.
 # 4-16-06 T2:
 # - A bunch of changes to hadle setting default paths and default
 #   startup files
@@ -21,12 +23,12 @@ import os, string, sys, getopt
 
 ##############################################################
 # test for command line switches
-startup   = True
 use_wxGUI = False
-files     = []
 debug     = False
 verbose   = False
+
 libs      = []
+files     = []
 
 opts, args = getopt.getopt(sys.argv[1:], "wdvhl:")
 #print opts
@@ -54,29 +56,27 @@ for o, a in opts:
         print '>tdl -v  fname1 fname2   #verbose and execute files'
         print '>tdl fname1 fname2       #defaults and execute files'
         print '>tdl -l Lib1 -l Lib2     # load libraries at startup'
-        startup = False
-
-if startup == False: sys.exit()
+        sys.exit()
 
 #################################################################
 # import and set default paths
 # additional paths should be set in the startup.tdl files
-if True: #try:
+try:
     import lib as tdl
-    lib_path    = os.path.abspath(tdl.__path__[0])
-    tdl_root    = os.path.split(lib_path)[0]
-    module_path = os.path.join(tdl_root,'modules')
     print '  ############## This is TDL devel ##############'
-else: # except:
+    mod_path = 'modules'
+except ImportError:
     import tdl
-    lib_path    = os.path.abspath(tdl.__path__[0])
-    tdl_root    = os.path.split(lib_path)[0]
-    module_path = os.path.join(tdl_root,'tdl_modules')
+    mod_path = 'tdl_modules'
+    
+lib_path    = os.path.abspath(tdl.__path__[0])
+tdl_root    = os.path.dirname(lib_path)
+module_path = os.path.join(tdl_root,mod_path)
 
 try:
-    if verbose: print 'tdl_root:   ', tdl_root
-    if verbose: print 'lib_path:   ', lib_path
-    if verbose: print 'module_path:', module_path
+    if verbose:
+        print ' == tdl paths:  | root | lib | module | '
+        print '    | %s | %s | %s | ' % (tdl_root, lib_path, module_path)
     tdl.Util.set_path(lib_path,verbose=verbose)
     tdl.Util.set_path(module_path,recurse=True,verbose=verbose)
     tdl.Util.set_path('.',verbose=verbose)
@@ -84,41 +84,35 @@ except:
     print "Error setting paths"
     pass
 
-
 ##############################################################
-# startup
-
-if verbose:
-    print "Command line Libraries:"
-    for l in libs: print l
-
-# default site startup file
-site_startup = os.path.join(module_path,'startup.tdl')
-if os.path.isfile(site_startup):
-    files.append(site_startup)
-
-# default user startup file
+# startup  files:  first site-wide, then from user's home dir
+#  (~/.tdl_init , the ~/startup.tdl)
+#  files contains tuples of (file, Warn_if_Not_Exist_Flag)
+files = [(os.path.join(module_path,'startup.tdl'),False)]
 user_home = os.path.expanduser('~')
-user_startup = os.path.join(user_home,'startup.tdl')
-if os.path.isfile(user_startup):
-    files.append(user_startup)
 
+if os.name == 'posix':   files.append((os.path.join(user_home,'.tdl_init'),False))
+
+files.append((os.path.join(user_home,'startup.tdl'),False))
+    
 # the rest of the arg line are added files
 if args is not None:
-    for f in args: files.append(f)
+    for f in args: files.append((f,True))
 
 if verbose:
-    print "Startup files:"
+    print " == Command line Libraries:"
+    for l in libs: print l
+    print " == Startup files:"
     for f in files: print f
 
 # run it 
 if use_wxGUI == False:
     t = tdl.shell(libs=libs,debug=debug,GUI='TkAgg')
-    for f in files:
-        if os.path.exists(f):
-            t.default("load('%s')" % f)
-        else:
-            print "\n   ***Cant find startup file: %s" % f
+    for f,warn in files:
+        if os.path.exists(f) and os.path.isfile(f):
+            t.tdl_execute("load('%s')" % f)
+        elif warn:
+            print "\n  ***Cannot find tdl file: %s" % f
     t.cmdloop()
 elif use_wxGUI == True:
     # tdl gets started from within the wxGUI
@@ -135,5 +129,3 @@ elif use_wxGUI == True:
     gui = tdl_wxGUI.model.Application(tdl_wxGUI.tdl_wxGUI, aFileName=rsrc)
     os.chdir(work_dir)
     gui.MainLoop()
-
-
