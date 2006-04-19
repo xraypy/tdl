@@ -40,12 +40,11 @@ class tdl_wxGUI(model.Background):
         #redir stdio
         #sys.stdin  = self.readline
         self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,GUI='WXAgg',debug=debug)
-        #self.shell.tdl.symbolTable.addBuiltin('GUI','WXAgg')
-        for f in files:
-            if os.path.exists(f):
-                self.shell.default("load('%s')" % f)
-            else:
-                print "\n   ***Cant find startup file: %s" % f
+        for f,warn in files:
+            if os.path.exists(f) and os.path.isfile(f):
+                self.shell.tdl_execute("load('%s')" % f)
+            elif warn:
+                print "\n  ***Cannot find tdl file: %s" % f
         self.run_tdl()
         # when done we've quit  
         sys.__stdout__.write("\nExiting TDL\n")

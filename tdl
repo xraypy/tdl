@@ -5,13 +5,15 @@
 # -------------
 # Modifications
 # -------------
+# 4-18-06 T2:
+# - another small tweak to startup files.  may as well be .tdl_init
+#   for all systems.
 # 4-18-06 MN:
 # - several tweaks to startup paths and files stuff.
 # 4-16-06 T2:
-# - A bunch of changes to hadle setting default paths and default
+# - A bunch of changes to handle setting default paths and default
 #   startup files
 # - also a bit of work on startup switches
-#
 # 4-8-06 T2
 # Added verbose option.  note -f doesnt do anything, ie shell
 # doesnt accept file on init.
@@ -74,9 +76,8 @@ module_path = os.path.join(tdl_root,'modules')
 try:
     if verbose:
         print ' == tdl paths:'
-        print '   tddl_root   = %s  ' % tdl_root
-        print '   module_path = %s  ' % module_path
-
+        print '    tdl_root   = %s  ' % tdl_root
+        print '    module_path = %s  ' % module_path
     tdl.Util.set_path(lib_path,verbose=verbose)
     tdl.Util.set_path(module_path,recurse=True,verbose=verbose)
     tdl.Util.set_path('.',verbose=verbose)
@@ -85,15 +86,17 @@ except:
     pass
 
 ##############################################################
-# startup  files:  first site-wide, then from user's home dir
-#  (~/.tdl_init , the ~/startup.tdl)
-#  files contains tuples of (file, Warn_if_Not_Exist_Flag)
+# startup  files:
+#   first site-wide ==> module_path/startup.tdl
+#   then from user's home dir ==> ~/.tdl_init
+# files contains tuples of (file, Warn_if_Not_Exist_Flag)
 files = [(os.path.join(module_path,'startup.tdl'),False)]
 user_home = os.path.expanduser('~')
 
-if os.name == 'posix':   files.append((os.path.join(user_home,'.tdl_init'),False))
-
-files.append((os.path.join(user_home,'startup.tdl'),False))
+# the .tdl_init works ok on win...
+#if os.name == 'posix':
+files.append((os.path.join(user_home,'.tdl_init'),False))
+#files.append((os.path.join(user_home,'startup.tdl'),False))
     
 # the rest of the arg line are added files
 if args is not None:

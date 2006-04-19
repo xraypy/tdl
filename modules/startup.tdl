@@ -1,8 +1,8 @@
 # default site startup file for tdl.
 # Add paths, imports and other data that should be defined for the site
-# Individual users can place a startup.tdl file in thier home
+# Individual users can place a .tdl_init file in thier home
 # directories for additional startup options
 
-#print "****Site Startup*****"
+#print "    **Site Startup "
 
 import LibTest
