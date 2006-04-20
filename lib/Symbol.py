@@ -102,8 +102,11 @@ class Symbol:
             return self.value
 
     def __cmdout__(self,val,**kws):
+        x = {}
+        x.update(self.kws) ; x.update(kws)
         if self.cmd_out:
-            return self.cmd_out(val,**kws)
+            #return self.cmd_out(val,**kws)
+            return self.cmd_out(val,**x)
         elif val is None:
             return None
         return str(val)

@@ -2,9 +2,6 @@
 # From Matt Newville
 # Modifed by Tom Trainor
 
-import string
-
-
 class SpecFile:
     def __init__(self,fname=None):
         self.fname    = fname
@@ -142,12 +139,12 @@ class SpecFile:
         # parse the various data into the dict
         sc_dict['cmd']  = s['cmnd']
         sc_dict['date'] = s['date']
-        sc_dict['G']    = map(float,string.split(s['Gvals']))
-        sc_dict['Q']    = map(float,string.split(s['q']))
+        sc_dict['G']    = map(float,s['Gvals'].split())
+        sc_dict['Q']    = map(float,s['q'].split())
         # get the motor positions
         p_dict = {}
-        m_names = string.split(s['mot_names'])
-        p_vals  = string.split(s['Pvals'])
+        m_names = s['mot_names'].split()
+        p_vals  = s['Pvals'].split()
         if len(m_names) != len(p_vals):
             print "Mismatch in Motor Names and Motor Values"
         else:
@@ -155,7 +152,7 @@ class SpecFile:
                 p_dict.update({m_names[j]:float(p_vals[j])})
         sc_dict['P'] = p_dict
         #
-        lbls = string.split(s['labels'])
+        lbls = s['labels'].split()
         sc_dict['labels'] = lbls
         ncol = len(lbls)
         nrow = len(dat)
@@ -172,5 +169,17 @@ class SpecFile:
         # all done
         return sc_dict
             
-            
- 
+####################################################
+def read_spec(fname=None,tdl=None,**kws):
+    sf = SpecFile(fname=fname)
+    return sf
+
+def read_spec_cmd(val,fname=None,tdl=None,**kws):
+    name = val.fname
+    if '.' in name: name = name.split('.',1)[0]
+    print name
+    
+    tdl.symbolTable.addSymbol(name,value=val,group='spec')
+
+
+_func_ = {"spec.read":(read_spec,read_spec_cmd)}

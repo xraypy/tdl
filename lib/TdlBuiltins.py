@@ -291,7 +291,7 @@ def _ls(arg= '.',**kws):
             ret[j] = ret[j].replace('\\','/')
     return ret
 
-def _ls_cmdout(x,ncol=None):
+def _ls_cmdout(x,ncol=None,**kws):
     " output for ls "
     return show_list(x,ncol=ncol)
 
