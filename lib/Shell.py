@@ -37,17 +37,15 @@ class shell(cmd.Cmd):
 
         cmd.Cmd.__init__(self,completekey='tab')
 
+        self.use_rawinput = True
         if stdin is not None:
-            sys.stdin = self.stdin = stdin
+            sys.stdin = stdin
             self.use_rawinput = False
-        else:
-            self.stdin = sys.stdin
-            self.use_rawinput = True
-        if stdout is not None:
-            sys.stdout = self.stdout = stdout
-            #sys.stderr = stdout
-        else:
-            self.stdout = sys.stdout
+
+        if stdout is not None:  sys.stdout = stdout
+        
+        self.stdin = sys.stdin
+        self.stdout = sys.stdout
         #self.stdin  = stdin  or sys.stdin
         #self.stdout = stdout or sys.stdout
 
