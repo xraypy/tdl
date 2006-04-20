@@ -23,7 +23,7 @@ import re
 from copy import deepcopy
 
 from Num import Num
-from Util import find_unquoted_char, split_delim, datalen
+from Util import find_unquoted_char, split_delim, datalen, set_path
 from Util import PrintExceptErr, PrintShortExcept
 
 random.seed(0)
@@ -38,11 +38,12 @@ SymbolTypeError = """SymbolTypeError: Valid type are:\n%s """ % str(SymbolTypes)
 # Default data groups
 #  search order will bw dataGroup,funcGroup,mainGroup,builtinGroup,mathGroup,plotGroup
 builtinGroup = '_builtin'
+sysGroup     = '_sys'
 mainGroup    = '_main'
 mathGroup    = '_math'
 plotGroup    = '_plot'
 # groups that must always be present, and default search order
-requiredGroups = (mainGroup,builtinGroup,mathGroup,plotGroup)
+requiredGroups = (mainGroup,builtinGroup,sysGroup,mathGroup,plotGroup)
 
 isValidName = re.compile(r'[a-zA-Z_\$][a-zA-Z0-9_]*').match
 
@@ -175,7 +176,11 @@ class SymbolTable:
     def import_lib(self,lib):
         " import or reload module given module name or object"
         if lib is None: return None
+        
         mod, msg = None, None
+        syspath = self.getSymbolValue('_sys.path')
+        # print syspath
+        if syspath is not None:  set_path(syspath)
         if type(lib) == types.StringType:
             try: 
                 mod = __import__(lib)
