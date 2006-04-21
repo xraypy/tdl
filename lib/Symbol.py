@@ -397,7 +397,7 @@ class SymbolTable:
 
     def setSearchGroups(self):
         self.searchGroups = [self.dataGroup]
-        if self.funcGroup != self.dataGroup: self.searchGroups.append(self.funcGrouop)
+        if self.funcGroup != self.dataGroup: self.searchGroups.append(self.funcGroup)
         for i in requiredGroups:
             if i not in self.searchGroups: self.searchGroups.append(i)
         return self.searchGroups

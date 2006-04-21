@@ -43,13 +43,13 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
 #
 def tdl_write_ascii(fname,  *arr,**kw):
     " write ascii file of tdl code -- could be a lot better! "
-    print 'write ascii ', fname
-    tdl = kw['tdl']
+    print 'write ascii ', fname, kw
+    tdl    = kw['tdl']
+    labels = kw.get('label', '')
     if tdl is None: return None
     arr_out=[]
     sca_val = []
     sca_nam = []
-    labels =''
     group = tdl.symbolTable.getDataGroup()
     npts = []
     for item in arr:
@@ -58,21 +58,23 @@ def tdl_write_ascii(fname,  *arr,**kw):
         itype = 'literal'
         iname = ' '        
         ival  = item
-        if n<=1 and type(item) is types.StringType:
-            try:
+        if dtype is types.StringType:
+            if True:# try:
                 sym   = tdl.symbolTable.getVariable(item)
-                n     = datalen(o)
                 dtype = sym.type
                 ival  = sym.value
+                n     = datalen(sym.value)
                 iname = sym.name
                 itype = 'symbol'
-            except:
+            else: # except:
                 itype = 'unknown'
                 print ' cannot handle ', item
         if itype == 'unknown': continue
-        if n == 1:
+        print '>> ', n, itype, dtype, iname
+        if n == 1 or dtype == 'string':
             sca_nam.append(iname)
             sca_val.append(ival)            
+            print '-> scalar ', iname, ival
         else:
             labels = "%s %s" % (labels,iname)
             arr_out.append(list(ival))
@@ -83,7 +85,7 @@ def tdl_write_ascii(fname,  *arr,**kw):
     f.write("# file written by tdl write_ascii() \n")
     for n,v in zip(sca_nam,sca_val):
         f.write("# %s = %s \n" %  (n,v))
-    f.write("-----------------------------------------\n")
+    f.write("#-----------------------------------------\n")
     f.write("# %s\n" % labels)
     nout = len(npts)
     mout = npts[0]
