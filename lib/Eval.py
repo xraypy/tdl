@@ -572,9 +572,8 @@ class Evaluator:
         name = proc.name
         if len(args) != len(proc.args):
             raise EvalException, 'not enough arguments for procedure %s' % name
-        
-        print 'RUN PROC ', proc.name, args, proc.args
-        
+
+
         savegroup = self.symbolTable.getDataGroup()
         group = self.symbolTable.addRandomGroup(prefix=name,nlen=4)
         if group is None:
