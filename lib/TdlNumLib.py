@@ -137,76 +137,40 @@ def _random_seed(x=None):
         try:
             return Num.random.seed([x])
         except:
-            pass
-
+            return Num.random.seed()            
 
 def _random(a,b=1,c=1,npts=1,distribution='normal',**kw):
-    "wrap numpy random distributions" 
+    "wrapper for numpy random distributions" 
     NR = Num.random
-    if distribution == 'binomial':
-        return NR.binomial(a,b,size=npts)
-    elif distribution == 'geometric':
-        return NR.geometric(a,size=npts)    
-    elif distribution == 'poisson':
-        return NR.poisson(a,size=npts)    
-    elif distribution == 'zipf':
-        return NR.zipf(a,size=npts)    
-    elif distribution == 'beta':
-        return NR.beta(a,b,size=npts)    
-    elif distribution == 'chisquare':
-        return NR.chisquare(a,size=npts)    
-    elif distribution == 'exponential':
-        return NR.exponential(a,size=npts)
-    elif distribution == 'gamma':
-        return NR.gamma(a,b,size=npts)
-    elif distribution == 'gumbel':
-        return NR.gumbel(a,b,size=npts)
-    elif distribution == 'laplace':
-        return NR.laplace(a,b,size=npts)
-    elif distribution == 'lognormal':
-        return NR.lognormal(a,b,size=npts)    
-    elif distribution == 'logistic':
-        return NR.logistic(a,b,size=npts)    
-    elif distribution == 'multivariate_normal':
-        return NR.multivariate_normal(a,b,size=npts)
-    elif distribution == 'noncentral_chisquare':
-        return NR.noncentral_chisquare(a,b,size=npts)
-
-
-    elif distribution == 'noncentral_f':
-        return NR.noncentral_f(a,b,c,size=npts)
-    elif distribution == 'normal':
-        return NR.normal(a,b,size=npts)
-    elif distribution == 'pareto':
-        return NR.pareto(a,size=npts)
-    elif distribution == 'power':
-        return NR.power(a,size=npts)
-    elif distribution == 'randint':
-        return NR.randint(a,b,size=npts)
-    elif distribution == 'random_integers':
-        return NR.random_integers(a,b,size=npts)
-    elif distribution == 'rayleigh':
-        return NR.rayleigh(a,size=npts)
-    elif distribution == 'standard_cauchy':
-        return NR.standard_cauchy(size=npts)
-    elif distribution == 'standard_exponential':
-        return NR.standard_exponential(size=npts)
-    elif distribution == 'standard_gamma':
-        return NR.standard_gamma(a,size=npts)
-    elif distribution == 'standard_normal':
-        return NR.standard_normal(size=npts)
-    elif distribution == 'standard_t':
-        return NR.standard_t(a,size=npts)
-    elif distribution == 'uniform':
-        return NR.uniform(a,b,size=npts)
-    elif distribution == 'wald':
-        return NR.wald(a,b,size=npts)
-    elif distribution == 'weibull':
-        return NR.weibull(a,b,size=npts)
-    
-
-    
-    
+    if   distribution == 'binomial':        return NR.binomial(a,b,size=npts)
+    elif distribution == 'geometric':       return NR.geometric(a,size=npts)    
+    elif distribution == 'poisson':         return NR.poisson(a,size=npts)    
+    elif distribution == 'zipf':            return NR.zipf(a,size=npts)    
+    elif distribution == 'beta':            return NR.beta(a,b,size=npts)    
+    elif distribution == 'chisquare':       return NR.chisquare(a,size=npts)    
+    elif distribution == 'exponential':     return NR.exponential(a,size=npts)
+    elif distribution == 'gamma':           return NR.gamma(a,b,size=npts)
+    elif distribution == 'gumbel':          return NR.gumbel(a,b,size=npts)
+    elif distribution == 'laplace':         return NR.laplace(a,b,size=npts)
+    elif distribution == 'lognormal':       return NR.lognormal(a,b,size=npts)    
+    elif distribution == 'logistic':        return NR.logistic(a,b,size=npts)    
+    elif distribution == 'multivariate_normal':   return NR.multivariate_normal(a,b,size=npts)
+    elif distribution == 'noncentral_chisquare':  return NR.noncentral_chisquare(a,b,size=npts)
+    elif distribution == 'noncentral_f':    return NR.noncentral_f(a,b,c,size=npts)
+    elif distribution == 'normal':          return NR.normal(a,b,size=npts)
+    elif distribution == 'pareto':          return NR.pareto(a,size=npts)
+    elif distribution == 'power':           return NR.power(a,size=npts)
+    elif distribution == 'randint':         return NR.randint(a,b,size=npts)
+    elif distribution == 'random_integers': return NR.random_integers(a,b,size=npts)
+    elif distribution == 'rayleigh':        return NR.rayleigh(a,size=npts)
+    elif distribution == 'standard_cauchy': return NR.standard_cauchy(size=npts)
+    elif distribution == 'standard_exponential':        return NR.standard_exponential(size=npts)
+    elif distribution == 'standard_gamma':  return NR.standard_gamma(a,size=npts)
+    elif distribution == 'standard_normal': return NR.standard_normal(size=npts)
+    elif distribution == 'standard_t':      return NR.standard_t(a,size=npts)
+    elif distribution == 'uniform':         return NR.uniform(a,b,size=npts)
+    elif distribution == 'wald':            return NR.wald(a,b,size=npts)
+    elif distribution == 'weibull':         return NR.weibull(a,b,size=npts)
 
 
 #################################################################

@@ -38,6 +38,7 @@ from Num import Num
 import os
 import sys
 import types
+import time
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
 from Util import set_path
@@ -209,13 +210,10 @@ def _list(x):
 
 def _listappend(x,val):
     "append a value to a list"
-    print 'append ', x, type(x)
     if type(x) == Num.ArrayType: x = x.tolist()
-    print 'append ', x, type(x)
     if type(x) == types.ListType:
         x.append(val)
         return list2array(x)
-    
 
 def _listjoin(x,y):
     "join two lists"    
@@ -598,6 +596,7 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.join":(_listjoin,None),
           "_builtin.reverse":(_listreverse,None),
           "_builtin.sort":(_listsort,None),
+          "_builtin.get_timestamp":(time.time,None),
           # these may never actually work.....
           #"_builtin.pop":(_pop,None),          
           #"_builtin.dictpop":(_dictpop,None),
