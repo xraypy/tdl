@@ -106,7 +106,6 @@ class Symbol:
         x = {}
         x.update(self.kws) ; x.update(kws)
         if self.cmd_out:
-            #return self.cmd_out(val,**kws)
             return self.cmd_out(val,**x)
         elif val is None:
             return None
@@ -282,11 +281,9 @@ class SymbolTable:
         if isValidName(group) and isValidName(name):
             if group not in self.sym.keys():self.sym[group]={}
             if name in self.sym[group].keys():
-                if self.sym[group][name].constant:
-                    #print "%s.%s is Constant type, cannot overwrite" % (group,name)
-                    return (None,None)
-            self.sym[group][name] = Symbol(name,value=value,type=type,code=code,
-                                           desc=desc,group=group,**kws)
+                if self.sym[group][name].constant: return (None,None)
+            self.sym[group][name] = Symbol(name,value=value,type=type,
+                                           code=code,desc=desc,group=group,**kws)
             return (group,name)
         else:
             return (None,None)
