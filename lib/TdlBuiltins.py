@@ -339,12 +339,13 @@ def _type(x):
     return 'unknown'             
 
 
-def _path(pth=None,recurse=False):
+def _path(pth=None,recurse=False,tdl=None):
     "modify or show python path"
     if not pth:
         return show_list(sys.path)
     else:
         set_path(pth=pth,recurse=recurse)
+        tdl.SetVariable('_sys.path', sys.path)
     return
 
 def tdl_open(filename,mode='r',tdl=None,**kw):
@@ -396,7 +397,7 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
     tdl.set_debug(debug)
     return None
 
-def tdl_load(fname, tdl=None,debug=False,**kw):
+def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
     " load file of tdl code"
     #print fname
     if tdl is None:
@@ -406,8 +407,13 @@ def tdl_load(fname, tdl=None,debug=False,**kw):
     if not os.path.isfile(fname):
         print 'file error: cannot find file %s ' % fname
         return None        
+    if group is not None:
+        group_save = tdl.symbolTable.getDataGroup()
+        tdl.symbolTable.setDataGroup(group)        
     tdl.load_file(fname)
     tdl.run()
+    if group is not None:    
+        tdl.symbolTable.setDataGroup(group_save)    
     if debug: print 'load done.'
 
 def tdl_import(lib='', tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
