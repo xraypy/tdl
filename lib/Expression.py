@@ -178,7 +178,10 @@ class ExpressionParser:
         _list = (_lbrack + lit_list + _rbrack).setParseAction(self.pushList)
         _dict = (_lbrace + lit_dict + _rbrace).setParseAction(self.pushDict)
 
-        atom  = _str | _num | _sym  | _expr | _list | _dict  
+        _emptylist = (_lbrack + _rbrack).setParseAction(self.pushEmptyList)
+        _emptydict = (_lbrace + _rbrace).setParseAction(self.pushEmptyDict)
+
+        atom  = _str | _num | _sym  | _expr | _list | _dict | _emptylist | _emptydict
 
         # define exponentiation as "atom [ ^ expr ]..." instead of "atom [ ^ atom ]...",
         # to get right associative
@@ -360,6 +363,13 @@ class ExpressionParser:
 
     def pushDict(self, s, loc, toks ):
         self.pushOp(opcodes.dict, self.dictcount)
+        self.dictcount = 0
+        
+    def pushEmptyList(self, s, loc, toks):
+        self.pushOp(opcodes.list, 0, reset=True)        
+
+    def pushEmptyDict(self, s, loc, toks):
+        self.pushOp(opcodes.list, 0)
         self.dictcount = 0
 
     def pushOp(self,op,count,count2=None,reset=False):
