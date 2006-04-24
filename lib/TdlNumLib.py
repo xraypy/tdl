@@ -8,7 +8,7 @@
 #  - Created, moved numeric related funs/cmds to this module
 #   from TdlLib
 ##########################################################################
-from Num import Num
+from Num import Num, num_version
 import os
 import sys
 import types
@@ -49,7 +49,6 @@ def _complex(x):
     else:
         return complex(x)
 
-
 def _range(x,stop=None,step=None,shape=None,dtype='d'):
     """create an array of evenly spaced values:
         range(x, [stop=stop, [step=step, [shape=shape, [dtype='d']]]])
@@ -89,6 +88,44 @@ def _range(x,stop=None,step=None,shape=None,dtype='d'):
     raise ValueError, ' could not re-shape array to shape = %s ' % repr(shape)
             
 
+
+
+def _tdl_minimize(residual,varlist,tdl=None, iter_function=None, **kw):
+    ' tdl optimization '
+    # for tdl with scipy.optimize.leastsq
+    if num_version.startswith('numpy'):
+        print 'cannot use tdl minimize:  scipy required'
+        return
+    
+    from scipy.optimize import leastsq
+
+    if tdl is None: return None
+    tdl.setVariable('_array.fit_iterations',0)
+    params = []
+    for i in varlist: params.append(tdl.getVariableValue(i))
+    params = Num.array(params)
+
+    tdl.eval(residual)
+
+    def get_residual(params):
+        for name,val in zip(varlist,params):
+            tdl.setVariable(name,val)
+        r = tdl.eval(residual)
+        n = tdl.getVariableValue('_array.fit_iterations')
+        tdl.setVariable('_array.fit_iterations',n + 1)
+        # print ' iteration ', n, params
+        if iter_function is not None:
+            tdl.eval(iter_function)
+        return r
+
+    plsq = leastsq(get_residual,params)
+    n    = tdl.getVariableValue('_array.fit_iterations')
+    tdl.eval(residual)
+
+    print  ' optimization done:  ', n, plsq[1]
+    return plsq[0]
+
+
 #################################################################
 # Load the functions
 #################################################################
@@ -99,7 +136,9 @@ _consts_ = {"_math.pi":Num.pi, "_math.e":Num.e}
 
 # these do not get passed a reference to tdl in call argument
 # should we make all these num.fcn ???
-_func_ = {"_math.array":Num.array,
+_func_ = {
+          "array.minimize":_tdl_minimize,
+          "_math.array":Num.array,
           "_math.sin":Num.sin,
           "_math.cos":Num.cos,
           "_math.tan":Num.tan,          
@@ -219,7 +258,6 @@ _func_ = {"_math.array":Num.array,
           "array.zeros":Num.zeros,
           }
           
-
 
 if __name__ == '__main__':
     print help

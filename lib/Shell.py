@@ -10,11 +10,12 @@
 #
 ############################################################################
 
-from Num import Num
+from Num import Num, num_version
 
 from Eval   import Evaluator
 from Symbol import SymbolTable
-from Util   import ParseException, EvalException, show_list, split_arg_str, show_more
+from Util   import ParseException, EvalException
+from Util   import show_list, split_arg_str, show_more
 from Help   import Help
 import version
 import cmd
@@ -26,7 +27,9 @@ import traceback
 
 
 class shell(cmd.Cmd):
-    banner = "\n  Tiny Data Language %s  M. Newville, T. Trainor (2006)"
+    banner = """
+    Tiny Data Language %s  M. Newville, T. Trainor (2006)
+           using %s"""
     intro  = "\n  type 'help' to get started"
     ps1    = "tdl> "
     ps2    = "...> "
@@ -49,7 +52,7 @@ class shell(cmd.Cmd):
         #self.stdin  = stdin  or sys.stdin
         #self.stdout = stdout or sys.stdout
 
-        print self.banner % version.version
+        print self.banner % (version.version,num_version)
 
         self.tdl       = Evaluator(interactive= True, debug= debug,
                                   output = self.stdout, libs= libs, GUI=GUI)
@@ -224,7 +227,7 @@ class shell(cmd.Cmd):
                 if s.startswith('show '):
                     self.do_show(s[5:])
                 else:
-                    ret = self.tdl.eval(s)
+                    ret = self.tdl.execute(s)
                 self._status = True
             except ValueError, detail:
                 x = "%s error: %s" % ('syntax',detail) 

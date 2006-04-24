@@ -27,7 +27,6 @@ class Evaluator:
 
         self.debug       = debug
         self.interactive = interactive
-
         self.output      = output      or sys.stdout
 
         self.help        = Help.Help()
@@ -53,6 +52,24 @@ class Evaluator:
         self.retval = None
         self.infile = '<stdin>'
         
+    def setVariable(self,var,val):
+        return self.symbolTable.setVariable(var,val)
+
+    def getVariable(self,var):
+        "return reference to a named variable"
+        return self.symbolTable.getVariable(var)
+
+    def getVariableValue(self,var):
+        "return value of a named variable"        
+        var = self.symbolTable.getVariable(var)
+        
+        if var is not None:
+            try:
+                return var.value
+            except AttributeError:
+                return None
+        return None
+
     def set_debug(self,n):
         self.debug = n
         self.expr.set_debug(n)
@@ -77,8 +94,17 @@ class Evaluator:
         self.stack = []
         self.text  = []
         self.nline = 0
+        
+    def eval(self,s):
+        " evaluate tdl statement"
+        ret = None
+        x = self.compile(s = s)
+        if x is not None:
+            ret = self.interpret(x, text=s)
+            self._status = True
+        return ret
 
-    def eval(self,t):
+    def execute(self,t):
         " evaluate tdl statement or list of tdl statements"
         if type(t) != types.ListType:
             self.load_statements([t])
@@ -88,15 +114,21 @@ class Evaluator:
 
     def load_statements(self,t,file='stdin'):
         " load a list of text lines to be parsed & executed"
-        s = t[:]
+        if type(t) == types.ListType:
+            s = t[:]
+        elif type(t) == types.StringType:
+            s = [t]
         n = 0
         self.infile = file
         while s:
             n = n+1
-            self.text.append((s.pop().strip(),n,self.infile))
+            xs = s.pop().strip()
+            # print 'load statements: ', n, xs, len(xs)
+            self.text.append((xs,n,self.infile))
 
     def run(self):
         " load a chunk of text to be parsed and possibly executed"
+        # if s is not None: self.load_statements([s])
         ret = None
         while True:
             try:
@@ -104,8 +136,10 @@ class Evaluator:
             except IndexError:
                 break
             if len(s)<=0: continue
+            s.strip()
+            if s.startswith('#'): continue
             x = self.compile(s = s)
-            # print 'run compilation: ', s, '=> ', x
+
             if x is not None:
                 ret = self.interpret(x, text=s)
                 self._status = True
@@ -324,31 +358,32 @@ class Evaluator:
                     if n1 <1 or n2<n1:
                         raise EvalException, 'syntax error: invalid def statement'
                     # print 'n1 = ', n1, n2
-                    # construct tuple and keyqords of function arguments
+                    # construct tuple and keywords of function arguments
                     vargs = [] ; kws = {} ; iargs = 0; eq_seen = False
-                    for i in split_list(s1[n1+1:n2]):
-                        iargs = iargs+1
-                        ieq = i.find('=')
-                        if ieq == -1:
-                            if eq_seen:
-                                raise EvalException, 'syntax error: invalid def statement 2'
-                            j = self.expr_compile(i,reverse=True)
-                            if len(j)>1:
+                    if n2>n1+1:
+                        for i in split_list(s1[n1+1:n2]):
+                            iargs = iargs+1
+                            ieq = i.find('=')
+                            if ieq == -1:
+                                if eq_seen:
+                                    raise EvalException, 'syntax error: invalid def statement 2'
+                                j = self.expr_compile(i,reverse=True)
+                                if j is not None and len(j)>1:
+                                    x = j.pop()
+                                    if len(j)!=1 or x != opcodes.variable:
+                                        raise EvalException, 'syntax error: invalid def statement 1'
+                                    vargs.append(j.pop())
+                                else:
+                                    iargs = iargs-1
+                            else:
+                                eq_seen = True
+                                j = self.expr_compile(i[:ieq], reverse=True)
                                 x = j.pop()
                                 if len(j)!=1 or x != opcodes.variable:
                                     raise EvalException, 'syntax error: invalid def statement 1'
-                                vargs.append(j.pop())
-                            else:
-                                iargs = iargs-1
-                        else:
-                            eq_seen = True
-                            j = self.expr_compile(i[:ieq], reverse=True)
-                            x = j.pop()
-                            if len(j)!=1 or x != opcodes.variable:
-                                raise EvalException, 'syntax error: invalid def statement 1'
-                            k = j.pop()
-                            v = self.expr_eval(self.expr_compile(i[ieq+1:]))
-                            kws[k] = v
+                                k = j.pop()
+                                v = self.expr_eval(self.expr_compile(i[ieq+1:]))
+                                kws[k] = v
                     if iargs != int(nargs):
                         raise EvalException, 'syntax error: invalid def statement 5'
                 blockhead = [fname, tuple(vargs), kws]
