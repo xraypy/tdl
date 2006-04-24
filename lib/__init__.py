@@ -33,3 +33,4 @@ TdlBuiltins = TdlBuiltins
 TdlNumLib = TdlNumLib
 Plotter = Plotter
 IO = IO
+__numeric__ = Num.num_version
