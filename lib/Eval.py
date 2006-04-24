@@ -135,6 +135,8 @@ class Evaluator:
                 s,nline,srcfile = self.text.pop()
             except IndexError:
                 break
+            if s == self.EOF: return None
+
             if len(s)<=0: continue
             s.strip()
             if s.startswith('#'): continue
