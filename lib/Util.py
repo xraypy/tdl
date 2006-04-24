@@ -424,14 +424,14 @@ def set_path(pth=None,recurse=False,verbose=False,clean=True):
     else:
         print "Path '%s' doesnt exist" % pth
     if clean: clean_path()
-    return 
+    return
 
 def clean_path():
     temp = []
     for p in sys.path:
         if p not in temp:
             temp.append(p)
-    temp.sort()
+    # temp.sort()
     sys.path = temp
 
 def sub_dirs(pth,skip_txt=None):
