@@ -12,7 +12,7 @@ from Num import Num, num_version
 import os
 import sys
 import types
-
+from Util import datalen
 
 title = "numeric functions"
 
@@ -88,42 +88,125 @@ def _range(x,stop=None,step=None,shape=None,dtype='d'):
     raise ValueError, ' could not re-shape array to shape = %s ' % repr(shape)
             
 
-
-
-def _tdl_minimize(residual,varlist,tdl=None, iter_function=None, **kw):
-    ' tdl optimization '
-    # for tdl with scipy.optimize.leastsq
+def _tdl_minimize(residual,varlist,tdl=None, iter_function=None, debug=False, **kw):
+    """tdl optimization:
+         minimize(f, variable_list)
+    """
+    if tdl is None: return varlist
     if num_version.startswith('numpy'):
         print 'cannot use tdl minimize:  scipy required'
-        return
-    
-    from scipy.optimize import leastsq
+        return varlist
 
-    if tdl is None: return None
-    tdl.setVariable('_array.fit_iterations',0)
+    from scipy.optimize import leastsq
+    tdl.setVariable('_sys.fit_iterations',0)
+
     params = []
     for i in varlist: params.append(tdl.getVariableValue(i))
     params = Num.array(params)
 
     tdl.eval(residual)
 
+    rsym = tdl.getVariable(residual)
+    try:
+        if rsym.type in ('pyfunc','defvar'): pass
+    except:
+        print 'cannot minimize %s: must be a defined procedure or variable ' % residual
+        return varlist
+    
+    n_iter = tdl.getVariable('_sys.fit_iterations')
     def get_residual(params):
-        for name,val in zip(varlist,params):
-            tdl.setVariable(name,val)
+        for name,val in zip(varlist,params): tdl.setVariable(name,val)
         r = tdl.eval(residual)
-        n = tdl.getVariableValue('_array.fit_iterations')
-        tdl.setVariable('_array.fit_iterations',n + 1)
-        # print ' iteration ', n, params
-        if iter_function is not None:
-            tdl.eval(iter_function)
+        n_iter.value = n_iter.value + 1
+        if iter_function is not None:  tdl.eval(iter_function)
         return r
 
-    plsq = leastsq(get_residual,params)
-    n    = tdl.getVariableValue('_array.fit_iterations')
+    result = leastsq(get_residual,params)
     tdl.eval(residual)
+    tdl.setVariable('_sys.fit_message',result[1])
+    if debug: print  ' optimization done:  ', n_iter.value, result[1]
+    return result[0]
 
-    print  ' optimization done:  ', n, plsq[1]
-    return plsq[0]
+
+def _random_seed(x=None):
+    "wrap numpy random seed "
+    print x, datalen(x)
+    if x is None:
+        return Num.random.seed()
+    else:
+        try:
+            return Num.random.seed([x])
+        except:
+            pass
+
+
+def _random(a,b=1,c=1,npts=1,distribution='normal',**kw):
+    "wrap numpy random distributions" 
+    NR = Num.random
+    if distribution == 'binomial':
+        return NR.binomial(a,b,size=npts)
+    elif distribution == 'geometric':
+        return NR.geometric(a,size=npts)    
+    elif distribution == 'poisson':
+        return NR.poisson(a,size=npts)    
+    elif distribution == 'zipf':
+        return NR.zipf(a,size=npts)    
+    elif distribution == 'beta':
+        return NR.beta(a,b,size=npts)    
+    elif distribution == 'chisquare':
+        return NR.chisquare(a,size=npts)    
+    elif distribution == 'exponential':
+        return NR.exponential(a,size=npts)
+    elif distribution == 'gamma':
+        return NR.gamma(a,b,size=npts)
+    elif distribution == 'gumbel':
+        return NR.gumbel(a,b,size=npts)
+    elif distribution == 'laplace':
+        return NR.laplace(a,b,size=npts)
+    elif distribution == 'lognormal':
+        return NR.lognormal(a,b,size=npts)    
+    elif distribution == 'logistic':
+        return NR.logistic(a,b,size=npts)    
+    elif distribution == 'multivariate_normal':
+        return NR.multivariate_normal(a,b,size=npts)
+    elif distribution == 'noncentral_chisquare':
+        return NR.noncentral_chisquare(a,b,size=npts)
+
+
+    elif distribution == 'noncentral_f':
+        return NR.noncentral_f(a,b,c,size=npts)
+    elif distribution == 'normal':
+        return NR.normal(a,b,size=npts)
+    elif distribution == 'pareto':
+        return NR.pareto(a,size=npts)
+    elif distribution == 'power':
+        return NR.power(a,size=npts)
+    elif distribution == 'randint':
+        return NR.randint(a,b,size=npts)
+    elif distribution == 'random_integers':
+        return NR.random_integers(a,b,size=npts)
+    elif distribution == 'rayleigh':
+        return NR.rayleigh(a,size=npts)
+    elif distribution == 'standard_cauchy':
+        return NR.standard_cauchy(size=npts)
+    elif distribution == 'standard_exponential':
+        return NR.standard_exponential(size=npts)
+    elif distribution == 'standard_gamma':
+        return NR.standard_gamma(a,size=npts)
+    elif distribution == 'standard_normal':
+        return NR.standard_normal(size=npts)
+    elif distribution == 'standard_t':
+        return NR.standard_t(a,size=npts)
+    elif distribution == 'uniform':
+        return NR.uniform(a,b,size=npts)
+    elif distribution == 'wald':
+        return NR.wald(a,b,size=npts)
+    elif distribution == 'weibull':
+        return NR.weibull(a,b,size=npts)
+    
+
+    
+    
 
 
 #################################################################
@@ -178,6 +261,8 @@ _func_ = {
           "_math.sin":Num.sin,
           "_math.sinh":Num.sinh,
           "_math.sqrt":Num.sqrt,          
+          "_math.random_seed": _random_seed,
+          "_math.random": _random,
           "array.identity": _identity,
           "array.take": _take,
           "array.choose": _choose,
