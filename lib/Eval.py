@@ -141,7 +141,6 @@ class Evaluator:
             s.strip()
             if s.startswith('#'): continue
             x = self.compile(s = s)
-
             if x is not None:
                 ret = self.interpret(x, text=s)
                 self._status = True
@@ -165,8 +164,10 @@ class Evaluator:
         
     def get_next_statement(self,s = None):
         " get and pre-process next program statement"
-
+        
         if s is None:  s,nline,fname = self.get_next_textline()
+        s.strip()
+        if s.startswith('#'): return ('','')
         # handle the case of triple quotes:
         #    join strings with a '\n' instead of ' '
         if s.find("'''")>-1   and not self.triple_dquote:
@@ -177,6 +178,10 @@ class Evaluator:
         if self.triple_dquote or self.triple_squote: join = '\n'
         
         if self.line_buff:  s = "%s%s%s" % (self.line_buff,join,s)
+
+        jcom =find_unquoted_char(s,char='#')
+        s = s[:jcom]
+
         is_complete = parens_matched(s)
         while not is_complete:
             self.line_buff = s
@@ -221,6 +226,7 @@ class Evaluator:
         # print " :s  <%s>"  % s
         
         if s in ('','#'): return None
+        if s.startswith('#'): return None
         if s == self.EOF: return [self.EOF]
         ret = []
         
