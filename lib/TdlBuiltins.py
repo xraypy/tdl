@@ -343,7 +343,7 @@ def _path(pth=None,recurse=False,tdl=None):
         return show_list(sys.path)
     else:
         set_path(pth=pth,recurse=recurse)
-        tdl.SetVariable('_sys.path', sys.path)
+        tdl.setVariable('_sys.path', sys.path)
     return
 
 def tdl_open(filename,mode='r',tdl=None,**kw):
