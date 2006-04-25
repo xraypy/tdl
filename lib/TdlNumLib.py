@@ -127,10 +127,9 @@ def _tdl_minimize(residual,varlist,tdl=None, iter_function=None, debug=False, **
     if debug: print  ' optimization done:  ', n_iter.value, result[1]
     return result[0]
 
-
 def _random_seed(x=None):
     "wrap numpy random seed "
-    print x, datalen(x)
+    ## print x, datalen(x)
     if x is None:
         return Num.random.seed()
     else:
