@@ -49,6 +49,21 @@ def _complex(x):
     else:
         return complex(x)
 
+def _min(x):
+    "return mininum value of an array or list"
+    if type(x) == Num.ArrayType:
+        return x.min()
+    else:
+        return min(x)
+
+def _max(x):
+    "return maxinum value of an array or list"    
+    if type(x) == Num.ArrayType:
+        return x.max()
+    else:
+        return max(x)
+
+
 def _range(x,stop=None,step=None,shape=None,dtype='d'):
     """create an array of evenly spaced values:
         range(x, [stop=stop, [step=step, [shape=shape, [dtype='d']]]])
@@ -304,6 +319,8 @@ _func_ = {
           "array.vdot":Num.vdot,
           "array.where":Num.where,
           "array.zeros":Num.zeros,
+          "_builtin.max":_max,
+          "_builtin.min":_min,
           }
           
 
