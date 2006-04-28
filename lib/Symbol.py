@@ -274,7 +274,8 @@ class SymbolTable:
         return (group, name)
 
     ### symbol manipulation functions
-    def addSymbol(self,name,value=None,group=None,type='variable',code=None,desc=None,**kws):
+    def addSymbol(self,name,value=None,group=None,type='variable',
+                  code=None,desc=None,constant=False,**kws):
         """
         add generic symbol to symbol table
         to specify which group the symbol goes to, you can either use
@@ -288,6 +289,8 @@ class SymbolTable:
                 if self.sym[group][name].constant: return (None,None)
             self.sym[group][name] = Symbol(name,value=value,type=type,
                                            code=code,desc=desc,group=group,**kws)
+            if constant:
+                self.sym[group][name].constant = True
             return (group,name)
         else:
             return (None,None)
