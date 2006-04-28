@@ -300,8 +300,8 @@ HelpStrings = """
       tdl> print " %(name)s , x = %(x)f" % data
       File 1 , x = 12.4
      
-   
 """
+
 HelpDicts = """
   Working with dictionaries:
 
@@ -314,7 +314,7 @@ HelpArrays = """
 
 HelpLists = """
   Working with lists:
-
+  
 """
 
 HelpControl = """
@@ -464,13 +464,15 @@ HelpControl = """
            print "OK,  that didn't work so well!"
        endtry
       
-   
 """
 
-import types
+#########################################################
+import types, sys
+from Util   import show_list, split_arg_str, show_more
+
 class Help:
     """ basic help mechanism for Tdl """
-    def __init__(self):
+    def __init__(self,tdl=None,output=None):
         h = self.topics = {}
         h['help']  = HelpHelp
         h['show']  = HelpShow
@@ -482,7 +484,15 @@ class Help:
         h['lists'] =   HelpLists
         h['control'] = HelpControl
 
+        self.help_topics = self.list_topics().split()
+        self.help_topics.sort()
 
+        self.tdl = tdl
+
+        if output is not None:
+            self.output = output
+        else:
+            self.output = sys.stdout
 
     def get_help(self,name):
         if name in self.topics.keys():
@@ -497,4 +507,140 @@ class Help:
             name = str(name)
         self.topics[name] = text
         
+    ###
+    def show_function(self,args):
+        lout = ''
+        if len(args)==0:
+            f = self.tdl.symbolTable.listFunc()
+            grps = f.keys()
+            grps.sort()
+            for grp in grps:
+                lout = "%s\n==Functions in '%s'\b" % (lout,grp)
+                lout = "%s\n%s" % (lout,show_list(f[grp]))
+        else:
+            for nam in args:
+                sym = self.tdl.symbolTable.getFunc(nam)
+                if sym is None:
+                    lout =" cannot find function %s " % nam
+                else:
+                    lout = "%s:  %s\n" % (sym.name, sym)
+                    for i in sym.desc.split('\n'): lout = "%s    %s\n" %(lout,i)
+        show_more(lout,writer=self.output)
+
+    def show_variable(self,args):
+        lout = ''
+        if len(args)==0:
+            f = self.tdl.symbolTable.listData()
+            grps = f.keys()
+            grps.sort()
+            for grp in grps:
+                lout = "%s\n==Variables in '%s'\b" % (lout,grp)
+                lout = "%s\n%s" % (lout,show_list(f[grp]))
+        else:
+            for nam in args:
+                sym = self.tdl.symbolTable.getVariable(nam)
+                if sym is None:
+                    lout =" cannot find variable %s " % nam
+                else:
+                    lout = " %s:  %s\n" % (sym.name, sym)
+                    # for i in sym.desc.split('\n'): lout = "%s    %s\n" %(lout,i)
+        show_more(lout,writer=self.output)
+
+    def show_groups(self,args=None):
+        " print list of groups"
+        l = self.tdl.symbolTable.listGroups()
+        print "   Default Data     Group = '%s'" % self.tdl.symbolTable.dataGroup
+        print "   Default Function Group = '%s'" % self.tdl.symbolTable.funcGroup
+        print "   ==Currently defined groups: "
+        show_more(show_list(l),writer=self.output)
+
+    def show_group(self,grp):
+        " list all contents of a group "
+        l = self.tdl.symbolTable.listGroups()
+        lout = ''
+        if grp in l:
+            fcns = self.tdl.symbolTable.listFunc()[grp]
+            data = self.tdl.symbolTable.listData()[grp]
+            if len(fcns)>0:
+                lout = "%s\n==Functions in '%s'\b" % (lout,grp)
+                lout = "%s\n%s" % (lout,show_list(fcns))
+            else:
+                lout = "%s\n==No Functions in '%s'\b" % (lout,grp)
+            if len(data)>0:
+                lout = "%s\n==Variables in '%s'\b" % (lout,grp)
+                lout = "%s\n%s" % (lout,show_list(data))
+            else:
+                lout = "%s\n==No Variables in '%s'\b" % (lout,grp)
+            show_more(lout,writer=self.output)
+        else:
+            print " No group %s.  Try 'show groups'" % grp
     
+    def show(self,argin):
+        args = argin.strip().split()
+        key = None
+        if len(args) > 0:  key = args.pop(0).strip()
+        
+        if key is None:
+            form = "\nDefault Data group = %s\nDefault Func group = %s"
+            print form % (self.tdl.symbolTable.dataGroup,self.tdl.symbolTable.funcGroup)
+            f = self.tdl.symbolTable.listFunc()
+            d = self.tdl.symbolTable.listData()
+            for grp in self.tdl.symbolTable.listGroups():
+                print "\n===Group: %s" % grp
+                for t,name in ((f,'functions'),(d,'variables')):
+                    n = 0
+                    if t.has_key(grp):  n = len(t[grp])
+                    print "   %i %s " % (n,name)
+            
+        elif key  in ( '-f', 'functions','function'):
+            self.show_function(args)
+
+        elif key  in ( '-v', 'variables','variable'):
+            self.show_variable(args)
+
+        elif key in ('-g', 'groups'):
+            self.show_groups()
+            
+        elif key in ('group') and len(args)>0:
+            self.show_group(args[0].strip())
+        else:
+            args.insert(0,key)
+            self.show_symbols(args)
+
+    def help(self,argin):
+        args = argin.strip().split()
+        key = None
+        if len(args) > 0:  key = args.pop(0).strip()
+        if key is None:
+            #print self.help('help')
+            print self.topics['help']
+        elif key in ('-t','topics'):
+            print "  Additional help is avaiable on the following topics:\n"
+            print  show_list(self.help_topics, ncol = 5)
+        elif key == 'topic' :
+            topic = args[0].strip()
+            if topic in self.help_topics:
+                show_more(self.help(topic),writer=self.output)
+            else:
+                print "  No help on topic %s. Try 'help topics'" % (topic)
+        elif key in self.help_topics:
+            show_more(self.get_help(key),writer=self.output)
+        else:
+            args.insert(0,key)
+            self.show_symbols(args,msg='help')
+            
+    def show_symbols(self,args,msg='show'):
+        for key in args:
+            if key.endswith(','): key=key[:-1]
+            key.strip()
+            if len(key)>0:
+                if self.tdl.symbolTable.getFunc(key):
+                    self.show_function([key])
+                elif self.tdl.symbolTable.getVariable(key):
+                    self.show_variable([key])
+                elif self.tdl.symbolTable.hasGroup(key):
+                    self.show_group(key)
+                elif msg == 'show':
+                    print " cannot find %s (try 'help show' or 'show groups')" % key
+                else:
+                    print "  No help on %s.  Try 'help' or 'help topics'" % key

@@ -4,6 +4,10 @@
 # --------------
 # Modifications
 # --------------
+# 4-27-06 T2:
+# - added help and show.  Also added an input function for cmd line input
+# - fixed a small bug in tdl_path, small fix to _cd
+#
 # 4-16-06 T2:
 # - modified the path function: moved most of it to Utils and
 #   added a recursive option
@@ -33,6 +37,7 @@
 #  - Add debug function to toggle tdl.debug
 #  
 ##########################################################################
+
 from Num import Num
 
 import os
@@ -158,6 +163,12 @@ HelpOS = """
 HelpImport = """
    Importing Python modules
 """
+
+def _help(arg='',tdl=None,**kw):
+    tdl.help.help(arg)
+
+def _show(arg='',tdl=None,**kw):
+    tdl.help.show(arg)
 
 def _dictkeys(x):
     "return list of dictionary keys"
@@ -302,7 +313,12 @@ def _cwd(x=None):
 
 def _cd(name):
     "change directorty"
-    os.chdir(name)
+    name = name.strip()
+    if name:
+        try:
+            os.chdir(name)
+        except:
+            print "Directory '%s' not found" % name
     ret = os.getcwd()
     if sys.platform == 'win32':
         ret = ret.replace('\\','/')
@@ -336,8 +352,7 @@ def _type(x):
     if t in typecodes.keys(): return typecodes[t]
     return 'unknown'             
 
-
-def _path(pth=None,recurse=False,tdl=None):
+def tdl_path(pth=None,recurse=False,tdl=None,**kw):
     "modify or show python path"
     if not pth:
         return show_list(sys.path)
@@ -345,6 +360,14 @@ def _path(pth=None,recurse=False,tdl=None):
         set_path(pth=pth,recurse=recurse)
         tdl.setVariable('_sys.path', sys.path)
     return
+
+def tdl_input(prompt='',tdl=None,**kw):
+    "get a line of raw input"
+    #return raw_input(prompt)
+    tdl.output.write(prompt)
+    tdl.output.flush()
+    line = tdl.input.readline()
+    return line
 
 def tdl_open(filename,mode='r',tdl=None,**kw):
     " open a file "
@@ -356,7 +379,6 @@ def tdl_close(file,tdl=None,**kw):
         return file.close()
     else:
         return False
-
 
 def tdl_write(file,s,tdl=None,**kw):
     " write a string to a file "
@@ -414,7 +436,7 @@ def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
         tdl.symbolTable.setDataGroup(group_save)    
     if debug: print 'load done.'
 
-def tdl_import(lib='', tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
+def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
     """
     import python modules that define tdl functions,
     import()               # re-imports all previously defined modules
@@ -479,7 +501,6 @@ def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
         if i.type not in ('pyfunc','defpro'):
             dict[i.name] = i.value
     return dict
-
 
 def tdl_setdatagroup(gname=None,tdl=None,debug=False,**kw):
     "set default group"
@@ -577,7 +598,7 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.cd":(_cd,None),
           "_builtin.pwd":(_cwd,None),
           "_builtin.more":(_more,None),
-          "_builtin.path":(_path,None),
+          "_builtin.path":(tdl_path,None),
           "_builtin.ls":(_ls,_ls_cmdout),
           "_builtin.abs":(abs,None),
           "_builtin.max":(max,None),
@@ -604,6 +625,9 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.read":tdl_read,
           "_builtin.readlines":tdl_readlines,
           "_builtin.group2dict":tdl_group2dict,
+          "_builtin.help":(_help,None),
+          "_builtin.show":(_show,None),
+          "_builtin.input":(tdl_input,None)
           }
 
 

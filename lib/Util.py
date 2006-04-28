@@ -422,7 +422,7 @@ def set_path(pth=None,recurse=False,verbose=False,clean=True):
                         if verbose: print 'add->', d
                         sys.path.append(d)
     else:
-        print "Path '%s' doesnt exist" % pth
+        if verbose: print "Path '%s' doesnt exist" % pth
     if clean: clean_path()
     return
 

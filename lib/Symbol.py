@@ -170,16 +170,20 @@ class SymbolTable:
             self.addBuiltin('func_group',mainGroup)
             self.setSearchGroups()
         if libs is not None:
-            for lib in libs: self.import_lib(lib)
+            for lib in libs:
+                self.import_lib(lib)
 
     def import_lib(self,lib):
         " import or reload module given module name or object"
         if lib is None: return None
-        
         mod, msg = None, None
         syspath = self.getSymbolValue('_sys.path')
         # print syspath
-        if syspath is not None:  set_path(syspath)
+        if syspath is not None:
+            if type(syspath) == types.ListType:
+                for pth in syspath: set_path(pth)
+            elif type(syspath) == types.StringType:
+                set_path(syspath)
         if type(lib) == types.StringType:
             try: 
                 mod = __import__(lib)

@@ -2,6 +2,14 @@
 #
 # Evaluator:  main TDL language evaluation class 
 #
+# --------------
+# Modifications
+# --------------
+# 4-27-06 T2:
+# - Pass reference of Evaluator to Help
+# - Added 'input' to Evalutor
+#
+###########################################################################
 import sys
 import types
 import copy
@@ -22,14 +30,15 @@ class Evaluator:
     """
     EOF      = opcodes.eof
     __interrupts = ['pass','continue','break','return']
-    def __init__(self,symbolTable = None, output=None,
+    def __init__(self,symbolTable = None, input=None, output=None,
                  interactive = False,libs=None,debug=0,GUI='TkAgg'):
 
         self.debug       = debug
         self.interactive = interactive
-        self.output      = output      or sys.stdout
+        self.input       = input    or  sys.stdout
+        self.output      = output   or  sys.stdout
 
-        self.help        = Help.Help()
+        self.help        = Help.Help(tdl=self,output=self.output)
         self.symbolTable = symbolTable or SymbolTable(libs=libs,
                                                       tdl=self,
                                                       writer=self.output)

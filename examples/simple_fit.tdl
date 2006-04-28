@@ -20,6 +20,7 @@ print '# Starting values = ', [avar,bvar,cvar]
 _plot.title= 'data (red) and starting point for fit'
 newplot x, data,  color='red', marker='+'
 plot    x, model, color='blue', style='dashed'
+input "hit enter to continue"
 
 t0 = get_timestamp()
 ## the real fit
@@ -33,8 +34,8 @@ print '# elapsed time, # of iterations = ', fit_time, _sys.fit_iterations
 _plot.title= 'data (red) and best fit'
 newplot x, data,  color='red', marker='+'
 plot    x, model, color='black',style='solid',marker='o'
-
-sleep(2.0)
+input "hit enter to continue"
+#sleep(2.0)
 
 _plot.title= 'Residual and starting noise'
 newplot x, resid,  color='black', marker='o'
