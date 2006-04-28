@@ -149,7 +149,9 @@ class Evaluator:
             if len(s)<=0: continue
             s.strip()
             if s.startswith('#'): continue
+            # print 'run compile: ',s
             x = self.compile(s = s)
+            # print 'run interpret : ', x
             if x is not None:
                 ret = self.interpret(x, text=s)
                 self._status = True
@@ -445,7 +447,13 @@ class Evaluator:
         # regular assignment / eval statement
         else:
             # check if command-like interpretation is reasonable
-            if key.find('(')==-1  and key.find(',')==-1 and key.find('=')==-1:
+            # print 'check for command / assignment '
+            try:
+                next_char = s[len(key):].strip()[0]
+            except:
+                next_char = None
+            if (key.find('(')==-1  and key.find(',')==-1 and key.find('=')==-1 and
+                next_char != '='):
                 if self.symbolTable.hasFunc(key):
                     stack= self.expr_compile(Command2Expr(s,symtable=self.symbolTable))
                     if stack[0] != opcodes.function:
@@ -468,8 +476,6 @@ class Evaluator:
 
         return ret
 
-
-
     def do_assign(self,left_hs,rhs):
         """ handle assignment statements """
         lhs  = left_hs[:]
@@ -482,6 +488,9 @@ class Evaluator:
             self.raise_error('Cannot make assignment to %s??' % varname)
         for i in range(len(lhs)):
             if type(lhs[i]) == types.FloatType: lhs[i] = int(lhs[i])
+
+        if sym.constant:
+            self.raise_error('Cannot reassign value of %s' % sym.name)
 
         if len(lhs)>0 and  sym.type=='defvar':
             self.raise_error('Cannot assign to part of defined variable %s.' % varname)
