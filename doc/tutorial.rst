@@ -198,15 +198,24 @@ An array slice may also include a third argument for the index step or
    [ 1.  4.  7.]
 
 
+**TODO**  complex numbers
+
 Non-Numeric Data Types
 ----------------------
 
 
 Strings
 
-Lists
+Lists, automatic coercing to numeric arrays
+
+
 
 Dictionaries
+
+
+
+Name Spaces and Groups
+----------------------
 
 
 String Formatting
@@ -222,4 +231,47 @@ Conditional Statements
 
 Program Flow Control
 --------------------
+
+For loops
+
+While loops
+
+break, continue
+
+
+Exceptions and Errors
+---------------------
+
+try / except
+
+Builtin Functions
+-----------------
+
+Mathematical
+
+Functions about the state of the program
+
+Functions for getting help
+
+User-Defined Functions
+----------------------
+
+argument lists
+
+isolated namespace
+
+return values
+
+
+Defined Variables
+------------------
+
+
+
+
+Extending with Python
+---------------------
+
+
+
 
