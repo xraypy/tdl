@@ -26,8 +26,7 @@ class EvalException(exceptions.Exception):
     def __init__(self,args=None):
         self.args = args
         
-##
-##
+####
 def datalen(x):
     "return length of data for many datatypes"
     try:
@@ -35,9 +34,7 @@ def datalen(x):
     except:
         return 1
 
-
-
-def show_more(text,filename=None,writer=sys.stdout,pagesize=30):
+def show_more(text,filename=None,writer=sys.stdout,pagesize=30,prefix=''):
     """ show lines of text in the style of more """
     txt = text[:]
     if type(txt)== types.StringType:  txt = txt.split('\n')        
@@ -46,11 +43,11 @@ def show_more(text,filename=None,writer=sys.stdout,pagesize=30):
     prompt = '== hit return for more, q to quit'
     ps = "%s (%%.2f%%%%) == " % prompt
     if filename: ps = "%s (%%.2f%%%%  of %s) == " % (prompt,filename)
-         
+    
     i = 0
     for i in range(len(txt)):
-        if txt[i].endswith('\n'): writer.write(txt[i])
-        else:                     writer.write("%s\n" % txt[i])
+        if txt[i].endswith('\n'): writer.write("%s%s" % (prefix,txt[i]))
+        else:                     writer.write("%s%s\n" % (prefix,txt[i]))
         i = i + 1
         if i % pagesize == 0:
             try:
@@ -59,6 +56,32 @@ def show_more(text,filename=None,writer=sys.stdout,pagesize=30):
             except KeyboardInterrupt:
                 writer.write("\n")
                 return
+
+def show_list(lst,ncol=None,textwidth=72):
+    "formatted list of stuff in a list or dict"
+    nmax = -1
+    if len(lst) == 0: return ""
+    if ncol is None:
+        ncol = 1
+        if type(lst) == types.ListType:        
+            ncol = textwidth / (2 + max([len(i) for i in lst]))
+
+    fmt = '%-'+str(int(textwidth/ncol))+'s  '
+
+    if type(lst) == types.ListType:
+        x = [str(c) for c in lst]
+    elif type(lst) == types.DictType:
+        x = [" %s= %s" % (k,str(lst[k])) for k in lst.keys()]
+        
+    pstr, num = '',1
+    for c in x:
+        t = fmt % str(c).rstrip()
+        pstr = "%s%s" % (pstr, t)
+        if num == ncol:
+            pstr = "%s\n" % pstr
+            num  = 0
+        num = num + 1
+    return  pstr
 
 def find_unquoted_char(s,char='#'):
     "find character in a string, skipping over quoted text"
@@ -115,7 +138,6 @@ def split_arg_str(s):
             args.append(y)
     return args
 
-
 def split_delim(s,delim='='):
     """ given a string of 'program text', split into parts around a
     single delimeter, such as an '=' sign for an assignment statement
@@ -162,7 +184,6 @@ def split_delim(s,delim='='):
         return (idel,s[:idel].strip(),s[idel+1:].strip())
     else:
         return (idel,s.strip(),'')
-
 
 def unescape_string(s):
     escapes =(("\\n","\n"), ("\\r","\r"), ("\\a","\a"),("\\f","\f"),
@@ -293,19 +314,6 @@ def Command2Expr(s,symtable=None):
     s = ', '.join([i.strip() for i in split_list(s, delim=' ')])    
     expr = "%s(%s)" % (key,s)
     return expr
-    
-# 
-#             for j in range(len(args)):
-#                 if (args[j].find('=') == -1) and (args[j][0] not in '0123456789'):
-#                     # if an arg is not a symbol, and not quoted, add quotes
-#                     if not self.symbolTable.hasSymbol(args[j]):
-#                         #(ok,f,e) = find_matching_quote(args[j])
-#                         #if not ok:
-#                         #    args[j] = '"%s"' % args[j]
-#                         if args[j][0] not in ('"',"'"):
-#                             args[j] = '"%s"' % args[j]
-#             sarg = ','.join(args[:])
-# 
 
 def int2bin(x):
     """ convert integer to list of booleans: gauranteed to return 12 'bits'"""
@@ -366,7 +374,6 @@ def PrintExceptErr(err_str,print_trace=True):
     except:
         print '*****Error printing exception error******'
 
-
 def PrintShortExcept(err_str):
     " print error on exceptions" 
     try:
@@ -377,33 +384,6 @@ def PrintShortExcept(err_str):
         print '***********************************\n'
     except:
         print '*****Error printing exception error******'
-
-
-def show_list(lst,ncol=None,textwidth=72):
-    "formatted list of stuff in a list or dict"
-    nmax = -1
-    if len(lst) == 0: return ""
-    if ncol is None:
-        ncol = 1
-        if type(lst) == types.ListType:        
-            ncol = textwidth / (2 + max([len(i) for i in lst]))
-
-    fmt = '%-'+str(int(textwidth/ncol))+'s  '
-
-    if type(lst) == types.ListType:
-        x = [str(c) for c in lst]
-    elif type(lst) == types.DictType:
-        x = [" %s= %s" % (k,str(lst[k])) for k in lst.keys()]
-        
-    pstr, num = '',1
-    for c in x:
-        t = fmt % str(c).rstrip()
-        pstr = "%s%s" % (pstr, t)
-        if num == ncol:
-            pstr = "%s\n" % pstr
-            num  = 0
-        num = num + 1
-    return  pstr 
 
 def set_path(pth=None,recurse=False,verbose=False,clean=True):
     "modify or return python path"

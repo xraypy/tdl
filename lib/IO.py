@@ -101,11 +101,6 @@ def tdl_write_ascii(fname,  *arr,**kw):
     f.close()
 
 ##########################
-# todo:
-#  -  control of legend, titles, etc  (tdl functions??)
-#  -  draw box on zooming
-#  -  GUI config
-
 title = 'File IO routine'
 
 HelpIO = """

@@ -32,8 +32,8 @@ import traceback
 class shell(cmd.Cmd):
     banner = """
     Tiny Data Language %s  M. Newville, T. Trainor (2006)
-           using %s"""
-    intro  = "\n  type 'help' to get started"
+    Using %s\n"""
+    intro  = "\n    Type 'help' to get started\n"
     ps1    = "tdl> "
     ps2    = "...> "
     max_save_lines = 500

@@ -122,8 +122,8 @@ HelpIO = """
   and is a special value (a python object) that won't make sense as any other
   type.  But you can use a file handle to read, write, and close a file.
 
-     tdl> write(f, 'a string\n')
-     tdl> write(f, 'another line.\n')
+     tdl> write(f, 'a string\\n')
+     tdl> write(f, 'another line.\\n')
      tdl> close(f)
 
   Note that writing a string to a file requires the newlines to be explicitly
@@ -139,10 +139,7 @@ HelpIO = """
      another line
 
      tdl> close(f)
-     
-     
- 
-  
+      
 """
 
 HelpOS = """
@@ -164,6 +161,7 @@ HelpImport = """
    Importing Python modules
 """
 
+#################################################################
 def _help(arg='',tdl=None,**kw):
     tdl.help.help(arg)
 
@@ -630,6 +628,5 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.input":(tdl_input,None)
           }
 
-
 if __name__ == '__main__':
-    print help
+    print title

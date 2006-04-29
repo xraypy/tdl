@@ -192,14 +192,11 @@ class SymbolTable:
                     mod = getattr(mod, comp)
             except ImportError:
                 msg = '    Error loading module %s:' % lib
-
-
         elif type(lib) == types.ModuleType:
             try:
                 mod = reload(lib)
             except ImportError:
                 msg = '    Error loading module %s:' % lib
-
         if mod is None:
             self.writer.write("    cannot load module %s !" % lib)
             if msg is not None: PrintShortExcept(msg)

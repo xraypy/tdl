@@ -197,9 +197,8 @@ HelpPlot = """
      plot(x,z,color='blue',style='dotted',linewidth=5)
      plot(x,z,color='green',linewidth=0,marker='+')           
 
-   
 """
 
 _help_ = {'plotting': HelpPlot}
-_func_ = {'_builtin.plot':(tdl_plot, None),
-          '_builtin.newplot':(tdl_newplot, None)}
+_func_ = {'_plot.plot':(tdl_plot, None),
+          '_plot.newplot':(tdl_newplot, None)}
