@@ -16,6 +16,8 @@ numpy_needed = 'Need SciPy 0.4.8 or (at least) NumPy version 0.9.6 or higher'
 num_version = None
 try:
     import scipy as Num
+    import scipy.linalg as linalg
+    Num.linalg = linalg
     v = [int(i) for i in Num.__version__.split('.')]
     v = 100*v[0] + 10*v[1] + v[2]
     if v >= 47:

@@ -285,6 +285,7 @@ _func_ = {
           "array.logical_not":Num.logical_not,
           "array.logical_or":Num.logical_or,
           "array.logical_xor":Num.logical_xor,
+          "array.matrixinverse":Num.linalg.inv,
           "array.matrixmultiply":Num.matrixmultiply,
           "array.maximum":Num.maximum,
           "array.minimum":Num.minimum,
