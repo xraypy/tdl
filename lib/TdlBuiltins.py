@@ -596,7 +596,6 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.cd":(_cd,None),
           "_builtin.pwd":(_cwd,None),
           "_builtin.more":(_more,None),
-          "_builtin.path":(tdl_path,None),
           "_builtin.ls":(_ls,_ls_cmdout),
           "_builtin.abs":(abs,None),
           "_builtin.max":(max,None),
@@ -625,7 +624,8 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.group2dict":tdl_group2dict,
           "_builtin.help":(_help,None),
           "_builtin.show":(_show,None),
-          "_builtin.input":(tdl_input,None)
+          "_builtin.input":(tdl_input,None),
+          "_sys.set_path":(tdl_path,None)
           }
 
 if __name__ == '__main__':

@@ -21,6 +21,7 @@ libs  = []
 intro = None
 debug = False
 files = []
+sys_vars = {}
 
 #####################################################
 
@@ -40,6 +41,8 @@ class tdl_wxGUI(model.Background):
         #redir stdio
         #sys.stdin  = self.readline
         self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,GUI='WXAgg',debug=debug)
+        for var in sys_vars.keys():
+            self.shell.tdl.setVariable(var,sys_vars[var])
         for f,warn in files:
             if os.path.exists(f) and os.path.isfile(f):
                 self.shell.tdl_execute("load('%s')" % f)

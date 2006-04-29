@@ -25,8 +25,6 @@ from Util import EvalException, Command2Expr,PrintShortExcept
 class Evaluator:
     """ main evaluation class for tdl language.
     parses  / compiles tdl statements and evaluates them:
-
-    
     """
     EOF      = opcodes.eof
     __interrupts = ['pass','continue','break','return']
@@ -42,7 +40,6 @@ class Evaluator:
         self.symbolTable = symbolTable or SymbolTable(libs=libs,
                                                       tdl=self,
                                                       writer=self.output)
-
         self.symbolTable.addBuiltin('GUI',GUI)
         self.Expression  = Expression(symbolTable=self.symbolTable,
                                       run_procedure = self.run_procedure)
@@ -71,7 +68,6 @@ class Evaluator:
     def getVariableValue(self,var):
         "return value of a named variable"        
         var = self.symbolTable.getVariable(var)
-        
         if var is not None:
             try:
                 return var.value

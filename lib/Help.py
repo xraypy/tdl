@@ -519,7 +519,7 @@ class Help:
             grps.sort()
             for grp in grps:
                 lout = "%s\n==Functions in '%s'\b" % (lout,grp)
-                lout = "%s\n%s" % (lout,show_list(f[grp]))
+                lout = "%s\n%s\n" % (lout,show_list(f[grp]))
         else:
             for nam in args:
                 sym = self.tdl.symbolTable.getFunc(nam)
@@ -538,7 +538,7 @@ class Help:
             grps.sort()
             for grp in grps:
                 lout = "%s\n==Variables in '%s'\b" % (lout,grp)
-                lout = "%s\n%s" % (lout,show_list(f[grp]))
+                lout = "%s\n%s\n" % (lout,show_list(f[grp]))
         else:
             for nam in args:
                 sym = self.tdl.symbolTable.getVariable(nam)
