@@ -4,6 +4,7 @@
 # --------------
 # Modifications
 # --------------
+#
 # 4-27-06 T2:
 # - added help and show.  Also added an input function for cmd line input
 # - fixed a small bug in tdl_path, small fix to _cd
@@ -456,7 +457,7 @@ def tdl_eval(expr, tdl=None,debug=False,**kw):
     if tdl is None:
         if debug: print 'cannot eval %s ' % expr
         return None
-    return tdl.do_eval(expr)
+    return tdl.eval(expr)
 
 def tdl_setvar(name,val,tdl=None,group=None,debug=False,**kws):
     "set default group"
@@ -482,6 +483,7 @@ def tdl_delvar(name,tdl=None,group=None,debug=False,**kw):
     if len(xx) == 1:
         return tdl.symbolTable.deleteSymbol(name,group=group)
     elif len(xx) == 2 and xx[1] == '':
+        print "here" , xx[0]
         return tdl.symbolTable.deleteGroup(xx[0])
     else:
         return tdl.symbolTable.deleteSymbol(xx[1],group=xx[0])
@@ -588,6 +590,7 @@ _func_ = {'_builtin.load':(tdl_load, None),
           '_builtin.import':(tdl_import, None),
           '_builtin.eval':(tdl_eval,None),
           '_builtin.setvar':(tdl_setvar,None),
+          '_builtin.delvar':tdl_delvar,
           '_builtin.datagroup':(tdl_setdatagroup, None),
           '_builtin.funcgroup':(tdl_setfuncgroup, None),
           '_builtin.ascmd':(tdl_func_as_cmd,None),
