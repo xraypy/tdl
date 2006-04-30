@@ -19,6 +19,7 @@ from Eval   import Evaluator
 from Symbol import SymbolTable
 from Util   import ParseException, EvalException
 from Util   import show_list, split_arg_str, show_more
+from Util   import PrintExceptErr
 from Help   import Help
 import version
 import cmd
@@ -99,9 +100,6 @@ class shell(cmd.Cmd):
             self._status = False
             ret,x,detail = None, None, None
             try:
-                #if s.startswith('show '):
-                #    self.do_show(s[5:])
-                #else:
                 ret = self.tdl.execute(s)
                 self._status = True
             except ValueError, detail:
@@ -127,7 +125,7 @@ class shell(cmd.Cmd):
                     print '='*60
             elif ret is not None:
                 print ret
-                
+
     
 #####################################################################################               
 #####################################################################################

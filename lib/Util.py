@@ -3,6 +3,9 @@
 # -------------
 # Modifications
 # -------------
+# 4-29-06 T2:
+# - added a file_open fcn
+#
 # 4-16-2006 T2:
 # - added set_path and associated functions
 #
@@ -426,6 +429,20 @@ def sub_dirs(pth,skip_txt=None):
                 else:
                     sub_dirs.append(temp)
     return sub_dirs
+
+def file_open(fname,default_path=None):
+    "open a file using default path if passed"
+    # two cases
+    # 1. fname has full path (or rel path to cwd), or file is in cwd -> dont use def_path
+    # 3. fname has rel path (or none) to default path -> join def_path and fname
+    if os.path.isfile(fname):
+        return open(fname)
+    elif default_path:
+        fname = os.path.join(default_path,fname)
+        return open(fname)
+    else:
+        raise IOError, "Could not open file '%s' or '%s'" % (fname)
+    
 
 ###################################################################
 def testCommand2Expr():

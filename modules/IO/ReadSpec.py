@@ -1,32 +1,50 @@
 # Read spec files
 # From Matt Newville
 # Modifed by Tom Trainor
+#
+######################################################################################
+
+import Util
+from Num import Num
+import os
+import types
 
 class SpecFile:
-    def __init__(self,fname=None):
-        self.fname    = fname
+    def __init__(self, fname, path=''):
+        self.path  = path
+        self.rel_path, self.fname = os.path.split(fname)
+        self.mtime    = 0
         self.lines    = []
         self.summary  = []
         self.max_scan = 0
         self.min_scan = 0
-        if (fname !=None):
-            self.read_specfile(fname)       
+        self.read()
 
-    def read_specfile(self,fname):
-        self.fname = fname
+    def __repr__(self):
+        self.read()
+        lout = "Spec file: %s" % self.fname
+        lout = "%s\nPath: %s" % (lout, os.path.join(self.path,self.rel_path))
+        lout = "%s\nFirst scan number: %i" % (lout,self.min_scan)
+        lout = "%s\nLast scan number:  %i" % (lout,self.max_scan)
+        lout = "%s\nLast scan: %s" % (lout, self.summary[self.max_scan-1]['date'])
+        return lout
+
+    def read(self):
         try:
-            f  = open(fname)
+            fname = os.path.join(self.rel_path, self.fname)
+            if os.path.getmtime(fname) != self.mtime:
+                print "Reading spec file %s" % fname
+                f  = Util.file_open(fname,default_path=self.path)
+                self.mtime = os.path.getmtime(fname)
+                self.lines = f.readlines()
+                f.close()
+                self.summarize()
         except IOError:
             print  'error reading file ', fname
-            return -1
-        self.lines = f.readlines()
-        f.close()
-        self.summarize()
-        return 0
 
     def summarize(self):
         lineno = 0
-        (mnames,cmnd,date,xtime,Gvals,q,Pvals,lab) = (None,None,None,None,None,None,None,None)
+        (mnames,cmnd,date,xtime,Gvals,q,Pvals,atten,lab) = (None,None,None,None,None,None,None,None,None)
         (index, ncols, n_sline) = (0,0,0)
         for i in self.lines:
             lineno = lineno + 1
@@ -56,21 +74,24 @@ class SpecFile:
                 Pvals = Pvals + i[3:]
             elif (i[0:3] == '#N '):
                 ncols = int(i[3:])
+            elif (i[0:3] == '#AT'):
+                atten = i[6:]
             elif (i[0:3] == '#L '):
                 lab = i[3:]
                 self.summary.append({'index':index,
                                      'nl_start':n_sline,
-                                     'cmnd':cmnd,
+                                     'cmd':cmnd,
                                      'date':date,
                                      'time':xtime,
-                                     'Gvals':Gvals,
-                                     'q':q,
+                                     'G':Gvals,
+                                     'Q':q,
                                      'mot_names':mnames,
-                                     'Pvals':Pvals,
+                                     'P':Pvals,
                                      'ncols':ncols,
                                      'labels':lab,
+                                     'atten':atten,
                                      'nl_label':lineno})
-                (cmnd,date,xtime,Gvals,q,Pvals,lab) = (None,None,None,None,None,None,None)
+                (cmnd,date,xtime,Gvals,q,Pvals,atten,lab) = (None,None,None,None,None,None,None,None)
                 (index, ncols, n_sline) = (0,0,0)
 
         self.min_scan = self.summary[0]['index']
@@ -81,29 +102,36 @@ class SpecFile:
             if (k < self.min_scan): self.min_scan = k
 
     def scan_min(self):
+        self.read()
         return self.min_scan
 
     def scan_max(self):
+        self.read()
         return self.max_scan
 
-    def check_range(self,i):
-        j = 1
-        if ((i > self.max_scan) or (i < self.min_scan)): j = 0
-        return j
-
     def nscans(self):
+        self.read()
         return len(self.summary)
 
+    def check_range(self,i):
+        self.read()
+        j = True
+        if ((i > self.max_scan) or (i < self.min_scan)): j = False
+        return j
+
     def scan_info(self):
+        self.read()
         return self.summary
 
     def get_summary(self,sc_num):
+        self.read()
         for i in self.summary:
             if (sc_num == i['index']):
                 return i
         return None
-            
+    
     def get_data(self, sc_num):
+        self.read()
         s = self.get_summary(sc_num)
         if (s == None): return None
         dat = []
@@ -119,6 +147,7 @@ class SpecFile:
         return dat
 
     def get_scan_dict(self, sc_num):
+        self.read()
         sc_dict = {'file':self.fname,
                    'index':sc_num,
                    'cmd':'',
@@ -137,14 +166,15 @@ class SpecFile:
         dat = self.get_data(sc_num)
         
         # parse the various data into the dict
-        sc_dict['cmd']  = s['cmnd']
+        sc_dict['cmd']  = s['cmd']
         sc_dict['date'] = s['date']
-        sc_dict['G']    = map(float,s['Gvals'].split())
-        sc_dict['Q']    = map(float,s['q'].split())
+        sc_dict['G']    = map(float,s['G'].split())
+        sc_dict['Q']    = map(float,s['Q'].split())
+        sc_dict['ATTEN'] = map(int,s['atten'].split())
         # get the motor positions
         p_dict = {}
         m_names = s['mot_names'].split()
-        p_vals  = s['Pvals'].split()
+        p_vals  = s['P'].split()
         if len(m_names) != len(p_vals):
             print "Mismatch in Motor Names and Motor Values"
         else:
@@ -168,18 +198,72 @@ class SpecFile:
         sc_dict['data'] = data_dict
         # all done
         return sc_dict
-            
+        
 ####################################################
-def read_spec(fname=None,tdl=None,**kws):
-    sf = SpecFile(fname=fname)
+def read_spec(fname=None,path='',tdl=None,**kws):
+    sf = SpecFile(fname=fname,path=path)
     return sf
 
 def read_spec_cmd(val,fname=None,tdl=None,**kws):
     name = val.fname
     if '.' in name: name = name.split('.',1)[0]
-    print name
+    name = 'spec.%s' % name
+    tdl.setVariable(name,val=val)
+
+def show_scan(sf,scan=None,all=False,**kws):
+    if type(sf) == types.StringType:
+        sf = SpecFile(sf)
+    if not sf: return
     
-    tdl.symbolTable.addSymbol(name,value=val,group='spec')
+    if scan == None:
+        print sf
+        return
+    if sf.check_range(scan):
+        sum = sf.get_summary(scan)
+    else:
+        sum = None
+    if sum:
+        #keys = sum.keys()
+        #keys.sort()
+        #for k in keys:
+        #    print "#%s  %s\n" % (k, sum[k])
+        print "#Scan:     %i" % sum['index']
+        print "#Date:     %s" % sum['date'].strip()
+        print "#Command:  %s" % sum['cmd'].strip()
+        print "#ATTEN:    %s" % sum['atten'].strip()
+        print "#Labels:   %s" % sum['labels'].strip()
+        if all:
+            print "#G:"
+            print Util.show_list(sum['G'].split())
+            print "#P:"
+            m_names = sum['mot_names'].split()
+            p_vals  = sum['P'].split()
+            if len(m_names) != len(p_vals):
+                print "Mismatch in Motor Names and Motor Values"
+            else:
+                lout = []
+                for j in range(len(m_names)):
+                    x = "%s=%s" % (m_names[j], p_vals[j])
+                    lout.append(x)
+                print Util.show_list(lout)        
+    else:
+        print "Scan not found"
+        print sf
 
+def scan_data(sf,scan,all=False,**kws):
+    if type(sf) == types.StringType:
+        sf = SpecFile(sf)
+    if not sf: return None
+    d = Num.array(sf.get_data(scan))
+    return d.transpose()
 
-_func_ = {"spec.read":(read_spec,read_spec_cmd)}
+def scan_dict(sf,scan,all=False,**kws):
+    if type(sf) == types.StringType:
+        sf = SpecFile(sf)
+    if not sf: return None
+    return sf.get_scan_dict(scan)
+
+_func_ = {"spec.read":(read_spec,read_spec_cmd),
+          "spec.show":(show_scan,None),
+          "spec.data":scan_data,
+          "spec.dict":scan_dict}
