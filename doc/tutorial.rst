@@ -2,6 +2,7 @@
 Tiny Data Language: A Tutorial
 ==============================
 
+
 Introduction: What is TDL?
 --------------------------
 
@@ -106,6 +107,10 @@ assignment statement like::
 Numeric Data and Arrays
 -----------------------
 
+------------------------
+real and complex numbers
+------------------------
+
 For numeric processing, Tdl has built-in data types for real (or floating
 point) numbers, and complex numbers (which have both real and imaginary
 parts).  In Tdl, a real number is represented with 8-bytes (double
@@ -143,6 +148,10 @@ indicating an error as occured, whereas::
 where the builtin function 'complex' automatically coerces otherwise purely
 real numbers to become complex values, essentially by adding '0.j' to
 them.  The second version above is more explicit: -1+0.j is a complex number.
+
+-----------------
+numerical arrays:
+-----------------
 
 In addition to supporting scalars (individual numbers), Tdl supports
 multi-dimensional numerical arrays, which represent a sequence of numeric
@@ -259,7 +268,9 @@ An array slice may also include a third argument for the index step or
    [ 1.  4.  7.]
 
 
-Multi-dimensional arrays:
+--------------------------
+multi-dimensional arrays:
+--------------------------
 
 Arrays in Tdl can have any number of elements, and can have multiple
 dimensions.  The layout of an array (the number of dimensions and the
@@ -275,10 +286,21 @@ multidimensional array uses multiple, nested brackets::
 Non-Numeric Data Types
 ----------------------
 
-Tdl has a few data types for storing non-numerical data.  The simplest of
-these are *strings*, which are sequences of text characters.  Strings in
-Tdl are nearly identical to their python counterpart, and typically
-specified as literal strings::
+Although it is primarily a language for processing numerical data, Tdl has
+a few data types for storing non-numerical data.  Compared to low level
+languages like C or Fortran, these data types act as simple data
+structures.  As such, these data types are extremly when handling real
+data, and in writing programs.
+
+
+---------
+strings
+---------
+
+
+The simplest non-numeric data type is a *string*, which is a sequence of
+text characters.  Strings in Tdl are nearly identical to their python
+counterpart, and typically specified as literal strings::
     
    tdl> greeting = 'Hello, World'
  
@@ -289,6 +311,9 @@ the handling of "escape characters".
 Triple-quote strings can span multiple lines, and the newline characters
 are preserved.
 
+-----------
+lists
+-----------
 
 The second non-numeric data type in Tdl is a *list*.  A list is similar to
 an array in that it contains a sequence of values.  Unlike an numerical
@@ -319,12 +344,16 @@ integer position of the element.....
 List functions (append, etc).
 
 
-Dictionaries:
+--------------
+dictionaries
+--------------
 
 Tdl supports a dictionary data type. Like lists, dictionaries are
 collections of 
 
-Other Data Types:
+------------------
+other data types
+------------------
 
 Tdl does actually allow other data types, and essentially any 'Python
 object' can be held in a named Tdl variable.  This can be quite useful when
@@ -333,23 +362,25 @@ with that variable -- you'll have to be careful to use it only in functions
 that know what to do with it.  One very common, builtin data type that is
 not one of the ones listed above is a 'file handle', ....
 
+------------------
+
 
 Python notes:  In the above discussion, Tdl shows a few differences with
 Python.
 
-#.  Python does not distinguish single and double quote strings. Tdl does
- make a distinction between these for how escaped strings are processed.
+#. Python does not distinguish single and double quote strings. Tdl does
+   make a distinction between these for how escaped strings are processed.
 
-#.  Python has tuples (which are sequences like lists, but that have a
-fixed size.  This is not so much of an issue in non-object-oriented Tdl,
-and so to avoid a 3rd sequence type, Tdl does not have tuples.  In Python,
-tuples are used many places, including string formatting and return values
-from functions.  Tdl uses lists for these functionalities.
+#. Python has tuples (which are sequences like lists, but that have a
+   fixed size.  This is not so much of an issue in non-object-oriented Tdl,
+   and so to avoid a 3rd sequence type, Tdl does not have tuples.  In Python,
+   tuples are used many places, including string formatting and return values
+   from functions.  Tdl uses lists for these functionalities.
 
-#.  Python has a strong distinction between 'immutable' types, and allows 
-dictionary keys to be any immutable types.  For simple uses, strings are
-the most common and natural type for dictionary keys, so Tdl just enforces
-this. 
+#. Python has a strong distinction between 'immutable' types, and allows 
+   dictionary keys to be any immutable types.  For simple uses, strings are
+   the most common and natural type for dictionary keys, so Tdl just enforces
+   this. 
 
 
 
