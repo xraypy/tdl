@@ -17,6 +17,7 @@ from Num import Num, num_version
 
 from Eval   import Evaluator
 from Symbol import SymbolTable
+import Util
 from Util   import ParseException, EvalException
 from Util   import show_list, split_arg_str, show_more
 from Util   import PrintExceptErr
@@ -50,7 +51,7 @@ class shell(cmd.Cmd):
             self.use_rawinput = False
 
         if stdout is not None:  sys.stdout = stdout
-        
+
         self.stdin = sys.stdin
         self.stdout = sys.stdout
         #self.stdin  = stdin  or sys.stdin
@@ -70,10 +71,10 @@ class shell(cmd.Cmd):
         self.tdl.prompt= self.ps2
         self._status   = True
         self.debug     = debug
-        
+
     def emptyline(self):
         pass
-    
+
     def do_shell(self, arg):
         import os
         os.system(arg)
@@ -88,7 +89,7 @@ class shell(cmd.Cmd):
 
     def tdl_execute(self,s_inp):
         self.default(s_inp)
-        
+
     def default(self,s_inp):
         s = s_inp.strip()
         words = s.split()
@@ -102,18 +103,18 @@ class shell(cmd.Cmd):
             try:
                 ret = self.tdl.execute(s)
                 self._status = True
-            except ValueError, detail:
-                x = "%s error: %s" % ('syntax',detail) 
+            except (ValueError,NameError), detail:
+                x = "%s error: %s" % ('syntax',detail)
             except TypeError, detail:
-                x = "%s error: %s" % ('syntax/type',detail) 
+                x = "%s error: %s" % ('syntax/type',detail)
             except (ArithmeticError), detail:
-                x = "%s error: %s" % ('mathematical',detail) 
+                x = "%s error: %s" % ('mathematical',detail)
             except (LookupError), detail:
-                x = "%s error: %s" % ('array lookup',detail) 
-            except (EvalException), detail:
-                x = "%s error: %s" % ('evaluation',detail) 
-            except (ParseException), detail:
-                x = "%s error: %s" % ('syntax',detail)            
+                x = "%s error: %s" % ('array lookup',detail)
+            except (EvalException,Util.EvalException), detail:
+                x = "%s error: %s" % ('evaluation',detail)
+            except (ParseException,Util.ParseException), detail:
+                x = "%s error: %s" % ('syntax',detail)
             except:
                 x = 'unknown error'
             if not self._status and x is not None:
@@ -126,13 +127,13 @@ class shell(cmd.Cmd):
             elif ret is not None:
                 print ret
 
-    
-#####################################################################################               
+
+#####################################################################################
 #####################################################################################
 def show_usage():
     print Help.ShellUsage
     sys.exit(1)
-    
+
 def main(arg,debug=False):
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hd",["help", "debug"])
@@ -146,4 +147,3 @@ def main(arg,debug=False):
 if (__name__ == '__main__'):
     # show_usage()
     main(sys.argv[1:])
-    
