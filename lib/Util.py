@@ -3,6 +3,9 @@
 # -------------
 # Modifications
 # -------------
+# 4-30-06 MN:
+# - improved list2array, show_list
+#
 # 4-29-06 T2:
 # - added a file_open fcn
 #
@@ -68,6 +71,7 @@ def show_list(lst,ncol=None,textwidth=72):
         ncol = 1
         if type(lst) == types.ListType:        
             ncol = textwidth / (2 + max([len(i) for i in lst]))
+    if ncol is None or ncol < 1: ncol = 1
 
     fmt = '%-'+str(int(textwidth/ncol))+'s  '
 
@@ -204,13 +208,27 @@ def trimstring(s,use_raw=False):
     elif (s.startswith("\"")  and s.endswith("\"")):   return unescape_string(s[1:-1])
     return s
 
+
+def _isnumericarray(x):
+    """returns whether value (potentially nested list) can be coerced to numerical array.
+    note that this insists on using numpy for numerical arrays, not record arrays.
+    """
+    for i in x:
+        ok = True
+        if type(i) in (types.ListType,types.TupleType):
+            ok = _isnumericarray(i)
+        elif type(i) not in (types.FloatType,types.ComplexType,types.IntType,types.LongType):
+            ok = False
+        if not ok: return False
+    return True
+
 def list2array(s):
     """ attempt to convert a list to a NumPy array.
     Returns original list if the conversion is not possible"""
     if type(s) == types.ListType:
         try:
-            for i in s:  x = abs(i)
-            s = Num.array(s)
+            if _isnumericarray(s):
+                s = Num.array(s)
         except (TypeError,AttributeError):
             pass
     return s
