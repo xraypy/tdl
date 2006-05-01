@@ -12,7 +12,7 @@ from Num import Num, num_version
 import os
 import sys
 import types
-from Util import datalen
+from Util import datalen, EvalException
 
 title = "numeric functions"
 
@@ -49,20 +49,22 @@ def _complex(x):
     else:
         return complex(x)
 
-def _min(x):
+def _min(x,*args):
     "return mininum value of an array or list"
-    if type(x) == Num.ArrayType:
-        return x.min()
-    else:
-        return min(x)
+    t = []
+    for i in args + (x,):
+        if type(i) == Num.ArrayType: i = i.max()
+        t.append(i)
+    return max(t)
 
-def _max(x):
+
+def _max(x,*args):
     "return maxinum value of an array or list"    
-    if type(x) == Num.ArrayType:
-        return x.max()
-    else:
-        return max(x)
-
+    t = []
+    for i in args + (x,):
+        if type(i) == Num.ArrayType: i = i.max()
+        t.append(i)
+    return max(t)
 
 def _range(x,stop=None,step=None,shape=None,dtype='d'):
     """create an array of evenly spaced values:
