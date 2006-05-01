@@ -76,7 +76,11 @@ assignment, and conditionals and control-flow are supported.  This section
 will discuss the basics of data types, variable naming, and program flow
 and execution.
 
-Tdl executes interactively for a *shell*, which can be a useful way to test
+----------------------------------
+using the interactive interpreter
+----------------------------------
+
+Tdl executes interactively in a *shell*, which can be a useful way to test
 and learn about tdl, as well as a simple way to work with your data.  You
 may also put a set or `program` of tdl statements into a file and execute
 that.  Throughout this tutorial, we'll use the convention of showing a Tdl
@@ -104,8 +108,22 @@ assignment statement like::
    1.0 2.0 0.333333333333
 
 
+-------------
+getting help
+-------------
+
+The Tdl interpreter has a built-in help system.....
+
+
 Numeric Data and Arrays
 -----------------------
+
+Tdl is designed for numeric processing, and the ability to manipulate and
+do calculations with numerical data is central to how the language works.
+In this section, we'll go over the basics of how Tdl thinks about numbers
+and arrays (or vectors) of numbers.  Tdl borrows almost all the
+functionality hear from Python and the wonderful NumPy extension which
+provides a basic 'numerical array' type to Python.
 
 ------------------------
 real and complex numbers
@@ -150,7 +168,7 @@ real numbers to become complex values, essentially by adding '0.j' to
 them.  The second version above is more explicit: -1+0.j is a complex number.
 
 -----------------
-numerical arrays:
+numerical arrays
 -----------------
 
 In addition to supporting scalars (individual numbers), Tdl supports
@@ -269,7 +287,7 @@ An array slice may also include a third argument for the index step or
 
 
 --------------------------
-multi-dimensional arrays:
+multi-dimensional arrays
 --------------------------
 
 Arrays in Tdl can have any number of elements, and can have multiple
@@ -384,9 +402,12 @@ Python.
 
 
 
-Name Spaces and Groups
-----------------------
+Variables, Name Spaces and Groups
+----------------------------------
 
+
+In all the above examples, we've assumed that all the named program
+variables are global variables
 
 String Formatting
 -----------------
@@ -402,26 +423,58 @@ Conditional Statements
 Program Flow Control
 --------------------
 
+It is often necessary to repeat some calculation or nearly-the-same
+calculation. 
+
+----------
 For loops
+----------
 
+A for loop executes a block of Tdl statements repeatedly.  One value is
+changed for each iteration of the block, often to indicate the number of
+times through the block.  A for loop looks like this::
+
+    for <value> in <list>:
+        <block>
+    endfor 
+
+------------
 While loops
+------------
 
+A while loop executes a block of Tdl statements as long as some logical
+(boolean) condition is met. 
+
+
+--------------------
 break, continue
+--------------------
+
+It is sometimes necessary to interrupt the execution of the main block of a
+for- or while-loop.
 
 
 Exceptions and Errors
 ---------------------
 
+
 try / except
+
 
 Builtin Functions
 -----------------
 
-Mathematical
+-------------------------------
+Basic Mathematical Functions
+-------------------------------
 
+-----------------------------------------
 Functions about the state of the program
+-----------------------------------------
 
+---------------------------
 Functions for getting help
+---------------------------
 
 User-Defined Functions
 ----------------------
@@ -435,6 +488,8 @@ return values
 
 Defined Variables
 ------------------
+
+
 
 
 
