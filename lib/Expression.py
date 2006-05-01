@@ -43,7 +43,7 @@ class opcodes:
     uplus =     "@UN+"
     subarray =  "@SUB"
     slice =     "@SLI"
-    slice3 =    "@SL3"          
+    slice3 =    "@SL3"
     assign =    "@ASN"
     empty =     "@EMP"
     colon =     "@COL"
@@ -119,7 +119,7 @@ _op_exp = Literal("^")  | Literal("**")
 _op_eq  = Literal("==") | Literal("!=") | \
           Literal(">=") | Literal("<=") | \
           Literal('&&') | Literal("||") | \
-          Literal("<")  | Literal(">") 
+          Literal("<")  | Literal(">")
 _op_and = CaselessLiteral("and")
 _op_or  = CaselessLiteral("or")
 
@@ -142,21 +142,21 @@ class ExpressionParser:
         modulo.
 
         comparison operators are  '==', '>','<','>=', '<=', 'or', and 'and'
-        symbol names 
+        symbol names
 
     based on the demonstration program fourFn.py from pyparsing.
-    """ 
+    """
     def __init__(self,**kw):
         self.debug = 0
         expr, term        = Forward(), Forward()
         _slice,arg_list   = Forward(), Forward()
         lit_list,lit_dict = Forward(), Forward()
-        
+
         # vname = name part (name of simple variable , group, or method)
         # name  = full name ( group:var.member, var.member, group:var,  etc)
         vname = Word(alphas+"_"+"&"+"$", alphas+nums+"_")
         name  = Combine(ZeroOrMore(vname + _point) +  vname)
-        
+
         fnum  = (Combine(Word(nums,nums) +
                          Optional(_point + Optional(Word(nums,nums))) +
                          Optional(CaselessLiteral("e") + Word("+-"+nums, nums)) +
@@ -164,13 +164,13 @@ class ExpressionParser:
                  ) | ( Combine((_point + Word(nums,nums)) +
                                Optional(CaselessLiteral("e") + Word("+-"+nums, nums)) +
                                Optional(CaselessLiteral("j"))) )
-        
+
         _str  = ( QuotedString("'''", multiline=True).setParseAction(self.pushString_SM) |
                   QuotedString('"""', multiline=True).setParseAction(self.pushString_DM) |
                   QuotedString("'").setParseAction(self.pushString_SS) |
                   QuotedString('"').setParseAction(self.pushString_DS) )
 
-        _num  = fnum.setParseAction(self.pushNum) 
+        _num  = fnum.setParseAction(self.pushNum)
         _sym  = (name + Optional(_lpar + arg_list + _rpar)
                  + ZeroOrMore(_lbrack + _slice + _rbrack)).setParseAction(self.pushSymbol)
         _expr = ((_lpar  + expr + _rpar) +
@@ -186,10 +186,10 @@ class ExpressionParser:
         # define exponentiation as "atom [ ^ expr ]..." instead of "atom [ ^ atom ]...",
         # to get right associative
         atom = atom + ZeroOrMore((_op_exp + term).setParseAction(self.pushFirst))
-        term << atom 
+        term << atom
         # put Unary operations next:
         term = (OneOrMore(_op_una) + term).setParseAction(self.pushUnary) | atom
-        
+
         # add other operators in order of precedence.
         for op in (_op_mul,_op_add,_op_eq,_op_and,_op_or):
             term = term + ZeroOrMore((op + term).setParseAction(self.pushFirst))
@@ -200,7 +200,7 @@ class ExpressionParser:
 
         dict_arg = (quotedString + _colon.suppress() + expr).setParseAction(self.pushDictArg)
 
-        expr    << term  
+        expr    << term
         lit_list<< (expr + ZeroOrMore(_comma.suppress() + expr)      ).setParseAction(self.CountArgs)
         arg_list<< (Optional(arg) + ZeroOrMore(_comma.suppress()+arg)).setParseAction(self.CountArgs)
         lit_dict<< (dict_arg + ZeroOrMore(_comma.suppress()+dict_arg))
@@ -212,12 +212,12 @@ class ExpressionParser:
 
         long_slice  = short_slice + Optional((_colon + Optional(expr)).setParseAction(self.pushSlice3))
         slice_item  = (short_slice ^ long_slice)
-        _slice << (slice_item + ZeroOrMore((_comma + slice_item))) 
-                  
+        _slice << (slice_item + ZeroOrMore((_comma + slice_item)))
+
         self.expr = expr + restOfLine.setParseAction(self.pushRestOfLine) + StringEnd()
         self.expr.streamline()
 
-        
+
     def compile(self,s,reverse=False):
         self.exprStack = []
         self.argcount  = 0
@@ -255,7 +255,7 @@ class ExpressionParser:
         if len(toks)==0:
             if p1 != opcodes.colon:
                 self.exprStack.append(p1)
-            else:                
+            else:
                 self.exprStack.append(opcodes.empty)
                 self.exprStack.append(opcodes.slice)
         else:
@@ -263,7 +263,7 @@ class ExpressionParser:
                 self.exprStack.pop()
             self.exprStack.append(p1)
             self.exprStack.append(opcodes.slice)
-    
+
     def pushSlice3(self, s, loc, toks ):
         stride = self.exprStack.pop()
         xtok = self.exprStack.pop()
@@ -310,14 +310,14 @@ class ExpressionParser:
                     t.append(i)
         if self.debug>=8:
             print ' ExprParse: pushSymbol ', op, na, n, t
-            
+
         if op == opcodes.function and n==0:  # regular function call
             return self.pushFirst(s,loc,t,op=op,count=na)
         elif op == opcodes.function and n>0: # "array function"
             return self.pushFirst(s,loc,t,op=opcodes.arrayfunc,count=na,count2=n)
-        
+
         elif op == opcodes.array and n==0:   # scalar variable / variable name
-            return self.pushFirst(s,loc,t,op=opcodes.variable)            
+            return self.pushFirst(s,loc,t,op=opcodes.variable)
         else:                                # general variable slice case
             return self.pushFirst(s,loc,t,op=op,count=n)
 
@@ -364,9 +364,9 @@ class ExpressionParser:
     def pushDict(self, s, loc, toks ):
         self.pushOp(opcodes.dict, self.dictcount)
         self.dictcount = 0
-        
+
     def pushEmptyList(self, s, loc, toks):
-        self.pushOp(opcodes.list, 0, reset=True)        
+        self.pushOp(opcodes.list, 0, reset=True)
 
     def pushEmptyDict(self, s, loc, toks):
         self.pushOp(opcodes.list, 0)
@@ -375,14 +375,14 @@ class ExpressionParser:
     def pushOp(self,op,count,count2=None,reset=False):
         if count  is not None: self.exprStack.append(count)
         if count2 is not None: self.exprStack.append(count2)
-        if op:     self.exprStack.append(op)            
+        if op:     self.exprStack.append(op)
         if reset:  self.argcount=0
-        
+
     def pushFirst(self, s, loc, toks,op=None,count=None,count2=None,reset=False):
         if self.debug>=32:
             print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
         if toks:
-            self.exprStack.append(toks[0])                
+            self.exprStack.append(toks[0])
         if op:    self.pushOp(op,count,count2=count2,reset=reset)
         return toks
 
@@ -391,19 +391,19 @@ class ExpressionParser:
             print ' ExprParse: pushLast ', toks, op, count, count2, reset, self.exprStack
         if toks:  self.exprStack.insert(0,toks[0])
         if op:    self.pushOp(op,count,count2=count2,reset=reset)
-        return toks    
+        return toks
 
 
 ####################################################
 class Expression:
     """
     Compile and Evaluate tdl expressions (typically right-hand-side of an equation)
-    
+
     The basic interface uses
     >>> e = Expression()
-    
+
     where symbolTable contains the SymbolTable instance for function/variable names
-    
+
     >>> stack = e.compile('2 / 5')
     >>> print stack
     ['/', 5.0, 2.0]
@@ -412,12 +412,12 @@ class Expression:
 
     The .compile function compiles the expression to a postfix stack representation of
     the expression. The .eval function evaluates this stack to an actual value.
-    You can also give the .eval() function an expression:   
-    
+    You can also give the .eval() function an expression:
+
     >>> print e.eval('3/5')
     0.6
     """
-    
+
     def __init__(self,symbolTable=None,run_procedure=None,debug=0):
         self.symbolTable = symbolTable
         if self.symbolTable is None: self.symbolTable = SymbolTable()
@@ -436,28 +436,29 @@ class Expression:
         if self.debug>=4:
             print 'expr compile = %s ' % expr
             print 'expr compile -> ', r
-            
+
         return r
 
     def set_debug(self,n):
         self.debug = n
         self.Parser.debug = n
-    
+
     def check_retval(self,val):
         # checks that return value is ok by raise exception for many error conditions
         if type(val) == types.NotImplementedType: self.raise_error('Not a Number')
         if type(val) == Num.ArrayType:
             if True in Num.isnan(val): self.raise_error('Not a Number')
             if True in Num.isinf(val): self.raise_error('Infinity')
-        if type(val) in (types.FloatType,types.ComplexType):
-            if Num.isnan(val):  self.raise_error('Not a Number')
+        if (type(val) in Num.typeDict.values() or \
+            type(val) in [types.FloatType,types.ComplexType]):
+            if Num.isnan(val):  self.raise_error('Math Error (undefined number)')
             if Num.isinf(val):  self.raise_error('Infinity')
         return val
-            
+
     def raise_error(self,msg):
         if len(self.text)>0: msg =  "%s at line:\n  '%s'" % (msg,self.text)
         raise EvalException, msg
-        
+
     def get_symbol(self,symbol,type='variable',expr=''):
         if expr != '': self.text = expr
         if type in ('variable','defvar'):
@@ -479,19 +480,19 @@ class Expression:
         if stack is None: stack = self.compile(expr)
         if stack is None or len(stack)<1 or type(stack) != types.ListType:
             self.raise_error('cannot evaluate expression %s, %s' % (stack,expr))
-        
+
         if expr != '': self.text = expr
-        
-        work = []        
+
+        work = []
         code = stack[:]
 
         if self.debug>=8:        print ' evaluate ', expr, '\n -> ', code
-        # print ' evaluate ', expr, '\n -> ', code        
+        # print ' evaluate ', expr, '\n -> ', code
 
         while len(code)> 0:
             val = tok = code.pop()
             if self.debug>=64: print 'TOK ', tok
-            
+
             if tok is None:
                 self.raise_error( 'evaluation error (unrecognized expression)')
 
@@ -505,7 +506,7 @@ class Expression:
                     ## special case for assignments...
                     elif tok == opcodes.symbol:
                         return work
-                    
+
                     elif tok == opcodes.variable: # simple variable reference
                         nam = work.pop()
                         sym = self.get_symbol(nam)
@@ -517,7 +518,7 @@ class Expression:
                         ndim  = work.pop()
                         nam   = work.pop()
                         elems = make_array(ndim,work)
-                        
+
                         sym   = self.get_symbol(nam)
                         if sym.type == 'defvar': sym.value = self.eval(sym.code)
                         # print '--> take subarray 1', sym.value, type(sym.value), elems
@@ -529,7 +530,7 @@ class Expression:
                         # the values in the current work array
                         ndim  = work.pop()
                         elems = make_array(ndim,work)
-                        # print '--> take subarray 2'                        
+                        # print '--> take subarray 2'
                         val   = take_subarray(work.pop(),elems)
 
                     elif tok in (opcodes.function,opcodes.arrayfunc,opcodes.command):
@@ -537,12 +538,12 @@ class Expression:
                         nargs = work.pop()
                         fname = work.pop()
                         fcn   = self.get_symbol(fname,type='function')
-                        
+
                         arr = []; kws = {}; elems = []
                         if tok == opcodes.arrayfunc:
                             for i in range(ndim):  elems.append(work.pop())
-                            elems.reverse()                            
-                        
+                            elems.reverse()
+
                         for i in range(nargs):
                             x = work.pop()
                             if x==opcodes.assign:
@@ -563,7 +564,7 @@ class Expression:
                                 val = val[i]
                         if tok == opcodes.command:
                             val = fcn.__cmdout__(val,**kws)
-                            
+
                     elif tok in (opcodes.uminus,opcodes.uplus):
                         val = work.pop()
                         if tok == opcodes.uminus: val = - val
@@ -588,7 +589,7 @@ class Expression:
 
                     elif tok in (opcodes.slice,opcodes.slice3):
                         val = get_slice(work,use_step=(tok == opcodes.slice3))
-                        
+
                     elif tok != opcodes.assign:
                         self.raise_error('unknown token : %s in "%s"' % (tok , expr))
 
@@ -607,7 +608,7 @@ class Expression:
                 elif tok == '*':   x = work.pop() ; val = work.pop() *  x
                 elif tok == '/':   x = work.pop() ; val = work.pop() /  x
                 elif tok == '==':  x = work.pop() ; val = work.pop() == x
-                elif tok == '!=':  x = work.pop() ; val = work.pop() != x 
+                elif tok == '!=':  x = work.pop() ; val = work.pop() != x
                 elif tok == '>':   x = work.pop() ; val = work.pop() >  x
                 elif tok == '<':   x = work.pop() ; val = work.pop() <  x
                 elif tok == '>=':  x = work.pop() ; val = work.pop() >= x
@@ -635,7 +636,7 @@ if __name__ == '__main__':
     s.addVariable('x',2.2)
     s.addVariable('ix',4)
     s.addVariable('st','a long string here')
-        
+
     t = ('a', 'a[2]', 'a[:7]', 'a[4:10]', 'b[9:]')
     t = ('a', 'a[2]',
          '""" three q"""',
@@ -652,8 +653,9 @@ if __name__ == '__main__':
          'st[2:len(st)-7]',
          'a[2]',
          'adict["key1"][1:4]',
-         'dlist[0,1:4]')
-         
+         'dlist[0,1:4]',
+         '[3, 4, 5]',
+         )
     for i in t:
         print '========================\n< ', i , ' > '
         x = p.compile(i)
