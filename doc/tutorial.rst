@@ -300,6 +300,8 @@ multidimensional array uses multiple, nested brackets::
    tdl> md = [[1,2,3,4,5],[6,5,4,3,2],[9,7,5,3,1]]
 
 
+Slices for multi-dimensional arrays can be complicated.
+
 
 Non-Numeric Data Types
 ----------------------
@@ -309,6 +311,15 @@ a few data types for storing non-numerical data.  Compared to low level
 languages like C or Fortran, these data types act as simple data
 structures.  As such, these data types are extremly when handling real
 data, and in writing programs.
+
+-------------------
+logical or booleans
+-------------------
+
+Tdl supports boolean values (which have either the value True or the value
+False).  These are most useful in conditional expressions (if-then-else)
+and while loops.
+
 
 
 ---------
@@ -432,18 +443,29 @@ For loops
 
 A for loop executes a block of Tdl statements repeatedly.  One value is
 changed for each iteration of the block, often to indicate the number of
-times through the block.  A for loop looks like this::
+times through the block.  A while loop looks like this::
 
-    for <value> in <list>:
+    while <condition>:
         <block>
-    endfor 
+    endwhile
 
 ------------
 While loops
 ------------
 
 A while loop executes a block of Tdl statements as long as some logical
-(boolean) condition is met. 
+(boolean) condition is met.  An example while loop looks like
+
+    for <value> in <list>:
+        <block>
+    endfor 
+
+       n = 0
+       while n<10: 
+          print ' n = ',n
+          if n==3: print 'here is 3!!'
+          n = n + 1
+       endwhile
 
 
 --------------------
