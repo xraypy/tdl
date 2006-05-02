@@ -317,9 +317,9 @@ logical or booleans
 -------------------
 
 Tdl supports boolean values (which have either the value True or the value
-False).  These are most useful in conditional expressions (if-then-else)
-and while loops.
-
+False).  These are most useful in combination with logical expressions in
+conditional expressions (if-then-else) and while loops, as we will see
+below.  
 
 
 ---------
@@ -420,6 +420,24 @@ Variables, Name Spaces and Groups
 In all the above examples, we've assumed that all the named program
 variables are global variables
 
+Operators, Expressions, and Statements
+----------------------------------------
+
+Thugh we've already seen several examples of using Tdl and have talked
+about data types and variable names, at this point we should take a step
+back and discuss the basic structure of Tdl, including how values are
+assigned to variables and how calculations are done.
+
+A Tdl script or program consists of a list of 'statements'.  Usually a
+statement corresponds to one line of text, but they can extend beyond one
+linee.
+
+There are several types of statements in Tdl.  The most common kind is the
+'assignment statement', which assigns some value to a named variable. That
+is, the statement::
+    tdl>  x = 1
+ 
+creates 
 String Formatting
 -----------------
 
@@ -429,56 +447,131 @@ String Formatting
 Conditional Statements
 ----------------------
 
+In complex scripts, it is ofetern desirable or even necessary to execute
+some part of the script only under certain conditions, or to change the
+calculation done.  This is done with conditional statements or
+'if-then-else' statements.  These are so vital to scripts that Tdl supports
+a few different variations on these.  The simplest form is a one-line 'if
+statement', that looks like this:
+    
+    if <condition>:  <single-line statement>
+
+The <condition> here is a boolen expression.  If it True, the statement
+will be run, if the condition is False, it will not be run.  Note that the
+colon ':' after the condition is important.  A simple example::
+  
+    if x == 0:  print 'x is zero!'
+
+If you need to execute more than one line of a script, you can use the
+'if-endif' form::
+  
+    if <condition>:
+       <block>
+    endif
+
+Here <block> is an arbitrarily long set of Tdl statements (one statement
+per line), ending with an 'endif'.  A simple example of this form::
+
+    if x == 0:
+       logx = 0.
+       print 'warning: set logx to zero!'
+    endif
+
 
 
 Program Flow Control
 --------------------
 
 It is often necessary to repeat some calculation or nearly-the-same
-calculation. 
+calculation.  Tdl provides two mechanisms for doing this: For loops and
+While loops.
 
 ----------
 For loops
 ----------
 
 A for loop executes a block of Tdl statements repeatedly.  One value is
-changed for each iteration of the block, often to indicate the number of
-times through the block.  A while loop looks like this::
+changed for each iteration of the block using a pre-determined list of 
+values to take.  A generic for loop looks like this::
 
-    while <condition>:
+    for <value> in <list>:
         <block>
-    endwhile
+    endfor 
+
+Because a list of values is used, a for loop will execute a predictable
+number of times -- the length of the list.  The most common use of a for
+loop is to increment some index that indicates the number of times through
+the block.  Here, we use the 'range()' function::
+
+    for x in range(10):
+        print x
+    endfor
+
+Note that the value x is put into the current default namespace and 
+exists when the loop finishes. 
 
 ------------
 While loops
 ------------
 
 A while loop executes a block of Tdl statements as long as some logical
-(boolean) condition is met.  An example while loop looks like
+(boolean) condition is met.  The generic while loop looks like this::
 
-    for <value> in <list>:
+    while <condition>:
         <block>
-    endfor 
+    endwhile
 
-       n = 0
-       while n<10: 
-          print ' n = ',n
-          if n==3: print 'here is 3!!'
-          n = n + 1
-       endwhile
+The <condition> here is a boolean, and as long as the condition is True,
+the block will be evaluated.  The expectation is that the block will do
+something to alter the condition.  A simple example::
+    x = 0
+    while x < 10:
+       print 'x = ', x
+       x = x + 1
+    endwhile
+
+This form could just as well be implemented with a for-loop::
+    for x in range(10):
+       print 'x = ', x
+       x = x + 1
+    endfor
+
+but many while-loops would be more difficult to implement with for loops::
+
+    x = 0
+    y = 9
+    while x < 10 and y > 0:
+         x = x + 1
+         y = 10 - exp(x/3.)
+         print x, y 
+    endwhile
 
 
 --------------------
 break, continue
 --------------------
 
-It is sometimes necessary to interrupt the execution of the main block of a
-for- or while-loop.
+It is sometimes necessary to interrupt the execution of the block of a for-
+or while-loop.  Tdl has two mechanisms to do this.  The first is the
+'break' statement, which jumps completely out of the loop as soon as it is
+encoutered.  With a break statement, the above while loop could be
+re-implemented as::
+
+    x = 0
+    y = 9
+    while x < 10:
+         x = x + 1
+         y = 10 - exp(x/3.)
+	 if y < 0: break
+         print x, y 
+    endwhile
+
+In contrast to 'break', the 'continue' statement stops the evaluation of
+the current block, but continues on to the next step in the loop.
 
 
 Exceptions and Errors
 ---------------------
-
 
 try / except
 
@@ -518,7 +611,4 @@ Defined Variables
 
 Extending with Python
 ---------------------
-
-
-
 
