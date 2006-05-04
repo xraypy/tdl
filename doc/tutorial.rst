@@ -413,12 +413,66 @@ Python.
 
 
 
+
 Variables, Name Spaces and Groups
 ----------------------------------
 
-
 In all the above examples, we've assumed that all the named program
-variables are global variables
+variables are always available and can easily be looked up.  That is, we
+assumed there was one 'global' set of variables.  When dealing with many
+variables holding many sets of similar data, or when dealing with complex
+scripts, it becomes inconvenient and even difficult to maintain a large
+number of accessible and unique variable names.  In addition, Tdl has very
+many avaible functions you can use, each of which must have a unique name
+
+Therefore, a key concept for Tdl (borrowed from modern programming
+languages) is that there is a heirarchy of variable names divided into
+separate *name spaces*.  Tdl manages name spaces by making *all* variable
+and function names have two parts: a group or family name, and a proper
+name, separated by a period '.': *group.variable*.  The idea is that groups
+of variables are organized by their group name, so that you might have one
+family of variables named 'data1.x' and 'data1.intensity', and another
+family with variables 'data2.x' and 'data2.intensity'.
+
+But of course the discussion above did not have variables with two-part
+names, it just had variables with names like 'x' and 'intensity'.  This is
+possible because Tdl uses a simple set of rules to lookup or *resolve*
+variable names::
+ 
+#.  If a variable name is *complete* (that is, it has the form
+"group.variable"), that variable is used.
+
+# If a variable name is not complete (that is, there's no '.'), and you are
+*creating* a variable, it is created in the current "default data group".
+When Tdl starts, the default data group is '_main'.  The name of the
+default data group can be reset at any time,
+
+# If a variable name is not complete (that is, there's no '.'), and you are
+*using* a variable in an expression, the following groups are looked for 
+(in order):  
+
+   a.  The current data group.
+   a.  The current function group.
+   a.  The groups '_main', then '_builtin'.
+
+# 
+
+The situation is largely the same for looking up function names.  But since
+Tdl is designed for data processing, the look-up rules for function names
+is slightly different.  For functions::
+
+ 
+#.  If a function name is *complete* (that is, it has the form
+"group.name"), that function is used.
+
+#   If a 
+
+The idea behind these two sets of rules is that for most analysis, you'll
+want to be in some "mode" where you have easy access to a select set of
+functions (that is, you want those to be easier to type so you want a list
+of function groups to look through) but that the variables containing a set
+of data should all be in the same formal group.
+
 
 Operators, Expressions, and Statements
 ----------------------------------------
@@ -430,14 +484,29 @@ assigned to variables and how calculations are done.
 
 A Tdl script or program consists of a list of 'statements'.  Usually a
 statement corresponds to one line of text, but they can extend beyond one
-linee.
+line.
 
 There are several types of statements in Tdl.  The most common kind is the
 'assignment statement', which assigns some value to a named variable. That
 is, the statement::
+
     tdl>  x = 1
  
-creates 
+creates a variable 'x' and assigns to it the value 1. If the variable 'x'
+already exists, its value will be re-assigned.  
+
+More formally, an assignment statement looks like this:
+
+
+
+---------------------------
+other kinds of statements
+---------------------------
+
+Assignment statements are by far the most common A
+
+
+
 String Formatting
 -----------------
 
@@ -524,6 +593,7 @@ A while loop executes a block of Tdl statements as long as some logical
 The <condition> here is a boolean, and as long as the condition is True,
 the block will be evaluated.  The expectation is that the block will do
 something to alter the condition.  A simple example::
+
     x = 0
     while x < 10:
        print 'x = ', x
@@ -531,6 +601,7 @@ something to alter the condition.  A simple example::
     endwhile
 
 This form could just as well be implemented with a for-loop::
+
     for x in range(10):
        print 'x = ', x
        x = x + 1
