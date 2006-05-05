@@ -53,9 +53,9 @@ def _min(x,*args):
     "return mininum value of an array or list"
     t = []
     for i in args + (x,):
-        if type(i) == Num.ArrayType: i = i.max()
+        if type(i) == Num.ArrayType: i = i.min()
         t.append(i)
-    return max(t)
+    return min(t)
 
 
 def _max(x,*args):
