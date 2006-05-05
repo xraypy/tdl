@@ -3,7 +3,6 @@
 ## A simple plotting frame, wrapping Tk and matplotlib
 
 
-
 import types
 
 gui_holder = '_builtin.GUI'
@@ -32,7 +31,7 @@ class Plotter_TkAgg:
         self.exit_callback = exit_callback
         self.cursor_callback = cursor_callback
         self.symtable = self.tdl.symbolTable
-        self.symtable.addVariable(_plotter,value=self,constant=True)
+        self.symtable.addVariable(_plotter,value=self,type='pyfunc',constant=True)
         
         self.plotter= TkPlotter.PlotFrame(self.root,
                                           exit_callback=self.onExit,
