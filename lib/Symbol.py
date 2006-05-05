@@ -29,7 +29,7 @@ from Util import PrintExceptErr, PrintShortExcept
 random.seed(0)
 
 # should these be moved to a more common place?
-DataTypes = ('variable','constant','defvar')
+DataTypes = ('variable','defvar')
 FuncTypes = ('pyfunc','defpro')
 SymbolTypes = DataTypes + FuncTypes
 SymbolTypeError = """SymbolTypeError: Valid type are:\n%s """ % str(SymbolTypes)
@@ -53,22 +53,25 @@ class Symbol:
     basic class for symbols for variables, functions, as stored in SymbolTable
     Symbols have a name, value, and type.  The type can be one of
     ** DATA
-       constant   immutable variable (pi,e, etc)
        variable   regular variable
        defvar     defined variable (expression stack)
     ** FUNC
        pyfunc     python function
        defpro     defined procedure (sequence of statement code)
+
+    constant is now a property that can apply to a symbol of any type.
+
     """
 
     constant = False
+    name  = '***'
     def __init__(self, name, value=None, desc=None, group=None,
                  help=None, type='variable',
                  code=None, constant = False,
                  as_cmd=True, cmd_out=None,
                  args=None, kws=None):
+        self.constant = False
         self.name     = name
-        self.constant = constant
         self.as_cmd   = as_cmd
         self.cmd_out  = cmd_out
         self.value    = value
@@ -80,11 +83,11 @@ class Symbol:
         self.group    = group
         
         # check that type is valid
-        if type not in SymbolTypes:
-            raise SymbolTypeError
+        if type not in SymbolTypes: raise SymbolTypeError
 
+        self.constant = constant
         self.type = type
-        if self.type == 'constant': self.constant = True
+        # if self.type == 'constant': self.constant = True
 
     def getHelp(self):
         return self.help
@@ -110,33 +113,35 @@ class Symbol:
         elif val is None:
             return None
         return str(val)
-        
-    #def __setattr__(self, attr, val):
-    #    if self.constant and  attr == 'value':
-    #        print 'cannot set value for constant ', self.name
-    #    else:
-    #        self.__dict__[attr] = val
+         
+    def __setattr__(self, attr, val):
+        if self.constant and  attr == 'value':
+            print 'cannot set value for constant ', self.name
+        else:
+            self.__dict__[attr] = val
 
     def __repr__(self):
         name = "%s.%s" % (self.group,self.name)
         if self.type == 'variable':
             nelem = datalen(self.value)
+            vtype = 'Variable'
+            if self.constant: vtype = 'Variable (constant)'
             if nelem == 1:
-                return "<Variable %s: type=scalar, value=%s>" % (name,repr(self.value))
+                return "<%s %s: type=scalar, value=%s>" % (vtype,name,repr(self.value))
             else: 
                 if type(self.value) == Num.ArrayType:
-                    return "<Variable %s: type=array, npts=%i, shape=%s>" % (name,len(self.value),self.value.shape)
+                    return "<%s %s: type=array, npts=%i, shape=%s>" % (vtype,name,len(self.value),self.value.shape)
                 else:
                     t = str(type(self.value))[1:-1].replace('type','')
                     t.strip()
-                    return "<Variable %s: type=%s, len=%i>" % (name,t,nelem)
+                    return "<%s %s: type=%s, len=%i>" % (vtype,name,t,nelem)
                     
-        elif self.type == 'constant':
-            return "<Constant %s: value=%s>" % (name,repr(self.value))
         elif self.type == 'defvar':
             return "<Defined Variable %s ='%s'>" % (name,self.desc)
         elif self.type == 'pyfunc':
-            return "<Function %s>" % (name)
+            vtype = 'Function'
+            if self.constant: vtype = 'Function (constant)'
+            return "<%s %s>" % (vtype, name)
         elif self.type == 'defpro':
             args = ','.join(self.args)
             for k,v in  self.kws.items(): args = "%s,%s=%s" % (args,k,str(v))
@@ -286,8 +291,8 @@ class SymbolTable:
                 if self.sym[group][name].constant: return (None,None)
             self.sym[group][name] = Symbol(name,value=value,type=type,
                                            code=code,desc=desc,group=group,**kws)
-            if constant:
-                self.sym[group][name].constant = True
+
+            self.sym[group][name].constant = constant
             return (group,name)
         else:
             return (None,None)
@@ -453,17 +458,23 @@ class SymbolTable:
     def getAllData(self,group=None):
         """ if group = None get all data, otherwise get all data in group """
         data = []
-        if group is None:
-            for group in self.sym.keys():
-                for name in self.sym[group].keys():
-                    if self.sym[group][name].type in DataTypes:
-                        data.append(self.sym[group][name])
-        else:
-            if self.hasGroup(group):
-                for name in self.sym[group].keys():
-                    if self.sym[group][name].type in DataTypes:
-                        data.append(self.sym[group][name])
+        grouplist = [group]
+        if group is None: grouplist = self.sym.keys()
+        for group in grouplist:
+            for name in self.sym[group].keys():
+                if self.sym[group][name].type in DataTypes:
+                    data.append(self.sym[group][name])
         return data
+
+    def restoreData(self,blob):
+        """ if group = None get all data, otherwise get all data in group """
+        for sym in blob:
+            g = sym.group
+            n = sym.name
+            if not self.hasGroup(g): self.addGroup(g)
+            self.addVariable("%s.%s" % (g,n),value=deepcopy(sym.value),
+                             type=sym.type,constant=sym.constant)
+            
 
     def clearAllData(self,group=None):
         " delete data "
@@ -548,18 +559,13 @@ class SymbolTable:
     def getAllFunc(self,group=None):
         """ if group = None get all data, otherwise get all data in group """
         func = {}
-        if group is None:
-            for group in self.sym.keys():
-                for name in self.sym[group].keys:
-                    if self.sym[group][name].type in FuncTypes:
-                        x = "%s.%s" % group,name
-                        func.update({x:sym[group][name]}) 
-        else:
-            if self.hasGroup(group):
-                for name in self.sym[group].keys:
-                    if self.sym[group][name].type in FuncTypes:
-                        x = "%s.%s" % group,name
-                        func.update({x:sym[group][name]})
+        grouplist = [group]
+        if group is None: grouplist = self.sym.keys()
+        for group in grouplist:
+            for name in self.sym[group].keys:
+                if self.sym[group][name].type in FuncTypes:
+                    x = "%s.%s" % group,name
+                    func.update({x:sym[group][name]}) 
         return func
 
     def clearAllFunc(self,group=None):
@@ -578,13 +584,9 @@ class SymbolTable:
                 self.deleteGroup(group)
 
     # variables (and const)
-    def addVariable(self,name,value=None,constant=False):
+    def addVariable(self,name,value=None,type='variable',constant=False):
         " add variable (or const)"
-        if constant == True:
-            type='constant'
-        else:
-            type='variable'
-        group,name = self.addSymbol(name,value=value,type=type)
+        group,name = self.addSymbol(name,value=value,type=type,constant=constant)
         return (group,name)
 
     def getVariable(self,name,create=False):
@@ -607,7 +609,7 @@ class SymbolTable:
                 sym = None
         return sym
 
-    def setVariable(self,name,value,group=None):
+    def setVariable(self,name,value,type='variable',group=None):
         return self.addSymbol(name,value=value,type='variable',group=group)
 
     # builtins
@@ -615,7 +617,7 @@ class SymbolTable:
         " add a symbol to the _builtin group, and make it a 'constant'"
         if name.find('.') > -1:
             raise NameError, name
-        return self.addSymbol(name,value=value,group=builtinGroup,type='constant')
+        return self.addSymbol(name,value=value,group=builtinGroup,type='variable',constant=True)
 
     def setBuiltin(self,name,value,desc=None):
         " set a Builtin value "
@@ -627,8 +629,8 @@ class SymbolTable:
             self.sym[builtinGroup][name].value    = value
             if desc: 
                 self.sym[builtinGroup][name].desc = desc
+            self.sym[builtinGroup][name].type     = 'variable'
             self.sym[builtinGroup][name].constant = True
-            self.sym[builtinGroup][name].type = 'constant'
         # if setting group name, make sure it exists in data
         if name == 'group':
             if not self.sym.has_key(value):  self.sym[value] = {}
