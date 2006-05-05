@@ -39,8 +39,8 @@
 #  
 ##########################################################################
 
-from Num import Num
-
+from Num import Num, num_version
+import version
 import os
 import sys
 import types
@@ -567,8 +567,65 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     # return default group to original
     tdl.symbolTable.setDataGroup(savegroup)
     return ret
-    
+##    
+## save / restore state
+##
+def tdl_savestate(fname, tdl=None,debug=False,**kw):
+    " save program state to a file"
+    if debug: print 'savestate XX.... ', fname
 
+    dat = tdl.symbolTable.getAllData()
+
+    d = {'save_version': 2,
+         'title':        'TDL Save Set',
+         'tdl_version':  version.version,
+         'num_version':  num_version,
+         'os_name':      os.name,
+         'os_environ':   os.environ,
+         'timestamp':    time.time(),
+         'data_table':   dat}
+
+    import cPickle
+    try:
+        f = open(fname,'w')
+        cPickle.dump(d,f)
+        f.close()
+    except:
+        print 'error saving state to %s ' % fname        
+
+def tdl_restorestate(fname, tdl=None,debug=False,**kw):
+    " restore state from a file"
+
+    if debug: print 'restorestate .... ', fname
+    if not os.path.isfile(fname):
+        print 'file error: cannot find file %s ' % fname
+        return None        
+    try:
+        f = open(fname)
+        import cPickle
+        d = cPickle.load(f)
+        f.close()
+    except:
+        print 'error restoring state from %s ' % fname        
+    #
+    isOK = True
+    try:
+        vers = d['save_version']
+        title= d['title']
+        tver = d['tdl_version']
+        data = d['data_table']
+        isOk = isOK and (d['title'] == 'TDL Save Set')
+        isOk = isOK and (int(d['save_version']) >= 2)
+    except:
+        isOK = False
+
+    if isOK:
+        tdl.symbolTable.restoreData(data)
+    else:
+        print '%s is not a proper TDL save file' % fname
+
+        
+        
 
 #################################################################
 # Load the functions
@@ -628,7 +685,9 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.help":(_help,None),
           "_builtin.show":(_show,None),
           "_builtin.input":(tdl_input,None),
-          "_sys.set_path":(tdl_path,None)
+          "_sys.set_path":(tdl_path,None),
+          "_builtin.save_state":(tdl_savestate,None),
+          "_builtin.restore_state":(tdl_restorestate,None),
           }
 
 if __name__ == '__main__':
