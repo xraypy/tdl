@@ -19,6 +19,8 @@ import Help
 
 from Expression import Expression, opcodes
 from Symbol import Symbol, SymbolTable
+import version
+from Num import num_version
 from Util import split_delim,  find_unquoted_char, parens_matched, split_list, trimstring
 from Util import EvalException, Command2Expr,PrintShortExcept
 
