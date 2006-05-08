@@ -439,12 +439,10 @@ names, it just had variables with names like 'x' and 'intensity'.  This is
 possible because Tdl uses a simple set of rules to lookup or *resolve*
 variable names::
  
-#.  If a variable name is *complete* (that is, it has the form
-"group.variable"), that variable is used.
+#.  If a variable name is *complete* (that is, it has the form "group.variable"), that variable is used.
 
 # If a variable name is not complete (that is, there's no '.'), and you are
-*creating* a variable, it is created in the current "default data group".
-When Tdl starts, the default data group is '_main'.  The name of the
+*creating* a variable, it is created in the current "default data group".  When Tdl starts, the default data group is '_main'.  The name of the
 default data group can be reset at any time,
 
 # If a variable name is not complete (that is, there's no '.'), and you are
@@ -455,17 +453,16 @@ default data group can be reset at any time,
    a.  The current function group.
    a.  The groups '_main', then '_builtin'.
 
-# 
+ 
 
 The situation is largely the same for looking up function names.  But since
 Tdl is designed for data processing, the look-up rules for function names
 is slightly different.  For functions::
 
  
-#.  If a function name is *complete* (that is, it has the form
-"group.name"), that function is used.
+#.  If a function name is *complete* (that is, it has the form "group.name"), that function is used.
 
-#   If a 
+#   If a function name is not complete, .....
 
 The idea behind these two sets of rules is that for most analysis, you'll
 want to be in some "mode" where you have easy access to a select set of
