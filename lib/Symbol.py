@@ -171,8 +171,8 @@ class SymbolTable:
             for i in requiredGroups:   self.sym[i] = {}
             self.dataGroup = mainGroup
             self.funcGroup = mainGroup
-            self.addBuiltin('data_group',mainGroup)
-            self.addBuiltin('func_group',mainGroup)
+            self.setVariable('data_group',value=mainGroup,group=builtinGroup)
+            self.setVariable('func_group',value=mainGroup,group=builtinGroup)
             self.setSearchGroups()
         if libs is not None:
             for lib in libs:
@@ -417,7 +417,7 @@ class SymbolTable:
         if not self.hasGroup(group): self.sym[group] = {}
         self.dataGroup = group
         self.setSearchGroups()        
-        self.setBuiltin('data_group',group)
+        self.setVariable('data_group',value=group,group=builtinGroup)
         return group
 
     def setFuncGroup(self, group):
@@ -426,7 +426,7 @@ class SymbolTable:
         if not self.hasGroup(group):  self.sym[group] = {}
         self.funcGroup = group
         self.setSearchGroups()        
-        self.setBuiltin('func_group',group)
+        self.setVariable('func_group',value=group,group=builtinGroup)
         return group
 
     def addRandomGroup(self,prefix='',nlen= 8):
@@ -609,33 +609,9 @@ class SymbolTable:
                 sym = None
         return sym
 
-    def setVariable(self,name,value,type='variable',group=None):
-        return self.addSymbol(name,value=value,type='variable',group=group)
-
-    # builtins
-    def addBuiltin(self,name,value,desc=None):
-        " add a symbol to the _builtin group, and make it a 'constant'"
-        if name.find('.') > -1:
-            raise NameError, name
-        return self.addSymbol(name,value=value,group=builtinGroup,type='variable',constant=True)
-
-    def setBuiltin(self,name,value,desc=None):
-        " set a Builtin value "
-        if name.find('.') > -1: raise NameError
-        if not self.hasGroup(builtinGroup): self.sym[builtinGroup] = {}
-        if not self.sym[builtinGroup].has_key(name):
-            self.addBuiltin(name,value,desc=desc)
-        else:
-            self.sym[builtinGroup][name].value    = value
-            if desc: 
-                self.sym[builtinGroup][name].desc = desc
-            self.sym[builtinGroup][name].type     = 'variable'
-            self.sym[builtinGroup][name].constant = True
-        # if setting group name, make sure it exists in data
-        if name == 'group':
-            if not self.sym.has_key(value):  self.sym[value] = {}
-            self.groupName = value
-        return    
+    def setVariable(self,name,value,type='variable',group=None,constant=False):
+        return self.addSymbol(name,value=value,type=type,
+                              group=group,constant=constant)
 
     # def variables
     def setDefVariable(self, name, code, desc,**kws):
