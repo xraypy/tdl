@@ -30,11 +30,12 @@ import os, string, sys, getopt
 use_wxGUI = False
 debug     = False
 verbose   = False
+do_shell  = True
 
 libs      = []
 files     = []
 
-opts, args = getopt.getopt(sys.argv[1:], "wdvhl:")
+opts, args = getopt.getopt(sys.argv[1:], "wdvhxl:")
 #print opts
 #print args
 for o, a in opts:
@@ -44,6 +45,8 @@ for o, a in opts:
         debug = True
     elif o == '-v':
         verbose = True
+    elif o == '-x':
+        do_shell = False
     elif o == '-l':
         libs.append(a)
     elif o == '-h':
@@ -127,7 +130,7 @@ if use_wxGUI == False:
             t.tdl_execute("load('%s')" % f)
         elif warn:
             print "\n  ***Cannot find tdl file: %s" % f
-    t.cmdloop()
+    if do_shell: t.cmdloop()
 elif use_wxGUI == True:
     # tdl gets started from within the wxGUI
     # looks like dir gets reset when call application
