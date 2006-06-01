@@ -452,7 +452,7 @@ def file_open(fname,default_path=None):
     "open a file using default path if passed"
     # two cases
     # 1. fname has full path (or rel path to cwd), or file is in cwd -> dont use def_path
-    # 3. fname has rel path (or none) to default path -> join def_path and fname
+    # 2. fname has rel path (or none) to default path -> join def_path and fname
     if os.path.isfile(fname):
         return open(fname)
     elif default_path:

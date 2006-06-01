@@ -18,6 +18,7 @@ class SpecFile:
         self.summary  = []
         self.max_scan = 0
         self.min_scan = 0
+        self.ok       = False
         self.read()
 
     def __repr__(self):
@@ -39,8 +40,10 @@ class SpecFile:
                 self.lines = f.readlines()
                 f.close()
                 self.summarize()
+                self.ok = True
         except IOError:
-            print  'error reading file ', fname
+            print  '**Error reading file ', fname
+            self.ok = False
 
     def summarize(self):
         lineno = 0
@@ -90,7 +93,7 @@ class SpecFile:
                                      'ncols':ncols,
                                      'labels':lab,
                                      'atten':atten,
-                                     'nl_label':lineno})
+                                     'lineno':lineno})
                 (cmnd,date,xtime,Gvals,q,Pvals,atten,lab) = (None,None,None,None,None,None,None,None)
                 (index, ncols, n_sline) = (0,0,0)
 
@@ -135,7 +138,7 @@ class SpecFile:
         s = self.get_summary(sc_num)
         if (s == None): return None
         dat = []
-        nl  = s['nl_label']
+        nl  = s['lineno']
         for i in (self.lines[nl:]):
             if (i[0:3] == '#S '):
                 break
@@ -200,7 +203,19 @@ class SpecFile:
         return sc_dict
         
 ####################################################
-def read_spec(fname=None,path='',tdl=None,**kws):
+def read_spec(fname,tdl=None,**kws):
+    """>sf = read("file_name")
+    >read_spec file_name
+    
+    The spec file variable is an object that contains all the information
+    this can be passed to the various functions for extracting and plotting
+    scan data. Note that the spec file_name can contain a path.  The path 
+    may be full, relative to the current directory or relative to _sys.work.
+    When using command syntax the variable name will be the file name prefix
+    and stored in the spec group.
+    """
+    path = tdl.getVariableValue("_sys.work")
+    if not path: path=''
     sf = SpecFile(fname=fname,path=path)
     return sf
 
@@ -210,10 +225,19 @@ def read_spec_cmd(val,fname=None,tdl=None,**kws):
     name = 'spec.%s' % name
     tdl.setVariable(name,val=val)
 
-def show_scan(sf,scan=None,all=False,**kws):
+def show_scan(sf,scan=None,all=False,tdl=None,**kws):
+    """>show spec_file, [scan=10,all=True]
+    
+    Show spec file/scan information.  If no scan number is provided this outputs
+    a summary of the data file other wise a summary of the scan is provided.
+    The all flag controls the level of detail.  The spec_file argument may be a file name
+    of a spec_file object (see read_spec).  This function has no return value. """
+    
     if type(sf) == types.StringType:
-        sf = SpecFile(sf)
-    if not sf: return
+        path = tdl.getVariableValue("_sys.work")
+        if not path: path=''
+        sf = SpecFile(sf,path=path)
+    if not sf.ok: return
     
     if scan == None:
         print sf
@@ -250,17 +274,34 @@ def show_scan(sf,scan=None,all=False,**kws):
         print "Scan not found"
         print sf
 
-def scan_data(sf,scan,all=False,**kws):
+def scan_data(sf,scan,tdl=None,**kws):
+    """>dat = data(spec_file,scan)
+    
+    The spec_file argument may be a file name of a spec_file object (see read_spec).
+    The returned array is the scan data:
+    dat[0] = 1st column
+    dat[1] = 2nd column etc..
+    """
     if type(sf) == types.StringType:
-        sf = SpecFile(sf)
-    if not sf: return None
+        path = tdl.getVariableValue("_sys.work")
+        if not path: path=''
+        sf = SpecFile(sf,path=path)
+    if not sf.ok: return None
     d = Num.array(sf.get_data(scan))
     return d.transpose()
 
-def scan_dict(sf,scan,all=False,**kws):
+def scan_dict(sf,scan,tdl=None,**kws):
+    """>dat = dict(spec_file,scan)
+    
+    The spec_file argument may be a file name of a spec_file object (see read_spec).
+    The returned dictionary contains all the scan data and relevant scan information.
+    Use >dictkeys(dat) to veiw the contents.
+    """
     if type(sf) == types.StringType:
-        sf = SpecFile(sf)
-    if not sf: return None
+        path = tdl.getVariableValue("_sys.work")
+        if not path: path=''
+        sf = SpecFile(sf,path=path)
+    if not sf.ok: return None
     return sf.get_scan_dict(scan)
 
 _func_ = {"spec.read":(read_spec,read_spec_cmd),
