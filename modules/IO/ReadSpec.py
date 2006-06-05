@@ -204,8 +204,8 @@ class SpecFile:
         
 ####################################################
 def read_spec(fname,tdl=None,**kws):
-    """>sf = read("file_name")
-    >read_spec file_name
+    """    >>sf = read("file_name")
+    >>read_spec file_name
     
     The spec file variable is an object that contains all the information
     this can be passed to the various functions for extracting and plotting
@@ -226,7 +226,7 @@ def read_spec_cmd(val,fname=None,tdl=None,**kws):
     tdl.setVariable(name,val=val)
 
 def show_scan(sf,scan=None,all=False,tdl=None,**kws):
-    """>show spec_file, [scan=10,all=True]
+    """    >>show spec_file, [scan=10,all=True]
     
     Show spec file/scan information.  If no scan number is provided this outputs
     a summary of the data file other wise a summary of the scan is provided.
@@ -275,12 +275,12 @@ def show_scan(sf,scan=None,all=False,tdl=None,**kws):
         print sf
 
 def scan_data(sf,scan,tdl=None,**kws):
-    """>dat = data(spec_file,scan)
+    """    >>dat = data(spec_file,scan)
     
-    The spec_file argument may be a file name of a spec_file object (see read_spec).
+    The spec_file argument may be a file name or a spec_file object (see read_spec).
     The returned array is the scan data:
-    dat[0] = 1st column
-    dat[1] = 2nd column etc..
+    dat[0] = 1st column (as a row vector)
+    dat[1] = 2nd column (as a row vector) etc..
     """
     if type(sf) == types.StringType:
         path = tdl.getVariableValue("_sys.work")
@@ -291,9 +291,9 @@ def scan_data(sf,scan,tdl=None,**kws):
     return d.transpose()
 
 def scan_dict(sf,scan,tdl=None,**kws):
-    """>dat = dict(spec_file,scan)
+    """    >>dat = dict(spec_file,scan)
     
-    The spec_file argument may be a file name of a spec_file object (see read_spec).
+    The spec_file argument may be a file name or a spec_file object (see read_spec).
     The returned dictionary contains all the scan data and relevant scan information.
     Use >dictkeys(dat) to veiw the contents.
     """
@@ -304,7 +304,40 @@ def scan_dict(sf,scan,tdl=None,**kws):
     if not sf.ok: return None
     return sf.get_scan_dict(scan)
 
+
+def scan_cols(sf,scan,cols=None,tdl=None,**kws):
+    """    >>dat = col(spec_file,scan,cols=[column_lables])
+    
+    The spec_file argument may be a file name or a spec_file object (see read_spec).
+    The returned array is the scan data:
+    dat[0] = column mathing the first column label (or the first column - default)
+    dat[1] = column mathing the second column label (or the last column - default)
+    """
+    if type(sf) == types.StringType:
+        path = tdl.getVariableValue("_sys.work")
+        if not path: path=''
+        sf = SpecFile(sf,path=path)
+    if not sf.ok: return None
+    d = sf.get_scan_dict(scan)
+    dd = d['data']
+    lbls = d['labels']
+    ncol = d['ncol']
+    dat = []
+    if cols:
+        if type(cols) != types.ListType: cols = [cols]
+        for c in cols:
+            if c in dd.keys():
+                dat.append(dd[c])
+            else:
+                print "Warning: skipping column label '%s', not found" % c
+    else:
+        dat.append(dd[lbls[0]])
+        dat.append(dd[lbls[ncol-1]])
+    return dat
+
+#################################################
 _func_ = {"spec.read":(read_spec,read_spec_cmd),
           "spec.show":(show_scan,None),
           "spec.data":scan_data,
-          "spec.dict":scan_dict}
+          "spec.dict":scan_dict,
+          "spec.col":scan_cols}
