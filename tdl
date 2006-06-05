@@ -56,6 +56,7 @@ for o, a in opts:
         print '-d: debug on'
         print '-l: load library'
         print '-v: verbose'
+        print '-x: non-interactive execution'
         print 'Examples (combine the various options):'
         print '>tdl -v                  #verbose startup'
         print '>tdl -vd                 #verbose startup and debug on'

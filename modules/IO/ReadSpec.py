@@ -1,6 +1,5 @@
 # Read spec files
-# From Matt Newville
-# Modifed by Tom Trainor
+# Matt Newville, Tom Trainor
 #
 ######################################################################################
 
@@ -341,3 +340,5 @@ _func_ = {"spec.read":(read_spec,read_spec_cmd),
           "spec.data":scan_data,
           "spec.dict":scan_dict,
           "spec.col":scan_cols}
+
+_scripts_ = ['spec_scripts.tdl']

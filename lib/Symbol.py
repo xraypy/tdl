@@ -4,6 +4,13 @@
 # Modifications
 # -------------
 #
+# 6-4-06 T2
+# In SymbolTable.import_lib added a case for _scripts_
+# If the lib module defines a list _scripts_ = [file1,file2]
+# then these will be loaded (eg to define various defs or data..)
+# Its assumed that these scripts live in the same directory as the
+# library module.  
+#
 # 4-2-06 T2
 # Modified symbolTable.initialize and symbolTable.import_lib
 # to correctly handle strings as module names
@@ -12,7 +19,7 @@
 # Added new methods for getting/putting to symbol table
 # back to a single dictionary of symbols
 #
-##########################################################################
+#########################################################################
 
 import types
 import os
@@ -228,6 +235,16 @@ class SymbolTable:
                     if len(val) > 1: cmdOut = val[1]
                     if len(val) > 2: asCmd  = val[3]
                 x =self.addFunction(nam,func,cmd_out=cmdOut,as_cmd=asCmd)
+            for nam in getattr(mod,'_scripts_',[]):
+                try:
+                    file_path = os.path.abspath(os.path.dirname(mod.__file__))
+                    file_name = os.path.join(file_path,nam)
+                    if os.path.exists(file_name) and os.path.isfile(file_name):
+                        self.tdl.load_file(file_name)
+                    else:
+                        print "Warning: Cannot find lib script file: %s" % file_name
+                except:
+                    PrintExceptErr("Error loading script file '%s'"  % file_name)
             if self.tdl:
                 for nam,val in getattr(mod,'_help_',{}).items():
                     self.tdl.help.add_topic(nam,val)

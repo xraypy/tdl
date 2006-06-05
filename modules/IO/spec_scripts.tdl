@@ -1,0 +1,56 @@
+# Tdl defined procedures for spec files
+
+def spec.plot(sf,scan,cols=None):
+    """>>spec.plot(sf,scan=0,cols=['Psi','i1'])
+
+    This command makes a new plot from a spec file (see spec.oplot)
+    
+    The spec_file argument may be a file name or a spec_file object (see read_spec).
+    scan is the scan number to be plotted. cols is a list of column
+    labels. This argument may be None (default) which plots the first and last columns
+    If two labels are passed these are assumed to be the x,y axis. If three columns
+    are passed then the data is plotted as x, y/z.
+
+    Note to use the cols argument with command syntax, it needs to be defined as a variable.
+    For example:
+    >>spec.plot(sf, 48, cols=['Psi','i1','Seconds'])
+    >>spec.plot sf, 48, cols=['Psi','i1','Seconds']
+    The second case doesnt work, however, the following does
+    >>plot_cols = ['Psi','i1','Seconds']
+    >>spec.plot sf, 48, cols=plot_cols
+
+    """
+    if cols == None or len(cols) == 2:
+        dat = spec.col(sf,scan)
+        x = dat[0]
+        y = dat[1]
+    elif len(cols) == 3:
+        dat = spec.col(sf,scan,cols)
+        x = dat[0]
+        y = dat[1]/dat[2]
+    else:
+        print "Error parsing column labels"
+    endif
+    newplot x,y
+enddef
+
+def spec.oplot(sf,scan,cols=None):
+    """>>spec.oplot(sf,scan=0,cols=['Psi','i1'])
+
+    This command over plots spec data (see spec.plot)
+
+    """
+    if cols == None or len(cols) == 2:
+        dat = spec.col(sf,scan)
+        x = dat[0]
+        y = dat[1]
+    elif len(cols) == 3:
+        dat = spec.col(sf,scan,cols)
+        x = dat[0]
+        y = dat[1]/dat[2]
+    else:
+        print "Error parsing column labels"
+    endif
+    plot x,y
+enddef
+    
