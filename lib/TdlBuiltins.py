@@ -473,17 +473,25 @@ def tdl_setvar(name,val,tdl=None,group=None,debug=False,**kws):
     
     return '.'.join(tdl.symbolTable.setVariable(name,val))
 
-def tdl_delvar(name,tdl=None,group=None,debug=False,**kw):
-    "delete a variable or group"
+
+def tdl_delgroup(name,tdl=None,debug=False,**kw):
+    "delete a group"
     if tdl is None:
-        if debug: print 'cannot setvar %s ' % expr
+        if debug: print 'cannot delete group %s ' % expr
+        return None
+    if tdl.symbolTable.hasGroup(name):
+        return tdl.symbolTable.deleteGroup(name)
+
+def tdl_delvar(name,tdl=None,group=None,debug=False,**kw):
+    "delete a variable "
+    if tdl is None:
+        if debug: print 'cannot delete variable %s ' % expr
         return None
     name.strip()
     xx = name.split('.')
     if len(xx) == 1:
         return tdl.symbolTable.deleteSymbol(name,group=group)
     elif len(xx) == 2 and xx[1] == '':
-        print "here" , xx[0]
         return tdl.symbolTable.deleteGroup(xx[0])
     else:
         return tdl.symbolTable.deleteSymbol(xx[1],group=xx[0])
@@ -647,6 +655,7 @@ _func_ = {'_builtin.load':(tdl_load, None),
           '_builtin.import':(tdl_import, None),
           '_builtin.eval':(tdl_eval,None),
           '_builtin.setvar':(tdl_setvar,None),
+          '_builtin.delgroup':tdl_delgroup,
           '_builtin.delvar':tdl_delvar,
           '_builtin.datagroup':(tdl_setdatagroup, None),
           '_builtin.funcgroup':(tdl_setfuncgroup, None),
