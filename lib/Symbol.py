@@ -1,4 +1,5 @@
 # M. Newville Univ of Chicago (2005)
+# M. Newville Univ of Chicago (2005)
 #
 # -------------
 # Modifications
@@ -51,6 +52,7 @@ mathGroup    = '_math'
 plotGroup    = '_plot'
 # groups that must always be present, and default search order
 requiredGroups = (mainGroup,builtinGroup,sysGroup,mathGroup,plotGroup)
+immutableGroups = (builtinGroup,sysGroup,mathGroup)
 
 isValidName = re.compile(r'[a-zA-Z_\$][a-zA-Z0-9_]*').match
 
@@ -402,8 +404,19 @@ class SymbolTable:
         " delete a group and all its symbols (except default groups)"
         group = group.strip()
         #if not group in (builtinGroup,globalGroup) and self.sym.has_key(group):
-        if self.sym.has_key(group) and group not in requiredGroups:
+        #if self.sym.has_key(group) and group not in requiredGroups:
+        #    self.sym.pop(group)
+        # should we allow deleting required groups and just re-instate?
+        # ie except for immutables??
+        if group in immutableGroups:
+            print "'%s' can not be deleted" % group
+            return None
+        elif self.sym.has_key(group):
             self.sym.pop(group)
+            if group in requiredGroups:
+                self.addGroup(group)
+        else:
+            print "Cant find group '%s'" % group
         return None
 
     def getDataGroup(self,group=None,create=True):
