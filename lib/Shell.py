@@ -4,12 +4,16 @@
 # -------------
 # Modifications
 # -------------
+# 6-10-06 T2
+# - override open, so all open statements use Util.file_open class
+#   dangerous???
+#
 # 4-27-06 T2
-# moved help stuff to Help
+# - moved help stuff to Help
 #
 # 4-8-06 T2
-# small tweak to setting stdin/stdout so tdl_wxGUI will work.
-# small change to do_show_symbols, checks if key is a group.
+# - small tweak to setting stdin/stdout so tdl_wxGUI will work.
+# - small change to do_show_symbols, checks if key is a group.
 #
 ############################################################################
 
@@ -54,8 +58,6 @@ class shell(cmd.Cmd):
 
         self.stdin = sys.stdin
         self.stdout = sys.stdout
-        #self.stdin  = stdin  or sys.stdin
-        #self.stdout = stdout or sys.stdout
 
         print self.banner % (version.version,num_version)
 
@@ -63,14 +65,14 @@ class shell(cmd.Cmd):
                                    input=self.stdin, output = self.stdout,
                                    libs= libs, GUI=GUI)
 
-        #self.help      = self.tdl.help.get_help
-        #self.help_topics = self.tdl.help.list_topics().split()
-        #self.help_topics.sort()
-
         self.prompt    = self.ps1
         self.tdl.prompt= self.ps2
         self._status   = True
         self.debug     = debug
+
+        # override builtin open function
+        # is this a bad idea?????
+        __builtins__['open'] = Util.file_open(sym=self.tdl)
 
     def emptyline(self):
         pass
@@ -130,20 +132,23 @@ class shell(cmd.Cmd):
 
 #####################################################################################
 #####################################################################################
-def show_usage():
-    print Help.ShellUsage
-    sys.exit(1)
-
-def main(arg,debug=False):
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "hd",["help", "debug"])
-    except:
-        show_usage()
-    for key,val in opts:
-        if key in ("-d", "--debug"): debug = True
-    t = shell(debug=debug)
-    t.cmdloop()
+#def show_usage():
+#    print Help.ShellUsage
+#    sys.exit(1)
+#
+#def main(arg,debug=False):
+#    try:
+#        opts, args = getopt.getopt(sys.argv[1:], "hd",["help", "debug"])
+#    except:
+#        show_usage()
+#    for key,val in opts:
+#        if key in ("-d", "--debug"): debug = True
+#    t = shell(debug=debug)
+#    t.cmdloop()
 
 if (__name__ == '__main__'):
     # show_usage()
-    main(sys.argv[1:])
+    #main(sys.argv[1:])
+    t = shell(debug=debug)
+    t.cmdloop()
+

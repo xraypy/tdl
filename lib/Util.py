@@ -3,6 +3,9 @@
 # -------------
 # Modifications
 # -------------
+# 6-10-06 T2:
+# - redid file_open as a class, can globally override open
+#
 # 4-30-06 MN:
 # - improved list2array, show_list
 #
@@ -448,19 +451,64 @@ def sub_dirs(pth,skip_txt=None):
                     sub_dirs.append(temp)
     return sub_dirs
 
-def file_open(fname,default_path=None):
-    "open a file using default path if passed"
-    # two cases
-    # 1. fname has full path (or rel path to cwd), or file is in cwd -> dont use def_path
-    # 2. fname has rel path (or none) to default path -> join def_path and fname
-    if os.path.isfile(fname):
-        return open(fname)
-    elif default_path:
-        fname = os.path.join(default_path,fname)
-        return open(fname)
-    else:
-        raise IOError, "Could not open file '%s' or '%s'" % (fname)
-    
+#def file_open(fname,default_path=None,**kw):
+#    "open a file using default path if passed"
+#    # two cases
+#    # 1. fname has full path (or rel path to cwd), or file is in cwd -> dont use def_path
+#    # 2. fname has rel path (or none) to default path -> join def_path and fname
+#    print "hello file open: %s" % default_path
+#    if os.path.isfile(fname):
+#        #return open(fname)
+#        return file(fname,**kw)
+#    elif default_path:
+#        fname = os.path.join(default_path,fname)
+#        #return open(fname)
+#        return file(fname,**kw)
+#    else:
+#        raise IOError, "Could not open file '%s'" % (fname)
+
+class file_open:
+    """open a file using default path.  The default path may be
+    passed as a kw or determined from a symbol table if present.
+    This class is intended to override the builtin function open
+    The equivalent operation file is used here to return a file
+    object.  Note do not override the builtin function 'file' with this class
+    or you'll enter an infinite loop!!!  
+     * two cases for finding the file:
+     1. fname has full path (or rel path to cwd), or file is in cwd
+        -> dont use def_path
+     2. fname has rel path (or none) to default path
+        -> join default_path and fname
+    """
+    def __init__(self,sym=None,file_path="_sys.work"):
+        self.sym=sym
+        self.file_path=file_path
+    def __call__(self,*args,**kw):
+        if kw.has_key("default_path"):
+            default_path = kw.pop("default_path")
+        elif self.sym and self.file_path:
+            #default_path = self.sym.getSymbolValue("_sys.work")
+            default_path = self.sym.getVariableValue(self.file_path)
+        else:
+            default_path = None
+        #print default_path
+        #print kw
+        #print args
+        if len(args) > 0:
+            fname = args[0]
+            args = args[1:]
+        else:
+            raise IOError, "No file name given"
+        
+        if os.path.isfile(fname):
+            #return open(fname)
+            return file(fname,*args,**kw)
+        elif default_path:
+            fname = os.path.join(default_path,fname)
+            #return open(fname)
+            return file(fname,*args,**kw)
+        else:
+            raise IOError, "Could not open file '%s'" % (fname)
 
 ###################################################################
 def testCommand2Expr():

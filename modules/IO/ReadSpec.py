@@ -9,9 +9,8 @@ import os
 import types
 
 class SpecFile:
-    def __init__(self, fname, path=''):
-        self.path  = path
-        self.rel_path, self.fname = os.path.split(fname)
+    def __init__(self, fname):
+        self.path, self.fname = os.path.split(fname)
         self.mtime    = 0
         self.lines    = []
         self.summary  = []
@@ -23,7 +22,7 @@ class SpecFile:
     def __repr__(self):
         self.read()
         lout = "Spec file: %s" % self.fname
-        lout = "%s\nPath: %s" % (lout, os.path.join(self.path,self.rel_path))
+        lout = "%s\nPath: %s" % (lout, os.path.join(self.path))
         lout = "%s\nFirst scan number: %i" % (lout,self.min_scan)
         lout = "%s\nLast scan number:  %i" % (lout,self.max_scan)
         lout = "%s\nLast scan: %s" % (lout, self.summary[self.max_scan-1]['date'])
@@ -31,10 +30,11 @@ class SpecFile:
 
     def read(self):
         try:
-            fname = os.path.join(self.rel_path, self.fname)
+            fname = os.path.join(self.path, self.fname)
             if os.path.getmtime(fname) != self.mtime:
                 print "Reading spec file %s" % fname
-                f  = Util.file_open(fname,default_path=self.path)
+                #f  = Util.file_open(fname,default_path=self.path)
+                f  = open(fname)
                 self.mtime = os.path.getmtime(fname)
                 self.lines = f.readlines()
                 f.close()
@@ -213,18 +213,16 @@ def read_spec(fname,tdl=None,**kws):
     When using command syntax the variable name will be the file name prefix
     and stored in the spec group.
     """
-    path = tdl.getVariableValue("_sys.work")
-    if not path: path=''
-    sf = SpecFile(fname=fname,path=path)
+    sf = SpecFile(fname)
     return sf
 
-def read_spec_cmd(val,fname=None,tdl=None,**kws):
+def read_spec_cmd(val,tdl=None,**kws):
     name = val.fname
     if '.' in name: name = name.split('.',1)[0]
     name = 'spec.%s' % name
     tdl.setVariable(name,val=val)
 
-def show_scan(sf,scan=None,all=False,tdl=None,**kws):
+def show_scan(sf,scan=None,all=False,**kws):
     """    >>show spec_file, [scan=10,all=True]
     
     Show spec file/scan information.  If no scan number is provided this outputs
@@ -233,9 +231,7 @@ def show_scan(sf,scan=None,all=False,tdl=None,**kws):
     of a spec_file object (see read_spec).  This function has no return value. """
     
     if type(sf) == types.StringType:
-        path = tdl.getVariableValue("_sys.work")
-        if not path: path=''
-        sf = SpecFile(sf,path=path)
+        sf = SpecFile(sf)
     if not sf.ok: return
     
     if scan == None:
@@ -273,7 +269,7 @@ def show_scan(sf,scan=None,all=False,tdl=None,**kws):
         print "Scan not found"
         print sf
 
-def scan_data(sf,scan,tdl=None,**kws):
+def scan_data(sf,scan,**kws):
     """    >>dat = data(spec_file,scan)
     
     The spec_file argument may be a file name or a spec_file object (see read_spec).
@@ -282,14 +278,12 @@ def scan_data(sf,scan,tdl=None,**kws):
     dat[1] = 2nd column (as a row vector) etc..
     """
     if type(sf) == types.StringType:
-        path = tdl.getVariableValue("_sys.work")
-        if not path: path=''
-        sf = SpecFile(sf,path=path)
+        sf = SpecFile(sf)
     if not sf.ok: return None
     d = Num.array(sf.get_data(scan))
     return d.transpose()
 
-def scan_dict(sf,scan,tdl=None,**kws):
+def scan_dict(sf,scan,**kws):
     """    >>dat = dict(spec_file,scan)
     
     The spec_file argument may be a file name or a spec_file object (see read_spec).
@@ -297,14 +291,12 @@ def scan_dict(sf,scan,tdl=None,**kws):
     Use >dictkeys(dat) to veiw the contents.
     """
     if type(sf) == types.StringType:
-        path = tdl.getVariableValue("_sys.work")
-        if not path: path=''
-        sf = SpecFile(sf,path=path)
+        sf = SpecFile(sf)
     if not sf.ok: return None
     return sf.get_scan_dict(scan)
 
 
-def scan_cols(sf,scan,cols=None,tdl=None,**kws):
+def scan_cols(sf,scan,cols=None,**kws):
     """    >>dat = col(spec_file,scan,cols=[column_lables])
     
     The spec_file argument may be a file name or a spec_file object (see read_spec).
@@ -313,9 +305,7 @@ def scan_cols(sf,scan,cols=None,tdl=None,**kws):
     dat[1] = column mathing the second column label (or the last column - default)
     """
     if type(sf) == types.StringType:
-        path = tdl.getVariableValue("_sys.work")
-        if not path: path=''
-        sf = SpecFile(sf,path=path)
+        sf = SpecFile(sf)
     if not sf.ok: return None
     d = sf.get_scan_dict(scan)
     dd = d['data']

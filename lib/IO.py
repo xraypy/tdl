@@ -26,7 +26,7 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     # save current group name
     savegroup = tdl.symbolTable.getDataGroup()
     if group == None:
-        group = savegrup
+        group = savegroup
     else:
         group = tdl.symbolTable.setDataGroup(group)
         
