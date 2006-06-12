@@ -127,7 +127,10 @@ class shell(cmd.Cmd):
                     traceback.print_exc()
                     print '='*60
             elif ret is not None:
-                print ret
+                try:
+                    print ret
+                except:
+                    PrintExceptErr("Error printing ret value")
 
 
 #####################################################################################
