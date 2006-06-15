@@ -24,7 +24,7 @@ input "hit enter to continue"
 
 t0 = get_timestamp()
 ## the real fit
-results = array.minimize('resid', ['avar','bvar','cvar'])
+results = minimize('resid', ['avar','bvar','cvar'])
 
 fit_time = get_timestamp() -t0
 

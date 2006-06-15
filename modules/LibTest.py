@@ -1,10 +1,10 @@
 import os
 import sys
 
-def test(a,b):
-    print a, type(a)
-    print b, type(b)
-    print a + b
+def test(file_path=None):
+    if hasattr(open,'file_path'):
+        open.file_path = file_path
+    print open.file_path
     return
 
 
