@@ -5,6 +5,10 @@
 # Modifications
 # --------------
 #
+# 6-14-06 T2:
+# - add a simple python command (ie access to interactive python prompt
+#   within tdl).  Currenlty only does one-line statements.  
+#
 # 4-27-06 T2:
 # - added help and show.  Also added an input function for cmd line input
 # - fixed a small bug in tdl_path, small fix to _cd
@@ -333,7 +337,6 @@ def _more(name,pagesize=24):
     except IOError:
         print "cannot open file: %s." % name
         return
-    
 
 def _type(x):
     "return data type of data"
@@ -632,8 +635,51 @@ def tdl_restorestate(fname, tdl=None,debug=False,**kw):
     else:
         print '%s is not a proper TDL save file' % fname
 
-        
-        
+##    
+## Simple python interface
+##
+def _python(arg=None,tdl=None,**kws):
+    """Execute raw python commands
+       >>python arg
+       >>python
+
+    Executes the commands passed and return, or (if no command is given)
+    enter an interactive prompt.
+    """
+    exec_namespace = {'tdl':tdl,'sym':tdl.symbolTable}
+    if arg:
+        try:
+            #ret = eval(arg.strip())
+            #exec arg.strip() in tdl.PythonNameSpace
+            exec arg.strip() in exec_namespace
+            return
+        except:
+            PrintExceptErr('Python Exception')
+            return 
+
+    print 'Python shell, type ret to return'
+    while True:
+        arg = raw_input("python>>")
+        #tdl.output.write("python>>")
+        #tdl.output.flush()
+        #arg = tdl.input.readline()
+        arg.strip()
+        if arg == 'ret':
+            return
+        elif arg == '':
+            pass
+        elif arg[0:2] == 'p ':
+            try:
+                arg = 'print %s' % arg[1:]
+                exec arg in exec_namespace
+            except:
+                PrintExceptErr('Python Exception')
+        else:
+            try:
+                exec arg in exec_namespace
+            except:
+                PrintExceptErr('Python Exception')
+    return
 
 #################################################################
 # Load the functions
@@ -697,6 +743,7 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_sys.set_path":(tdl_path,None),
           "_builtin.save_state":(tdl_savestate,None),
           "_builtin.restore_state":(tdl_restorestate,None),
+          "_builtin.python":(_python,None)
           }
 
 if __name__ == '__main__':
