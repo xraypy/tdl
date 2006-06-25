@@ -51,7 +51,7 @@ import types
 import time
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
-from Util import set_path
+from Util import set_path, PrintExceptErr
 
 title = "builtin library functions"
 
@@ -414,9 +414,16 @@ def tdl_tell(file,offset,whence=None,tdl=None,**kw):
 def tdl_set_debug(debug=None,tdl=None,**kw):
     if tdl is None:
         return None
-    if debug is None:
-        debug = not tdl.debug
+    if debug == None or debug == "":
+        #debug = not tdl.debug
+        if tdl.debug > 0:
+            debug = 0
+        elif tdl.debug == 0:
+            debug = 1
+        else:
+            debug = 0
     tdl.set_debug(debug)
+    print "Debug level = ", tdl.debug
     return None
 
 def tdl_load(fname, tdl=None,group=None,debug=False,**kw):

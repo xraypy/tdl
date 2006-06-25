@@ -68,7 +68,7 @@ class shell(cmd.Cmd):
         self.prompt    = self.ps1
         self.tdl.prompt= self.ps2
         self._status   = True
-        self.debug     = debug
+        #self.debug     = debug
 
         # override builtin open function
         # is this a bad idea?????
@@ -122,7 +122,7 @@ class shell(cmd.Cmd):
             if not self._status and x is not None:
                 if detail is None: detail = s
                 print x
-                if self.debug or x == 'unknown error':
+                if self.tdl.debug or x == 'unknown error':
                     print '='*60
                     traceback.print_exc()
                     print '='*60

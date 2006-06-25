@@ -33,7 +33,6 @@ class Evaluator:
     def __init__(self,symbolTable = None, input=None, output=None,
                  interactive = False,libs=None,debug=0,GUI='TkAgg'):
 
-        self.debug       = debug
         self.interactive = interactive
         self.input       = input    or  sys.stdout
         self.output      = output   or  sys.stdout
@@ -59,6 +58,9 @@ class Evaluator:
         self.interrupt  = 0
         self.retval = None
         self.infile = '<stdin>'
+
+        #self.debug       = debug
+        self.set_debug(debug)
         
     def setVariable(self,var,val):
         return self.symbolTable.setVariable(var,val)
@@ -79,7 +81,8 @@ class Evaluator:
 
     def set_debug(self,n):
         self.debug = n
-        self.expr.set_debug(n)
+        #self.expr.set_debug(n)
+        self.Expression.set_debug(n)
 
     def raise_error(self,msg):
         if len(self.text)>0: msg =  "%s at line %i:\n  '%s'" % (msg,self.nline,self.text)
