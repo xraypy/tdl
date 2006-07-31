@@ -107,6 +107,7 @@ class Evaluator:
         
     def eval(self,s):
         " evaluate tdl statement"
+        # print 'in Eval.eval?? ' 
         ret = None
         x = self.compile(s = s)
         if x is not None:
@@ -274,10 +275,11 @@ class Evaluator:
                     elif nextkey == 'elif':
                         if else_seen:
                             raise EvalException, 'syntax error: elif after else'
-                        t = s[len(key):]
+                        t = sn[len(nextkey):]
                         status,s1,s2 = split_delim(t, delim=':')
+                        # print 'ELIF ', status , s1, s2
                         if status == -1:   return None
-                        blockhead = self.expr_compile(s1)
+                        cond.append(self.expr_compile(s1))
                         block.append(tmp)
                         tmp = []
                     elif nextkey == 'else':
@@ -612,7 +614,11 @@ class Evaluator:
             #  look for docstring
             desc = None
             code = s[2]
-            tx   = s[2][0]
+            try:
+                tx   = s[2][0]
+            except IndexError:
+                tx = ['']
+                
             if (tx[0] == 'eval' and  len(tx[1])==2 and tx[1][0] == opcodes.string):
                 desc = trimstring(tx[1][1])
                 code = s[2][1:]
