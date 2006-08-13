@@ -144,7 +144,6 @@ class Symbol:
                     t = str(type(self.value))[1:-1].replace('type','')
                     t.strip()
                     return "<%s %s: type=%s, len=%i>" % (vtype,name,t,nelem)
-                    
         elif self.type == 'defvar':
             return "<Defined Variable %s ='%s'>" % (name,self.desc)
         elif self.type == 'pyfunc':

@@ -67,7 +67,7 @@ class ASCIIFile:
         #
         self.dat   = Num.transpose(Num.array(tmp_dat))
         self.ncols, self.npts = self.dat.shape
-        # print 'data shape: ', self.ncols, self.npts
+        #print 'data shape: ', self.ncols, self.npts
         
         # column labels
         if label != None: tmp_label = label
@@ -76,7 +76,7 @@ class ASCIIFile:
             lx = re.split(self.delim,tmp_label)
         except:
             lx = []
-        # print 'label: ', len(lx), lx
+        #print 'label: ', len(lx), lx
         for i in range(len(lx),self.ncols+1):
             lx.append("col%i" % (i+1))
         self.labels = [l.lower() for l in lx[:self.ncols]]
