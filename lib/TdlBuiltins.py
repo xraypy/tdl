@@ -92,7 +92,6 @@ HelpBuiltins = """
 
      type      :  returns the type of a variable
 
-     read_ascii -
      debug      -
      abs        -
      max        -
@@ -550,7 +549,7 @@ def tdl_func_as_cmd(name,tdl=None):
         sym.as_cmd = True
     return
 
-
+"""
 def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     " read ascii file of tdl code"
     from ASCIIFile import ASCIIFile
@@ -585,6 +584,8 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     # return default group to original
     tdl.symbolTable.setDataGroup(savegroup)
     return ret
+"""
+
 ##    
 ## save / restore state
 ##
@@ -713,7 +714,7 @@ _func_ = {'_builtin.load':(tdl_load, None),
           '_builtin.datagroup':(tdl_setdatagroup, None),
           '_builtin.funcgroup':(tdl_setfuncgroup, None),
           '_builtin.ascmd':(tdl_func_as_cmd,None),
-          '_builtin.read_ascii':(tdl_read_ascii,None),
+          #'_builtin.read_ascii':(tdl_read_ascii,None),
           '_builtin.debug':(tdl_set_debug,None),
           "_builtin.cd":(_cd,None),
           "_builtin.pwd":(_cwd,None),
