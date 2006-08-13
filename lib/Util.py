@@ -52,7 +52,7 @@ def show_more(text,filename=None,writer=sys.stdout,pagesize=30,prefix=''):
     prompt = '== hit return for more, q to quit'
     ps = "%s (%%.2f%%%%) == " % prompt
     if filename: ps = "%s (%%.2f%%%%  of %s) == " % (prompt,filename)
-    
+
     i = 0
     for i in range(len(txt)):
         if txt[i].endswith('\n'): writer.write("%s%s" % (prefix,txt[i]))

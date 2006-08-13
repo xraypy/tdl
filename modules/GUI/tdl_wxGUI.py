@@ -148,10 +148,12 @@ class tdl_wxGUI(model.Background):
         if self.application.shell is not None:
             self.application.shellFrame.visible = not self.application.shellFrame.visible
 
-    #def on_menuWindowPeak_select(self, event):
-    #   self.PeakWindow = model.childWindow(self, ds_wxPeak)
-    #   self.PeakWindow.position = (200, 5)
-    #   self.PeakWindow.visible = True
+    #def on_menuWindowXRF_select(self, event):
+    #    from wxXRF import wxXRF
+    #    # can set wxXRF.shell = self.shell, wxXRF.tdl=tdl, etc...
+    #    self.PeakWindow = model.childWindow(self, wxXRF)
+    #    self.PeakWindow.position = (200, 5)
+    #    self.PeakWindow.visible = True
 
     
     ###########################################################

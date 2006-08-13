@@ -3,9 +3,10 @@
     'backgrounds': [
     {'type':'Background',
           'name':'tdl_wxGUI_bgTemplate',
-          'title':'TDL',
+          'title':u'TDL',
           'size':(855, 916),
           'statusBar':1,
+          'style':['resizeable'],
 
         'menubar': {'type':'MenuBar',
          'menus': [
@@ -35,8 +36,8 @@
              'label':'Window',
              'items': [
                   {'type':'MenuItem',
-                   'name':'menuWindowPeak',
-                   'label':'Peak',
+                   'name':'menuWindowXRF',
+                   'label':'XRF',
                   },
               ]
              },
@@ -56,7 +57,7 @@
     'name':'Prompt', 
     'position':(7, 787), 
     'font':{'faceName': 'Microsoft Sans Serif', 'family': 'sansSerif', 'size': 10}, 
-    'text':'>>>', 
+    'text':u'>>>', 
     },
 
 {'type':'TextField', 
@@ -72,6 +73,7 @@
     'size':(829, 755), 
     'editable':False, 
     'font':{'faceName': 'Lucida Console', 'family': 'sansSerif', 'size': 9}, 
+    'horizontalScrollbar':True, 
     },
 
 ] # end components
