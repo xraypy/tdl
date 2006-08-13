@@ -1,0 +1,35 @@
+# Tdl defined procedures for med data
+
+def xrf.plot(xrf,channel=False,hold=False):
+    """
+    plot a spectrum
+    >>xrf.plot(xrf)
+    """
+    print xrf
+    dat  = xrf.data(xrf)
+    ndet = len(dat)
+    nchan = len(dat[0])
+    if channel==True:
+        e = []
+        for j in range(ndet):
+            e = append(e,[int(range(nchan))])
+        endfor
+    else:
+        e = xrf.energy(xrf)
+    endif
+
+    first = True
+    for j in int(range(ndet)):
+        if sum(dat[j]) > 0:
+            if first==True and hold==False:
+                newplot e[j],dat[j]
+            else
+                plot e[j],dat[j]
+            endif
+            first = False
+        else:
+            print "Skipping detector %i, sum is zero" % (j)
+        endif
+    endfor
+
+enddef

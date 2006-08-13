@@ -27,10 +27,10 @@ import Plotter
 import TdlBuiltins
 import TdlNumLib
 import Shell
-import IO
+#import IO
 shell = Shell.shell
 TdlBuiltins = TdlBuiltins
 TdlNumLib = TdlNumLib
 Plotter = Plotter
-IO = IO
+#IO = IO
 __numeric__ = Num.num_version
