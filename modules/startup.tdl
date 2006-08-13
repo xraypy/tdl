@@ -6,6 +6,8 @@
 #print "    **Site Startup "
 
 #import LibTest
+import LibASCIIFile
+import LibPlotter
 import LibSpec
 import LibCarsXrf
 

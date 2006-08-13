@@ -6,7 +6,7 @@ import os
 import sys
 import types
 from Util import datalen
-import FileIO.ASCIIFile as ASCIIFile
+import ASCIIFile.ASCIIFile as ASCIIFile
 
 ##
 def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):

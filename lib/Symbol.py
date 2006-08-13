@@ -167,7 +167,7 @@ class SymbolTable:
         self.writer = writer
         self.load_libs = []
         init_libs = []
-        init_libs = ['TdlBuiltins','TdlNumLib','IO','Plotter']
+        init_libs = ['TdlBuiltins','TdlNumLib']  ##,'IO','Plotter']
 
         if libs is not None:
             init_libs.extend(libs)

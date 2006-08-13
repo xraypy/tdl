@@ -23,7 +23,7 @@ import Expression
 import Help
 import Util
 import Symbol
-import Plotter
+#import Plotter
 import TdlBuiltins
 import TdlNumLib
 import Shell
@@ -31,6 +31,6 @@ import Shell
 shell = Shell.shell
 TdlBuiltins = TdlBuiltins
 TdlNumLib = TdlNumLib
-Plotter = Plotter
+#Plotter = Plotter
 #IO = IO
 __numeric__ = Num.num_version
