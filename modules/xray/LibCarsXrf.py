@@ -1,6 +1,6 @@
 # T. Trainor (2006)
 # Wrapper functions for CARS MED/MCA library
-# T. Trainor, 6-10-2006
+# T. Trainor, 8-11-2006
 #
 # --------------
 # Modifications
