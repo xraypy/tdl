@@ -11,11 +11,12 @@ package_dir = {'tdl': ''}
 
 # the packages to be installed include tdl (py files in same dir as this script)
 # and the lib and modules sub directories
-packages = ['tdl','tdl.lib','tdl.lib.TkPlotter','tdl.modules']
+packages = ['tdl','tdl.lib','tdl.modules']
 package_data = {'tdl.modules':['README.modules','startup.tdl']}
 
-### Add-on modules 
-packages.append('tdl.modules.FileIO')
+### Add-on modules
+packages.append('tdl.modules.TkPlotter')
+packages.append('tdl.modules.ASCIIFile')
 packages.append('tdl.modules.GUI')
 packages.append('tdl.modules.xray')
 packages.append('tdl.modules.xray.CarsMca')
