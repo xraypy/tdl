@@ -136,15 +136,15 @@ elif use_wxGUI == True:
     # tdl gets started from within the wxGUI
     # looks like dir gets reset when call application
     work_dir = os.getcwd()
-    import tdl_wxGUI
-    tdl_wxGUI.tdl      = tdl
-    tdl_wxGUI.libs     = libs
-    tdl_wxGUI.intro    = None
-    tdl_wxGUI.debug    = debug
-    tdl_wxGUI.files    = files
-    tdl_wxGUI.sys_vars = sys_vars
-    rsrc = os.path.join(module_path,'wxGUI','tdl_wxGUI.rsrc.py')
+    from wxGUI import wxGUI
+    wxGUI.tdl      = tdl
+    wxGUI.libs     = libs
+    wxGUI.intro    = None
+    wxGUI.debug    = debug
+    wxGUI.files    = files
+    wxGUI.sys_vars = sys_vars
+    rsrc = os.path.join(module_path,'wxGUI','wxGUI.rsrc.py')
     # the wxGUI code handles creation of tdl...
-    gui = tdl_wxGUI.model.Application(tdl_wxGUI.tdl_wxGUI, aFileName=rsrc)
+    gui = wxGUI.model.Application(wxGUI.wxGUI, aFileName=rsrc)
     os.chdir(work_dir)
     gui.MainLoop()

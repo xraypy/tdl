@@ -25,7 +25,7 @@ sys_vars = {}
 
 #####################################################
 
-class tdl_wxGUI(model.Background):
+class wxGUI(model.Background):
 
     def on_initialize(self, event):
         print "initialize"
@@ -205,6 +205,6 @@ class tdl_wxGUI(model.Background):
 
 ################################################################
 if __name__ == '__main__':
-    app = model.Application(ds_wxGUI)
+    app = model.Application(wxGUI)
     app.MainLoop()
 
