@@ -40,7 +40,10 @@ class tdl_wxGUI(model.Background):
         self.cmd_idx = 0
         #redir stdio
         #sys.stdin  = self.readline
-        self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,GUI='WXAgg',debug=debug)
+        #self.tdl = tdl
+        self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,
+                               GUI='WXAgg',debug=debug)
+        
         for var in sys_vars.keys():
             self.shell.tdl.setVariable(var,sys_vars[var])
         for f,warn in files:
@@ -79,7 +82,6 @@ class tdl_wxGUI(model.Background):
         return(line)
 
     #########################################
-            
     def UpdatePrompt(self,prompt):
         self.prompt = prompt
         self.components.Prompt.text = prompt
@@ -132,7 +134,10 @@ class tdl_wxGUI(model.Background):
     #def PostLineToShellText(self,line):
     #   self.components.ShellText.appendText(line)
 
-        
+    def get_shell(self):
+        #print "hello from get shell"
+        return self.shell
+    
     ###########################################################
     #             Menus                                       #
     ###########################################################
@@ -148,13 +153,14 @@ class tdl_wxGUI(model.Background):
         if self.application.shell is not None:
             self.application.shellFrame.visible = not self.application.shellFrame.visible
 
-    #def on_menuWindowXRF_select(self, event):
-    #    from wxXRF import wxXRF
-    #    # can set wxXRF.shell = self.shell, wxXRF.tdl=tdl, etc...
-    #    self.PeakWindow = model.childWindow(self, wxXRF)
-    #    self.PeakWindow.position = (200, 5)
-    #    self.PeakWindow.visible = True
-
+    def on_menuWindowXRF_select(self, event):
+        from wxXRF import wxXRF
+        # can set wxXRF.shell = self.shell, etc...
+        #wxXRF.shell = self.shell
+        # that dont work, the child has to get shell from the parent
+        self.XrfWindow = model.childWindow(self, wxXRF)
+        self.XrfWindow.position = (200, 5)
+        self.XrfWindow.visible = True
     
     ###########################################################
     #             EVENTS                                      #

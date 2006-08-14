@@ -73,7 +73,6 @@
     'size':(829, 755), 
     'editable':False, 
     'font':{'faceName': 'Lucida Console', 'family': 'sansSerif', 'size': 9}, 
-    'horizontalScrollbar':True, 
     },
 
 ] # end components
