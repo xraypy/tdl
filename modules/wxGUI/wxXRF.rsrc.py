@@ -646,6 +646,7 @@
     'size':(135, -1), 
     'items':[u'abc', u'def'], 
     'stringSelection':u'abc', 
+    'text':u'abc', 
     },
 
 {'type':'StaticText', 

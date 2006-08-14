@@ -155,9 +155,7 @@ class wxGUI(model.Background):
 
     def on_menuWindowXRF_select(self, event):
         from wxXRF import wxXRF
-        # can set wxXRF.shell = self.shell, etc...
-        #wxXRF.shell = self.shell
-        # that dont work, the child has to get shell from the parent
+        # the child has to get self.shell from the parent
         self.XrfWindow = model.childWindow(self, wxXRF)
         self.XrfWindow.position = (200, 5)
         self.XrfWindow.visible = True

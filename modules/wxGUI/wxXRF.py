@@ -1,9 +1,20 @@
-#!/usr/bin/python
-
-"""
-__version__ = "$Revision: 1.3 $"
-__date__ = "$Date: 2004/04/14 02:38:47 $"
-"""
+############################################################################
+# Tom Trainor (fftpt@uaf.edu)
+# This should be run as a child window from wxGUI
+#
+# --------------
+# Modifications:
+# --------------
+#
+# --------------
+# Todo
+# --------------
+#
+# - go back to rsrc file and simplify component names
+# - make a single var menu update function (groups and nodes)
+# - maybe add a sync/update button rather than the middle mouse d-click.
+#
+############################################################################
 
 from PythonCard import model
 
@@ -26,6 +37,7 @@ class wxXRF(model.Background):
         
         #### Init Menus
         self.init_XrfGrpItems()
+        self.init_XrfNodePrefixItems()
 
     ## Utilities
     def setValue(self,var_name,value):
@@ -48,10 +60,11 @@ class wxXRF(model.Background):
     #             Components and Events                       #
     ###########################################################
 
-    ####################################################################
-    #### XrfGrpItems
-
-    # Initialize the menu    
+    #--------------
+    # XrfGrpItems 
+    #--------------
+    
+    ### Initialize the menu    
     def init_XrfGrpItems(self): 
         self.components.XrfGrp.items = self.tdl.symbolTable.listGroups()
         data_group = self.tdl.getVariableValue('_builtin.data_group')
@@ -67,18 +80,42 @@ class wxXRF(model.Background):
     #def on_XrfGrp_mouseDoubleClick(self, event):
     #    self.init_XrfGrpItems()
 
+    def on_XrfGrp_select(self, event):
+        "I dont think this is actually needed, should just work"
+        #group = self.components.XrfGrp.text
+        #print "selected group = %s" % (group)
+        #print "text = %s" % (self.components.XrfGrp.text)
+        self.init_XrfNodePrefixItems()
+
     def on_XrfGrp_mouseMiddleDown(self, event):
         "use this to update incase the list has changed"
         print "text = %s" % (self.components.XrfGrp.text)
         txt = self.components.XrfGrp.text
         self.init_XrfGrpItems()
         self.components.XrfGrp.text = txt
-        
-    #def on_XrfGrp_select(self, event):
-    #    "I dont think this is actually needed, should just work"
-    #    group = self.components.XrfGrp.text
-    #    print "selected group = %s" % (group)
-    #    print "text = %s" % (self.components.XrfGrp.text)
+
+    #------------------
+    # XrfXrfNodePrefix 
+    #------------------
+    
+    ### Initialize the menu    
+    def init_XrfNodePrefixItems(self):
+        """use the group thats selected in the group menu
+        Note we could get smart here and only chose nodes that
+        are actually xrf objects...."""
+        group = self.components.XrfGrp.text
+        if len(group) == 0: group = None
+        #data_group = self.tdl.getVariableValue('_builtin.data_group')
+        self.components.XrfNodePrefix.items = self.tdl.symbolTable.listDataGroup(group)
+
+    ### Events
+    def on_XrfNodePrefix_mouseMiddleDown(self, event):
+        "use this to update incase the list has changed"
+        print "text = %s" % (self.components.XrfNodePrefix.text)
+        txt = self.components.XrfNodePrefix.text
+        self.init_XrfNodePrefixItems()
+        self.components.XrfNodePrefix.text = txt
+
 
 
     #######################################################################
