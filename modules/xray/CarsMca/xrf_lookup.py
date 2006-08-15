@@ -153,3 +153,27 @@ def lookup_gamma_line(gamma_line):
       return gamma_lines[isotope][line]
    except:
       return None
+
+def list_lines(Emin=0.01,Emax=40.):
+    """return the list of all lines that fall between Emin/Emax
+    This needs to be faster and smarter, eg. return list sorted
+    by energy, flags for looking at specific elements,ignoring
+    line types etc......
+    """
+    if Emin == Emax:
+        Emin = 0.01
+        Emax = 40.
+    if Emin <= 0: Emin = 0.001
+    lines = []
+    for el in xrf_lines.keys():
+        for line in xrf_lines[el].keys():
+            if xrf_lines[el][line] >= Emin and \
+               xrf_lines[el][line] <= Emax:
+                lbl = el[0]
+                if len(el) > 1: lbl = lbl + el[1].lower()
+                lbl = '%s %s' % (lbl,line)
+                lines.append(lbl)
+    lines.sort()
+    return lines
+        
+    
