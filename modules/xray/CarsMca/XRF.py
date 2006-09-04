@@ -153,9 +153,11 @@ class XRF:
         for i in range(self.array_len):
             self.fit_params[i] = fitPeaks.McaFit()
             self.bgr_params[i] = fitBgr.McaBackground(slope=self.calibration[i].slope,
-                                                      exponent=exponent, top_width=top_width,
+                                                      exponent=exponent,
+                                                      top_width=top_width,
                                                       bottom_width=bottom_width,
-                                                      tangent=tangent, compress=compress)
+                                                      tangent=tangent,
+                                                      compress=compress)
             for line in peaks:
                 #self.set_peak(idx=i,line=line)
                 self.init_peak(idx=i,line=line)

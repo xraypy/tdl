@@ -25,6 +25,12 @@
 #
 # * add Emin/Emax to read/set_detectors
 #
+#
+# Note for read and set commands, should have an mcas arg instead of detectors
+# For others use a det=integer syntax.  (or index=integer) ie data, energy
+# fits etc should work on individual detectors or all of them at once
+#
+#
 #################################################################################################
 HelpXRF = """
 
@@ -145,7 +151,7 @@ def xrf_read_cmd(val,file=None,tdl=None,**kws):
 def xrf_set_data(xrf,detectors=None,total=None,align=None,tau=None):
     """
     Reset detectors used for xrf analysis
-    >>data = xrf.set(xrf,detectors=[],total=False,align=True)
+    >>xrf.set_data(xrf,detectors=[],total=False,align=True,tau=[])
 
     Inputs:
         xrf:
