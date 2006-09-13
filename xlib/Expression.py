@@ -508,10 +508,13 @@ class Expression:
                         val  = work.pop()        # for (expr)[slice] and fcn(...)[slice]
                         if tok == opcodes.array:  # for "more normal" name[slice] syntax
                             sym = self.get_symbol(val)
-                            if sym.type == symTypes.defvar:
-                                # re-evaluate defined variables here
-                                sym.value = self.eval(sym.code)
-                            val = sym.value
+                            try:
+                                if sym.type == symTypes.defvar:
+                                    # re-evaluate defined variables here
+                                    sym.value = self.eval(sym.code)
+                                val = sym.value
+                            except AttributeError:
+                                val = sym
                         val  = take_subarray(val,ndim,work)
                     elif tok in (opcodes.function,opcodes.arrayfunc,opcodes.command):
                         if tok == opcodes.arrayfunc:  ndim = work.pop()
@@ -602,15 +605,18 @@ class Expression:
                 elif tok == 'or':  x = work.pop() ; val = work.pop() or x
                 elif tok == 'and': x = work.pop() ; val = work.pop() and x
                 #
+            if type(val)==types.TupleType: val = list(val)
             work.append(val)
             if self.debug >=32: print ' work ', work
         #
-        # print 'WORK ', work, type(work), len(work),
+        # print 'WORK ', work, type(work), len(work)
 
         if type(work) == types.ListType:
             work = list2array([self.check_retval(i) for i in work])
-        if len(work)==1:                   work = work[0]
-        if type(work) == types.StringType: work = trimstring(work)
+        if len(work)==1:
+            work = work[0]
+        if type(work) == types.StringType:
+            work = trimstring(work)
         return work
 
 if __name__ == '__main__':
