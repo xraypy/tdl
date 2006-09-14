@@ -45,7 +45,7 @@ from string import ascii_lowercase, digits
 
 __version__  = '0.3'
 
-isValidName = re.compile(r'[a-zA-Z_\$][a-zA-Z_\$0-9]*').match
+isValidName = re.compile(r'^[a-zA-Z_\$&@][a-zA-Z_\$&@0-9]*$').match
 
 class symTypes:
     variable  = 'variable'
@@ -685,7 +685,8 @@ class SymbolTable:
         if prefix is None: prefix = ''
         grp  = symGroup(name='',status='delete',**kw)
         keys = self.data.keys()
-        ntry,gname  = 0,'_main'
+        gname= "%s%s" % (prefix,self.randomName(n = nlen))
+        ntry = 0
         while gname in keys:
             gname = "%s%s" % (prefix,self.randomName(n = nlen))                
             ntry = ntry + 1

@@ -148,7 +148,8 @@ class ExpressionParser:
 
         # vname = name part (name of simple variable , group, or method)
         # name  = full name ( group:var.member, var.member, group:var,  etc)
-        vname = Word(alphas+"_"+"&"+"$", alphas+nums+"_")
+        alphasx = alphas+"_"+"&"+"$"+"@"
+        vname = Word(alphasx, alphasx+nums)
         name  = Combine(ZeroOrMore(vname + _point) +  vname)
 
         fnum  = (Combine(Word(nums,nums) +

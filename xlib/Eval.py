@@ -650,33 +650,31 @@ class Evaluator:
         if len(args) != len(proc.args):
             raise EvalException, 'not enough arguments for procedure %s' % name
 
-
+        name = "$%s$" % name.replace('.','@') # mangle module/function name 
         locgroup = self.symbolTable.LocalGroup
         modgroup = self.symbolTable.ModuleGroup
-        group = self.symbolTable.addTempGroup(prefix=name,nlen=10)
 
+        group = self.symbolTable.addTempGroup(prefix=name,nlen=4)
+        group.setname()
+        
         self.symbolTable.LocalGroup=group.name
         self.symbolTable.ModuleGroup= proc.mod
-        
-        self.symbolTable.showTable()
-        print 'Local Group ', group, group.name ,proc.mod
+       
+        # self.symbolTable.showTable(skip=('_math','_builtin','_plot'))
+
         if group is None:
             raise EvalException, 'cannot run procedure %s (cannot create group??)' % name
-        print 'A'
 
-        for k,v in zip(proc.args,args):  self.symbolTable.setVariable(k,v)
+        for k,v in zip(proc.args,args):
+            self.symbolTable.setVariable(k,v)
 
         kvals = {}
         kvals.update(proc.kws)
         kvals.update(kws)
-        print ' B ', kvals
         for k,v in kvals.items():
             self.symbolTable.setVariable(k,v)
 
-        print 'C'
         ret = None
-        for i in  proc.code: print i
-
         try:
             for i in proc.code:
                 self.interpret(i)
@@ -693,6 +691,10 @@ class Evaluator:
         except TypeError:
             pass
 
+        self.symbolTable.delGroup(group.name)
+        self.symbolTable.LocalGroup=locgroup
+        self.symbolTable.ModuleGroup= modgroup
+        
         # remove this Group, return to previous default Group
         # self.symbolTable.deleteGroup(group)
         # self.symbolTable.setDataGroup(savegroup)
