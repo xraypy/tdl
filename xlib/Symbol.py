@@ -440,6 +440,7 @@ class SymbolTable:
     def setFunction(self,name,func,ftype=symTypes.pyfunc,code=None,
                     desc=None,cmd_out=None):
         "add a function"
+        # print 'This is set Func ', name, func, ftype
         if func is None: return None
         if ftype not in symTypes.Funcs:
             raise SymbolError, 'cannot add function %s with type  %s' % (name,ftype)
@@ -450,12 +451,14 @@ class SymbolTable:
             try:
                 if (func.__name__.startswith('tdl') or 
                     'tdl' in inspect.getargspec(func)[0]):
+                    
                     fcn_kws = {'kws':{'tdl':self.tdl}}
             except TypeError:  # numpy ufuncs will raise a TypeError here...
                 pass
         except:
             raise SymbolError, 'cannot add function %s ' % name
 
+        # print 'Set Func  ' , func.__name__, func, fcn_kws
         if fcn_kws:
             return self.addSymbol(name,value=func,type=ftype,code=code,
                                   desc=desc,cmd_out=cmd_out,**fcn_kws)
@@ -612,9 +615,14 @@ class SymbolTable:
     def import_lib(self,lib):
         " import or reload module given module name or object"
         if lib is None: return None
-
+        if self.tdl is None: return None
         mod, msg = None, None
+        if type(lib) == types.ModuleType:
+            mod = lib
+            lib = lib.__name__
+            
         if type(lib) == types.StringType:
+            msg = '    Error loading module %s:' % lib
             try: 
                 mod = __import__(lib)
                 components = lib.split('.')
@@ -622,9 +630,9 @@ class SymbolTable:
                     mod = getattr(mod, comp)
             except ImportError:
                 msg = '    Error loading module %s:' % lib
-        elif type(lib) == types.ModuleType:
+        if mod in self.loaded_libs:
             try:
-                mod = reload(lib)
+                mod = reload(mod)
             except ImportError:
                 msg = '    Error loading module %s:' % lib
         if mod is None:
@@ -639,33 +647,48 @@ class SymbolTable:
         if mod not in self.loaded_libs: self.loaded_libs.append(mod)
         
         try:
-            for nam,val in getattr(mod,'_var_',{}).items():
-                self.addSymbol(nam,val)
-            for nam,val in getattr(mod,'_consts_',{}).items():
-                self.addSymbol(nam,val,constant=True)
-            for nam,val in getattr(mod,'_func_',{}).items():
-                cmdOut = None
-                func   = val
-                if type(val) == types.TupleType:
-                    func = val[0]
-                    if len(val) > 1: cmdOut = val[1]
-                x =self.setFunction(nam,func,cmd_out=cmdOut) 
-            for nam in getattr(mod,'_scripts_',[]):
-                try:
-                    file_path = os.path.abspath(os.path.dirname(mod.__file__))
-                    file_name = os.path.join(file_path,nam)
-                    if os.path.exists(file_name) and os.path.isfile(file_name):
-                        self.tdl.load_file(file_name)
-                    else:
-                        print "Warning: Cannot find lib script file: %s" % file_name
-                except:
-                    PrintExceptErr("Error loading script file '%s'"  % file_name)
-            if self.tdl:
+            if hasattr(mod,'_groups_'):
+                for nam,toplevel in getattr(mod,'_groups_',(None,True)):
+                    if nam: self.addGroup(nam,toplevel=toplevel)
+            if hasattr(mod,'_var_'):
+                for nam,val in getattr(mod,'_var_',{}).items():
+                    self.addSymbol(nam,val)
+            if hasattr(mod,'_consts_'):
+                for nam,val in getattr(mod,'_consts_',{}).items():
+                    self.addSymbol(nam,val,constant=True)
+            if hasattr(mod,'_func_'):
+                for nam,val in getattr(mod,'_func_',{}).items():
+                    cmdOut = None
+                    func   = val
+                    if type(val) == types.TupleType:
+                        func = val[0]
+                        if len(val) > 1: cmdOut = val[1]
+                    x =self.setFunction(nam,func,cmd_out=cmdOut) 
+            if hasattr(mod,'_scripts_'):
+                for nam in getattr(mod,'_scripts_',[]):
+                    try:
+                        file_path = os.path.abspath(os.path.dirname(mod.__file__))
+                        file_name = os.path.join(file_path,nam)
+                        if os.path.exists(file_name) and os.path.isfile(file_name):
+                            self.tdl.load_file(file_name)
+                        else:
+                            print "Warning: Cannot find lib script file: %s" % file_name
+                    except:
+                        PrintExceptErr("Error loading script file '%s'"  % file_name)
+            if hasattr(mod,'_help_'):
                 for nam,val in getattr(mod,'_help_',{}).items():
                     self.tdl.help.add_topic(nam,val)
+            if hasattr(mod,'_init_'):
+                f = getattr(mod,'_init_')
+                fname = '_@@%s@@init_%s' % (mod.__name__, self.randomName(n=6))
+                fname = fname.replace('.','_')
+                s = self.setFunction(fname, f)
+                self.tdl.eval("%s()" % fname)
+                self.delSymbol(fname)
             import_msg = 'ok.'
         except ImportError:
             import_msg = 'import failed!'
+
         self.writer.write(" %s\n" % import_msg)
 
     def clearTempGroups(self):

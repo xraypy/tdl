@@ -466,11 +466,10 @@ def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
     if tdl is None:
         if debug: print 'cannot load function modules ' 
         return None
-    if debug: print 'loading function modules.... '
-    if lib=='' or reloadAll:
-        tdl.symbolTable.initialize(libs=tdl.symbolTable.load_libs,clearAll=clearAll)
-    elif lib:
+    if lib:
         tdl.symbolTable.import_lib(lib)
+    #  tdl.symbolTable.initialize(libs=tdl.symbolTable.load_libs,clearAll=clearAll)
+
     if debug: print 'import done.'
 
 def tdl_eval(expr, tdl=None,debug=False,**kw):
