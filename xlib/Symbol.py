@@ -250,6 +250,7 @@ class SymbolTable:
         "returns fully resolved group object "
         names = self.__splitName(name)
         grp  = self.data.get(names[0])
+        # print 'resolvegroup name ' , grp, name, names       
         if len(names)>1:
             names = names[1:]
             gn = grp.get(names[0])
@@ -403,14 +404,18 @@ class SymbolTable:
         TODO: add toplevel / complex name??
                 addGroup('_sys.newgroup')  works already
         """
-        names = self.__splitName(name)
-        owner,n   = self.__findName(name)
-        name= "%s.%s" % (owner.name,n)
-        if toplevel: name= n
-        grp = symGroup(name=name,status=status)
-        owner[n] =grp
-        grp.setname( name)
-        return grp
+        g = self.copyGroup(name,self.addTempGroup(toplevel=toplevel))
+        g.status = status
+        return g
+
+#         names = self.__splitName(name)
+#         owner,n   = self.__findName(name)
+#         name= "%s.%s" % (owner.name,n)
+#         if toplevel: name= n
+#         grp = symGroup(name=name,status=status)
+#         owner[n] =grp
+#         grp.setname( name)
+#         return grp
 
     def setVariable(self,name,value=None,**kws):
         "add a variable"

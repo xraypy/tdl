@@ -13,6 +13,7 @@ s.addSymbol('_sys.var', value=1)
 s.addSymbol('_main.b',  value=2)
 
 s.addGroup('mymod',toplevel=True)
+
 s.addGroup('_sys.subgroup')
 s.addGroup('_sys.subgroup.s2')
 s.addSymbol('_sys.subgroup.s2.x',value='x1')
