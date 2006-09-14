@@ -73,11 +73,11 @@ class symGroup(dict):
         self.toplevel = toplevel
         self.setname(name)
 
-    def setname(self,name):
-        self.name     = name
+    def setname(self,name=None):
+        if name is not None: self.name     = name
         self.value    = "<symGroup %s status=%s, id=%s>" % (self.name,
                                                             self.status,
-                                                            hex(id(self)))        
+                                                            hex(id(self)))
     def __repr__(self):
         self.setname(self.name)
         return self.value
@@ -397,32 +397,8 @@ class SymbolTable:
         if type(s) == symGroup: s = self.addSymbol(sname)
         return s
 
-
-    def addGroup(self,name,toplevel=False,status='normal'):
-        """ add a Symbol Group, either to the current LocalGroup (the default)
-        or at the toplevel.
-        TODO: add toplevel / complex name??
-                addGroup('_sys.newgroup')  works already
-        """
-        g = self.copyGroup(name,self.addTempGroup(toplevel=toplevel))
-        g.status = status
-        return g
-
-#         names = self.__splitName(name)
-#         owner,n   = self.__findName(name)
-#         name= "%s.%s" % (owner.name,n)
-#         if toplevel: name= n
-#         grp = symGroup(name=name,status=status)
-#         owner[n] =grp
-#         grp.setname( name)
-#         return grp
-
-    def setVariable(self,name,value=None,**kws):
-        "add a variable"
-        return self.addSymbol(name,value=value,type=symTypes.variable,**kws)
-
-    def copyGroup(self, name, group):
-        """ copy an existing symGroup into the SymbolTable"""
+    def moveGroup(self, name, group):
+        """ move an existing symGroup in the SymbolTable"""
         if self.data.has_key(group.name): group = self.data.pop(group.name)
         owner,nam = self.__findName(name)
         fullname = "%s.%s" % (owner.name, nam)
@@ -434,13 +410,21 @@ class SymbolTable:
         group.setname(fullname)
         return group
 
-        #         owner[name] = owner[child]
-#         owner[name].name = "%s.%s" % (owner.name, name)
-#         sym.status = 'normal'
-#         if owner.name=='_top': owner[name].name = "%s" % (name)
-#         print 'copy:    ', owner[name], owner[name].name
-# return owner[name]
-        
+    def addGroup(self,name,toplevel=False,status='normal'):
+        """ add a Symbol Group, either to the current LocalGroup (the default)
+        or at the toplevel.
+        TODO: add toplevel / complex name??
+                addGroup('_sys.newgroup')  works already
+        """
+        g = self.moveGroup(name,self.addTempGroup(toplevel=toplevel))
+        g.status = status
+        g.setname()
+        return g
+
+    def setVariable(self,name,value=None,**kws):
+        "add a variable"
+        return self.addSymbol(name,value=value,type=symTypes.variable,**kws)
+
     def setObject(self,name,value=None,**kws):
         "add a reference to a python object"
         return self.addSymbol(name,value=value,type=symTypes.object**kws)

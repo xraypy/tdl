@@ -489,7 +489,7 @@ class Evaluator:
         # sym  = self.symbolTable.getSymbolLocalGroup(varname)
         isSymGroup = (type(rhs) == symGroup)
         if isSymGroup:
-            sym  = self.symbolTable.copyGroup(varname,rhs)
+            sym  = self.symbolTable.moveGroup(varname,rhs)
             # self.symbolTable.showTable(skip=('_math','_builtin'))
             return
         else:
@@ -632,8 +632,8 @@ class Evaluator:
                 desc = trimstring(tx[1][1])
                 code = s[2][1:]
 
-            self.symbolTable.addDefPro(s[1][0], code, desc=desc,
-                                    args=s[1][1],kws=s[1][2])
+            self.symbolTable.setProcedure(s[1][0], code, desc=desc,
+                                          args=s[1][1],kws=s[1][2])
         elif tok == self.EOF:
             return None
         else:
@@ -643,7 +643,7 @@ class Evaluator:
 
     def run_procedure(self,proc,args=None,kws=None):
         " run a user-created tdl procedure "
-        if proc.type != 'defpro':
+        if proc.type != symTypes.defpro:
             raise EvalException, 'invalid procedure'
 
         name = proc.name
@@ -651,23 +651,31 @@ class Evaluator:
             raise EvalException, 'not enough arguments for procedure %s' % name
 
 
-        savegroup = self.symbolTable.getDataGroup()
-        group = self.symbolTable.addTempGroup(prefix=name,nlen=4)
+        locgroup = self.symbolTable.LocalGroup
+        modgroup = self.symbolTable.ModuleGroup
+        group = self.symbolTable.addTempGroup(prefix=name,nlen=10)
+
+        self.symbolTable.LocalGroup=group.name
+        self.symbolTable.ModuleGroup= proc.mod
+        
+        self.symbolTable.showTable()
+        print 'Local Group ', group, group.name ,proc.mod
         if group is None:
             raise EvalException, 'cannot run procedure %s (cannot create group??)' % name
-        self.symbolTable.setDataGroup(group)
+        print 'A'
 
         for k,v in zip(proc.args,args):  self.symbolTable.setVariable(k,v)
 
         kvals = {}
         kvals.update(proc.kws)
         kvals.update(kws)
-
+        print ' B ', kvals
         for k,v in kvals.items():
             self.symbolTable.setVariable(k,v)
 
+        print 'C'
         ret = None
-        # for i in  proc.code: print i
+        for i in  proc.code: print i
 
         try:
             for i in proc.code:
@@ -686,7 +694,7 @@ class Evaluator:
             pass
 
         # remove this Group, return to previous default Group
-        self.symbolTable.deleteGroup(group)
-        self.symbolTable.setDataGroup(savegroup)
+        # self.symbolTable.deleteGroup(group)
+        # self.symbolTable.setDataGroup(savegroup)
         return ret
 

@@ -427,22 +427,33 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
 
 def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
     " load file of tdl code"
-    #print fname
     if tdl is None:
         if debug: print 'cannot run file %s ' % fname
         return None
-    if debug: print 'load .... ', fname
+    symTab = tdl.symbolTable
+    if group is None:
+        # print fname, os.path.splitext(fname)
+        group = os.path.basename(os.path.splitext(fname)[0])
     if not os.path.isfile(fname):
         print 'file error: cannot find file %s ' % fname
         return None        
-    if group is not None:
-        group_save = tdl.symbolTable.getDataGroup()
-        tdl.symbolTable.setDataGroup(group)        
+
+    localsave  = symTab.LocalGroup
+    modulesave = symTab.ModuleGroup
+    symTab.addGroup(group,toplevel=True,status='module')
+    symTab.LocalGroup = group
+    symTab.ModuleGroup = group
     tdl.load_file(fname)
     tdl.run()
-    if group is not None:    
-        tdl.symbolTable.setDataGroup(group_save)    
+
+    owner,grp = symTab.getGroup(group)
+    x = owner[grp]
+    if len(x.keys()) == 0: owner.pop(grp)
+    symTab.LocalGroup = localsave
+    symTab.ModuleGroup = modulesave
+
     if debug: print 'load done.'
+
 
 def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
     """
