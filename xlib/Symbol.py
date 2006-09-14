@@ -425,10 +425,6 @@ class SymbolTable:
         "add a variable"
         return self.addSymbol(name,value=value,type=symTypes.variable,**kws)
 
-    def setObject(self,name,value=None,**kws):
-        "add a reference to a python object"
-        return self.addSymbol(name,value=value,type=symTypes.object**kws)
-
     def setProcedure(self, name, code,desc=None, **kws):
         " add defined procedure "
         if desc is None: desc = name

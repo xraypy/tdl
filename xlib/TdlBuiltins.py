@@ -372,6 +372,7 @@ def tdl_input(prompt='',tdl=None,**kw):
 
 def tdl_open(filename,mode='r',tdl=None,**kw):
     " open a file "
+    print 'This is tdl open ', filename, mode, tdl
     return open(filename,mode=mode)
 
 def tdl_close(file,tdl=None,**kw):
@@ -475,60 +476,52 @@ def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
 def tdl_eval(expr, tdl=None,debug=False,**kw):
     " evaluate tdl expression"
     if tdl is None:
-        if debug: print 'cannot eval %s ' % expr
-        return None
-    return tdl.eval(expr)
+        print 'cannot eval %s ' % expr
+    else:
+        return tdl.eval(expr)
 
 def tdl_setvar(name,val,tdl=None,group=None,debug=False,**kws):
     "set default group"
     # print 'This is tdl setvar ', name, val, tdl, group, kws
-    if tdl is None:
-        if debug: print 'cannot setvar %s ' % expr
-        return None
-    name.strip()
-    #idot = name.find('.')
-    #if idot > 1:
-    #    group = name[:idot]
-    #    name  = name[idot+1:]
-    
-    return '.'.join(tdl.symbolTable.setVariable(name,val))
-
+    if tdl is None or type(name)!=types.StringType:
+        print 'cannot setvar %s ' % expr
+    else:
+        return tdl.symbolTable.setVariable(name,val)
 
 def tdl_delgroup(name,tdl=None,debug=False,**kw):
     "delete a group"
     if tdl is None:
-        if debug: print 'cannot delete group %s ' % name
-        return None
-    if tdl.symbolTable.hasGroup(name):
-        return tdl.symbolTable.delGroup(name)
+        print 'cannot delete group %s ' % name
+    else:
+        delme = False
+        if type(name) == types.StringType:
+            if name.startswith('<symGroup'):   name = name.split()[1].strip()
+            if tdl.symbolTable.hasGroup(name): delme = True
+        if delme:
+            return tdl.symbolTable.delGroup(name)
+        else:
+            print 'cannot delete group ', name
 
 def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
     "add a group"
     if tdl is None:
-        if debug: print 'cannot add group %s ' % name
-        return None
-    return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
+        print 'cannot add group %s ' % name
+    else:
+        return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
 
-def tdl_showtable(name=None,tdl=None,toplevel=True,debug=False,**kw):
+def tdl_showtable(name=None,tdl=None,toplevel=True,**kw):
     "add a group"
     if tdl is None:
-        if debug: print 'cannot add group %s ' % name
-        return None
-    return tdl.symbolTable.showTable(skip=('_math','_builtin'))
-        
-def tdl_delvar(name,tdl=None,group=None,debug=False,**kw):
-    "delete a variable "
-    if tdl is None:
-        if debug: print 'cannot delete variable %s ' % expr
-        return None
-    name.strip()
-    xx = name.split('.')
-    if len(xx) == 1:
-        return tdl.symbolTable.deleteSymbol(name,group=group)
-    elif len(xx) == 2 and xx[1] == '':
-        return tdl.symbolTable.deleteGroup(xx[0])
+        print 'cannot add group %s ' % name
     else:
-        return tdl.symbolTable.deleteSymbol(xx[1],group=xx[0])
+        return tdl.symbolTable.showTable(skip=('_math','_builtin'))
+        
+def tdl_delvar(name,tdl=None,**kw):
+    "delete a variable "
+    if tdl is None or type(name) != types.StringTyps:
+        print 'cannot delete variable %s ' % name
+    else:
+        return tdl.symbolTable.delSymbol(name)
 
 def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
     "convert all data in a group to a single dictionary"
@@ -544,26 +537,6 @@ def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
             dict[i.name] = i.value
     return dict
 
-def tdl_setdatagroup(gname=None,tdl=None,debug=False,**kw):
-    "set default group"
-    if tdl is None:
-        if debug: print 'cannot setgroup %s ' % expr
-        return None
-    if gname is None:
-        return tdl.symbolTable.getDataGroup()
-    g = gname.strip()
-    return tdl.symbolTable.setDataGroup(g)
-
-def tdl_setfuncgroup(gname=None,tdl=None,debug=False,**kw):
-    "set default group"
-    if tdl is None:
-        if debug: print 'cannot setgroup %s ' % expr
-        return None
-    if gname is None:
-        return tdl.symbolTable.getFuncGroup()
-    g = gname.strip()
-    return tdl.symbolTable.setFuncGroup(g)
-
 def tdl_func_as_cmd(name,tdl=None):
     "allow functions to act as commands"
     if tdl is None:
@@ -573,44 +546,6 @@ def tdl_func_as_cmd(name,tdl=None):
         sym = tdl.symbolTable.getSymbol(name)
         sym.as_cmd = True
     return
-
-"""
-def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
-    " read ascii file of tdl code"
-    from ASCIIFile import ASCIIFile
-    if tdl is None:
-        if debug: print 'cannot read file %s ' % fname
-        return None
-    if debug: print 'reading.... ', fname
-    if not os.path.exists(fname):
-        print 'read_ascii: cannot find file %s ' % fname
-        return None        
-    try:
-        f = ASCIIFile(fname)
-    except:
-        print 'read_ascii: error reading file %s ' % fname        
-        return None
-    
-    # save current group name
-    savegroup = tdl.symbolTable.getDataGroup()
-    if group is None:
-        group = savegroup
-    else:
-        group = tdl.symbolTable.setDataGroup(group)
-    tdl.symbolTable.setDataGroup(group)
-    
-    tdl.symbolTable.setVariable('titles', f.get_titles())
-    tdl.symbolTable.setVariable('column_labels', f.labels)        
-    ret = [group]
-    for i in f.labels:
-        ret.append(i)
-        tdl.symbolTable.setVariable(i, f.get_array(i))
-    if debug: print 'read done.'
-    # return default group to original
-    tdl.symbolTable.setDataGroup(savegroup)
-    return ret
-"""
-
 ##    
 ## save / restore state
 ##
@@ -767,7 +702,6 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_builtin.write":tdl_write,
           "_builtin.read":tdl_read,
           "_builtin.readlines":tdl_readlines,
-          "_builtin.group2dict":tdl_group2dict,
           "_builtin.help":(_help,None),
           "_builtin.show":(_show,None),
           "_builtin.input":(tdl_input,None),
