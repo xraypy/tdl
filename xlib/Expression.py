@@ -453,18 +453,19 @@ class Expression:
         if len(self.text)>0: msg =  "%s at line:\n  '%s'" % (msg,self.text)
         raise EvalException, msg
 
-    def get_symbol(self,symbol,type='variable',expr=''):
+    def get_symbol(self,symbol,vtype='variable',expr=''):
         if expr != '': self.text = expr
-        if type in ('variable','defvar'):
-            x = self.symbolTable.getVariable(symbol.strip())
-        elif type == 'function':
-            x = self.symbolTable.getFunction(symbol.strip())
+        # print 'get_symbol ', symbol, type(symbol), len(symbol), vtype
+        x = None
+        if vtype in ('variable','defvar'):
+            x = self.symbolTable.getVariable(symbol)
+        elif vtype == 'function':
+            x = self.symbolTable.getFunction(symbol)
+
         if x is None:
-            self.raise_error( '%s "%s" not found' % (type,symbol) )
-        try:
-            return x
-        except:
-            self.raise_error( 'invalid %s: %s' % (type,symbol) )
+            self.raise_error( '%s "%s" not found' % (vtype,symbol) )
+        return x
+
 
     def eval(self,stack=None,expr=''):
         "evaluate expression stack, compiled with Parser.parse()"
@@ -520,7 +521,7 @@ class Expression:
                         if tok == opcodes.arrayfunc:  ndim = work.pop()
                         nargs = work.pop()
                         fname = work.pop()
-                        fcn   = self.get_symbol(fname,type='function')
+                        fcn   = self.get_symbol(fname,vtype='function')
                         arr = []; kws = {}; elems = []
                         if tok == opcodes.arrayfunc:
                             for i in range(ndim):  elems.append(work.pop())

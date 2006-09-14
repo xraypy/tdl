@@ -22,10 +22,14 @@ def _identity(x):
 
 def _take(x,y):
     "wrap Numeric.take"
+    if type(y) == types.ListType:
+        return Num.take(x,Num.array(y).astype(Num.In32))
     return Num.take(x,y.astype(Num.Int32))
 
 def _choose(x,y):
     "wrap Numeric.choose"
+    if type(x) == types.ListType:
+        return Num.take(Num.array(x).astype(Num.In32),y)    
     return Num.choose(x.astype(Num.Int32),y)
 
 def _int(x):
@@ -155,7 +159,7 @@ def _random_seed(x=None):
         except:
             return Num.random.seed()            
 
-def _random(a,b=1,c=1,npts=1,distribution='normal',**kw):
+def _random(a=0,b=1,c=1,npts=1,distribution='normal',**kw):
     "wrapper for numpy random distributions" 
     NR = Num.random
     if   distribution == 'binomial':        return NR.binomial(a,b,size=npts)

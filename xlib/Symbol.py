@@ -49,26 +49,38 @@ isValidName = re.compile(r'[a-zA-Z_\$][a-zA-Z_\$0-9]*').match
 
 class symTypes:
     variable  = 'variable'
-    defvar    = 'defined variable'
-    defpro    = 'tdl procedure'
-    pyobj     = 'python object'
-    pyfunc    = 'python function'
     group     = 'symbol group'
-    Data      = (variable,defvar,pyobj,group)
-    Funcs     = (pyfunc,  defpro)
+    pyobj     = 'python object'
+    file      = 'file'
+    defvar    = 'defined variable'
+    
+    pyfunc    = 'python function'
+    defpro    = 'tdl procedure'
+
+
+    Data      = (variable,group,pyobj,file,defvar)
+    Funcs     = (pyfunc,defpro)
     All       = Data + Funcs
 
 
 class symGroup(dict):
     """ variable group
     """
-    def __init__(self,name=None,filename=None,status='normal'):
-        self.name = name
+    type = 'group'
+    def __init__(self,name=None,filename=None,toplevel=False,status='normal'):
         self.filename = filename
-        self.status  = status
+        self.status   = status
+        self.toplevel = toplevel
+        self.setname(name)
 
+    def setname(self,name):
+        self.name     = name
+        self.value    = "<symGroup %s status=%s, id=%s>" % (self.name,
+                                                            self.status,
+                                                            hex(id(self)))        
     def __repr__(self):
-        return "<symGroup %s: size=%i, status=%s>" % (self.name,len(self.keys()),self.status)
+        self.setname(self.name)
+        return self.value
         
     def addGroup(self,name,filename=None,status=None,toplevel=False):
         if self.status=='frozen' and not self.has_key(name):
@@ -88,8 +100,9 @@ class symGroup(dict):
     def addSymbol(self,name,value=None,**kw):
         if self.status=='frozen' and not self.has_key(name):
             raise SymbolError, ' group %s is frozen, and cannot be extended.' % self.name
-        if self.has_key(name) and self[name].constant:
-            raise ConstantError, ' cannot overwrite constant %s' % name
+        if self.has_key(name):
+            if isinstance(self[name],Symbol) and self[name].constant:
+                raise ConstantError, ' cannot overwrite constant %s' % name
         self[name] = Symbol(name="%s.%s" %(self.name,name),value=value,**kw)
 
     def delSymbol(self,name):
@@ -203,6 +216,12 @@ class SymbolTable:
     """
     Table of symbols and groups storing all functions and variables in tdl
     """
+    vchars = ascii_lowercase + '_' + digits
+    rrange = random.randrange
+    def randomName(self,n=8):
+        return "_%s" % ''.join([self.vchars[self.rrange(0,37)] for i in range(n)])
+
+
     def __init__(self,libs=None,writer=None,tdl=None,init=True,**kws):
         self.tdl          = tdl
         self.writer       = writer  or sys.stdout
@@ -227,7 +246,7 @@ class SymbolTable:
                raise SymbolError, 'invalid name "%s"' % (name)
         return n
 
-    def __resolveGroup(self, name):
+    def resolveGroup(self, name):
         "returns fully resolved group object "
         names = self.__splitName(name)
         grp  = self.data.get(names[0])
@@ -264,23 +283,25 @@ class SymbolTable:
            exist, or is not a symGroup, a SymbolError is raised.
         
         """
-        grp = self.__resolveGroup(self.LocalGroup)
+        grp = self.resolveGroup(self.LocalGroup)
         names = self.__splitName(name)
         if len(names)>1 and self.data.has_key(names[0]):
             grp = self.data[names[0]]
             names = names[1:]
         while len(names) > 1:
             gn = grp.get(names[0])
+            if isinstance(gn,Symbol): gn = gn.value
             if gn is None:
                 raise SymbolError, 'cannot find group "%s" in "%s"' % (names[0],grp.name)
             if type(gn) != symGroup:
+                print gn, type(gn)
                 raise SymbolError, 'symbol "%s.%s" is not a group' % (grp.name, names[0])
             grp = gn
             names = names[1:]
         return (grp,names[0])
 
 
-    def __resolveName(self,name):
+    def resolveName(self,name):
         """ returns  'full path to symbol', so that the symbol
         can easily be resolved from it's split absolute name.
         """
@@ -290,7 +311,7 @@ class SymbolTable:
         if len(names)==1:
             for i in (self.LocalGroup,self.ModuleGroup):
                 try:
-                    sym = self.__resolveGroup(i).get(name)
+                    sym = self.resolveGroup(i).get(name)
                     if sym is not None:
                         ret = self.__splitName(i)
                         ret.append(name)
@@ -302,11 +323,16 @@ class SymbolTable:
         slist = []
         for i in ([self.LocalGroup,self.ModuleGroup] +
                   self.searchGroups + ['_sys','_builtin','_main']):
-            g = self.__resolveGroup(i)
+            g = self.resolveGroup(i)
             r = i,g
             if r not in slist: slist.append(r)
         # add toplevel group
         slist.append(('_top',self.data))
+
+        for i in self.data.keys():
+            g = self.resolveGroup(i)
+            r = i,g
+            if r not in slist: slist.append(r)
 
         #
         # For SimpleNames and FirstName of CompoundNames:
@@ -319,11 +345,13 @@ class SymbolTable:
                 sym = group
                 ret = [name0]
                 break
-            sym = group.get(name0)   # name0 is contained in a group in searchGroup
-            if sym is not None:
-                ret = [group.name,name0]
-                if group.name=='_top':  ret = [name0]
-                break
+        if sym is None:
+            for gname,group in slist:
+                sym = group.get(name0)   # name0 is contained in a group in searchGroup
+                if sym is not None:
+                    ret = [group.name,name0]
+                    if group.name=='_top':  ret = [name0]
+                    break
         if sym is None:
             raise SymbolError, 'could not resolve name "%s"' % (name)
 
@@ -354,29 +382,60 @@ class SymbolTable:
         g.addSymbol(name=n,value=value,**kws)
         return g[n]
 
+
     def getSymbolLocalGroup(self, name):
         """ basic form for adding new Symbols into Symbol Table"""
         g,n = self.__findName(name)
-        g.addSymbol(name=n)
-        return g[n]
+        sname = "%s.%s" % (g.name,n)
+        if not self.hasSymbol(sname):
+            g.addSymbol(name=n)
+            s = g[n]
+        else:
+            s = self.getSymbol(sname)
+        # print 'gslp ' , s  
+        if type(s) == symGroup: s = self.addSymbol(sname)
+        return s
 
 
-    def addGroup(self, name,toplevel=False,status='normal'):
+    def addGroup(self,name,toplevel=False,status='normal'):
         """ add a Symbol Group, either to the current LocalGroup (the default)
         or at the toplevel.
         TODO: add toplevel / complex name??
                 addGroup('_sys.newgroup')  works already
         """
         names = self.__splitName(name)
-        g,n = self.__findName(name)
-        if toplevel and len(names)==1: g,n = self.data,name
-        g.addGroup(n,status=status,toplevel=toplevel)
-        return g[n]
+        owner,n   = self.__findName(name)
+        name= "%s.%s" % (owner.name,n)
+        if toplevel: name= n
+        grp = symGroup(name=name,status=status)
+        owner[n] =grp
+        grp.setname( name)
+        return grp
 
     def setVariable(self,name,value=None,**kws):
         "add a variable"
         return self.addSymbol(name,value=value,type=symTypes.variable,**kws)
-    
+
+    def copyGroup(self, name, group):
+        """ copy an existing symGroup into the SymbolTable"""
+        if self.data.has_key(group.name): group = self.data.pop(group.name)
+        owner,nam = self.__findName(name)
+        fullname = "%s.%s" % (owner.name, nam)
+        group.status = 'normal'
+        if group.toplevel:
+            fullname = nam
+            owner = self.data
+        owner[nam] = group
+        group.setname(fullname)
+        return group
+
+        #         owner[name] = owner[child]
+#         owner[name].name = "%s.%s" % (owner.name, name)
+#         sym.status = 'normal'
+#         if owner.name=='_top': owner[name].name = "%s" % (name)
+#         print 'copy:    ', owner[name], owner[name].name
+# return owner[name]
+        
     def setObject(self,name,value=None,**kws):
         "add a reference to a python object"
         return self.addSymbol(name,value=value,type=symTypes.object**kws)
@@ -423,11 +482,11 @@ class SymbolTable:
     def getSymbol(self,name):
         """ look up symbol name
         """
-        names,rest = self.__resolveName(name)
-        # print 'Get Symbol ', names, name
+        names,rest = self.resolveName(name)
         sym = self.data[names[0]]
-        for i in names[1:]:
-            sym = sym[i]
+        for i in names[1:]:    sym = sym[i]
+        # print 'getSymbol ', name, names,rest, self.data[names[0]], sym
+        
         # 'rest' may contain attributes of an object
         for i in rest:
             sn = None
@@ -468,8 +527,21 @@ class SymbolTable:
             pass
         return ret
 
+    def getGroup(self,name):
+        names,rest = self.resolveName(name)
+        if rest != []:
+            raise SymbolError, 'cannot get group %s' % name
+        
+        parent,child = self.data,names[0]
+        for i in names[1:]:
+            parent,child = parent[child],i
+            if type(parent[child]) != symGroup:
+                raise SymbolError, 'cannot get group %s' % name
+
+        return (parent,child)
+    
     def delGroup(self,name):
-        names,rest = self.__resolveName(name)
+        names,rest = self.resolveName(name)
         if rest != []:
             raise SymbolError, 'cannot delete group %s' % name
         
@@ -486,7 +558,7 @@ class SymbolTable:
         return
     
     def delVariable(self,name):
-        names,rest = self.__resolveName(name)
+        names,rest = self.resolveName(name)
         if rest != []:
             raise SymbolError, 'cannot delete variable: "%s" -- python attribute??' % name
         
@@ -500,7 +572,7 @@ class SymbolTable:
         return
 
     def delSymbol(self,name):
-        names,rest = self.__resolveName(name)
+        names,rest = self.resolveName(name)
         if rest != []:
             raise SymbolError, 'cannot delete symbol: "%s" -- python attribute??' % name
         
@@ -611,41 +683,45 @@ class SymbolTable:
             import_msg = 'import failed!'
         self.writer.write(" %s\n" % import_msg)
 
-
-    def addTempGroup(self,prefix='',nlen=8,toplevel=True):
+    def clearTempGroups(self):
+        " clear all toplevel groups with delete status"
+        k = self.data.keys()
+        for i in k:
+            if type(self.data[i]) == symGroup and self.data[i].status=='delete':
+                self.data.pop(i)
+                
+    def addTempGroup(self,prefix='',nlen=8,**kw):
         """ add a random-ish group name, as for a procedures namespace """
         
-        vchars = ascii_lowercase + '_' + digits
-        rrange = random.randrange
-        def randomName(n=8):
-            return "_%s" % ''.join([vchars[rrange(0,37)] for i in range(n)])
-
         if prefix is None: prefix = ''
-        gname = "%s%s" % (prefix,randomName(n = nlen))
-        if self.hasGroup(gname):
-            ntry  = 0
-            while self.hasGroup(gname):
-                gname = "%s%s" % (prefix,randomName(n = nlen))                
-                ntry = ntry + 1
-                if (ntry>10000):
-                    raise SymbolError, 'cannot create a group name! %s' % prefix
-                if (ntry%500 == 0):
-                    random.seed() ; time.sleep(0.001)
-        return (gname,self.addGroup(gname,toplevel=toplevel, status='delete'))
+        grp  = symGroup(name='',status='delete',**kw)
+        keys = self.data.keys()
+        ntry,gname  = 0,'_main'
+        while gname in keys:
+            gname = "%s%s" % (prefix,self.randomName(n = nlen))                
+            ntry = ntry + 1
+            if (ntry>10000):
+                raise SymbolError, 'cannot create a group name! %s' % prefix
+            if (ntry%500 == 0):
+                random.seed() ; time.sleep(0.001)
+        self.data[gname] = grp
+        grp.setname(gname)
+        return grp
     
-    def showTable(self):
+    def showTable(self,skip=None):
+        print '======================'
+        if skip is None:  skip = []
         def showGroup(x,prefix=None,indent=-1):
             px = '%s %s' % (' '*2*indent,prefix)
-            if prefix is not None:
-                print '%s: ' %  px
             for i in x.keys():
-                s = i
-                if prefix is not None: s = "%s.%s" % (px,i)
-                if type(x[i]) is symGroup:
-                    showGroup(x[i], prefix=s,indent=indent+1)
-                else:
-                    print  s, ' = ',  x[i]
-        showGroup(self.data,prefix=None,indent=-1)
+                if i not in skip:
+                    s = i
+                    if prefix is not None: s = "%s.%s" % (px,i)
+                    print  s, ' ',  x[i].value
+                    if type(x[i]) is symGroup:
+                        showGroup(x[i], prefix=s,indent=indent+1)
+
+        showGroup(self.data,prefix=None,indent=0)
 
     def listGroups(self):
         """collect full list of symbol groups """

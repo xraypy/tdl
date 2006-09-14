@@ -18,7 +18,7 @@ import copy
 import Help
 
 from Expression import Expression, opcodes
-from Symbol import Symbol, SymbolTable
+from Symbol import Symbol, SymbolTable, symGroup,symTypes
 import version
 from Num import num_version
 from Util import split_delim, find_unquoted_char, parens_matched
@@ -483,22 +483,31 @@ class Evaluator:
         lhs  = left_hs[:]
         # the symbol name for the lhs will be looked for only
         # in the 'current group' unless fully qualified
+
         ndim_lhs = lhs.pop()
         varname  = lhs.pop()
-        sym  = self.symbolTable.getSymbolLocalGroup(varname)
+        # sym  = self.symbolTable.getSymbolLocalGroup(varname)
+        isSymGroup = (type(rhs) == symGroup)
+        if isSymGroup:
+            sym  = self.symbolTable.copyGroup(varname,rhs)
+            # self.symbolTable.showTable(skip=('_math','_builtin'))
+            return
+        else:
+            sym  = self.symbolTable.getSymbolLocalGroup(varname)            
+
         if sym is None:
             self.raise_error('Cannot make assignment to %s??' % varname)
         for i in range(len(lhs)):
             if type(lhs[i]) == types.FloatType: lhs[i] = int(lhs[i])
 
-        if sym.constant:
-            self.raise_error('Cannot reassign value of %s' % sym.name)
-
-        if len(lhs)>0 and  sym.type=='defvar':
-            self.raise_error('Cannot assign to part of defined variable %s.' % varname)
+        if isinstance(sym,Symbol):
+            if sym.constant:
+                self.raise_error('Cannot reassign value of %s' % sym.name)
+            if len(lhs)>0 and  sym.type==symTypes.defvar:
+                self.raise_error('Cannot assign to part of defined variable %s.' % varname)
 
         try:
-            x    = copy.deepcopy(sym.value)
+            x = sym.value             # x = copy.deepcopy(sym.value)
         except:
             self.raise_error('Cannot make assignment %s' % sym.name)
 
@@ -508,13 +517,14 @@ class Evaluator:
             x[lhs[0]] = rhs
         else:
             x[tuple(lhs)] = rhs
-        if sym.constant:
-            self.raise_error('cannot re-assign value of constant %s ' % varname)
-        elif sym.type in ('defvar','defpro','variable'):
+        # 
+
+        if sym.type in (symTypes.defvar,symTypes.defpro,symTypes.variable):
             sym.value  = x
             sym.code   = None
-            sym.type   = 'variable'
+            sym.type   = symTypes.variable
             sym.constant = False
+            
 
     def interpret(self,s,text=''):
         "interpret parsed code from compile"

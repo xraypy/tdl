@@ -52,7 +52,7 @@ import time
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
 from Util import set_path, PrintExceptErr
-
+from Symbol import symGroup
 title = "builtin library functions"
 
 HelpBuiltins = """
@@ -178,7 +178,7 @@ def _dictkeys(x):
         return x.keys()
     else:
         return []
-
+1
 def _dictitems(x):
     "return list of dictionary items"
     if type(x) == types.DictType:
@@ -486,11 +486,25 @@ def tdl_setvar(name,val,tdl=None,group=None,debug=False,**kws):
 def tdl_delgroup(name,tdl=None,debug=False,**kw):
     "delete a group"
     if tdl is None:
-        if debug: print 'cannot delete group %s ' % expr
+        if debug: print 'cannot delete group %s ' % name
         return None
     if tdl.symbolTable.hasGroup(name):
-        return tdl.symbolTable.deleteGroup(name)
+        return tdl.symbolTable.delGroup(name)
 
+def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
+    "add a group"
+    if tdl is None:
+        if debug: print 'cannot add group %s ' % name
+        return None
+    return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
+
+def tdl_showtable(name=None,tdl=None,toplevel=True,debug=False,**kw):
+    "add a group"
+    if tdl is None:
+        if debug: print 'cannot add group %s ' % name
+        return None
+    return tdl.symbolTable.showTable(skip=('_math','_builtin'))
+        
 def tdl_delvar(name,tdl=None,group=None,debug=False,**kw):
     "delete a variable "
     if tdl is None:
@@ -709,10 +723,9 @@ _func_ = {'_builtin.load':(tdl_load, None),
           '_builtin.eval':(tdl_eval,None),
           '_builtin.setvar':(tdl_setvar,None),
           '_builtin.delgroup':tdl_delgroup,
+          '_builtin.newgroup':tdl_newgroup,
+          '_builtin.showtable':tdl_showtable,
           '_builtin.delvar':tdl_delvar,
-          '_builtin.datagroup':(tdl_setdatagroup, None),
-          '_builtin.funcgroup':(tdl_setfuncgroup, None),
-          '_builtin.ascmd':(tdl_func_as_cmd,None),
           #'_builtin.read_ascii':(tdl_read_ascii,None),
           '_builtin.debug':(tdl_set_debug,None),
           "_builtin.cd":(_cd,None),
