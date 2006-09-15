@@ -31,7 +31,7 @@ class Plotter_TkAgg:
         self.exit_callback = exit_callback
         self.cursor_callback = cursor_callback
         self.symtable = self.tdl.symbolTable
-        self.symtable.addVariable(_plotter,value=self,type='pyfunc',constant=True)
+        self.symtable.setVariable(_plotter,value=self,constant=True)
         
         self.plotter= TkPlotter.PlotFrame(self.root,
                                           exit_callback=self.onExit,
@@ -56,7 +56,10 @@ class Plotter_TkAgg:
         if self.tdl is None: return
         getval = self.symtable.getSymbolValue
         for name,method in self.plot_attribs.items():
-            val = getval("%s.%s" % (plot_group,name),default=None)
+            try:
+                val = getval("%s.%s" % (plot_group,name))
+            except:
+                val = None
             if val is not None:
                 val = r"%s" % val
                 getattr(self.plotter,method)(val)
@@ -198,6 +201,8 @@ HelpPlot = """
 
 """
 
-_help_ = {'plotting': HelpPlot}
-_func_ = {'_plot.plot':(tdl_plot, None),
+_groups_ = [('_plot',True)]
+_var_    = {'_plot.plotter':None}
+_help_   = {'plotting': HelpPlot}
+_func_   = {'_plot.plot':(tdl_plot, None),
           '_plot.newplot':(tdl_newplot, None)}
