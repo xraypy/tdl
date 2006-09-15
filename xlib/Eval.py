@@ -23,7 +23,7 @@ import version
 from Num import num_version
 from Util import split_delim, find_unquoted_char, parens_matched
 from Util import split_list, trimstring
-from Util import EvalException, Command2Expr,PrintShortExcept
+from Util import EvalError, Command2Expr
 
 class Evaluator:
     """ main evaluation class for tdl language.
@@ -87,7 +87,7 @@ class Evaluator:
 
     def raise_error(self,msg):
         if len(self.text)>0: msg =  "%s at line %i:\n  '%s'" % (msg,self.nline,self.text)
-        raise EvalException, msg
+        raise EvalError, msg
 
     def load_file(self,fname):
         try:
@@ -95,7 +95,7 @@ class Evaluator:
             l = f.readlines()
             f.close()
         except IOError:
-            raise EvalException, 'cannot load file %s '% fname
+            raise EvalError, 'cannot load file %s '% fname
         self.infile = fname
         self.text.append((self.EOF,-1,fname))
         self.load_statements(l,file=fname)
@@ -246,7 +246,7 @@ class Evaluator:
         # and will always be found while the appropriate (if,while,for,def)
         # block is being processed
         if key in ('else','elif','endif','endfor','endwhile','enddef','endtry'):
-            raise EvalException, 'syntax error: %s' % key
+            raise EvalError, 'syntax error: %s' % key
 
         # handle if statements, including if/elif/else/endif blocks
         elif key == 'if':
@@ -273,7 +273,7 @@ class Evaluator:
                         break
                     elif nextkey == 'elif':
                         if else_seen:
-                            raise EvalException, 'syntax error: elif after else'
+                            raise EvalError, 'syntax error: elif after else'
                         t = sn[len(nextkey):]
                         status,s1,s2 = split_delim(t, delim=':')
                         # print 'ELIF ', status , s1, s2
@@ -298,7 +298,7 @@ class Evaluator:
             ret = ['try']
             blockhead = self.expr_compile('1')
             if s2:
-                raise EvalException, 'syntax error: invalid try statement.'
+                raise EvalError, 'syntax error: invalid try statement.'
             else:
                 end = "endtry"
                 t = None
@@ -338,7 +338,7 @@ class Evaluator:
                 j = self.expr_compile(r1, reverse=True)
                 x = j.pop()
                 if len(j)!=1 or x != opcodes.variable:
-                    raise EvalException, 'syntax error: invalid for A statement'
+                    raise EvalError, 'syntax error: invalid for A statement'
                 blockhead = (j.pop(), self.expr_compile(r2))
 
             elif key == 'def':
@@ -356,12 +356,12 @@ class Evaluator:
                 if status <4:
                     status,s1,s2 = split_delim(t, delim='=')
                     if status<1:
-                        raise EvalException, 'syntax error: invalid def statement'
+                        raise EvalError, 'syntax error: invalid def statement'
                     # it's of the simple form:   def x = expr
                     stack = self.expr_compile(s1, reverse=True)
                     tok = stack.pop()
                     if tok != opcodes.variable:
-                        raise EvalException, 'syntax error: invalid def statement'
+                        raise EvalError, 'syntax error: invalid def statement'
                     stack.append(opcodes.symbol)
 
                     return ['defvar',stack, self.expr_compile(s2),s2]
@@ -369,15 +369,15 @@ class Evaluator:
                     try:
                         t = self.expr_compile(s1,  reverse=True)
                     except:
-                        raise EvalException, 'syntax error: invalid def statement'
+                        raise EvalError, 'syntax error: invalid def statement'
 
                     ftype = t.pop() ;nargs = t.pop() ;  fname = t.pop()
                     if ftype != opcodes.function:
-                        raise EvalException, 'syntax error: invalid def statement'
+                        raise EvalError, 'syntax error: invalid def statement'
 
                     n1,n2 =  s1.find('('), s1.rfind(')')
                     if n1 <1 or n2<n1:
-                        raise EvalException, 'syntax error: invalid def statement'
+                        raise EvalError, 'syntax error: invalid def statement'
                     # print 'n1 = ', n1, n2
                     # construct tuple and keywords of function arguments
                     vargs = [] ; kws = {} ; iargs = 0; eq_seen = False
@@ -387,12 +387,12 @@ class Evaluator:
                             ieq = i.find('=')
                             if ieq == -1:
                                 if eq_seen:
-                                    raise EvalException, 'syntax error: invalid def statement 2'
+                                    raise EvalError, 'syntax error: invalid def statement 2'
                                 j = self.expr_compile(i,reverse=True)
                                 if j is not None and len(j)>1:
                                     x = j.pop()
                                     if len(j)!=1 or x != opcodes.variable:
-                                        raise EvalException, 'syntax error: invalid def statement 1'
+                                        raise EvalError, 'syntax error: invalid def statement 1'
                                     vargs.append(j.pop())
                                 else:
                                     iargs = iargs-1
@@ -401,12 +401,12 @@ class Evaluator:
                                 j = self.expr_compile(i[:ieq], reverse=True)
                                 x = j.pop()
                                 if len(j)!=1 or x != opcodes.variable:
-                                    raise EvalException, 'syntax error: invalid def statement 1'
+                                    raise EvalError, 'syntax error: invalid def statement 1'
                                 k = j.pop()
                                 v = self.expr_eval(self.expr_compile(i[ieq+1:]))
                                 kws[k] = v
                     if iargs != int(nargs):
-                        raise EvalException, 'syntax error: invalid def statement 5'
+                        raise EvalError, 'syntax error: invalid def statement 5'
                 blockhead = [fname, tuple(vargs), kws]
             ret.append(blockhead)
             # block to execute
@@ -443,7 +443,7 @@ class Evaluator:
             # and at parse stage do nothing.
             s = s[len(key):].strip()
             if len(s)>0:
-                raise EvalException, 'syntax error: invalid %s statement' % key
+                raise EvalError, 'syntax error: invalid %s statement' % key
             ret.append(key)
 
         # regular assignment / eval statement
@@ -459,7 +459,7 @@ class Evaluator:
                 if self.symbolTable.hasFunction(key):
                     stack= self.expr_compile(Command2Expr(s,symtable=self.symbolTable))
                     if stack[0] != opcodes.function:
-                        raise EvalException, 'syntax error: weird error with commad '
+                        raise EvalError, 'syntax error: weird error with commad '
                     stack[0] = opcodes.command
                     return  ['eval', stack, s]
             # wasn't a command!
@@ -471,7 +471,7 @@ class Evaluator:
                 stack = self.expr_compile(s1)
                 tok = stack.pop(0)
                 if tok not in (opcodes.variable, opcodes.array):
-                    raise EvalException, 'syntax error: invalid assignment statement'
+                    raise EvalError, 'syntax error: invalid assignment statement'
                 if tok ==  opcodes.variable:  stack.insert(0,0)
                 stack.insert(0,opcodes.symbol)
                 return ['assign', stack,  self.expr_compile(s2), s]
@@ -548,16 +548,16 @@ class Evaluator:
             xtok = s[1].pop()
             nvar = s[1].pop()
             if xtok != opcodes.list:
-                raise EvalException, 'Invalid "del" statement'
+                raise EvalError, 'Invalid "del" statement'
             try:
                 for i in range(nvar):
                     xtok = s[1].pop()
                     vname = s[1].pop()
                     if xtok != opcodes.variable:
-                        raise EvalException, 'cannot delete %s ' % vname
+                        raise EvalError, 'cannot delete %s ' % vname
                     self.symbolTable.deleteSymbol(vname)
             except:
-                raise EvalException, 'Invalid "del" statement'
+                raise EvalError, 'Invalid "del" statement'
         elif tok == 'print':
             if len(s[1])>0:
                 for i in self.expr_eval(s[1]):
@@ -565,7 +565,7 @@ class Evaluator:
             self.output.write('\n')
         elif tok == 'defvar':
             if len(s[1]) != 2 or s[1][1] != opcodes.symbol:
-                raise EvalException, 'Invalid "def" statement'
+                raise EvalError, 'Invalid "def" statement'
             x = self.symbolTable.setDefVariable(s[1][0], s[2], s[3])
         elif tok == 'assign':
             lhs = self.expr_eval(s[1])
@@ -637,18 +637,18 @@ class Evaluator:
         elif tok == self.EOF:
             return None
         else:
-            raise EvalException, 'unknown evaluation error'
+            raise EvalError, 'unknown evaluation error'
 
     ######
 
     def run_procedure(self,proc,args=None,kws=None):
         " run a user-created tdl procedure "
         if proc.type != symTypes.defpro:
-            raise EvalException, 'invalid procedure'
+            raise EvalError, 'invalid procedure'
 
         name = proc.name
         if len(args) != len(proc.args):
-            raise EvalException, 'not enough arguments for procedure %s' % name
+            raise EvalError, 'not enough arguments for procedure %s' % name
 
         name = "$%s$" % name.replace('.','@') # mangle module/function name 
         locgroup = self.symbolTable.LocalGroup
@@ -663,7 +663,7 @@ class Evaluator:
         # self.symbolTable.showTable(skip=('_math','_builtin','_plot'))
 
         if group is None:
-            raise EvalException, 'cannot run procedure %s (cannot create group??)' % name
+            raise EvalError, 'cannot run procedure %s (cannot create group??)' % name
 
         for k,v in zip(proc.args,args):
             self.symbolTable.setVariable(k,v)
@@ -684,8 +684,9 @@ class Evaluator:
                     break
         except:
             s = 'Error in procedure %s\n    %s' % (name, i[-1])
-            PrintShortExcept(s)
-
+            self.ShowError(msg=s,showtraceback=False)
+            
+            
         try:
             if len(ret) == 1: ret= ret[0]
         except TypeError:
@@ -700,3 +701,15 @@ class Evaluator:
         # self.symbolTable.setDataGroup(savegroup)
         return ret
 
+    def ShowError(self,msg=None,showtraceback=True):
+        " print error on exceptions"
+        w = self.output.write
+        try:
+            w('\n***********************************\n')
+            w("%s\n" % err_str)
+            exctype, val, tb  = sys.exc_info()
+            if not showtraceback: tb = None
+            sys.excepthook(excpe,val,tb)
+        except:
+            w('*****Error printing exception error******\n')
+            

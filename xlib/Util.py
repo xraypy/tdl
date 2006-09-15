@@ -27,11 +27,11 @@ import sys
 import string
 import os
 
-class ParseException(exceptions.Exception):
+class ParseError(exceptions.Exception):
     def __init__(self,args=None):
         self.args = args
 
-class EvalException(exceptions.Exception):
+class EvalError(exceptions.Exception):
     def __init__(self,args=None):
         self.args = args
 
@@ -44,7 +44,12 @@ class ConstantError(exceptions.Exception):
         self.args = args
 
 
-
+def verify_tdl(tdl,name='unknown',msg=''):
+    if tdl is None:
+        mout = "No tdl reference in python function '%s'" % (name)
+        if msg != '': mout = "%s\n%s" % (mout,msg)
+        raise RunTimeError, mout
+    
 ####
 def datalen(x):
     "return length of data for many datatypes"
@@ -400,7 +405,7 @@ def PrintExceptErr(err_str,print_trace=True):
     try:
         print '\n***********************************'
         print err_str
-        print 'Exception:', sys.exc_type
+        print 'Error:', sys.exc_type
         xx, yy, zz = sys.exc_info()
         if print_trace == False: zz = ''
         sys.excepthook(xx,yy,zz)

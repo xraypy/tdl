@@ -22,9 +22,8 @@ from Num import Num, num_version
 from Eval   import Evaluator
 from Symbol import SymbolTable
 import Util
-from Util   import ParseException, EvalException
 from Util   import show_list, split_arg_str, show_more
-from Util   import PrintExceptErr
+from Util   import EvalError, ParseError, SymbolError, ConstantError
 from Help   import Help
 import version
 import cmd
@@ -72,7 +71,7 @@ class shell(cmd.Cmd):
 
         # override builtin open function
         # is this a bad idea?????
-        __builtins__['open'] = Util.file_open(sym=self.tdl)
+        # __builtins__['open'] = Util.file_open(sym=self.tdl)
 
     def emptyline(self):
         pass
@@ -105,6 +104,8 @@ class shell(cmd.Cmd):
             try:
                 ret = self.tdl.execute(s)
                 self._status = True
+            except (ParseError,Util.ParseError), detail:
+                x = "%s error: %s" % ('syntax',detail)
             except (ValueError,NameError), detail:
                 x = "%s error: %s" % ('syntax',detail)
             except TypeError, detail:
@@ -113,10 +114,10 @@ class shell(cmd.Cmd):
                 x = "%s error: %s" % ('mathematical',detail)
             except (LookupError), detail:
                 x = "%s error: %s" % ('array lookup',detail)
-            except (EvalException,Util.EvalException), detail:
+            except (EvalError,Util.EvalError), detail:
                 x = "%s error: %s" % ('evaluation',detail)
-            except (ParseException,Util.ParseException), detail:
-                x = "%s error: %s" % ('syntax',detail)
+            except (SymbolError,AttributeError,Util.ParseError), detail:
+                x = "%s error: %s" % ('evaluation',detail)
             except:
                 x = 'unknown error'
             if not self._status and x is not None:
@@ -130,7 +131,7 @@ class shell(cmd.Cmd):
                 try:
                     print ret
                 except:
-                    PrintExceptErr("Error printing ret value")
+                    self.tdl.ShowError("Error printing ret value")
 
 
 #####################################################################################
@@ -150,7 +151,7 @@ class shell(cmd.Cmd):
 #    t.cmdloop()
 
 if (__name__ == '__main__'):
-    # show_usage()
+    debug=False
     #main(sys.argv[1:])
     t = shell(debug=debug)
     t.cmdloop()

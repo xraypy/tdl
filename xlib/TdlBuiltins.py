@@ -51,8 +51,8 @@ import types
 import time
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
-from Util import set_path, PrintExceptErr
-from Symbol import symGroup
+from Util import set_path,  verify_tdl
+
 title = "builtin library functions"
 
 HelpBuiltins = """
@@ -178,7 +178,7 @@ def _dictkeys(x):
         return x.keys()
     else:
         return []
-1
+
 def _dictitems(x):
     "return list of dictionary items"
     if type(x) == types.DictType:
@@ -351,10 +351,11 @@ def _type(x):
                  Num.ArrayType:'array'}
     
     if t in typecodes.keys(): return typecodes[t]
-    return 'unknown'             
+    return 'object'
 
 def tdl_path(pth=None,recurse=False,tdl=None,**kw):
     "modify or show python path"
+    verify_tdl(tdl,'path')
     if not pth:
         return show_list(sys.path)
     else:
@@ -365,6 +366,7 @@ def tdl_path(pth=None,recurse=False,tdl=None,**kw):
 def tdl_input(prompt='',tdl=None,**kw):
     "get a line of raw input"
     #return raw_input(prompt)
+    verify_tdl(tdl,'input')
     tdl.output.write(prompt)
     tdl.output.flush()
     line = tdl.input.readline()
@@ -372,7 +374,6 @@ def tdl_input(prompt='',tdl=None,**kw):
 
 def tdl_open(filename,mode='r',tdl=None,**kw):
     " open a file "
-    print 'This is tdl open ', filename, mode, tdl
     return open(filename,mode=mode)
 
 def tdl_close(file,tdl=None,**kw):
@@ -412,8 +413,7 @@ def tdl_tell(file,offset,whence=None,tdl=None,**kw):
     if type(file) == types.FileType: return file.tell()
 
 def tdl_set_debug(debug=None,tdl=None,**kw):
-    if tdl is None:
-        return None
+    verify_tdl(tdl, 'set_debug')
     if debug == None or debug == "":
         #debug = not tdl.debug
         if tdl.debug > 0:
@@ -428,9 +428,8 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
 
 def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
     " load file of tdl code"
-    if tdl is None:
-        if debug: print 'cannot run file %s ' % fname
-        return None
+    verify_tdl(tdl, 'load',msg='loading file %s' % fname)
+
     symTab = tdl.symbolTable
     if group is None:
         # print fname, os.path.splitext(fname)
@@ -463,70 +462,51 @@ def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
     import('x.py')         # imports new module x.py
     import(clearAll=True)  # re-imports modules AND clears all data  
     """
-    if tdl is None:
-        if debug: print 'cannot load function modules ' 
-        return None
-    if lib:
-        tdl.symbolTable.import_lib(lib)
-    #  tdl.symbolTable.initialize(libs=tdl.symbolTable.load_libs,clearAll=clearAll)
+    verify_tdl(tdl, 'import',msg='trying to import %s' % lib)
 
+    if lib: tdl.symbolTable.import_lib(lib)
     if debug: print 'import done.'
 
 def tdl_eval(expr, tdl=None,debug=False,**kw):
     " evaluate tdl expression"
-    if tdl is None:
-        print 'cannot eval %s ' % expr
-    else:
-        return tdl.eval(expr)
+    verify_tdl(tdl, 'eval',msg='trying to eval %s' % expr)
+    return tdl.eval(expr)
 
-def tdl_setvar(name,val,tdl=None,group=None,debug=False,**kws):
+def tdl_setvar(name,val,tdl=None,debug=False,**kws):
     "set default group"
-    # print 'This is tdl setvar ', name, val, tdl, group, kws
-    if tdl is None or type(name)!=types.StringType:
-        print 'cannot setvar %s ' % expr
-    else:
-        return tdl.symbolTable.setVariable(name,val)
-
-def tdl_delgroup(name,tdl=None,debug=False,**kw):
-    "delete a group"
-    if tdl is None:
-        print 'cannot delete group %s ' % name
-    else:
-        delme = False
-        if type(name) == types.StringType:
-            if name.startswith('<symGroup'):   name = name.split()[1].strip()
-            if tdl.symbolTable.hasGroup(name): delme = True
-        if delme:
-            return tdl.symbolTable.delGroup(name)
-        else:
-            print 'cannot delete group ', name
+    verify_tdl(tdl, 'setvar',msg='trying to setvar %s' % name)
+    return tdl.symbolTable.setVariable(name,val,**kws)
 
 def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
     "add a group"
-    if tdl is None:
-        print 'cannot add group %s ' % name
-    else:
-        return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
+    verify_tdl(tdl, 'newgroup',msg='trying to create group %s' % name)
+    return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
 
-def tdl_showtable(name=None,tdl=None,toplevel=True,**kw):
+def tdl_showtable(extra=None, tdl=None,skip=('_math','_builtin'), **kw):
     "add a group"
-    if tdl is None:
-        print 'cannot add group %s ' % name
-    else:
-        return tdl.symbolTable.showTable(skip=('_math','_builtin'))
+    verify_tdl(tdl, 'showtable')
+    return tdl.symbolTable.showTable(skip=skip)
+
+def tdl_showfunctions(extra=None,tdl=None):
+    "add a group"
+    print 'This is tdl show funcs ', tdl
+    verify_tdl(tdl, 'showfunctions')
+    return tdl.symbolTable.listFunctions()
+
+def tdl_showgroups(extra=None,tdl=None):
+    "add a group"
+    verify_tdl(tdl, 'showgroups')
+    return tdl.symbolTable.listGroups()
         
 def tdl_delvar(name,tdl=None,**kw):
     "delete a variable "
-    if tdl is None or type(name) != types.StringTyps:
-        print 'cannot delete variable %s ' % name
-    else:
-        return tdl.symbolTable.delSymbol(name)
+    verify_tdl(tdl, 'delvar',msg='trying to delete variable %s' % name)
+    return tdl.symbolTable.delSymbol(name)
 
 def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
     "convert all data in a group to a single dictionary"
-    if tdl is None:
-        if debug: print 'cannot setgroup %s ' % expr
-        return None
+    verify_tdl(tdl, 'group2dict')
+    
     if gname is None: gname = tdl.symbolTable.getDataGroup()
     gname = gname.strip()
     dict = {}
@@ -538,9 +518,8 @@ def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
 
 def tdl_func_as_cmd(name,tdl=None):
     "allow functions to act as commands"
-    if tdl is None:
-        if debug: print 'cannot setgroup %s ' % expr
-        return None
+    verify_tdl(tdl, 'func as cmd')
+
     if tdl.symbolTable.hasFunc(name):
         sym = tdl.symbolTable.getSymbol(name)
         sym.as_cmd = True
@@ -550,7 +529,8 @@ def tdl_func_as_cmd(name,tdl=None):
 ##
 def tdl_savestate(fname, tdl=None,debug=False,**kw):
     " save program state to a file"
-    if debug: print 'savestate XX.... ', fname
+    verify_tdl(tdl,'savestate')
+    if debug: print 'savestate ... ', fname
 
     dat = tdl.symbolTable.getAllData()
 
@@ -574,6 +554,7 @@ def tdl_savestate(fname, tdl=None,debug=False,**kw):
 def tdl_restorestate(fname, tdl=None,debug=False,**kw):
     " restore state from a file"
 
+    verify_tdl(tdl,'restorestate')
     if debug: print 'restorestate .... ', fname
     if not os.path.isfile(fname):
         print 'file error: cannot find file %s ' % fname
@@ -613,6 +594,7 @@ def _python(arg=None,tdl=None,**kws):
     Executes the commands passed and return, or (if no command is given)
     enter an interactive prompt.
     """
+    verify_tdl(tdl, 'python',msg='executing python command %s' % arg)
     exec_namespace = {'tdl':tdl,'sym':tdl.symbolTable}
     if arg:
         try:
@@ -621,7 +603,7 @@ def _python(arg=None,tdl=None,**kws):
             exec arg.strip() in exec_namespace
             return
         except:
-            PrintExceptErr('Python Exception')
+            tdl.ShowError('Python Exception')
             return 
 
     print 'Python shell, type ret to return'
@@ -640,12 +622,12 @@ def _python(arg=None,tdl=None,**kws):
                 arg = 'print %s' % arg[1:]
                 exec arg in exec_namespace
             except:
-                PrintExceptErr('Python Exception')
+                tdl.ShowError('Python Exception')
         else:
             try:
                 exec arg in exec_namespace
             except:
-                PrintExceptErr('Python Exception')
+                tdl.ShowError('Python Exception')
     return
 
 #################################################################
@@ -667,11 +649,11 @@ _func_ = {'_builtin.load':(tdl_load, None),
           '_builtin.import':(tdl_import, None),
           '_builtin.eval':(tdl_eval,None),
           '_builtin.setvar':(tdl_setvar,None),
-          '_builtin.delgroup':tdl_delgroup,
           '_builtin.newgroup':tdl_newgroup,
           '_builtin.showtable':tdl_showtable,
-          '_builtin.delvar':tdl_delvar,
-          #'_builtin.read_ascii':(tdl_read_ascii,None),
+          '_builtin.showfuncs':tdl_showfunctions,
+          '_builtin.showgroups':tdl_showgroups,
+          '_builtin.delete':tdl_delvar,
           '_builtin.debug':(tdl_set_debug,None),
           "_builtin.cd":(_cd,None),
           "_builtin.pwd":(_cwd,None),

@@ -468,13 +468,14 @@ HelpControl = """
        endtry
       
 """
-
+#  one quote mark: ' to fix emacs colorization
 #########################################################
 import types, sys
 from Util   import show_list, split_arg_str, show_more
 
 class Help:
     """ basic help mechanism for Tdl """
+
     def __init__(self,tdl=None,output=None):
         h = self.topics = {}
         h['help']  = HelpHelp
@@ -512,33 +513,51 @@ class Help:
 
     ###
     def show_function(self,args):
-        lout = ''
-        if len(args)==0:
-            f = self.tdl.symbolTable.listFunc()
-            grps = f.keys()
-            grps.sort()
-            for grp in grps:
-                lout = "%s\n==Functions in '%s'\b" % (lout,grp)
-                lout = "%s\n%s\n" % (lout,show_list(f[grp]))
-        else:
-            for nam in args:
-                sym = self.tdl.symbolTable.getFunc(nam)
-                if sym is None:
-                    lout =" cannot find function %s " % nam
-                else:
-                    lout = "%s:  %s\n" % (sym.name, sym)
-                    for i in sym.desc.split('\n'): lout = "%s    %s\n" %(lout,i)
+        lout = []
+        fcns = self.tdl.symbolTable.listFunctions()
+        grps  = fcns.keys()
+        if len(args)>0:
+            g = []
+            for i in args:
+                if i in grps: g.append(i)
+            grps = g
+        grps.sort()
+        for g in grps:
+            flist = fcns[g]
+            if len(flist) > 0:
+                fout = [f[0] for f in flist]
+                lout.append("== Functions in '%s'\n" % (g))
+                lout.append("  %s\n" % (show_list(fout)))
+        lout = "".join(lout)
         show_more(lout,writer=self.output)
 
+
+    def show_functions(self,args=None,skip=None):
+        " print list of groups"
+        x = self.tdl.symbolTable.listFunctions()
+        
+        if skip is None:  skip = []
+        lout = []
+        def showGroup(x,prefix='',indent=-1):
+            px = '%s %s' % (' '*2*indent,prefix)
+            for k,v in x.items():
+                nam = "%s%s" % (px,k)
+                lout.append(" %s:\n" % nam)
+                if len(v)>0:
+                    showGroup(v, prefix="%s." % (nam) , indent=indent+1)
+        showGroup(x,prefix='',indent=0)
+        show_more(lout,writer=self.output)
+        
+
     def show_variable(self,args):
-        lout = ''
+        lout = []
         if len(args)==0:
             f = self.tdl.symbolTable.listData()
-            grps = f.keys()
-            grps.sort()
-            for grp in grps:
-                lout = "%s\n==Variables in '%s'\b" % (lout,grp)
-                lout = "%s\n%s\n" % (lout,show_list(f[grp]))
+            g,flist = f.keys()
+            g.sort()
+            for grp in g:
+                lout.append("==Variables in '%s'\b" % (grp))
+                lout.append("%s\n" % (show_list(flist)))
         else:
             for nam in args:
                 sym = self.tdl.symbolTable.getVariable(nam)
@@ -549,35 +568,48 @@ class Help:
                     # for i in sym.desc.split('\n'): lout = "%s    %s\n" %(lout,i)
         show_more(lout,writer=self.output)
 
-    def show_groups(self,args=None):
+    def show_groups(self,args=None,skip=None):
         " print list of groups"
-        l = self.tdl.symbolTable.listGroups()
-        form = "\n   Default Data group = %s\n   Default Func group = %s\n"
-        print form % (self.tdl.symbolTable.dataGroup,self.tdl.symbolTable.funcGroup)
-        print "   ==Currently defined groups: "
-        show_more(show_list(l,ncol=4),writer=self.output,prefix='   ')
+        x = self.tdl.symbolTable.listGroups()
+        if skip is None:  skip = []
+        lout = []
+        def showGroup(x,prefix='',indent=-1):
+            px = '%s %s' % (' '*2*indent,prefix)
+            for k,v in x.items():
+                nam = "%s%s" % (px,k)
+                lout.append(" %s:\n" % nam)
+                if len(v)>0:
+                    showGroup(v, prefix="%s." % (nam) , indent=indent+1)
+        showGroup(x,prefix='',indent=0)
+        show_more(lout,writer=self.output)
+        
+#         print form % (self.tdl.symbolTable.dataGroup,self.tdl.symbolTable.funcGroup)
+#         print "   ==Currently defined groups: "
+#         show_more(show_list(l,ncol=4),writer=self.output,prefix='   ')
 
     def show_group(self,grp):
         " list all contents of a group "
         l = self.tdl.symbolTable.listGroups()
-        lout = ''
-        if grp in l:
-            fcns = self.tdl.symbolTable.listFunc()[grp]
-            data = self.tdl.symbolTable.listData()[grp]
-            if len(fcns)>0:
-                lout = "%s\n==Functions in '%s'\b" % (lout,grp)
-                lout = "%s\n%s" % (lout,show_list(fcns,ncol=4))
-            else:
-                lout = "%s\n==No Functions in '%s'\b" % (lout,grp)
-            if len(data)>0:
-                lout = "%s\n\n==Variables in '%s'\b" % (lout,grp)
-                lout = "%s\n%s" % (lout,show_list(data,ncol=4))
-            else:
-                lout = "%s\n\n==No Variables in '%s'\b" % (lout,grp)
-            show_more(lout,writer=self.output)
-            print ""
-        else:
-            print " No group %s.  Try 'show groups'" % grp
+        print 'show group ', grp
+#         
+#         lout = ''
+#         if grp in l:
+#             fcns = self.tdl.symbolTable.listFunc()[grp]
+#             data = self.tdl.symbolTable.listData()[grp]
+#             if len(fcns)>0:
+#                 lout = "%s\n==Functions in '%s'\b" % (lout,grp)
+#                 lout = "%s\n%s" % (lout,show_list(fcns,ncol=4))
+#             else:
+#                 lout = "%s\n==No Functions in '%s'\b" % (lout,grp)
+#             if len(data)>0:
+#                 lout = "%s\n\n==Variables in '%s'\b" % (lout,grp)
+#                 lout = "%s\n%s" % (lout,show_list(data,ncol=4))
+#             else:
+#                 lout = "%s\n\n==No Variables in '%s'\b" % (lout,grp)
+#             show_more(lout,writer=self.output)
+#             print ""
+#         else:
+#             print " No group %s.  Try 'show groups'" % grp
     
     def show(self,argin):
         args = argin.strip().split()

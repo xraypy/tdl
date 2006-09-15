@@ -40,7 +40,7 @@ from copy import deepcopy
 
 from Num import Num
 from Util import find_unquoted_char, split_delim, datalen, set_path
-from Util import PrintExceptErr, PrintShortExcept, SymbolError, ConstantError
+from Util import PrintExceptErr, SymbolError, ConstantError
 from string import ascii_lowercase, digits
 
 __version__  = '0.3'
@@ -72,16 +72,17 @@ class symGroup(dict):
         self.status   = status
         self.toplevel = toplevel
         self.setname(name)
-
+        # self.value    = self
+        
     def setname(self,name=None):
         if name is not None: self.name     = name
-        self.value    = "<symGroup %s status=%s, id=%s>" % (self.name,
-                                                            self.status,
-                                                            hex(id(self)))
+
     def __repr__(self):
         self.setname(self.name)
-        return self.value
-        
+        return "<symGroup %s status=%s, id=%s>" % (self.name,
+                                                   self.status,
+                                                   hex(id(self)))
+
     def addGroup(self,name,filename=None,status=None,toplevel=False):
         if self.status=='frozen' and not self.has_key(name):
             raise SymbolError, ' group %s is frozen, and cannot be extended.' % self.name
@@ -295,7 +296,6 @@ class SymbolTable:
             if gn is None:
                 raise SymbolError, 'cannot find group "%s" in "%s"' % (names[0],grp.name)
             if type(gn) != symGroup:
-                print gn, type(gn)
                 raise SymbolError, 'symbol "%s.%s" is not a group' % (grp.name, names[0])
             grp = gn
             names = names[1:]
@@ -393,13 +393,15 @@ class SymbolTable:
             s = g[n]
         else:
             s = self.getSymbol(sname)
-        # print 'gslp ' , s  
         if type(s) == symGroup: s = self.addSymbol(sname)
         return s
 
     def moveGroup(self, name, group):
         """ move an existing symGroup in the SymbolTable"""
-        if self.data.has_key(group.name): group = self.data.pop(group.name)
+        # print ' This is move group ', name , group
+        if self.data.has_key(group.name):
+            if group.status == 'delete': 
+                group = self.data.pop(group.name)
         owner,nam = self.__findName(name)
         fullname = "%s.%s" % (owner.name, nam)
         group.status = 'normal'
@@ -416,6 +418,7 @@ class SymbolTable:
         TODO: add toplevel / complex name??
                 addGroup('_sys.newgroup')  works already
         """
+        # print 'This is addGroup ', name , toplevel, status
         g = self.moveGroup(name,self.addTempGroup(toplevel=toplevel))
         g.status = status
         g.setname()
@@ -530,6 +533,7 @@ class SymbolTable:
     
     def delGroup(self,name):
         names,rest = self.resolveName(name)
+
         if rest != []:
             raise SymbolError, 'cannot delete group %s' % name
         
@@ -537,10 +541,10 @@ class SymbolTable:
         for i in names[1:]:
             parent,child = parent[child],i
             if type(parent[child]) != symGroup:
-                raise SymbolError, 'cannot delete group %s' % name
+                raise SymbolError, 'cannot delete group %s (not group)' % name
 
         if parent[child].status == 'nodelete':
-            raise SymbolError, 'cannot delete group %s' % name            
+            raise SymbolError, 'cannot delete group %s  (nodelete)' % name            
 
         parent.pop(child)
         return
@@ -560,6 +564,9 @@ class SymbolTable:
         return
 
     def delSymbol(self,name):
+        # print 'delete Symbol ', name, type(name)
+        if type(name) != types.StringType:
+            raise SymbolError, 'cannot delete symbol: "%s". Must give variable name!' % name
         names,rest = self.resolveName(name)
         if rest != []:
             raise SymbolError, 'cannot delete symbol: "%s" -- python attribute??' % name
@@ -637,7 +644,7 @@ class SymbolTable:
                 msg = '    Error loading module %s:' % lib
         if mod is None:
             self.writer.write("    cannot load module %s !" % lib)
-            if msg is not None: PrintShortExcept(msg)
+            if msg is not None: self.tdl.ShowError(msg, showtraceback=False)
             return None
 
         # mod is now a real module, not a string of the module name
@@ -672,9 +679,9 @@ class SymbolTable:
                         if os.path.exists(file_name) and os.path.isfile(file_name):
                             self.tdl.load_file(file_name)
                         else:
-                            print "Warning: Cannot find lib script file: %s" % file_name
+                            self.writer("Warning: Cannot find lib script file: %s\n" % file_name)
                     except:
-                        PrintExceptErr("Error loading script file '%s'"  % file_name)
+                        self.tdl.ShowError(msg="Error loading script file '%s'"  % file_name)
             if hasattr(mod,'_help_'):
                 for nam,val in getattr(mod,'_help_',{}).items():
                     self.tdl.help.add_topic(nam,val)
@@ -718,7 +725,7 @@ class SymbolTable:
         return grp
     
     def showTable(self,skip=None):
-        print '======================'
+        # print '======================'
         if skip is None:  skip = []
         def showGroup(x,prefix=None,indent=-1):
             px = '%s %s' % (' '*2*indent,prefix)
@@ -726,26 +733,40 @@ class SymbolTable:
                 if i not in skip:
                     s = i
                     if prefix is not None: s = "%s.%s" % (px,i)
-                    print  s, ' ',  x[i].value
+             
                     if type(x[i]) is symGroup:
+                        print "%s  %s" % (s,x[i])
                         showGroup(x[i], prefix=s,indent=indent+1)
-
+                    else:
+                        print s, ' ',  x[i].value
         showGroup(self.data,prefix=None,indent=0)
+
+    def listFunctions(self):
+        """collect full list of functions"""
+        ret = {}
+        def gather(x):
+            dat = []
+            for k,v in x.items():
+                if type(v) is symGroup:
+                    gather(v)
+                elif isinstance(v,Symbol):
+                    if v.type in (symTypes.pyfunc,symTypes.defpro):
+                        dat.append((k, v))
+            ret[x.name] = dat
+        gather(self.data)
+        return ret
 
     def listGroups(self):
         """collect full list of symbol groups """
-        ret = []
-        def showGroup(x,prefix=None):
-            px = prefix
-            if prefix is not None:
-                ret.append(px)
-            for i in x.keys():
-                s = i
-                if prefix is not None: s = "%s.%s" % (px,i)
-                if type(x[i]) is symGroup:
-                    showGroup(x[i], prefix=s)
-        showGroup(self.data,prefix=None)
-        return ret
+        def gather(x,prefix=''):
+            ps = "%s" % prefix
+            dat = {}
+            for k,v in x.items():
+                s = "%s.%s" % (prefix,k)
+                if type(v) is symGroup:
+                    dat[k] = gather(v,prefix=s)
+            return dat 
+        return gather(self.data)
 
 
     def saveTable(self,file):

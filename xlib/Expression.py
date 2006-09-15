@@ -23,8 +23,8 @@ from pyparsing import Word, Combine, Optional, Literal, CaselessLiteral
 from pyparsing import OneOrMore, ZeroOrMore, Forward, Or
 from pyparsing import QuotedString, StringEnd
 
-from Util import trimstring, list2array, int2bin
-from Util import ParseException, EvalException
+from Util import trimstring, list2array
+from Util import ParseError, EvalError
 from Symbol import SymbolTable, symTypes,Symbol
 
 __version__ = '0.3.4'
@@ -220,8 +220,8 @@ class ExpressionParser:
         s = s.strip()
         try:
             self.expr.parseString(s)
-        except (ParseException,pyparsing.ParseException):
-            raise ParseException, s
+        except (ParseError,pyparsing.ParseException):
+            raise ParseError, s
         # reversing the stack is the default...
         # set reverse=True to NOT reverse the stack
         if not reverse: self.exprStack.reverse()
@@ -266,7 +266,7 @@ class ExpressionParser:
         if xtok != opcodes.slice:
             msg = "syntax error: %s.  " % s
             msg = "%s\n   bad slice syntax " % (msg)
-            raise ParseException, msg
+            raise ParseError, msg
         self.exprStack.append(opcodes.slice3)
 
     def pushColon(self, s, loc, toks ):
@@ -276,7 +276,7 @@ class ExpressionParser:
         if len(toks)>0 and len(toks[0]) > 0:
             msg = "syntax error: %s.  " % s
             msg = "%s\n   unrecognized tokens: %s" % (msg,toks[0])
-            raise ParseException, msg
+            raise ParseError, msg
 
     def pushSymbol(self, s, loc, toks ):
         """ push symbols for variable and function names:
@@ -452,7 +452,7 @@ class Expression:
 
     def raise_error(self,msg):
         if len(self.text)>0: msg =  "%s at line:\n  '%s'" % (msg,self.text)
-        raise EvalException, msg
+        raise EvalError, msg
 
     def get_symbol(self,symbol,vtype='variable',expr=''):
         if expr != '': self.text = expr

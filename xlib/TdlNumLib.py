@@ -12,7 +12,7 @@ from Num import Num, num_version
 import os
 import sys
 import types
-from Util import datalen, EvalException
+from Util import datalen
 
 title = "numeric functions"
 
