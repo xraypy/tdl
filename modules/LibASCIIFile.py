@@ -5,15 +5,14 @@
 import os
 import sys
 import types
-from Util import datalen
+from Util import datalen, verify_tdl
 import ASCIIFile.ASCIIFile as ASCIIFile
 
 ##
-def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
+def tdl_read_ascii(fname, tdl=None,debug=False, **kw):
     " read ascii file of tdl code"
-    if tdl == None:
-        if debug: print 'cannot read file %s ' % fname
-        return None
+    verify_tdl(tdl,'read_ascii')
+
     if debug: print 'reading.... ', fname
     if not os.path.exists(fname):
         print 'read_ascii: cannot find file %s ' % fname
@@ -23,23 +22,18 @@ def tdl_read_ascii(fname, group=None, tdl=None,debug=False, **kw):
     except:
         print 'read_ascii: error reading file %s ' % fname        
         return None
-    # save current group name
-    savegroup = tdl.symbolTable.getDataGroup()
-    if group == None:
-        group = savegroup
-    else:
-        group = tdl.symbolTable.setDataGroup(group)
+
+    group = tdl.symbolTable.addTempGroup(toplevel=True,**kw)
+    gname = group.name
+    def setvar(name,value):
+        tdl.symbolTable.setVariable("%s.%s" % (gname,name), value)
         
-    tdl.symbolTable.setVariable('titles', f.get_titles(), group=group)
-    tdl.symbolTable.setVariable('column_labels', f.labels, group=group)        
-    ret = [group]
-    for i in f.labels:
-        ret.append(i)
-        tdl.symbolTable.setVariable(i, f.get_array(i), group=group)
+    setvar('titles', f.get_titles())
+    setvar('column_labels', f.labels)
+
+    for i in f.labels: setvar(i, f.get_array(i))
     if debug: print 'read done.'
-    # return default group to original
-    tdl.symbolTable.setDataGroup(savegroup)
-    return ret
+    return group
 #
 def tdl_write_ascii(fname,  *arr,**kw):
     " write ascii file of tdl code -- could be a lot better! "

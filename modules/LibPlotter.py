@@ -47,7 +47,7 @@ class Plotter_TkAgg:
     def onExit(self,event=None):
         self.plotter.destroy()
         self.plotter = self.root = None
-        self.symtable.deleteSymbol(_plotter,override=True)
+        self.symtable.delSymbol(_plotter,override=True)
 
 
     def setPlotOptions(self):
