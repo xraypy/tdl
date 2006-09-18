@@ -52,6 +52,7 @@ import time
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
 from Util import set_path,  verify_tdl
+from Symbol import isGroup, isSymbol
 
 title = "builtin library functions"
 
@@ -351,6 +352,9 @@ def _type(x):
                  Num.ArrayType:'array'}
     
     if t in typecodes.keys(): return typecodes[t]
+    if isGroup(x): return 'group'
+    if isSymbol(x): return x.type
+
     return 'object'
 
 def tdl_path(pth=None,recurse=False,tdl=None,**kw):

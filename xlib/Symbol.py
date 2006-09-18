@@ -66,7 +66,7 @@ class symTypes:
 class symGroup(dict):
     """ variable group
     """
-    type = 'group'
+    type = symTypes.group
     def __init__(self,name=None,filename=None,toplevel=False,status='normal'):
         self.filename = filename
         self.status   = status
@@ -109,6 +109,7 @@ class symGroup(dict):
     def delSymbol(self,name):
         if self.has_key(name) and isinstance(self[name],Symbol):
             self.pop(name)
+
 
 class Symbol:
     """
@@ -528,7 +529,6 @@ class SymbolTable:
             parent,child = parent[child],i
             if type(parent[child]) != symGroup:
                 raise SymbolError, 'cannot get group %s' % name
-
         return (parent,child)
     
     def delGroup(self,name):
@@ -724,49 +724,39 @@ class SymbolTable:
         grp.setname(gname)
         return grp
     
-    def showTable(self,skip=None):
-        # print '======================'
-        if skip is None:  skip = []
-        def showGroup(x,prefix=None,indent=-1):
-            px = '%s %s' % (' '*2*indent,prefix)
-            for i in x.keys():
-                if i not in skip:
-                    s = i
-                    if prefix is not None: s = "%s.%s" % (px,i)
-             
-                    if type(x[i]) is symGroup:
-                        print "%s  %s" % (s,x[i])
-                        showGroup(x[i], prefix=s,indent=indent+1)
-                    else:
-                        print s, ' ',  x[i].value
-        showGroup(self.data,prefix=None,indent=0)
+    def __gather(self,x,ret,name=None,mylist=None):
+        dat = []
+        for k,v in x.items():
+            if isinstance(v,Symbol):
+                if v.type in mylist: dat.append((k, v))
+            if type(v) is symGroup:
+                self.__gather(v,ret,name=k,mylist=mylist)
+        if name is None:  name = x.name
+        ret[name] = dat
 
+        
+    def listAll(self,start=None):
+        ret = {}
+        if start==None: start = self.data
+        self.__gather(start,ret,name=None,mylist=symTypes.All)
+        return ret
+        
     def listFunctions(self):
         """collect full list of functions"""
         ret = {}
-        def gather(x):
-            dat = []
-            for k,v in x.items():
-                if type(v) is symGroup:
-                    gather(v)
-                elif isinstance(v,Symbol):
-                    if v.type in (symTypes.pyfunc,symTypes.defpro):
-                        dat.append((k, v))
-            ret[x.name] = dat
-        gather(self.data)
+        self.__gather(self.data,ret,name=None,mylist=symTypes.Funcs)
+        return ret
+
+    def listVariables(self):
+        print 'list Variables '
+        ret = {}
+        self.__gather(self.data,ret,name=None,mylist=symTypes.Data)        
         return ret
 
     def listGroups(self):
-        """collect full list of symbol groups """
-        def gather(x,prefix=''):
-            ps = "%s" % prefix
-            dat = {}
-            for k,v in x.items():
-                s = "%s.%s" % (prefix,k)
-                if type(v) is symGroup:
-                    dat[k] = gather(v,prefix=s)
-            return dat 
-        return gather(self.data)
+        ret = {}
+        self.__gather(self.data,ret,name=None,mylist=symTypes.group)
+        return ret
 
 
     def saveTable(self,file):
@@ -786,3 +776,12 @@ class SymbolTable:
             self.addVariable("%s.%s" % (g,n),value=deepcopy(sym.value),
                              type=sym.type,constant=sym.constant)
             
+
+def isGroup(x):
+    if type(x) == symGroup: return True
+    try:
+        return x.type == symTypes.group
+    except:
+        return False
+
+def isSymbol(x): return isinstance(x,Symbol)
