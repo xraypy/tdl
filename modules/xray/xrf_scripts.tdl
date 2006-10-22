@@ -22,9 +22,9 @@ def xrf.plot(xrf,channel=False,hold=False):
     for j in int(range(ndet)):
         if sum(dat[j]) > 0:
             if first==True and hold==False:
-                newplot e[j],dat[j]
+                newplot(e[j],dat[j])
             else
-                plot e[j],dat[j]
+                plot(e[j],dat[j])
             endif
             first = False
         else:

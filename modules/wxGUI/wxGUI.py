@@ -27,7 +27,12 @@ sys_vars = {}
 
 class wxGUI(model.Background):
 
+
     def on_initialize(self, event):
+
+        # including sizer setup, do it here
+        self.setupSizers()
+
         print "initialize"
         self.indent = 0
         self.prompt = 'tdl>'
@@ -57,6 +62,8 @@ class wxGUI(model.Background):
         time.sleep(.5)
         self.close()
         sys.exit()
+
+
 
     ################################################
     def run_tdl(self,fname=''):
@@ -200,6 +207,43 @@ class wxGUI(model.Background):
 
         else:
             event.skip()
+
+
+####
+    def setupSizers( self ):
+        comp = self.components
+        # Create base sizers
+        base_sizer = wx.BoxSizer( wx.VERTICAL )
+        base_sizer_V = wx.BoxSizer( wx.VERTICAL )
+
+        # here are the sizers for the shell and sep bar
+        # note 80:1 ratio of vertical dims
+        shell_sizer_V = wx.BoxSizer(wx.VERTICAL)
+        shell_sizer_V.Add( comp.ShellText, 80, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+        shell_sizer_V.Add( comp.Sep1, 1, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+        
+        # here make horz sizer for prompt and cmd line
+        cmd_sizer_H = wx.BoxSizer( wx.HORIZONTAL )
+        cmd_sizer_H.Add( comp.Prompt, 1, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+        cmd_sizer_H.Add( comp.ShellCmd, 20, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+        
+        # Now add both of these to the base vert sizer
+        base_sizer_V.Add(shell_sizer_V,50, wx.ALL | wx.EXPAND,0 )
+        base_sizer_V.Add(cmd_sizer_H, 2, wx.ALL | wx.EXPAND,0)
+
+        # Now add this to the base sizer        
+        base_sizer.Add(base_sizer_V, 50, wx.ALL | wx.EXPAND ,5)
+
+        # Magic
+        base_sizer.Fit( self )
+        base_sizer.SetSizeHints( self )
+        self.panel.SetSizer( base_sizer )
+        self.panel.SetAutoLayout( 1 )
+        self.panel.Layout()
+        self.visible = True
+
+####
+
 
 ################################################################
 if __name__ == '__main__':

@@ -31,6 +31,13 @@
 # fits etc should work on individual detectors or all of them at once
 #
 #
+# -> mca_inc_array = [1,2,3,-4,5,6,7,-9]
+# -> can use bad = [1,2]
+# -> mca_inc_array = [1,2,3,-4,5,6,7,-9]
+#
+# -> put plot cmd in here and add all fancy options....
+#
+#
 #################################################################################################
 HelpXRF = """
 
@@ -141,14 +148,16 @@ def xrf_read(file=None,detectors=[],total=True,align=True,tau=None,tdl=None,**kw
 
 def xrf_read_cmd(val,file=None,tdl=None,**kws):
     """use command syntax, put ret into xrf.file"""
-    name = val.name
-    if '.' in name: name = name.split('.',1)[0]
-    name = 'xrf.%s' % name
+    name = val.med.name
+    if '.' in name:
+        #name = name.split('.',1)[0]
+        name = name.replace('.','_')
+    name = 'xrf_data.%s' % name
     tdl.setVariable(name,val=val)
     return
 
 #############################################################################
-def xrf_set_data(xrf,detectors=None,total=None,align=None,tau=None):
+def xrf_set_data(xrf,detectors=[],total=None,align=None,tau=None):
     """
     Reset detectors used for xrf analysis
     >>xrf.set_data(xrf,detectors=[],total=False,align=True,tau=[])
@@ -785,6 +794,28 @@ def xrf_get_rois(xrf,detectors=[],total=False,net=False):
 
     return ret
 
+def xrf_get_rois_cmd(val,**kws):
+    for j in range(len(val)):
+        print "detector %i:" % j
+        print val[j]
+    return
+
+def xrf_show_rois(xrf):
+    """Show detector counts/rois
+    >>xrf.totals(xrf)
+
+    Inputs:
+        xrf:
+            An instance of the xrf class. See xrf.read
+
+    Output:
+        A list of dictionaries.  Each entry in the list corresponds to a detector mca.
+        The dictionary contains entries for real time (rt), live time (lt), output count rate (OCR)
+        and input count rate (icr).  
+
+    """
+    print xrf.show_rois()
+
 ##########################################################################
 def xrf_set_roi(med,label,lrn=[],detectors=[],units='keV'):
     """Set the roi values for a detector
@@ -861,21 +892,6 @@ def xrf_set_roi(med,label,lrn=[],detectors=[],units='keV'):
 
     return
 
-def xrf_show_rois(xrf):
-    """Show detector counts/rois
-    >>xrf.totals(xrf)
-
-    Inputs:
-        xrf:
-            An instance of the xrf class. See xrf.read
-
-    Output:
-        A list of dictionaries.  Each entry in the list corresponds to a detector mca.
-        The dictionary contains entries for real time (rt), live time (lt), output count rate (OCR)
-        and input count rate (icr).  
-
-    """
-    print xrf.show_rois()
 
 def xrf_get_count_totals(xrf):
     """Get detector count totals
@@ -887,17 +903,14 @@ def xrf_get_count_totals(xrf):
     """
     return xrf.get_count_totals()
 
-def xrf_get_count_totals_cmd(val):
+def xrf_get_count_totals_cmd(val,**kws):
     lout = ''
-    print 'Total number of detectors in file = ', len(val)
+    print 'Number of MCAs = ', len(val)
     for j in range(len(val)):
-        lout = lout + "detector %3d, rt= %f,  lt= %f,  OCR= %6.0f,  ICR= %6.0f\n" % (j,
-                                                                                val[j]['rt'],
-                                                                                val[j]['lt'],
-                                                                                val[j]['OCR'],
-                                                                                val[j]['ICR'])
+        lout = lout + "MCA %3d, rt= %f,  lt= %f,  OCR= %6.0f,  ICR= %6.0f\n" % \
+                      (j,val[j]['rt'],val[j]['lt'],val[j]['OCR'],val[j]['ICR'])
     print lout
-    return
+    return 
 
 ##################################################################################
 
@@ -916,9 +929,9 @@ _func_ = {"xrf.read":(xrf_read,xrf_read_cmd),
           "xrf.calc_peaks":xrf_calc_peaks,
           "xrf.get_peaks":xrf_get_peaks,
           "xrf.data_dict":xrf_data_dict,
-          "xrf.get_rois":xrf_get_rois,
-          "xrf.set_roi":xrf_set_roi,
+          "xrf.rois":(xrf_get_rois,xrf_get_rois_cmd),
           "xrf.show_rois":xrf_show_rois,
+          "xrf.set_roi":xrf_set_roi,
           "xrf.totals":(xrf_get_count_totals,xrf_get_count_totals_cmd)}
 
 _scripts_ = ['xrf_scripts.tdl']
