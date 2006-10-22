@@ -24,23 +24,23 @@ import xrf_lookup
 XRF GUI
 """
 
-DataPar= {'grp':None,'node':None,'total':True,'align':True,
-          'scan':False,'sc_start':0,'sc_stop':0,'sc_inc':1,'sc_step':0,
-          'mcas':[],'mca_taus':[],'emin':0.0,'emax':0.0}
+DataPar= {'grp':'None','node':'None','total':'True','align':'True',
+          'scan':'False','sc_start':'0','sc_stop':'0','sc_inc':'1','sc_step':'0',
+          'mcas':'[]','mca_taus':'[]','emin':'0.0','emax':'0.0'}
 
 PlotPar= {'plt_data':True,'plt_fit':False,'plt_auto_update':False,
           'plt_hold':False,'plt_components':False,
           'plt_xlog':False,'plt_ylog':False,'plt_yerr':False}
 
-BgrParams={'do_bgr':True,'exponent':2.0,'topwidth':0.0,
-           'bottomwidth':4.0,'tangent':0,'compress':4}
+BgrParams={'det':'0','do_bgr':'True','exponent':'2.0','topwidth':'0.0',
+           'bottomwidth':'4.0','tangent':'0','compress':'4'}
 
-PeakParams= {'label':None,'energy':None,'amplitude':0.0,
-             'fwhm':0.0,'en_flag':0,'fwhm_flag':0,
-             'amp_factor':0.0,'ignore':False,'area':0.0}
+PeakParams= {'det':'0','label':'','energy':'','amplitude':'0.0',
+             'fwhm':'0.0','en_flag':'0','fwhm_flag':'0',
+             'amp_factor':'0.0','ignore':'0','area':'0.0'}
 
-FitArgs= {'fit_fwhm_flag':0,'fit_en_flag':0,'chi_exp':0,
-          'init_sc_idx':0,'use_prev':False}
+FitArgs= {'fit_fwhm_flag':'0','fit_en_flag':'0','chi_exp':'0',
+          'init_sc_idx':'0','use_prev':'False'}
 
 #self.fit_par = {'bgr_pars':[],'peak_pars':[],'fit_args':[]}
 #self.params={'data_par':{},'plot_par':{},'fit_pars':{}}
@@ -72,6 +72,7 @@ class wxXRF(model.Background):
         self.fit_args = FitArgs
         self.xrf=None
         self.components.PkParams._autoresize = 0
+        self.components.BgrParams._autoresize = 0
 
     def init_tdl(self,shell=None):
         # self.shell = shell
@@ -102,14 +103,17 @@ class wxXRF(model.Background):
             tau = str(m.med.tau)
             self.components.TauList.text = tau
             # update det select for fitting
-            det_idx_str = ['All']
-            for idx in m.detectors: det_idx_str.append(str(idx))
+            det_idx_str = []
+            if self.components.Total.checked:
+                det_idx_str.append('0')
+            else:
+                for idx in m.detectors: det_idx_str.append(str(idx))
             det_sel = self.components.DetSelect.stringSelection
             self.components.DetSelect.items = det_idx_str
             if det_sel in det_idx_str:
                 self.components.DetSelect.stringSelection = det_sel
             else:
-                self.components.DetSelect.stringSelection = 'All'
+                self.components.DetSelect.stringSelection = '0'
         except:
             self.components.NumMcas.text = "Variable is not an XRF data type"
             self.components.McaList.text = '[]'
@@ -278,7 +282,7 @@ class wxXRF(model.Background):
     #------------------
     # Energy Range - button
     #------------------
-    def on_EnRange_mouseClick(self):
+    def on_EnRange_mouseClick(self,event):
         """ Select energy Range from plot"""
         self.plot_cmd()
         # select Emin/Emax
@@ -290,7 +294,6 @@ class wxXRF(model.Background):
     #------------------
     def on_Plot_mouseClick(self,event):
         "make a plot"
-        self.set_data_cmd()
         self.plot_cmd()
         return
 
@@ -317,15 +320,14 @@ class wxXRF(model.Background):
             en = str(en)
         else:
             en = ''
-        self.components.PkLbl.text = line
-        self.components.PkEn.text = en
-
+        self.components.PkLbl.text       = line
+        self.components.PkEn.text        = en
         self.components.PkAmp.text       = '0'
         self.components.PkFWHM.text      = '0'
         self.components.PkEnFlag.text    = '0'
         self.components.PkFwhmFlag.text  = '0'
         self.components.PkAmpFactor.text = '0'
-        self.components.PkIgnore.clicked = False
+        self.components.PkIgnore.checked = False
         return
 
     #------------------
@@ -333,45 +335,33 @@ class wxXRF(model.Background):
     #------------------
     def on_XrfLineAdd_mouseClick(self,event):
         "add an xrf line"
-        # gather all the info
-        det = self.components.DetSelect.stringSelection
-        lbl = self.components.PkLbl.text.strip()
-        if len(lbl) < 1: return
-        en  = self.components.PkEn.text.strip()
-        amp = self.components.PkAmp.text.strip()  
-        fwhm = self.components.PkFWHM.text.strip() 
-        enfl = self.components.PkEnFlag.text.strip() 
-        fwfl = self.components.PkFwhmFlag.text.strip() 
-        ampfac = self.components.PkAmpFactor.text.strip()
-        if self.components.PkIgnore.clicked == False:
-            ignore = '0'
-        elif self.components.PkIgnore.clicked == True:
-            ignore = '1'
-
+        # get peak params from fields
+        pk_params = self.get_PkPar_fields()
+        if pk_params == None: return
+        
         # grab the PkParam list  
         list = self.components.PkParams.items
-        print list
+
         if len(list) == 0:
-            list.append([det,lbl,en,amp,fwhm,enfl,fwfl,ampfac,ignore,'0'])
+            list.append(pk_params)
             sel = 0
         else:
             found = False
             for j in range(len(list)):
-                if list[j][0] == det and list[j][1] == lbl:
-                    list[j] = [det,lbl,en,amp,fwhm,enfl,fwfl,ampfac,ignore,'0']
+                if list[j][0] == pk_params[0] and list[j][1] == pk_params[1]:
+                    list[j] = pk_params
                     found = True
                     sel = j
                     break
             if found == False:
-                list.append([det,lbl,en,amp,fwhm,enfl,fwfl,ampfac,ignore,'0'])
+                list.append(pk_params)
                 sel = last = len(list)-1
         self.components.PkParams.items = list
-
+        
         # this should invoke the on_PkParams_select event
         self.components.PkParams.SetSelection(sel)
 
         return
-
 
     #------------------
     # XrfLineDel - button
@@ -393,7 +383,6 @@ class wxXRF(model.Background):
         self.components.PkParams.SetSelection(0)
 
         return
-        
 
     #------------------
     # Peak params select
@@ -401,21 +390,8 @@ class wxXRF(model.Background):
     def on_PkParams_select(self,event):
         #print self.components.PkParams.items
         selected =  self.components.PkParams.getStringSelection()
-        ed = selected[0]
-        #print '\nselcted', selected
-        #print '\ned', selected[0]
-        self.components.DetSelect.stringSelection = ed[0]
-        self.components.PkLbl.text                = ed[1]
-        self.components.PkEn.text                 = ed[2]
-        self.components.PkAmp.text                = ed[3]
-        self.components.PkFWHM.text               = ed[4]
-        self.components.PkEnFlag.text             = ed[5]
-        self.components.PkFwhmFlag.text           = ed[6]
-        self.components.PkAmpFactor.text          = ed[7]
-        if ed[8] == '0':
-            self.components.PkIgnore.clicked = False
-        elif ed[8] == '1':
-            self.components.PkIgnore.clicked = True
+        pk_params = selected[0]
+        self.put_PkPar_fields(pk_params)
         return
 
     ## Note we also need the parameters in PkParams list to
@@ -423,8 +399,87 @@ class wxXRF(model.Background):
     ## or mouseclick on sliders / ignore box...
     ## at the moment need to click add to update...
 
-    ## Also note need to make some of above into functions so can re-use code
-    
+    #------------------
+    # Bgr params select
+    #------------------
+    def on_BgrCheck_mouseClick(self,event):
+        if self.components.BgrCheck.checked == True:
+            self.components.BgrExp.editable = True
+            self.components.BgrExp.backgroundColor = (255, 255, 255)
+            self.components.BgrTopWdth.editable = True
+            self.components.BgrTopWdth.backgroundColor = (255, 255, 255)
+            self.components.BgrBtmWdth.editable = True
+            self.components.BgrBtmWdth.backgroundColor = (255, 255, 255)
+            self.components.BgrTangent.editable = True
+            self.components.BgrTangent.backgroundColor = (255, 255, 255)
+            self.components.BgrCompress.editable = True
+            self.components.BgrCompress.backgroundColor = (255, 255, 255)
+            self.components.BgrDefault.enabled = True
+        else:
+            self.components.BgrExp.editable = False
+            self.components.BgrExp.backgroundColor = (192, 192, 192)
+            self.components.BgrTopWdth.editable = False
+            self.components.BgrTopWdth.backgroundColor = (192, 192, 192)
+            self.components.BgrBtmWdth.editable = False
+            self.components.BgrBtmWdth.backgroundColor = (192, 192, 192)
+            self.components.BgrTangent.editable = False
+            self.components.BgrTangent.backgroundColor = (192, 192, 192)
+            self.components.BgrCompress.editable = False
+            self.components.BgrCompress.backgroundColor = (192, 192, 192)
+            self.components.BgrDefault.enabled = False
+        return
+
+    def on_BgrDefault_mouseClick(self,event):
+        self.components.BgrExp.text = '2.0'
+        self.components.BgrTopWdth.text = '0.0'
+        self.components.BgrBtmWdth.text = '4.0'
+        self.components.BgrTangent.text = '0'
+        self.components.BgrCompress.text = '4'
+        return
+
+    #------------------
+    # BgrParamsAdd - button
+    #------------------
+    def on_AddBgr_mouseClick(self,event):
+        "add bgr params"
+        # get bgr params from fields
+        bgr_params = self.get_BgrPar_fields()
+        if bgr_params == None: return
+        
+        # grab the BgrParam list  
+        list = self.components.BgrParams.items
+
+        if len(list) == 0:
+            list.append(bgr_params)
+            sel = 0
+        else:
+            found = False
+            for j in range(len(list)):
+                if list[j][0] == bgr_params[0] :
+                    list[j] = bgr_params
+                    found = True
+                    sel = j
+                    break
+            if found == False:
+                list.append(bgr_params)
+                sel = last = len(list)-1
+        self.components.BgrParams.items = list
+        
+        # this should invoke the on_PkParams_select event
+        self.components.BgrParams.SetSelection(sel)
+
+        return
+
+    #------------------
+    # Bgr params select
+    #------------------
+    def on_BgrParams_select(self,event):
+        #print self.components.PkParams.items
+        selected =  self.components.BgrParams.getStringSelection()
+        bgr_params = selected[0]
+        self.put_BgrPar_fields(bgr_params)
+        return
+
     ###########################################################
     # Data parameters, cmd wrappers, etc.
     ###########################################################
@@ -529,6 +584,7 @@ class wxXRF(model.Background):
 
     def data_par_display(self):
         """ Update components from self.data_par"""
+        # update from the xrf obj 
         pass
 
     #------------------
@@ -536,7 +592,8 @@ class wxXRF(model.Background):
     #------------------
     def plot_cmd(self):
         "run xrf.plot cmd"
-        # update plot params
+        # update data and plot params
+        self.set_data_cmd()
         self.plot_par_update()
         # build cmd
         xrf   = "%s.%s" % (self.data_par['grp'],self.data_par['node'])
@@ -555,21 +612,52 @@ class wxXRF(model.Background):
         pass
 
     #------------------
-    # Fit pars
+    # Peak pars
     #------------------
+    def get_PkPar_fields(self):
+        "ret a list of all the peak parameter info in the entry fields"
+        pk_params = ['']*10
+        # gather all the info
+        det = self.components.DetSelect.stringSelection
+        lbl = self.components.PkLbl.text.strip()
+        if len(lbl) < 1: return None
+        pk_params[0] = det
+        pk_params[1] = lbl
+        pk_params[2] = self.components.PkEn.text.strip()
+        pk_params[3] = self.components.PkAmp.text.strip()  
+        pk_params[4] = self.components.PkFWHM.text.strip() 
+        pk_params[5] = self.components.PkEnFlag.text.strip() 
+        pk_params[6] = self.components.PkFwhmFlag.text.strip() 
+        pk_params[7] = self.components.PkAmpFactor.text.strip()
+        pk_params[8] = str(self.components.PkIgnore.checked)
+        pk_params[9] = '0.0'
+        return pk_params
+
+    def put_PkPar_fields(self,pk_params):
+        "reverse of above"
+        if pk_params == None: return
+        if len(pk_params) < 9: return
+        self.components.DetSelect.stringSelection = pk_params[0]
+        self.components.PkLbl.text                = pk_params[1]
+        self.components.PkEn.text                 = pk_params[2]
+        self.components.PkAmp.text                = pk_params[3]
+        self.components.PkFWHM.text               = pk_params[4]
+        self.components.PkEnFlag.text             = pk_params[5]
+        self.components.PkFwhmFlag.text           = pk_params[6]
+        self.components.PkAmpFactor.text          = pk_params[7]
+        self.components.PkIgnore.checked = eval(pk_params[8])
+        #if pk_params[8] == 'False':
+        #    self.components.PkIgnore.checked = False
+        #elif pk_params[8] == 'True':
+        #    self.components.PkIgnore.checked = True
+        return
+
     def fit_params_update(self):
+        # update the xrf obj 
         pass
     def fit_params_display(self):
+        # read from the xrf obj and disp
         pass
-
-    #------------------
-    # Bgr pars
-    #------------------
-    def bgr_params_update(self):
-        pass
-    def default_bgr_params(self):
-        pass
-    
     #------------------
     # peak pars
     #------------------
@@ -579,6 +667,42 @@ class wxXRF(model.Background):
         pass
     def delete_pk(self):
         pass
+
+    #------------------
+    # Bgr pars
+    #------------------
+    def get_BgrPar_fields(self):
+        "ret a list of all the peak parameter info in the entry fields"
+        #bgr_params = BgrParams.copy()
+        bgr_params = ['']*7
+        bgr_params[0] = self.components.DetSelect.stringSelection
+        bgr_params[1] = self.components.BgrExp.text.strip() 
+        bgr_params[2] = self.components.BgrTopWdth.text.strip()
+        bgr_params[3] = self.components.BgrBtmWdth.text.strip()
+        bgr_params[4] = self.components.BgrTangent.text.strip()
+        bgr_params[5] = self.components.BgrCompress.text.strip()
+        bgr_params[6] = str(self.components.BgrCheck.checked)  
+        return bgr_params
+    
+    def put_BgrPar_fields(self,bgr_params):
+        "reverse above"
+        if bgr_params == None: return
+        if len(bgr_params) < 7: return
+
+        self.components.DetSelect.stringSelection = bgr_params[0] 
+        self.components.BgrExp.text       = bgr_params[1]  
+        self.components.BgrTopWdth.text   = bgr_params[2] 
+        self.components.BgrBtmWdth.text   = bgr_params[3] 
+        self.components.BgrTangent.text   = bgr_params[4] 
+        self.components.BgrCompress.text  = bgr_params[5] 
+        self.components.BgrCheck.checked    = eval(bgr_params[6])  
+        return
+
+    def bgr_params_update(self):
+        pass
+    def default_bgr_params(self):
+        pass
+    
 
     #------------------
     # calc/fit args
@@ -601,7 +725,7 @@ class wxXRF(model.Background):
         pass
     def update_xrf(self):
         pass
-    def plot(self):
+    def read_params_from_xrf(self):
         pass
     def calc(self):
         pass
