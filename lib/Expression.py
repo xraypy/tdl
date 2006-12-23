@@ -83,7 +83,7 @@ def take_subarray(val,elems):
 
     if type(val) == types.StringType:
         for el in elems: val = val[el.start:el.stop]
-    elif type(val) == Num.arraytype:
+    elif type(val) == Num.ArrayType:
         j = 0
         for el in elems:
             j = j + 1
