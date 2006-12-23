@@ -22,14 +22,10 @@ def _identity(x):
 
 def _take(x,y):
     "wrap Numeric.take"
-    if type(y) == types.ListType:
-        return Num.take(x,Num.array(y).astype(Num.In32))
     return Num.take(x,y.astype(Num.Int32))
 
 def _choose(x,y):
     "wrap Numeric.choose"
-    if type(x) == types.ListType:
-        return Num.take(Num.array(x).astype(Num.In32),y)    
     return Num.choose(x.astype(Num.Int32),y)
 
 def _int(x):
@@ -159,7 +155,7 @@ def _random_seed(x=None):
         except:
             return Num.random.seed()            
 
-def _random(a=0,b=1,c=1,npts=1,distribution='normal',**kw):
+def _random(a,b=1,c=1,npts=1,distribution='normal',**kw):
     "wrapper for numpy random distributions" 
     NR = Num.random
     if   distribution == 'binomial':        return NR.binomial(a,b,size=npts)
@@ -230,7 +226,8 @@ _func_ = {
           "_math.argmin":Num.argmin,
           "_math.argsort":Num.argsort,
           "_math.array":Num.array,
-          "_math.arrayrange":Num.arrayrange,
+          #"_math.arrayrange":Num.arrayrange,
+          "_math.arange":Num.arange,
           "_math.cosh":Num.cosh,
           "_math.exp":Num.exp,
           "_math.fabs":Num.fabs,
@@ -265,14 +262,14 @@ _func_ = {
           "_math.concatenate":Num.concatenate,
           "_math.conjugate":Num.conjugate,
           "_math.convolve":Num.convolve,
-          "_math.cross_correlate":Num.cross_correlate,
+          #"_math.cross_correlate":Num.cross_correlate,
           "_math.cumproduct":Num.cumproduct,
           "_math.cumsum":Num.cumsum,
           "_math.diagonal":Num.diagonal,
           "_math.divide":Num.divide,
           "_math.dot":Num.dot,
-          "_math.dump":Num.dump,
-          "_math.dumps":Num.dumps,
+          #"_math.dump":Num.dump,
+          #"_math.dumps":Num.dumps,
           "_math.equal":Num.equal,
           "_math.fromfunction":Num.fromfunction,
           "_math.fromstring":Num.fromstring,
@@ -280,19 +277,19 @@ _func_ = {
           "_math.greater_equal":Num.greater_equal,
           "_math.hypot":Num.hypot,
           "_math.indices":Num.indices,
-          "_math.innerproduct":Num.innerproduct,
+          #"_math.innerproduct":Num.innerproduct,
           "_math.invert":Num.invert,
           "_math.left_shift":Num.left_shift,
           "_math.less":Num.less,
           "_math.less_equal":Num.less_equal,
-          # "_math.load":Num.load,
-          # "_math.loads":Num.loads,
+          "_math.load":Num.load,
+          "_math.loads":Num.loads,
           "_math.logical_and":Num.logical_and,
           "_math.logical_not":Num.logical_not,
           "_math.logical_or":Num.logical_or,
           "_math.logical_xor":Num.logical_xor,
           "_math.matrixinverse":Num.linalg.inv,
-          "_math.matrixmultiply":Num.matrixmultiply,
+          #"_math.matrixmultiply":Num.matrixmultiply,
           "_math.maximum":Num.maximum,
           "_math.minimum":Num.minimum,
           "_math.multiply":Num.multiply,
@@ -300,7 +297,7 @@ _func_ = {
           "_math.nonzero":Num.nonzero,
           "_math.not_equal":Num.not_equal,
           "_math.ones":Num.ones,
-          "_math.outerproduct":Num.outerproduct,
+          #"_math.outerproduct":Num.outerproduct,
           "_math.power":Num.power,
           "_math.product":Num.product,
           "_math.put":Num.put,

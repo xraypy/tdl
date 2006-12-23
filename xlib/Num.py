@@ -12,6 +12,8 @@
 ##########################################################################
 from __future__ import division
 
+ArrayType =  "<type 'numpy.ndarray'>"
+
 numpy_needed = 'Need SciPy 0.4.8 or (at least) NumPy version 0.9.6 or higher'
 num_version = None
 try:
@@ -22,13 +24,19 @@ try:
     v = 100*v[0] + 10*v[1] + v[2]
     if v >= 47:
         num_version = 'scipy %s' % Num.__version__
+
+    if not hasattr(Num,ArrayType):
+        Num.ArrayType = "<type 'numpy.ndarray'>"
+        
 except:
     try:
         import numpy as Num
         v = [int(i) for i in Num.__version__.split('.')]
         v = 100*v[0] + 10*v[1] + v[2]
         if v >= 96:
-            num_version = 'numpy %s' % Num.__version__            
+            num_version = 'numpy %s' % Num.__version__
+        if not hasattr(Num,ArrayType):
+            Num.ArrayType = "<type 'numpy.ndarray'>"
     except:
         pass
 
