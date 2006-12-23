@@ -413,6 +413,8 @@ def xrf_init_peaks(xrf,peaks,detectors=[]):
 
         peaks:
             A list of xrf peaks or peak energies, eg ['Fe Ka', 'Fe Kb']
+            If peaks = [] or None, then this blows away the previous
+            values
 
         detectors:
             A list of detectors to set parameters for.  An empty list (default) means
@@ -420,16 +422,24 @@ def xrf_init_peaks(xrf,peaks,detectors=[]):
             Note if xrf.total == True this argument is ignored since the fit is
             performed after summing the detectors (only one set of peak parameters needed)
     """
+    # note if peaks = None or [] should blow away all previous peaks
+
     if xrf.total == True:
-        for line in peaks:
-            xrf.init_peak(line=line)
+        if peaks == [] or peaks == None:
+            xrf.init_peak(line=None)
+        else:
+            for line in peaks:
+                xrf.init_peak(line=line)
     else:
         if detectors == []: detectors = xrf.detectors
         for d in detectors:
             idx = xrf.detector_idx(d)
             if idx >= 0:
-                for line in peaks:
-                    xrf.init_peak(idx=idx,line=line)
+                if peaks == [] or peaks == None:
+                    xrf.init_peak(idx=idx,line=None)
+                else:
+                    for line in peaks:
+                        xrf.init_peak(idx=idx,line=line)
     return
 
 #########################################################################

@@ -164,8 +164,14 @@ class XRF:
                 
         return
 
+    #########################################################################
+    def get_params(self):
+        return (self.fit_params, self.bgr_params, self.peak_params)
+
     #######################################################################
-    def init_peak(self,idx=0,line=None):
+    # note we should have one meth that inits based on line
+    # and another pass name and en
+    def init_peak(self,idx=0,line=None,lookup=True):
         """
         create a new peak_param for an xrf line
         """
@@ -173,15 +179,16 @@ class XRF:
         if not idx in range(self.array_len): return
 
         # if line = None, blow away all peaks for this detector
-        if line == None:
-            self.peak_params[idx] = []
-            return
+        #if line == None:
+        #    self.peak_params[idx] = []
+        #    return
 
-        if type(line) == types.StringType:
+        if lookup==True and type(line)==types.StringType:
             label = line
             en = xrf_lookup.lookup_xrf_line(line)
         else:
-            label = 'peak:' + str(line)
+            #label = 'peak:' + str(line)
+            label = str(line)
             en = line
 
         # see if its a duplicate 

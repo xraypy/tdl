@@ -24,6 +24,19 @@ import xrf_lookup
 XRF GUI
 """
 
+
+###########
+#      Note instead of running the commands, lets
+#      get the actual object and work on that, ie xrf = getVar("XRF")
+#      then we can run the xrf.init_params(), which blows away everythin
+#      then update it with the info thats in the peak and bgr list
+#      ie we should avoid using commands if possible especialy since
+#      its probably best that we scrap the commands once we have Matts updates
+#      to tdl (ie we just read a file then have the object in the list, and can
+#     access methods directly, ie limited commands.... (just read, plot, fit scan etc.)
+##############
+
+
 DataPar= {'grp':'None','node':'None','total':'True','align':'True',
           'scan':'False','sc_start':'0','sc_stop':'0','sc_inc':'1','sc_step':'0',
           'mcas':'[]','mca_taus':'[]','emin':'0.0','emax':'0.0'}
@@ -56,6 +69,10 @@ class wxXRF(model.Background):
         # including sizer setup, do it here
         # are there potential race conditions?
         # window management???
+
+        # including sizer setup, do it here
+        #self.setupSizers()
+
         self.shell = None
         self.tdl = None
         self.init_tdl()
@@ -103,7 +120,7 @@ class wxXRF(model.Background):
             tau = str(m.med.tau)
             self.components.TauList.text = tau
             # update det select for fitting
-            det_idx_str = []
+            det_idx_str = ['All']
             if self.components.Total.checked:
                 det_idx_str.append('0')
             else:
@@ -113,7 +130,7 @@ class wxXRF(model.Background):
             if det_sel in det_idx_str:
                 self.components.DetSelect.stringSelection = det_sel
             else:
-                self.components.DetSelect.stringSelection = '0'
+                self.components.DetSelect.stringSelection = 'All'
         except:
             self.components.NumMcas.text = "Variable is not an XRF data type"
             self.components.McaList.text = '[]'
@@ -480,6 +497,13 @@ class wxXRF(model.Background):
         self.put_BgrPar_fields(bgr_params)
         return
 
+    #------------------
+    # Update params button
+    #------------------
+    def on_UpdateParams_mouseClick(self,event):
+        self.fit_params_update_cmd()
+
+
     ###########################################################
     # Data parameters, cmd wrappers, etc.
     ###########################################################
@@ -652,22 +676,10 @@ class wxXRF(model.Background):
         #    self.components.PkIgnore.checked = True
         return
 
-    def fit_params_update(self):
-        # update the xrf obj 
-        pass
     def fit_params_display(self):
         # read from the xrf obj and disp
         pass
-    #------------------
-    # peak pars
-    #------------------
-    def add_pk(self):
-        pass
-    def pk_params_update(self):
-        pass
-    def delete_pk(self):
-        pass
-
+    
     #------------------
     # Bgr pars
     #------------------
@@ -698,12 +710,81 @@ class wxXRF(model.Background):
         self.components.BgrCheck.checked    = eval(bgr_params[6])  
         return
 
-    def bgr_params_update(self):
-        pass
-    def default_bgr_params(self):
-        pass
-    
+###########
+#----> editing here.  Note instead of running the commands, lets
+#      get the actual object and work on that, ie xrf = getVar("XRF")
+#      then we can run the xrf.init_params(), which blows away everythin
+#      then update it with the info thats in the peak and bgr list
+#      ie we should avoid using commands if possible especialy since
+#      its probably best that we scrap the commands once we have Matts updates
+#      to tdl (ie we just read a file then have the object in the list, and can
+#     access methods directly, ie limited commands.... (just read, plot, fit scan etc.)
+##############
 
+    def fit_params_update_cmd(self):
+        # update the xrf obj
+        bgr_params = self.components.BgrParams.items
+        peak_params = self.components.PkParams.items
+
+        # build args
+        xrf   = "%s.%s" % (self.data_par['grp'],self.data_par['node'])
+        print bgr_params, peak_params, xrf
+
+        xrf = self.getVariable(xrf)
+        if xrf == None: return
+
+        xrf.init_params()
+
+#*****
+#--> here loop through and run
+#        idx = xrf.init_peak(det_idx=0,line=Name,lookup=True)        
+#        # note should make a new init method
+#        # xrf.init_pk(idx,name)  and xrf_init_pk_line(idx,line)
+#        xrf.set_peak(det_idx=0,pk_idx=0,energy=None,ampl=None,fwhm=None,
+#                 energy_flag=None,fwhm_flag=None,ampl_factor=None,ignore=False)
+#
+#    then loop through and run
+#    xrf.set_bgr(det_idx=0,slope=None,exponent=None,top_width=None,
+#                bottom_width=None, tangent=None, compress=None)
+
+
+        return
+
+    def update_pk_params_cmd(self,pk_params):
+        ##xrf_init_peaks(xrf,peaks,detectors=[])
+        #cmd_str = "xrf.set_data(%s,detectors=%s,total=%s,align=%s,tau=%s)" % \
+        #          (xrf,det,total,align,tau)
+        #self.post_message(cmd_str)
+        #self.execLine(cmd_str)
+        pass
+
+
+    def update_bgr_params_cmd(self,bgr_params):
+        det       = bgr_params[0] 
+        exp       = bgr_params[1]  
+        top_width = bgr_params[2] 
+        btm_width = bgr_params[3] 
+        tangent   = bgr_params[4] 
+        compress  = bgr_params[5] 
+        ignore    = bgr_params[6]
+        #xrf.set_bgr(xrf,exponent=None,top_width=None,bottom_width=None,
+        #              tangent=None, compress=None,detectors=[])
+
+    #------------------
+    # peak pars
+    #------------------
+    #def add_pk(self):
+    #    pass
+    #def pk_params_update(self):
+    #    pass
+    #def delete_pk(self):
+    #    pass
+    #def bgr_params_update(self):
+    #    pass
+    #def default_bgr_params(self):
+    #    pass
+
+    
     #------------------
     # calc/fit args
     #------------------

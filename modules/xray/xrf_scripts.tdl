@@ -11,15 +11,15 @@ def xrf.plot(xrf,channel=False,hold=False):
     nchan = len(dat[0])
     if channel==True:
         e = []
-        for j in range(ndet):
-            e = append(e,[int(range(nchan))])
+        for j in range(ndet,dtype='i'):
+            e = append(e,[range(nchan,dtype='i')])
         endfor
     else:
         e = xrf.energy(xrf)
     endif
 
     first = True
-    for j in int(range(ndet)):
+    for j in range(ndet,dtype='i'):
         if sum(dat[j]) > 0:
             if first==True and hold==False:
                 newplot(e[j],dat[j])
