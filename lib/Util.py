@@ -36,6 +36,12 @@ class EvalException(exceptions.Exception):
         self.args = args
         
 ####
+def verify_tdl(tdl,name='unknown',msg=''):
+    if tdl is None:
+        mout = "No tdl reference in python function '%s'" % (name)
+        if msg != '': mout = "%s\n%s" % (mout,msg)
+        raise RunTimeError, mout
+        
 def datalen(x):
     "return length of data for many datatypes"
     try:

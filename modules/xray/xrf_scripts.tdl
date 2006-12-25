@@ -1,6 +1,6 @@
 # Tdl defined procedures for med data
 
-def xrf.plot(xrf,channel=False,hold=False):
+def xrf.plot(xrf,channel=False,hold=False,logplt=False):
     """
     plot a spectrum
     >>xrf.plot(xrf)
@@ -22,9 +22,9 @@ def xrf.plot(xrf,channel=False,hold=False):
     for j in range(ndet,dtype='i'):
         if sum(dat[j]) > 0:
             if first==True and hold==False:
-                newplot(e[j],dat[j])
+                newplot(e[j],dat[j],ylog=logplt)
             else
-                plot(e[j],dat[j])
+                plot(e[j],dat[j],ylog=logplt)
             endif
             first = False
         else:
@@ -33,3 +33,42 @@ def xrf.plot(xrf,channel=False,hold=False):
     endfor
 
 enddef
+
+
+def xrf.plot_fit(xrf,channel=False,hold=False,logplt=False):
+    """
+    plot a fit spectrum
+    >>xrf.plot(xrf)
+    """
+    print xrf
+    dat  = xrf.data(xrf)
+    calc = xrf.calc_peaks(xrf)
+    ndet = len(dat)
+    nchan = len(dat[0])
+    if channel==True:
+        e = []
+        for j in range(ndet,dtype='i'):
+            e = append(e,[range(nchan,dtype='i')])
+        endfor
+    else:
+        e = xrf.energy(xrf)
+    endif
+
+    first = True
+    for j in range(ndet,dtype='i'):
+        if sum(dat[j]) > 0:
+            if first==True and hold==False:
+                newplot(e[j],dat[j],fmt='b.',ylog=logplt)
+                plot(e[j],calc[j],fmt='r',ylog=logplt)
+            else
+                plot(e[j],dat[j],fmt='b.',ylog=logplt)
+                plot(e[j],calc[j],fmt='r',ylog=logplt)
+            endif
+            first = False
+        else:
+            print "Skipping detector %i, sum is zero" % (j)
+        endif
+    endfor
+
+enddef
+

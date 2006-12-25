@@ -47,6 +47,11 @@ class XRF:
         lout = lout + '  Detectors used = %s\n' % str(self.detectors)
         lout = lout + '  Align = %s\n' % str(self.align)
         lout = lout + '  Total = %s\n' % str(self.total)
+        ##
+        for pk in self.peak_params:
+            for p in pk:
+                lout = lout + '  Peak=%s, Energy=%s,FWHM=%s,Amp=%s,Area=%s,Ignore=%s\n'  % \
+                       (p.label, str(p.energy),str(p.fwhm),str(p.ampl),str(p.area),str(p.ignore))
         return lout
 
     def show_rois(self):
@@ -138,7 +143,7 @@ class XRF:
         return idx
     
     #########################################################################
-    def init_params(self,peaks = [], bottom_width=4.,top_width=0.,
+    def init_params(self,lines = [], bottom_width=4.,top_width=0.,
                     exponent=2, tangent=0, compress=4):
 
         # reset all peak and bgr parameters to defaults
@@ -158,9 +163,9 @@ class XRF:
                                                       bottom_width=bottom_width,
                                                       tangent=tangent,
                                                       compress=compress)
-            for line in peaks:
+            for line in lines:
                 #self.set_peak(idx=i,line=line)
-                self.init_peak(idx=i,line=line)
+                self.init_peak_line(idx=i,line=line)
                 
         return
 
@@ -169,11 +174,9 @@ class XRF:
         return (self.fit_params, self.bgr_params, self.peak_params)
 
     #######################################################################
-    # note we should have one meth that inits based on line
-    # and another pass name and en
-    def init_peak(self,idx=0,line=None,lookup=True):
+    def init_peak_line(self,idx=0,line=None,lookup=True):
         """
-        create a new peak_param for an xrf line
+        create a new peak_param given an xrf line
         """
         
         if not idx in range(self.array_len): return
@@ -188,8 +191,9 @@ class XRF:
             en = xrf_lookup.lookup_xrf_line(line)
         else:
             #label = 'peak:' + str(line)
-            label = str(line)
-            en = line
+            #label = str(line)
+            #en = line
+            return -1
 
         # see if its a duplicate 
         dup = self.peak_idx(idx=idx,label=label)
@@ -205,7 +209,39 @@ class XRF:
 
         # return pk_idx of new peak_param
         return (len(self.peak_params[idx]) - 1)
-    
+
+    #######################################################################
+    def init_peak_en(self,idx=0,label=None,energy=0.0):
+        """
+        create a new peak_param given a name and energy
+        """
+        
+        if not idx in range(self.array_len): return
+
+        # if line = None, blow away all peaks for this detector
+        #if line == None:
+        #    self.peak_params[idx] = []
+        #    return
+
+        if label == None:
+            label = str(energy)
+
+        # see if its a duplicate 
+        dup = self.peak_idx(idx=idx,label=label)
+        if dup > -1:
+            self.peak_params[idx].pop(dup)
+
+        # create a new McaPeak structure
+        tmp = fitPeaks.McaPeak()
+        tmp.label = label
+        tmp.initial_energy = energy
+        tmp.energy         = energy
+        self.peak_params[idx].append(tmp)
+
+        # return pk_idx of new peak_param
+        return (len(self.peak_params[idx]) - 1)
+
+
     #########################################################################
     def peak_idx(self,idx=0,label=None):
         """ See if a peak label exists and ret idx"""
