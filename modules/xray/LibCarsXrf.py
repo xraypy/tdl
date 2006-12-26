@@ -90,7 +90,7 @@ import os
 import sys
 import types
 import copy
-from Util import datalen, EvalException
+from Util import datalen
 
 import CarsMcaFile
 import Mca

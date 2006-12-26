@@ -435,28 +435,31 @@ def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
     verify_tdl(tdl, 'load',msg='loading file %s' % fname)
 
     symTab = tdl.symbolTable
-    if group is None:
-        # print fname, os.path.splitext(fname)
-        group = os.path.basename(os.path.splitext(fname)[0])
     if not os.path.isfile(fname):
         print 'file error: cannot find file %s ' % fname
-        return None        
+        return None
 
-    localsave  = symTab.LocalGroup
-    modulesave = symTab.ModuleGroup
-    symTab.addGroup(group,toplevel=True,status='module')
-    symTab.LocalGroup = group
-    symTab.ModuleGroup = group
-    tdl.load_file(fname)
-    tdl.run()
-
-    owner,grp = symTab.getGroup(group)
-    x = owner[grp]
-    if len(x.keys()) == 0: owner.pop(grp)
-    symTab.LocalGroup = localsave
-    symTab.ModuleGroup = modulesave
+    if group is None:
+        # print fname, os.path.splitext(fname)
+        #group = os.path.basename(os.path.splitext(fname)[0])
+        tdl.load_file(fname)
+        tdl.run()
+    else:
+        localsave  = symTab.LocalGroup
+        modulesave = symTab.ModuleGroup
+        symTab.addGroup(group,toplevel=True,status='module')
+        symTab.LocalGroup = group
+        symTab.ModuleGroup = group
+        tdl.load_file(fname)
+        tdl.run()
+        owner,grp = symTab.getGroup(group)
+        x = owner[grp]
+        if len(x.keys()) == 0: owner.pop(grp)
+        symTab.LocalGroup = localsave
+        symTab.ModuleGroup = modulesave
 
     if debug: print 'load done.'
+    return
 
 
 def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):

@@ -8,8 +8,10 @@
 #import LibTest
 import LibASCIIFile
 import LibPlotter
-# import LibSpec
-# import LibCarsXrf
+newgroup spec
+import LibSpec
+newgroup xrf
+import LibCarsXrf
 
 # x = 1
 # y = 33
