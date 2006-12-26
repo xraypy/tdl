@@ -602,7 +602,8 @@ class Help:
         
         if key is None:
             form = "\nDefault Data group = %s\nDefault Func group = %s\n"
-            print form % (self.tdl.symbolTable.dataGroup,self.tdl.symbolTable.funcGroup)
+            #print form % (self.tdl.symbolTable.dataGroup,self.tdl.symbolTable.funcGroup)
+            print form % (self.tdl.symbolTable.LocalGroup,self.tdl.symbolTable.ModuleGroup)
             f = self.tdl.symbolTable.listFunctions()
             d = self.tdl.symbolTable.listVariables()
             #for grp in self.tdl.symbolTable.listGroups():

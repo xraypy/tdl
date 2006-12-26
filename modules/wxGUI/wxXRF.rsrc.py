@@ -37,9 +37,16 @@
          'components': [
 
 {'type':'Button', 
+    'name':'DelBgr', 
+    'position':(89, 295), 
+    'size':(49, 20), 
+    'label':u'Delete', 
+    },
+
+{'type':'Button', 
     'name':'AddBgr', 
-    'position':(45, 290), 
-    'size':(62, -1), 
+    'position':(35, 294), 
+    'size':(46, 20), 
     'label':u'Add', 
     },
 

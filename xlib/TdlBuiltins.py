@@ -484,7 +484,8 @@ def tdl_setvar(name,val,tdl=None,debug=False,**kws):
 def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
     "add a group"
     verify_tdl(tdl, 'newgroup',msg='trying to create group %s' % name)
-    return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
+    #return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
+    return tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
 
 def tdl_showtable(extra=None, tdl=None,skip=('_math','_builtin'), **kw):
     "add a group"

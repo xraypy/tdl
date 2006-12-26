@@ -282,7 +282,7 @@ _func_ = {
           "_math.left_shift":Num.left_shift,
           "_math.less":Num.less,
           "_math.less_equal":Num.less_equal,
-          "_math.load":Num.load,
+          #"_math.load":Num.load,
           "_math.loads":Num.loads,
           "_math.logical_and":Num.logical_and,
           "_math.logical_not":Num.logical_not,
