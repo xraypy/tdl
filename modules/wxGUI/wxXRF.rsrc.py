@@ -52,10 +52,10 @@
 
 {'type':'MultiColumnList', 
     'name':'BgrParams', 
-    'position':(30, 323), 
-    'size':(720, 71), 
+    'position':(29, 323), 
+    'size':(510, 71), 
     'backgroundColor':(255, 255, 255), 
-    'columnHeadings':['Det', 'Exponent', 'TopWidth', 'BottWidth', 'Tangent', 'Compress', 'FitBgr'], 
+    'columnHeadings':['Det', 'Exponent', 'TopWidth', 'BottWidth', 'Tangent', 'Compress'], 
     'font':{'faceName': u'Tahoma', 'family': 'sansSerif', 'size': 8}, 
     'items':[], 
     'maxColumns':20, 
@@ -373,7 +373,7 @@
 
 {'type':'Button', 
     'name':'BgrDefault', 
-    'position':(680, 290), 
+    'position':(562, 296), 
     'size':(67, -1), 
     'label':u'Default', 
     },
@@ -431,6 +431,7 @@
     'position':(255, 250), 
     'size':(70, -1), 
     'items':[u'All'], 
+    'stringSelection':u'All', 
     },
 
 {'type':'StaticText', 
@@ -669,7 +670,7 @@
 
 {'type':'CheckBox', 
     'name':'BgrCheck', 
-    'position':(555, 300), 
+    'position':(557, 353), 
     'size':(98, -1), 
     'checked':True, 
     'label':u'FitBackground', 

@@ -72,8 +72,8 @@ are indexed from 0 - len(detectors) -1 (unless total=True, then just one value)
 
 Example read/plot/fit:
 >>xrf = xrf.read('test/test2.xrf')
->>det = [1,2,4,5,6,7,8,9,10,11,12,14]
->>xrf.set_data(xrf,det)
+>>bad = [3,13]
+>>xrf.set_data(xrf,bad_mca_idx=bad)
 >>d = xrf.data(xrf)
 >>e = xrf.energy(xrf)
 >>plot(e[0],d[0])
@@ -102,10 +102,10 @@ import XRF
 title = "CARS XRF Library "
 
 ##############################################################################
-def xrf_read(file=None,detectors=[],total=True,align=True,tau=None,tdl=None,**kws):
+def xrf_read(file=None,bad_mca_idx=[],total=True,align=True,tau=None,tdl=None,**kws):
     """
     Read detector files
-    >>m = xrf.read("file_name",detectors=[],total=True,align=True,tau=None)
+    >>m = xrf.read("file_name",bad_mca_idx=[],total=True,align=True,tau=None)
 
     Returns an xrf object.  This function is appropriate for reading single and
     multi-element detectors.  (We always assume that the detector may be a
@@ -115,8 +115,8 @@ def xrf_read(file=None,detectors=[],total=True,align=True,tau=None,tdl=None,**kw
         file:
             File name
             
-        detectors:
-            A list of detectors to be used.  An empty
+        bad_mca_idx:
+            A list of bad detectors to be used.  An empty
             list (default) means use all the detectors.  Note detector indexing
             starts at zero!
 
@@ -139,11 +139,7 @@ def xrf_read(file=None,detectors=[],total=True,align=True,tau=None,tdl=None,**kw
 
     """
 
-    if file:
-        med = CarsMcaFile.read_med(file=file)
-    else:
-        med = Med.Med()
-    xrf = XRF.XRF(med=med,detectors=detectors,total=total,align=align,tau=tau)
+    xrf = XRF.read_xrf_file(file=file,bad_mca_idx=bad_mca_idx,total=total,align=align,tau=tau)
     return xrf
 
 def xrf_read_cmd(val,file=None,tdl=None,**kws):
@@ -157,18 +153,19 @@ def xrf_read_cmd(val,file=None,tdl=None,**kws):
     return
 
 #############################################################################
-def xrf_set_data(xrf,detectors=[],total=None,align=None,tau=None):
+def xrf_set_data(xrf,bad_mca_idx=None,total=None,align=None,correct=True,tau=None):
     """
     Reset detectors used for xrf analysis
-    >>xrf.set_data(xrf,detectors=[],total=False,align=True,tau=[])
+    >>xrf.set_data(xrf,detectors=[],total=False,align=True,correct=True,tau=[])
 
     Inputs:
         xrf:
             An instance of the xrf class or an xrf file name. See xrf.read
         
-        detectors:
-            A list of detectors to be used.  An empty list (default) means
-            use all the detectors. Note detector indexing starts at zero!
+        bad_mca_idx:
+            A list of bad detectors to be used.  An empty
+            list (default) means use all the detectors.  Note detector indexing
+            starts at zero!
 
         total:
             Set this keyword to work on the sum of the spectra from all
@@ -182,6 +179,9 @@ def xrf_set_data(xrf,detectors=[],total=None,align=None,tau=None):
             or together with the TOTAL keyword, in which case the data
             are aligned before summing.
 
+        correct:
+            Flag to determine if deadtime corrections are apprlied to the data
+            
         tau:
             None or a list of deadtime factors for each detector (dimesion should
             be the same as the total number of detectors)
@@ -196,35 +196,29 @@ def xrf_set_data(xrf,detectors=[],total=None,align=None,tau=None):
         arrays and paramterss relating to analysis (background and peaks)!  
     """
     if type(xrf) == types.StringType:
-        med = CarsMcaFile.read_med(file=xrf)
-        xrf = XRF.XRF(med=med,detectors=detectors,total=total,align=align,tau=tau)
+        xrf = XRF.read_xrf_file(file=file,bad_mca_idx=bad_mca_idx,total=total,align=align,tau=tau)
     else:
-        xrf.init_data(detectors=detectors,total=total,align=align,tau=tau)
+        xrf.init_data(bad_mca_idx=bad_mca_idx,total=total,align=align,correct=correct,tau=tau)
     return
 
 #############################################################################
-def xrf_data(xrf,detectors=[]):
+def xrf_data(xrf):
     """
     Returns the data 
-    >>data = xrf.data(xrf,detectors=[])
+    >>data = xrf.data(xrf)
 
     Inputs:
         xrf:
             An instance of the xrf class. See xrf.read
-        
-        detectors:
-            A list of detectors to return.  An empty list (default) means
-            return all the detectors.  Note detector indexing
-            starts at zero!  This argument is ignored if xrf.total = True
-        
+                
     Outputs:
-        By default this function returns [counts] where
+        This function returns [counts] where
          counts = [ [cnts0],[cnts1], ...]
 
         These counts array is length = len(detectors), the first entry corresponds to
         the first detector in the detector list etc..
 
-        If the align flag is set to True the first detector is used as the reference
+        If the align flag is set to True the first good detector is used as the reference
         for alignment (all energy arrays have the same values).
         
         If the "total" keyword is set the counts array has only one entry.
@@ -239,19 +233,10 @@ def xrf_data(xrf,detectors=[]):
         >>cnts1 = data[1]
         
     """
-    cnts = xrf.get_data()
-    if xrf.total == True or detectors == []:
-        return cnts
-    else:
-        ret_cnts = []
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                ret_cnts.append(cnts[idx])
-        return ret_cnts
+    return xrf.get_data()
 
 #############################################################################
-def xrf_energy(xrf,detectors=[]):
+def xrf_energy(xrf):
     """
     Returns the energy arrays
     >>data = xrf.energy(xrf,detectors=[])
@@ -259,20 +244,15 @@ def xrf_energy(xrf,detectors=[]):
     Inputs:
         xrf:
             An instance of the xrf class or an xrf file name.
-
-        detectors:
-            A list of detectors to return.  An empty list (default) means
-            return all the detectors.  Note detector indexing
-            starts at zero!  This argument is ignored if xrf.total = True
-        
+            
     Outputs:
-        By default this function returns [energy,counts] where
+        This function returns [energy,counts] where
          energy = [ [e0],[e1], ...]
 
         The energy array length = len(detectors), the first entry corresponds to
         the first detector in the detector list etc..
 
-        If the align flag is set to True the first detector is used as the reference
+        If the align flag is set to True the first good detector is used as the reference
         for alignment (all energy arrays have the same values).
         
         If the "total" keyword is set the energy and counts arrays only have one enetry each.
@@ -284,20 +264,12 @@ def xrf_energy(xrf,detectors=[]):
         >>en1 = data[1]
         
     """
-    energy = xrf.get_energy()
-    if xrf.total == True or detectors == []:
-        return energy
-    else:
-        ret_energy = []
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                ret_energy.append(energy[idx])
-        return ret_energy
+    return xrf.get_energy()
+
 
 #########################################################################
 def xrf_set_bgr(xrf,exponent=None,top_width=None, bottom_width=None,
-                tangent=None,compress=None,detectors=[]):
+                tangent=None,compress=None,det_idx=0):
     """
     Set background parameters for detector(s)
     >>xrf.set_bgr(xrf,exponent=None,top_width=None,bottom_width=None,
@@ -337,30 +309,19 @@ def xrf_set_bgr(xrf,exponent=None,top_width=None, bottom_width=None,
            Default=4, which means, for example, that a 2048 channel spectrum
            will be rebinned to 512 channels before fitting.
 
-        detectors:
-            A list of detectors to set parameters for.  An empty list (default) means
-            set for all the detectors.  Note detector indexing starts at zero!
-            Note if xrf.total == True this argument is ignored since the background is
-            substracted after summing the detectors (only one set of parameters needed)
+        det_idx:
+            Index of the detector to set bgr parameters for.  Note detector indexing starts at zero!
+            Note if xrf.total == True then det_idx should be zero (default) 
     """
-    if xrf.total == True:
-        xrf.set_bgr(exponent=exponent,top_width=top_width,
-                    bottom_width=bottom_width, tangent=tangent, compress=compress)
-    else:
-        if detectors == []: detectors = xrf.detectors
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                xrf.set_bgr(idx=idx,exponent=exponent,top_width=top_width,
-                            bottom_width=bottom_width, tangent=tangent, compress=compress)
-
+    xrf.set_bgr(exponent=exponent,top_width=top_width,
+                bottom_width=bottom_width, tangent=tangent, compress=compress,det_idx=det_idx)
     return
 
 #########################################################################
-def xrf_fit_bgr(xrf,subtract=False,detectors=[]):
+def xrf_fit_bgr(xrf,subtract=False):
     """
     Remove the background from a spectrum
-    >>data = xrf.fit_bgr(xrf,subtract=True,detectors=[])
+    >>data = xrf.fit_bgr(xrf,subtract=True)
 
     * Inputs
         xrf:
@@ -369,43 +330,25 @@ def xrf_fit_bgr(xrf,subtract=False,detectors=[]):
         subtract: True/False
             Set this keyword to return background subtracted data.  False
             returns the background functions.  Defaults is False.
-                    
-        detectors:
-            A list of detectors to fit.  An empty list (default) means
-            fit all the detectors.  Note detector indexing starts at zero!
-            Note if xrf.total == True this argument is ignored since the fit is
-            performed after summing the detectors.
 
     * Outputs
         Returns an array [bgr0,bgr1,bgr2] 
         If the "total" keyword is set then the return only has a single entry
         If subtract == True the background substracted data is returned
     """
-    if xrf.total == True:
-        xrf.fit_bgr()
-        if subtract:
-            bgr = xrf.data[0] - xrf.bgr[0]
-        else:
-            bgr = xrf.bgr
+    xrf.fit_bgr()
+    if subtract:
+        bgr = xrf.data - xrf.bgr
     else:
-        if detectors == []: detectors = xrf.detectors
-        bgr = []
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                xrf._fit_bgr(idx)
-                if subtract:
-                    bgr.append(xrf.data[idx] - xrf.bgr[idx])
-                else:
-                    bgr.append(xrf.bgr[idx])
+        bgr = xrf.bgr
     return bgr
 
 
 #########################################################################
-def xrf_init_peaks(xrf,peaks,detectors=[]):
+def xrf_init_peaks(xrf,peaks):
     """
     Init peak parameters for detector(s)
-    >>xrf.init_peaks(xrf,peaks,detectors=[])
+    >>xrf.init_peaks(xrf,peaks)
 
     * Inputs
         xrf:
@@ -413,49 +356,33 @@ def xrf_init_peaks(xrf,peaks,detectors=[]):
 
         peaks:
             A list of xrf peaks or peak energies, eg ['Fe Ka', 'Fe Kb']
-            If peaks = [] or None, then this blows away the previous
+            If peaks = None or [], then this blows away the previous
             values
 
-        detectors:
-            A list of detectors to set parameters for.  An empty list (default) means
-            set for all the detectors.  Note detector indexing starts at zero!
-            Note if xrf.total == True this argument is ignored since the fit is
-            performed after summing the detectors (only one set of peak parameters needed)
     """
-    # note if peaks = None or [] should blow away all previous peaks
-
-    if xrf.total == True:
-        if peaks == [] or peaks == None:
-            xrf.init_peak(line=None)
-        else:
-            for line in peaks:
-                xrf.init_peak(line=line)
+    # note if peaks = None blow away all previous peaks
+    if peaks == [] or peaks == None:
+        xrf.init_peak_line_all(None)
     else:
-        if detectors == []: detectors = xrf.detectors
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                if peaks == [] or peaks == None:
-                    xrf.init_peak(idx=idx,line=None)
-                else:
-                    for line in peaks:
-                        xrf.init_peak(idx=idx,line=line)
+        for line in peaks:
+            xrf.init_peak_line_all(line)
+
     return
 
 #########################################################################
 def xrf_set_peak(xrf,label,energy=None,ampl=None,fwhm=None,energy_flag=None,
-                  fwhm_flag=None,ampl_factor=None,ignore=False,detectors=[]):
+                 fwhm_flag=None,ampl_factor=None,ignore=False,det_idx=0):
     """
     Set peak parameters for detector(s)
     >>xrf.set_peak(xrf,label,energy=None,ampl=None,fwhm=None,energy_flag=None,
-                  fwhm_flag=None,ampl_factor=None,ignore=False,detectors=[])
+                  fwhm_flag=None,ampl_factor=None,ignore=False,det_idx=0)
 
     * Inputs
         xrf:
             An instance of the xrf class
 
         label:
-            A string describing the peak, use similiar syntax to init_peak
+            A string describing the peak (may also be an integer corresponding to peak index)
 
         energy:
             Peak energy
@@ -488,48 +415,35 @@ def xrf_set_peak(xrf,label,energy=None,ampl=None,fwhm=None,energy_flag=None,
         ignore:
             Flag to ignore peak in the fit (Default is False)
 
-        detectors:
-            A list of detectors to set parameters for.  An empty list (default) means
-            set for all the detectors.  Note detector indexing starts at zero!
-            Note if xrf.total == True this argument is ignored since the fit is
-            performed after summing the detectors (only one set of peak parameters needed)
+        det_idx:
+            Index for detector.  If det_idx == 'All' then the parameters are set for all detectors
+            Note if xrf.total == then this should be zero (default)
     """
-    if xrf.total == True:
-        pk_idx = xrf.peak_idx(idx=0,label=label)
-        if pk_idx == -1:
-            pk_idx =xrf.init_peak(idx=0,line=label)
 
-        xrf.set_peak(idx=0,pk_idx=pk_idx,energy=energy,ampl=ampl,fwhm=fwhm,
-                     energy_flag=energy_flag,fwhm_flag=fwhm_flag,
-                     ampl_factor=ampl_factor,ignore=ignore)
-
-    else:
-        if detectors == []: detectors = xrf.detectors
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                pk_idx = xrf.peak_idx(idx=idx,label=label)
-                if pk_idx == -1:
-                    pk_idx = xrf.init_peak(idx=idx,line=label)
-
-                xrf.set_peak(idx=0,pk_idx=pk_idx,energy=energy,ampl=ampl,fwhm=fwhm,
+    if type(det_idx) == types.StringType:
+        if det_idx.lower() == 'all':
+            xrf.set_peak_all(pk_idx=pk_idx,energy=energy,ampl=ampl,fwhm=fwhm,
                              energy_flag=energy_flag,fwhm_flag=fwhm_flag,
                              ampl_factor=ampl_factor,ignore=ignore)
+            return
+        else:
+            det_idx = int(det_idx)
+
+    xrf.set_peak(pk_idx=pk_idx,energy=energy,ampl=ampl,fwhm=fwhm,
+                 energy_flag=energy_flag,fwhm_flag=fwhm_flag,
+                 ampl_factor=ampl_factor,ignore=ignore,det_idx=det_idx)
+
     return
 
 #########################################################################
-def xrf_fit_peaks(xrf,fit_bgr=True,fwhm_flag=1,energy_flag=1,chi_exp=0.0,detectors=[]):
+def xrf_fit_peaks(xrf,fwhm_flag=1,energy_flag=1,chi_exp=0.0,fit_bgr=True,):
     """
     Fit peaks
-    >>xrf.fit_peaks(fit_bgr=True,fwhm_flag=1,energy_flag=1,chi_exp=0.0,detectors=[])
+    >>xrf.fit_peaks(fit_bgr=True,fwhm_flag=1,energy_flag=1,chi_exp=0.0)
 
     * Inputs
         xrf:
             An instance of the xrf class
-
-        fit_bgr: (True/False)
-            Flag to indicate if the background should be fit (and removed)
-            before fitting peaks
 
         fwhm_flag:
             0 = Fix FWHM coefficients
@@ -553,11 +467,9 @@ def xrf_fit_peaks(xrf,fit_bgr=True,fwhm_flag=1,energy_flag=1,chi_exp=0.0,detecto
             in each channel. This should tend to weight the fit more strongly toward
             the small peaks.
 
-        detectors:
-            A list of detectors to fit.  An empty list (default) means
-            fit all the detectors.  Note detector indexing starts at zero!
-            Note if xrf.total == True this argument is ignored since the fit is
-            performed after summing the detectors.
+        fit_bgr: (True/False)
+            Flag to indicate if the background should be fit (and removed)
+            before fitting peaks (default = True)
 
     * Outputs
         Returns an array [predicted0,predicted1,predicted2] 
@@ -565,38 +477,20 @@ def xrf_fit_peaks(xrf,fit_bgr=True,fwhm_flag=1,energy_flag=1,chi_exp=0.0,detecto
         The predicted function includes the background
 
     """
-    if xrf.total == True:
-        if fit_bgr == True:
-            xrf.fit(fwhm_flag=fwhm_flag,energy_flag=energy_flag,chi_exp=chi_exp)
-        else:
-            xrf.fit_peaks(fwhm_flag=fwhm_flag,energy_flag=energy_flag,chi_exp=chi_exp)
-        predicted = xrf.predicted
-    else:
-        if detectors == []: detectors = xrf.detectors
-        predicted = []
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                if fit_bgr: xrf._fit_bgr(idx)
-                xrf._fit_peaks(idx,fwhm_flag=fwhm_flag,energy_flag=energy_flag,chi_exp=chi_exp)
-                predicted.append(xrf.predicted[idx])
+    xrf.fit(fwhm_flag=fwhm_flag,energy_flag=energy_flag,chi_exp=chi_exp,fit_bgr=fit_bgr)
+    predicted = xrf.predicted
+
     return predicted
 
 #########################################################################
-def xrf_calc_peaks(xrf,detectors=[]):
+def xrf_calc_peaks(xrf):
     """
     Calculate peaks
-    >>xrf.calc_peaks(xrf,detectors=[])
+    >>xrf.calc_peaks(xrf)
 
     * Inputs
         xrf:
             An instance of the xrf class
-
-        detectors:
-            A list of detectors to fit.  An empty list (default) means
-            fit all the detectors.  Note detector indexing starts at zero!
-            Note if xrf.total == True this argument is ignored since the fit is
-            performed after summing the detectors.
 
     * Outputs
         Returns an array [predicted0,predicted1,predicted2] 
@@ -604,33 +498,18 @@ def xrf_calc_peaks(xrf,detectors=[]):
         The predicted function includes the background
         
     """
-    if xrf.total == True:
-        xrf.calc_peaks()
-        predicted = xrf.predicted
-    else:
-        predicted = []
-        if detectors == []: detectors = xrf.detectors
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                xrf._calc_peaks(idx)
-                predicted.append(xrf.predicted[idx])
+    xrf.calc_peaks()
+    predicted = xrf.predicted
     return predicted
 
 ##############################################################################
-def xrf_data_dict(xrf,detectors=[]):
+def xrf_data_dict(xrf):
     """ Dictionary of xrf data
-    >>xrf.data_dict(xrf,detectors=[])
+    >>xrf.data_dict(xrf)
 
     * Inputs
         xrf:
             An instance of the xrf class
-
-        detectors:
-            A list of detectors to fit.  An empty list (default) means
-            fit all the detectors.  Note detector indexing starts at zero!
-            Note if xrf.total == True this argument is ignored since the fit is
-            performed after summing the detectors.
 
     * Outputs
         Returns a dictionary 
@@ -639,55 +518,11 @@ def xrf_data_dict(xrf,detectors=[]):
         If the "total" keyword is set then each array has a single entry
 
     """
-    data = {'energy':[],'counts':[],'background':[],'predicted':[],'peak_areas':[],'peaks':[]}
-    counts = xrf.get_data()
-    energy = xrf.get_energy()
-    if xrf.total == True:
-        data['energy']     = energy
-        data['counts']     = counts
-        data['background'] = xrf.bgr
-        data['predicted']  = xrf.predicted
-
-        # peak areas
-        peak_areas = {}
-        for peak in xrf.peak_params[0]:
-            peak_areas[peak.label] = peak.area
-        data['peak_areas'].append(peak_areas)
-
-        # get each peak function
-        peaks = {}
-        for peak_params in xrf.peak_params[0]:
-            calc = fitPeaks.predict_gaussian_spectrum(xrf.fit_params[0], [peak_params])
-            peaks[peak_params.label] = calc
-        data['peaks'].append(peaks)
-        
-    else:
-        if detectors == []: detectors = xrf.detectors
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                data['energy'].append(energy[idx])
-                data['counts'].append(counts[idx])
-                data['background'].append(xrf.bgr[idx])
-                data['predicted'].append(xrf.predicted[idx])
-
-                # peak areas
-                peak_areas = {}
-                for peak in xrf.peak_params[idx]:
-                    peak_areas[peak.label] = peak.area
-                data['peak_areas'].append(peak_areas)
-
-                # get each peak function
-                peaks = {}
-                for peak_params in xrf.peak_params[idx]:
-                    calc = fitPeaks.predict_gaussian_spectrum(xrf.fit_params[idx], [peak_params])
-                    peaks[peak_params.label] = calc
-                data['peaks'].append(peaks)
-
-    return data
+    dict = xrf.data_dict()
+    return dict
 
 ##############################################################################
-def xrf_get_peaks(xrf,detectors=[]):
+def xrf_get_peaks(xrf):
     """ Dictionary of peak fitting results
     >>xrf.get_peaks(xrf,detectors=[])
 
@@ -708,101 +543,25 @@ def xrf_get_peaks(xrf,detectors=[]):
       If the "total" keyword is set then each array has a single entry
 
     """
-    results = []
-    if xrf.total == True:
-        # peak results
-        peak_results = {}
-        for peak in xrf.peak_params[0]:
-            peak_results[peak.label] = {'energy':0.0,'ampl':0.0,'fwhm':0.0,'area':0.0}
-            peak_results[peak.label]['energy'] = peak.energy
-            peak_results[peak.label]['ampl'] = peak.ampl
-            peak_results[peak.label]['fwhm'] = peak.fwhm
-            peak_results[peak.label]['area'] = peak.area
-        results.append(peak_results)
-        
-    else:
-        if detectors == []: detectors = xrf.detectors
-        for d in detectors:
-            idx = xrf.detector_idx(d)
-            if idx >= 0:
-                peak_results = {}
-                for peak in xrf.peak_params[idx]:
-                    peak_results[peak.label] = {'energy':0.0,'ampl':0.0,'fwhm':0.0,'area':0.0}
-                    peak_results[peak.label]['energy'] = peak.energy
-                    peak_results[peak.label]['ampl'] = peak.ampl
-                    peak_results[peak.label]['fwhm'] = peak.fwhm
-                    peak_results[peak.label]['area'] = peak.area
-                results.append(peak_results)
-
+    results = xrf.get_peaks()
     return results
 
 ###############################################################################
-def xrf_get_rois(xrf,detectors=[],total=False,net=False):
+def xrf_get_rois(xrf,background_width=1):
     """
     Return the roi values
-    r = xrf.get_rois(xrf,detectors=[],total=False,net=False)
+    r = xrf.get_rois(xrf)
 
     Inputs:
         xrf:
             an instance of the xrf class or an xrf file name. See med.read
-
-    Keywords:
-        detectors:
-            A list of detectors to be passed back.  An empty list (default)
-            return all the detectors.  Note detector indexing
-            starts at zero!
-
-        total:
-            If the total flag is True then the roi's from each detector
-            will be summed
-
-        net:
-            If net is true then return the net (bgr subtracted) counts rather than the total counts
             
     Outputs:    
-        Returns an array of roi values,
-        r[0] = {roi1:value,roi2:value} --> for first det (or sum if total is true)...
+        Returns a list of dictionaries.  The list is of length num detectors
+        each entry in the list holds a dictionary of {'lbl':(total, net),...}
+
     """
-
-    if type(xrf) == types.StringType:
-        med = CarsMcaFile.read_med(file=xrf)
-        if detectors == []:
-            detectors = range(med.n_detectors)
-        else:
-            detectors = map(int,detectors)        
-    else:
-        med = xrf.med
-        if detectors == []:
-            detectors = xrf.detectors
-        else:
-            detectors = map(int,detectors)        
-
-    # note could just use net,total = roi[d].get_counts()
-    # but that doesnt ret the label
-    rois = med.get_rois()
-    if not rois: return None
-
-    ret = []
-    for i in detectors:
-        temp = {}
-        for roi in rois[i]:
-            if net==True:
-                temp[roi.label]=roi.net
-            else:
-                temp[roi.label]=roi.total
-        ret.append(temp)
-
-    if total:
-        temp = {}
-        for i in range(len(ret)):
-            if i == 0:
-                temp = ret[i]
-            else:
-                for label in ret[i].keys():
-                    temp[label] = temp[label] + ret[i][label]
-        ret = [temp]
-
-    return ret
+    return xrf.get_rois(background_width=background_width)
 
 def xrf_get_rois_cmd(val,**kws):
     for j in range(len(val)):
@@ -810,6 +569,7 @@ def xrf_get_rois_cmd(val,**kws):
         print val[j]
     return
 
+###############################################################################
 def xrf_show_rois(xrf):
     """Show detector counts/rois
     >>xrf.totals(xrf)
@@ -827,9 +587,9 @@ def xrf_show_rois(xrf):
     print xrf.show_rois()
 
 ##########################################################################
-def xrf_set_roi(med,label,lrn=[],detectors=[],units='keV'):
+def xrf_set_roi(label,lrn=[],mcas=[],units='keV'):
     """Set the roi values for a detector
-    >>xrf.set_roi(xrf,label,lrn=[],detectors=[],units='keV')
+    >>xrf.set_roi(xrf,label,lrn=[],mcas=[],units='keV')
 
     Inputs:
         xrf:
@@ -844,7 +604,7 @@ def xrf_set_roi(med,label,lrn=[],detectors=[],units='keV'):
             if lrn=[] then delete it if it exists
             nbgr is optional.
              
-        detectors:
+        mcas:
             A list of detectors to set roi for.  An empty
             list (default) means use all the detectors.  Note detector indexing
             starts at zero!
@@ -853,56 +613,11 @@ def xrf_set_roi(med,label,lrn=[],detectors=[],units='keV'):
             string specifying units for left and right. default is 'keV'
             Valid strings are "channel","keV" and "eV"
     """
-    if type(xrf) == types.StringType:
-        med = CarsMcaFile.read_med(file=xrf)
-        if detectors == []:
-            detectors = range(med.n_detectors)
-        else:
-            detectors = map(int,detectors)
-    else:
-        med = xrf.med
-        if detectors == []:
-            detectors = xrf.detectors
-        else:
-            detectors = map(int,detectors)
 
-    # delete rois
-    for i in detectors:
-        d = int(i)
-        if type(label) == types.IntType:
-            med.mcas[d].delete_roi(label)
-        elif type(label) == types.StringType:
-            idx =  med.mcas[d].find_roi_label(label=label)
-            if idx > 0:
-                med.mcas[d].delete_roi(idx)
-        else:
-            print "roi needs to be string label or integer index"
-            return
-
-    if lrn == []:
-        return
-    else:
-        # add roi
-        if len(lrn) == 2:
-            left = lrn[0]
-            right = lrn[1]
-            nbgr  = 1
-        elif len(lrn) == 3:
-            left = lrn[0]
-            right = lrn[1]
-            nbgr  = int(lrn[2])
-        else:
-            print "lrn needs either 2 or 3 vals"
-            return
-
-        roi = Mca.McaROI(units=units,left=left,right=right,bgd_width=nbgr,label=str(label))
-        for i in detectors:
-            d = int(i)
-            med.mcas[d].add_roi(roi)
-
+    xrf.xrf_set_roi(label,lrn=lrn,mcas=mcas,units=units)
     return
 
-
+##########################################################################
 def xrf_get_count_totals(xrf):
     """Get detector count totals
     >>xrf.show_rois(xrf)

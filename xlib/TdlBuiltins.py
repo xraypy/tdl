@@ -173,6 +173,13 @@ def _help(arg='',tdl=None,**kw):
 def _show(arg='',tdl=None,**kw):
     tdl.help.show(arg)
 
+def _dir(x,tdl=None,**kws):
+    ll = dir(x)
+    return ll
+
+def _dir_cmd(ll,**kws):
+    return show_list(ll,ncol=1)
+
 def _dictkeys(x):
     "return list of dictionary keys"
     if type(x) == types.DictType:
@@ -637,6 +644,7 @@ def _python(arg=None,tdl=None,**kws):
             except:
                 tdl.ShowError('Python Exception')
     return
+    
 
 #################################################################
 # Load the functions
@@ -697,7 +705,8 @@ _func_ = {'_builtin.load':(tdl_load, None),
           "_sys.set_path":(tdl_path,None),
           "_builtin.save_state":(tdl_savestate,None),
           "_builtin.restore_state":(tdl_restorestate,None),
-          "_builtin.python":(_python,None)
+          "_builtin.python":(_python,None),
+          "_builtin.dir":(_dir,_dir_cmd)
           }
 
 if __name__ == '__main__':

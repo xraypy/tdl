@@ -43,7 +43,6 @@ class Med:
         self.environment = []
         # for deadtimes
         self.tau = None
-        self.update = True
 
     def __repr__(self):
         lout = "Name = %s\n" % self.name
@@ -102,20 +101,20 @@ class Med:
             mca.initial_calibration(energy)
 
     #########################################################################
-    def final_calibration(self, peaks):
-        """
-        Performs a final energy calibration for each Mca in the Med.
-
-        Inputs:
-            peaks: A list of McaPeak objects. This list is typically read from a
-                   disk file with function Mca.read_peaks().
-                
-        See the documentation for Mca.final_calibration() for more information.
-        """
-        print "Not yet implemented"
-        #for mca in self.mcas:
-        #    mca.final_calibration(peaks)
-
+    #def final_calibration(self, peaks):
+    #    """
+    #    Performs a final energy calibration for each Mca in the Med.
+    #
+    #    Inputs:
+    #        peaks: A list of McaPeak objects. This list is typically read from a
+    #               disk file with function Mca.read_peaks().
+    #            
+    #    See the documentation for Mca.final_calibration() for more information.
+    #    """
+    #    print "Not yet implemented"
+    #    #for mca in self.mcas:
+    #    #    mca.final_calibration(peaks)
+    #
     #########################################################################
     def get_calibration(self):
         """
@@ -124,7 +123,7 @@ class Med:
         calibration = []
         for mca in self.mcas:
             calibration.append(mca.get_calibration())
-        self.calibration = calibration
+        #self.calibration = calibration
         return calibration
 
     #########################################################################
@@ -208,7 +207,13 @@ class Med:
         return rois
 
     #########################################################################
-    def get_roi_counts(self, background_width=1):
+    def update_rois(self,background_width=1,correct=True):
+        for mca in self.mcas:
+            mca.update_rois(background_width=background_width,correct=correct)
+        return
+
+    #########################################################################
+    def get_roi_counts(self, background_width=1,correct=True):
         """
         Returns the net and total counts for each Roi in each Mca in the Med.
 
@@ -221,11 +226,26 @@ class Med:
         total = []
         net = []
         for mca in self.mcas:
-            t, n = mca.get_roi_counts(background_width)
+            t, n = mca.get_roi_counts(background_width=background_width,correct=correct)
             total.append(t)
             net.append(n)
         return (total, net)
 
+   #########################################################################
+    def get_roi_counts_lbl(self, background_width=1,correct=True):
+        """
+        Returns the net and total counts for each Roi in each Mca in the Med.
+
+        Outputs:
+            Returns a list of dictionaries.  The list is of length num detectors
+            each entry in the list holds a dictionary of {'lbl:(total, net),...}
+        """
+        rois = []
+        for mca in self.mcas:
+            r = mca.get_roi_counts_lbl(background_width=background_width,correct=correct)
+            rois.append(r)
+        return rois
+    
     #########################################################################
     def set_rois(self, rois):
         """
@@ -299,21 +319,20 @@ class Med:
         if tau is not None:
             if len(tau) != self.n_detectors:
                 print "Error: tau array must be of length %d" % self.n_detectors
-                self.tau = None
+                return
             else:
                 self.tau = tau
-                self.update = True
-        if self.update == True:
-            for j in range(self.n_detectors):
-                if self.tau != None:
-                    t = self.tau[j]
-                else:
-                    t = None
-                self.mcas[j].update_correction(tau=t)
-            self.update = False
+
+        for j in range(self.n_detectors):
+            if self.tau != None:
+                t = self.tau[j]
+            else:
+                t = None
+            self.mcas[j].update_correction(tau=t)
+        return
 
     #########################################################################
-    def get_data(self, detectors=[], total=False, align=False, correct=True):
+    def get_data(self, bad_mca_idx=[], total=False, align=False, correct=True):
         """
         Returns the data from each Mca in the Med as a 2-D Numeric array
         
@@ -328,8 +347,8 @@ class Med:
                    or together with the TOTAL keyword, in which case the data
                    are aligned before summing.
 
-            detectors: A list of detectors to be passed back.  An empty
-                       list (default) means use all the detectors.
+            bad_mca_idx: A list of bad mca's, data will be zeros.  An empty
+                       list (default) means all the detectors are ok.
                        Note detector indexing starts at zero!
 
             correct:
@@ -342,37 +361,38 @@ class Med:
             If the "total" keyword is set then the array dimensions are [1,nchans]
         """
         
-        if len(detectors) > 0 and len(detectors) < self.n_detectors:
-            det_idx = detectors
-        else:
-            det_idx = range(self.n_detectors)
-            
-        temp = self.mcas[det_idx[0]].get_data()
+        temp = self.mcas[0].get_data()
         nchans = len(temp)
 
-        #data = Numeric.zeros((self.n_detectors, nchans))
-        data = Numeric.zeros((len(det_idx), nchans))
+        # init all data to zeros
+        data = Numeric.zeros((self.n_detectors, nchans))
 
-        #for i in range(self.n_detectors):
-        for i in range(len(det_idx)):
-            d = int(det_idx[i])
-            data[i,:] = self.mcas[d].get_data(correct=correct)
+        for d in range(self.n_detectors):
+            if d not in bad_mca_idx:
+                data[d,:] = self.mcas[d].get_data(correct=correct)
 
-        if align ==True and len(det_idx) > 1:
+        if align ==True and self.n_detectors > 1:
             #ref_energy = self.mcas[0].get_energy()
-            d = int(det_idx[0])
-            ref_energy = self.mcas[d].get_energy()
-            for i in range(len(det_idx)):
-                d = int(det_idx[i])
-                energy = self.mcas[d].get_energy()
-                temp = spline.spline_interpolate(energy, data[i,:], ref_energy)
-                data[i,:] = (temp+.5).astype(Numeric.Int)
+            first_good = self.get_align_idx(bad_mca_idx)
+            ref_energy = self.mcas[first_good].get_energy()
+            for d in range(self.n_detectors):
+                if d not in bad_mca_idx:
+                    energy = self.mcas[d].get_energy()
+                    temp = spline.spline_interpolate(energy, data[d,:], ref_energy)
+                    data[d,:] = (temp+.5).astype(Numeric.Int)
 
-        if total == True and len(det_idx) > 1:
-            d = Numeric.sum(data)
-            return [d]
+        if total == True and self.n_detectors > 1:
+            data = Numeric.sum(data)
+            return [data]
         else:
             return data
+
+    #########################################################################
+    def get_align_idx(self,bad_mca_idx):
+        for d in range(self.n_detectors):
+            if d not in bad_mca_idx:
+                return d
+        return 0
 
     #########################################################################
     def get_energy(self,detectors = []):

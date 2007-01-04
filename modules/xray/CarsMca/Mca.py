@@ -325,6 +325,56 @@ class McaROI:
         #lout = lout + "centroid = %f, fwhm = %f\n" % (self.centroid,self.fwhm)
         return lout
 
+    def update_counts(self, data, background_width=1):
+        """
+        Update the total and net.
+        Note this sets roi units should be set to channel
+
+        Arguments:
+            data: Num Array or list of data.
+        
+        Keywords:
+            background_width: Set this keyword to set the width of the
+                              background region on either side of the peaks
+                              when computing net counts.  The default is 1.
+        """
+        nchans = len(data)
+        def_background_width = background_width
+        
+        if self.bgd_width > 0 and def_background_width==1:
+            background_width = int(self.bgd_width)
+        else:
+            background_width = int(def_background_width)
+            self.bgd_width    = def_background_width
+
+        left = self.left            
+        ll = max((left-background_width+1), 0)
+        if (background_width > 0):
+             bgd_left = sum(data[ll:(left+1)]) / (left-ll+1)
+        else:
+            bgd_left = 0.
+        
+        right = self.right
+        rr = min((right+background_width-1), nchans-1)
+        if (background_width > 0):
+            bgd_right = sum(data[right:rr+1]) / (rr-right+1)
+        else:
+            bgd_right = 0.
+
+        #total cts array
+        total_counts = data[left:right+1]
+
+        #net cts array
+        n_sel        = right - left + 1
+        bgd_counts   = bgd_left + Numeric.arange(n_sel)/(n_sel-1.0) * (bgd_right - bgd_left)
+        net_counts   = total_counts - bgd_counts
+
+        # do sums
+        self.total =  sum(total_counts)
+        self.net   =  sum(net_counts)
+
+        return
+
 ########################################################################
 class Mca:
     """ Device-independent MultiChannel Analyzer (MCA) class """
@@ -575,9 +625,9 @@ class Mca:
         # this also sets ROI units to channel
         self.update_rois()
         rois = copy.copy(self.rois)
-
         # this should convert rois to passed units
         self.set_roi_units(rois=rois,units=units)
+
         return rois
 
     ########################################################################
@@ -631,7 +681,7 @@ class Mca:
                     print "Warning: units %s uknown" % str(units)
 
     ########################################################################
-    def get_roi_counts(self, background_width=1):
+    def get_roi_counts(self, background_width=1,correct=True):
         """
         Returns a tuple (total, net) containing the total and net counts of
         each region-of-interest in the MCA.
@@ -655,14 +705,39 @@ class Mca:
         """
         total = []
         net = []
-        self.update_rois(background_width=background_width)
+        self.update_rois(background_width=background_width,correct=correct)
         for roi in self.rois:
             total.update(roi.total)
             net.update(roi.net)
         return (total,net)
 
     ########################################################################
-    def update_rois(self, background_width=1):
+    def get_roi_counts_lbl(self, background_width=1,correct=True):
+        """
+        Returns a dict of {'lbl:(total, net),...} containing the total and net counts of
+        each region-of-interest in the MCA.
+
+        Keywords:
+            background_width:
+                Set this keyword to set the width of the background region on either
+                side of the peaks when computing net counts.  The default is 1.
+                
+        Outputs:
+             lbl:    ROI label
+             total:  The total counts in each ROI.
+             net:    The net counts in each ROI.
+             
+        Example:
+            rois = mca.get_roi_counts_lbl(background_width=3)
+        """
+        rois = {}
+        self.update_rois(background_width=background_width,correct=correct)
+        for roi in self.rois:
+            rois[roi.label] = (roi.total, roi.net)
+        return rois
+    
+    ########################################################################
+    def update_rois(self, background_width=1,correct=True):
         """
         Update the total and net counts for each roi.
         Note this sets roi units to channel and
@@ -673,9 +748,7 @@ class Mca:
                               background region on either side of the peaks
                               when computing net counts.  The default is 1.
         """
-        nchans = len(self.data)
-        def_background_width = background_width
-        
+       
         # make sure current units for rois are channel units
         self.set_roi_units(units="channel")
 
@@ -683,42 +756,11 @@ class Mca:
         self.rois.sort()
         
         for roi in self.rois:
-            if roi.bgd_width > 0 and def_background_width==1:
-                background_width = int(roi.bgd_width)
+            if correct == True:
+                data = self.get_data(correct=correct)
+                roi.update_counts(data, background_width=background_width)
             else:
-                background_width = int(def_background_width)
-                roi.bgd_width    = def_background_width
-
-            left = roi.left            
-            ll = max((left-background_width+1), 0)
-            if (background_width > 0):
-                 bgd_left = sum(self.data[ll:(left+1)]) / (left-ll+1)
-            else:
-                bgd_left = 0.
-            
-            right = roi.right
-            rr = min((right+background_width-1), nchans-1)
-            if (background_width > 0):
-                bgd_right = sum(self.data[right:rr+1]) / (rr-right+1)
-            else:
-                bgd_right = 0.
-
-            #total cts array
-            total_counts = self.data[left:right+1]
-
-            #net cts array
-            n_sel        = right - left + 1
-            bgd_counts   = bgd_left + Numeric.arange(n_sel)/(n_sel-1.0) * (bgd_right - bgd_left)
-            net_counts   = total_counts - bgd_counts
-
-            # do sums
-            total_counts = sum(total_counts)
-            net_counts   = sum(net_counts)
-
-            # update roi
-            roi.total = total_counts
-            roi.net   = net_counts
-            
+                roi.update_counts(self.data, background_width=background_width)
         return
 
     ########################################################################
