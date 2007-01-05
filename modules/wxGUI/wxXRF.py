@@ -98,22 +98,18 @@ class wxXRF(model.Background):
         try:
             num_mca = m.med.n_detectors
             self.components.NumMcas.text = "NumMcas = %i" % num_mca
-            det = str(m.detectors)
+            det = str(m.bad_mca_idx)
             self.components.McaList.text = det
             tau = str(m.med.tau)
             self.components.TauList.text = tau
             # update det select for fitting
             det_idx_str = ['All']
-            if self.components.Total.checked:
-                det_idx_str.append('0')
-            else:
-                for idx in m.detectors: det_idx_str.append(str(idx))
+            for idx in range(m.ndet):
+                det_idx_str.append(str(idx))
             det_sel = self.components.DetSelect.stringSelection
             self.components.DetSelect.items = det_idx_str
-            if det_sel in det_idx_str:
+            for det_sel in det_idx_str:
                 self.components.DetSelect.stringSelection = det_sel
-            else:
-                self.components.DetSelect.stringSelection = 'All'
 
             # get parameters from the xrf object and update in the gui
             self.PkParams_init()

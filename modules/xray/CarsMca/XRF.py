@@ -623,7 +623,7 @@ class XRF:
             return self.med.get_roi_counts_lbl(background_width=background_width,correct=correct)
 
     #########################################################################
-    def xrf_set_roi(self,label,lrn=[],mcas=[],units='keV'):
+    def set_roi(self,label,lrn=[],mcas=[],units='keV'):
 
         if mcas == []: mcas = range(self.med.n_detectors)
 

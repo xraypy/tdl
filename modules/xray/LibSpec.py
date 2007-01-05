@@ -140,6 +140,7 @@ def scan_cols(sf,scan,cols=None,**kws):
     return dat
 
 #################################################
+_groups_ = [('spec',True)]
 _func_ = {"spec.read":(read_spec,read_spec_cmd),
           "spec.show":(show_scan,None),
           "spec.data":scan_data,

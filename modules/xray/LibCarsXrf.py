@@ -640,6 +640,7 @@ def xrf_get_count_totals_cmd(val,**kws):
 ##################################################################################
 
 _help_  = {'xrf': HelpXRF}
+_groups_ = [('xrf',True)]
 
 # tdl functions
 _func_ = {"xrf.read":(xrf_read,xrf_read_cmd),

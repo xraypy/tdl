@@ -8,9 +8,8 @@
 #import LibTest
 import LibASCIIFile
 import LibPlotter
-newgroup spec
+#import LibPyLab
 import LibSpec
-newgroup xrf
 import LibCarsXrf
 
 # x = 1
