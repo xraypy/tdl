@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 import distutils
 from distutils.core import setup, Extension
 
