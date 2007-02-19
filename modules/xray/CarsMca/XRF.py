@@ -98,7 +98,7 @@ class XRF:
         return
 
     #########################################################################
-    # needs work -- should provide summary of fitting parameters etc..
+    # needs work -- should provide summary of fitting parameters, nicer fmt
     def __repr__(self):
         if self.med == None: return "No Data"
         lout = 'XRF Data Object:\n'
@@ -307,7 +307,7 @@ class XRF:
         tmp.label          = label
         tmp.initial_energy = energy
         tmp.energy         = energy
-        self.peak_params[idx].append(tmp)
+        self.peak_params[det_idx].append(tmp)
 
         # return pk_idx of new peak_param
         return (len(self.peak_params[det_idx]) - 1)

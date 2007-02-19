@@ -13,29 +13,12 @@
 #
 # * add read/fit spectra command (ie loop)
 #
-# * modify things so that detectors = [-1,-2] means use all
-#   except the negative values.
-#
-# * currently rois are directly from med.  should change to use corrected data in xrf class
-#   and work on show rois etc....
-#
 # * test fitting etc when total = False
 #
 # * work on __repr__, ie nicer format, include fitting results
 #
 # * add Emin/Emax to read/set_detectors
 #
-#
-# Note for read and set commands, should have an mcas arg instead of detectors
-# For others use a det=integer syntax.  (or index=integer) ie data, energy
-# fits etc should work on individual detectors or all of them at once
-#
-#
-# -> mca_inc_array = [1,2,3,-4,5,6,7,-9]
-# -> can use bad = [1,2]
-# -> mca_inc_array = [1,2,3,-4,5,6,7,-9]
-#
-# -> put plot cmd in here and add all fancy options....
 #
 #
 #################################################################################################
