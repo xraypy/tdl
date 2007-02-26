@@ -82,7 +82,7 @@ class XRF:
         self.bad_mca_idx = bad_mca_idx
 
         # lists for corrected/processed data
-        self.sum         = []
+        #self.sum         = []
         self.data        = []
         self.bgr         = []
         self.predicted   = []
@@ -397,8 +397,6 @@ class XRF:
                     tangent=tangent, compress=compress, det_idx=det_idx)
         return
 
-
-
     #########################################################################
     def fit(self,fwhm_flag=1,energy_flag=1,chi_exp=0.0,fit_bgr=True):
 
@@ -451,9 +449,12 @@ class XRF:
         calib_idx    = self.get_calibration_idx(det_idx)
         peaks        = self.peak_params[det_idx]
         fit          = self.fit_params[det_idx]
+        print "peak params for ", det_idx
+        print "length of peaks", len(peaks)
+        print "peaks[0].label", peaks[0].label
 
         # Copy parameters to fit
-        fit.npeaks = len(peaks)
+        fit.npeaks                = len(peaks)
         fit.initial_energy_offset = self.med.mcas[calib_idx].calibration.offset
         fit.initial_energy_slope  = self.med.mcas[calib_idx].calibration.slope
         fit.nchans                = len(observed)

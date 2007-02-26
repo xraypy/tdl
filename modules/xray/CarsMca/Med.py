@@ -389,6 +389,7 @@ class Med:
 
     #########################################################################
     def get_align_idx(self,bad_mca_idx):
+        " find first good detector for alignment"
         for d in range(self.n_detectors):
             if d not in bad_mca_idx:
                 return d
