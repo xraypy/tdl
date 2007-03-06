@@ -21,6 +21,7 @@ try:
     import scipy.linalg as linalg
     Num.linalg = linalg
     v = [int(i) for i in Num.__version__.split('.')]
+    v.append(0) ;     v.append(0) 
     v = 100*v[0] + 10*v[1] + v[2]
     if v >= 47:
         num_version = 'scipy %s' % Num.__version__
@@ -32,6 +33,7 @@ except:
     try:
         import numpy as Num
         v = [int(i) for i in Num.__version__.split('.')]
+        v.append(0) ;     v.append(0) ; 
         v = 100*v[0] + 10*v[1] + v[2]
         if v >= 96:
             num_version = 'numpy %s' % Num.__version__
