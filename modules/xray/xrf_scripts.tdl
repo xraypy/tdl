@@ -1,5 +1,6 @@
 # Tdl defined procedures for med data
 
+#########################################################
 def xrf.plot(xrf,channel=False,hold=False,logplt=False):
     """
     plot a spectrum
@@ -34,7 +35,7 @@ def xrf.plot(xrf,channel=False,hold=False,logplt=False):
 
 enddef
 
-
+#########################################################
 def xrf.plot_fit(xrf,channel=False,hold=False,logplt=False):
     """
     plot a fit spectrum
@@ -72,3 +73,53 @@ def xrf.plot_fit(xrf,channel=False,hold=False,logplt=False):
 
 enddef
 
+#########################################################
+def xrf.plot_det(xrf,det=0,channel=False,hold=False,logplt=False):
+    """
+    plot a spectrum
+    >>xrf.plot(xrf)
+    """
+    print xrf
+    det = int(det)
+    dat  = xrf.data(xrf)[det]
+    nchan = len(dat)
+    if channel==True:
+        e = [range(nchan,dtype='i')]
+    else:
+        e = xrf.energy(xrf)[det]
+    endif
+
+    if hold == False:
+        newplot(e,dat,ylog=logplt)
+    else
+        plot(e,dat,ylog=logplt)
+    endif
+
+enddef
+
+#########################################################
+def xrf.plot_fit_det(xrf,det=0,channel=False,hold=False,logplt=False):
+    """
+    plot a fit spectrum
+    >>xrf.plot(xrf)
+    """
+    print xrf
+    det = int(det)
+    dat  = xrf.data(xrf)[det]
+    calc = xrf.calc_peaks(xrf)[det]
+    nchan = len(dat)
+    if channel==True:
+        e = [range(nchan,dtype='i')]
+    else:
+        e = xrf.energy(xrf)[det]
+    endif
+
+    if hold == False:
+        newplot(e,dat,fmt='b.',ylog=logplt)
+        plot(e,calc,fmt='r',ylog=logplt)
+    else:
+        plot(e,dat,fmt='b.',ylog=logplt)
+        plot(e,calc,fmt='r',ylog=logplt)
+    endif
+
+enddef

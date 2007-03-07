@@ -136,7 +136,7 @@ def xrf_read_cmd(val,file=None,tdl=None,**kws):
     return
 
 #############################################################################
-def xrf_set_data(xrf,bad_mca_idx=None,total=None,align=None,correct=True,tau=None):
+def xrf_set_data(xrf,bad_mca_idx=None,total=None,align=None,correct=None,tau=None):
     """
     Reset detectors used for xrf analysis
     >>xrf.set_data(xrf,detectors=[],total=False,align=True,correct=True,tau=[])

@@ -79,7 +79,10 @@ class XRF:
         self.ndet        = 0
         self.total       = total
         self.align       = align
+        self.correct     = True
         self.bad_mca_idx = bad_mca_idx
+        self.emin        = 0.0
+        self.emax        = 0.0
 
         # lists for corrected/processed data
         #self.sum         = []
@@ -105,8 +108,10 @@ class XRF:
         lout = lout + '  Name = %s\n' % self.med.name
         lout = lout + '  Num detectors = %i\n' % self.med.n_detectors
         lout = lout + '  Bad Detectors = %s\n' % str(self.bad_mca_idx)
+        lout = lout + '  Detector Taus = %s\n' % str(self.med.tau)
         lout = lout + '  Align = %s\n' % str(self.align)
         lout = lout + '  Total = %s\n' % str(self.total)
+        lout = lout + '  Correct = %s\n' % str(self.correct)
         ##
         for pk in self.peak_params:
             for p in pk:
@@ -128,7 +133,8 @@ class XRF:
     #    return new
 
     #########################################################################
-    def init_data(self,bad_mca_idx=None,total=None,align=None,correct=True,tau=None,init_params=True):
+    def init_data(self,bad_mca_idx=None,total=None,align=None,correct=None,
+                  tau=None,init_params=True):
 
         if self.med == None: return
 
@@ -137,6 +143,8 @@ class XRF:
             self.total = total
         if align is not None:
             self.align = align
+        if correct is not None:
+            self.correct = correct
 
         # update bad list
         if bad_mca_idx is not None:
@@ -155,7 +163,7 @@ class XRF:
         self.data = self.med.get_data(bad_mca_idx=self.bad_mca_idx,
                                       total=self.total,
                                       align=self.align,
-                                      correct=correct)
+                                      correct=self.correct)
 
         self.ndet = len(self.data)
         
@@ -173,11 +181,22 @@ class XRF:
                     exponent=2, tangent=0, compress=4):
 
         # reset all peak and bgr parameters to defaults
-        self.fit_params  = self.ndet * [[]]
-        self.bgr_params  = self.ndet * [[]]
-        self.peak_params = self.ndet * [[]]
-        self.bgr         = self.ndet * [[]]
-        self.predicted   = self.ndet * [[]]
+        #self.fit_params  = self.ndet * [[]]
+        #self.bgr_params  = self.ndet * [[]]
+        #self.peak_params = self.ndet * [[]]
+        #self.bgr         = self.ndet * [[]]
+        #self.predicted   = self.ndet * [[]]
+        self.fit_params  = []
+        self.bgr_params  = []
+        self.peak_params = []
+        self.bgr         = []
+        self.predicted   = []
+        for i in range(self.ndet):
+            self.fit_params.append([])
+            self.bgr_params.append([])
+            self.peak_params.append([])
+            self.bgr.append([])
+            self.predicted.append([])
 
         for i in range(self.ndet):
             self.fit_params[i] = fitPeaks.McaFit()
@@ -290,7 +309,6 @@ class XRF:
         """
         create a new peak_param given a name and energy
         """
-        
         if not det_idx in range(self.ndet): return
 
         if label == None:
@@ -393,14 +411,16 @@ class XRF:
                     tangent=None, compress=None):
 
         for det_idx in range(self.ndet):
-            self.set_bgr(slope=slope,exponent=exponent,top_width=top_width, bottom_width=bottom_width,
-                    tangent=tangent, compress=compress, det_idx=det_idx)
+            self.set_bgr(slope=slope,exponent=exponent,top_width=top_width,
+                         bottom_width=bottom_width, tangent=tangent,
+                         compress=compress, det_idx=det_idx)
         return
 
     #########################################################################
     def fit(self,fwhm_flag=1,energy_flag=1,chi_exp=0.0,fit_bgr=True):
 
         for i in range(self.ndet):
+            #print i, fit_bgr
             if fit_bgr: self._fit_bgr(i)
             self._fit_peaks(i,fwhm_flag=fwhm_flag,energy_flag=energy_flag,chi_exp=chi_exp)
         return 
@@ -423,7 +443,8 @@ class XRF:
         else:
             calib = self.get_calibration(det_idx)
             self.bgr_params[det_idx].slope = calib.slope
-            self.bgr[det_idx] = fitBgr.fit_background(self.data[det_idx], self.bgr_params[det_idx])
+            self.bgr[det_idx] = fitBgr.fit_background(self.data[det_idx],
+                                                      self.bgr_params[det_idx])
 
         return
 
@@ -438,20 +459,25 @@ class XRF:
 
         if not det_idx in range(self.ndet): return
         if det_idx in self.bad_mca_idx:
+            #print "skip det ", det_idx
             self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
             return
+        observed    = self.data[det_idx]
+        background  = self.bgr[det_idx]
         
-        observed     = self.data[det_idx]
-        background   = self.bgr[det_idx]
         # in case background was not subtracted
         if len(background) == 0:
             background = Num.zeros(len(observed))
         calib_idx    = self.get_calibration_idx(det_idx)
         peaks        = self.peak_params[det_idx]
         fit          = self.fit_params[det_idx]
-        print "peak params for ", det_idx
-        print "length of peaks", len(peaks)
-        print "peaks[0].label", peaks[0].label
+        #print "peak params for ", det_idx
+        #print "length of peaks", len(peaks)
+
+        if len(peaks) == 0:
+            #print "det ", det_idx, " has no peak parameters"
+            self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
+            return
 
         # Copy parameters to fit
         fit.npeaks                = len(peaks)
@@ -476,9 +502,10 @@ class XRF:
         return
     
     #########################################################################
-    def calc_peaks(self):
+    def calc_peaks(self,calc_bgr=True):
 
         for i in range(self.ndet):
+            if calc_bgr: self._fit_bgr(i)
             self._calc_peaks(i)
         return 
 
@@ -490,12 +517,12 @@ class XRF:
         if det_idx in self.bad_mca_idx:
             self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
             return
-
+        
+        # Bgr
         background   = self.bgr[det_idx]
-
-        # in case background was not subtracted
         if len(background) == 0:
             background = Num.zeros(len(self.data[det_idx]))
+        
         calibration  = self.get_calibration(det_idx)
         peaks        = self.peak_params[det_idx]
         fit          = self.fit_params[det_idx]
@@ -526,9 +553,9 @@ class XRF:
             self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
             return
 
+        # Bgr
+        if add_bgr: self._fit_bgr(det_idx)
         background   = self.bgr[det_idx]
-
-        # in case background was not subtracted
         if len(background) == 0:
             background = Num.zeros(len(self.data[det_idx]))
 
@@ -565,7 +592,8 @@ class XRF:
             
     #########################################################################
     def data_dict(self):
-        dict = {'energy':[],'counts':[],'background':[],'predicted':[],'peak_areas':[],'peaks':[]}
+        dict = {'energy':[],'counts':[],'background':[],'predicted':[],
+                'peak_areas':[],'peaks':[]}
         energy    = self.get_energy()
         counts    = self.get_data()
         bgr       = self.bgr
@@ -586,7 +614,8 @@ class XRF:
             # get each peak function
             peaks = {}
             for peak_params in self.peak_params[mca_idx]:
-                calc = fitPeaks.predict_gaussian_spectrum(self.fit_params[mca_idx], [peak_params])
+                calc = fitPeaks.predict_gaussian_spectrum(self.fit_params[mca_idx],
+                                                          [peak_params])
                 peaks[peak_params.label] = calc
             dict['peaks'].append(peaks)
 
@@ -621,7 +650,8 @@ class XRF:
                     ret[roi.label] = (roi.total, roi.net)
                 return [ret]
         else:
-            return self.med.get_roi_counts_lbl(background_width=background_width,correct=correct)
+            return self.med.get_roi_counts_lbl(background_width=background_width,
+                                               correct=correct)
 
     #########################################################################
     def set_roi(self,label,lrn=[],mcas=[],units='keV'):

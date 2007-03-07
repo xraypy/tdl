@@ -60,7 +60,37 @@ class wxTdlUtil:
             lst = s.split()
         else:
             lst = s.split(',')
-        return map(conv, lst)
+        # we probably need to loop
+        # and do explicit instead of use map
+        #return map(conv, lst)
+        v = []
+        for l in lst:
+            if conv == float:
+                n = float(eval(l))
+                v.append(n)
+            elif conv == int:
+                n = int(eval(l))
+                v.append(n)
+        return v
+
+    def str_to_list_var(self,s,conv=float):
+        if s == None: return []
+        s = s.strip()
+        if len(s) == 0: return []
+        if s[0].isalpha() or s[0] == '_':
+            v = self.getValue(s)
+            if v == None: return []
+            v2 = []
+            for l in v:
+                if conv == float:
+                    n = float(l)
+                    v2.append(n)
+                elif conv == int:
+                    n = int(l)
+                    v2.append(n)
+            return v2
+        else:
+            return self.str_to_list(s,conv=conv)
 
     def post_message(self,mess):
         """
