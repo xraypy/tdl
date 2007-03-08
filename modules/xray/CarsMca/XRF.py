@@ -458,10 +458,11 @@ class XRF:
     def _fit_peaks(self,det_idx,fwhm_flag=1,energy_flag=1,chi_exp=0.0):
 
         if not det_idx in range(self.ndet): return
-        if det_idx in self.bad_mca_idx:
-            #print "skip det ", det_idx
-            self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
-            return
+        if self.total == False:
+            if det_idx in self.bad_mca_idx:
+                print "skip det ", det_idx
+                self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
+                return
         observed    = self.data[det_idx]
         background  = self.bgr[det_idx]
         
@@ -514,9 +515,10 @@ class XRF:
 
         if not det_idx in range(self.ndet): return
 
-        if det_idx in self.bad_mca_idx:
-            self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
-            return
+        if self.total == False:
+            if det_idx in self.bad_mca_idx:
+                self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
+                return
         
         # Bgr
         background   = self.bgr[det_idx]
@@ -549,9 +551,10 @@ class XRF:
             
         if not pk_idx in range(len(self.peak_params[det_idx])): return
 
-        if det_idx in self.bad_mca_idx:
-            self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
-            return
+        if self.total == False:
+            if det_idx in self.bad_mca_idx:
+                self.predicted[det_idx] = Num.zeros(len(self.data[det_idx]))
+                return
 
         # Bgr
         if add_bgr: self._fit_bgr(det_idx)

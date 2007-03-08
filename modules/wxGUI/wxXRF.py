@@ -94,6 +94,7 @@ class wxXRF(model.Background, wxTdlUtil):
         # below updates depend on how we want it to work 
         if self.components.SetParFromSave.checked:
             self.update_gui_from_save()
+            self.update_xrf_from_gui()
         elif self.check_xrf_var():
             self.update_gui_from_xrf()
         return
@@ -180,7 +181,8 @@ class wxXRF(model.Background, wxTdlUtil):
         return
 
     def init_NodePfxItems(self):
-        """Initialize the menu. Use the group thats selected in the group menu"""
+        """Initialize the menu. Use the group thats
+        selected in the group menu"""
         grp = self.components.Grp.text  
         if len(grp) == 0: grp = None
         node = self.components.NodePfx.text
@@ -246,7 +248,6 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.AutoIncInc.text = scan_par['sc_inc']
         self.components.NodeInc.value = scan_par['sc_step']
 
-
     ###########################################################
     # Data Parameters
     ###########################################################
@@ -260,7 +261,6 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.BadMcas.text = '[]'
         self.components.McaTaus.text = ''
         return
-
 
     def init_DetAndTauItems(self):
         " Initialize the items from tdl    "
@@ -433,8 +433,9 @@ class wxXRF(model.Background, wxTdlUtil):
         self.put_PkPar_fields(pk_params)
         return
 
-    def get_PeakPar(self):
-        return self.components.PkParams
+    def get_PeakParams(self):
+        """ return list of all Peak Parameters from GUI """
+        return self.components.PkParams.items
     
     def PkParams_update(self,pk_params):        
         "update the pk params list"
@@ -457,7 +458,7 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.PkParams.items = list
         
         # this should invoke the on_PkParams_select event
-        self.components.PkParams.SetSelection(sel)
+        #self.components.PkParams.SetSelection(sel)
 
         return
 
@@ -578,8 +579,9 @@ class wxXRF(model.Background, wxTdlUtil):
         self.put_BgrPar_fields(bgr_params)
         return
 
-    def get_BgrPar(self):
-        return self.components.BgrParams
+    def get_BgrParams(self):
+        """ return list of all Bgr parameters """
+        return self.components.BgrParams.items
 
     def BgrParams_update(self,bgr_params):        
         "given list of bgr_pars update list"
@@ -602,7 +604,7 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.BgrParams.items = list
         
         # this should invoke the on_PkParams_select event
-        self.components.BgrParams.SetSelection(sel)
+        #self.components.BgrParams.SetSelection(sel)
         return
 
     def get_BgrPar_fields(self):
@@ -629,8 +631,80 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.BgrBtmWdth.text   = bgr_params[3] 
         self.components.BgrTangent.text   = bgr_params[4] 
         self.components.BgrCompress.text  = bgr_params[5] 
-        #self.components.BgrCheck.checked  = eval(bgr_params[6])  
         return
+
+    ###########################################################
+    # Copy/Del/Update Parameters Buttons
+    ###########################################################
+    def on_CopyParams_mouseClick(self,event):
+        det      = self.components.DetSelect.stringSelection
+        det_lst  = self.components.DetSelect.items
+
+        # copy Bgr
+        list = self.get_BgrParams()
+        if len(list) > 0:
+            # find the bgr params
+            found = False
+            for j in range(len(list)):
+                if list[j][0] == det:
+                    bgr_params = list[j]
+                    found = True
+                    break
+            if found == True:
+                for d in det_lst:
+                    bgr_params[0] = d
+                    self.BgrParams_update(bgr_params)
+        
+        # copy peak
+        list = self.get_PeakParams()
+        if len(list) > 0:
+            # find the peaks params
+            pk_params = []
+            found = False
+            for j in range(len(list)):
+                if list[j][0] == det:
+                    pk_params.append(list[j])
+                    found = True
+            if found == True:
+                for d in det_lst:
+                    for pk_par in pk_params:
+                        pk_par[0] = d
+                        self.PkParams_update(pk_par)
+        return
+    
+    def on_ClearParamsDet_mouseClick(self,event):
+        det = self.components.DetSelect.stringSelection
+
+        # Bgr
+        list = self.get_BgrParams()
+        if len(list) > 0:
+            # find the bgr params
+            for j in range(len(list)):
+                if list[j][0] == det:
+                    list.pop(j)
+                    break
+            self.components.BgrParams.items = list
+
+        # peak
+        list = self.get_PeakParams()
+        if len(list) > 0:
+            # find the pk params
+            while True:
+                n = len(list)
+                for j in range(n):
+                    if list[j][0] == det:
+                        list.pop(j)
+                        break
+                if j >= n-1: break
+            self.components.PkParams.items = list
+        
+        return 
+    
+    def on_ClearParamsAll_mouseClick(self,event):
+        self.init_BgrParams()
+        self.init_PkParams()
+        pass
+
 
     ###########################################################
     # XRF Object
@@ -643,6 +717,9 @@ class wxXRF(model.Background, wxTdlUtil):
         return
 
     def compare_data_params(self):
+        """ return True is the xrf data params are the same as
+        the parameters listed in the GUI, ie does the xrf object
+        need an update"""
         xrf = self.get_xrf()
         if xrf == None: return False
 
@@ -655,13 +732,20 @@ class wxXRF(model.Background, wxTdlUtil):
 
         bad_mca = self.str_to_list_var(data_par['bad_mcas'],conv=int)
         if bad_mca != xrf.bad_mca_idx: return False
-        
+
+        # note should fix xrf to make this simpler, ie no None's        
         mca_taus = self.str_to_list_var(data_par['mca_taus'],conv=float)
-        if mca_taus != xrf.med.tau: return False
+        if mca_taus != xrf.med.tau:
+            if mca_taus == [] and xrf.med.tau == None:
+                pass
+            else:
+                return False
 
         return True
 
     def compare_fit_params(self):
+        """ return True is the xrf fit params are the same as
+        the parameters listed in the GUI"""
         return False
 
     def update_xrf_from_gui(self):
@@ -671,6 +755,7 @@ class wxXRF(model.Background, wxTdlUtil):
 
         # data parameters
         if self.compare_data_params() == False:
+            self.post_message("reset data parameters")
             data_par  = self.get_DataPar()
             bad_mca   = self.str_to_list_var(data_par['bad_mcas'],conv=int)
             tau       = self.str_to_list_var(data_par['mca_taus'],conv=float)
@@ -746,6 +831,8 @@ class wxXRF(model.Background, wxTdlUtil):
             self.components.McaTaus.text = str(xrf.med.tau)
 
             # update det select for fitting
+            # should this be a seperate function
+            # should the DetSelect list skip 'bads'?
             det_idx_str = []
             for idx in range(xrf.ndet):
                 det_idx_str.append(str(idx))
@@ -770,7 +857,6 @@ class wxXRF(model.Background, wxTdlUtil):
                     bgr_params[3] = str(bgr[j].bottom_width)
                     bgr_params[4] = str(bgr[j].tangent)
                     bgr_params[5] = str(bgr[j].compress)
-                    #bgr_params[6] = str(True)
                     self.BgrParams_update(bgr_params)
             except:
                 pass
@@ -813,6 +899,28 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.SaveParVar.text = t
         return
 
+    def on_SaveSavePar_mouseClick(self,event):
+        self.save_parameters()
+        self.init_tdl_list_items()
+        return
+
+    def on_RestoreSavePar_mouseClick(self,event):
+        self.update_gui_from_save()
+        return    
+
+    def save_parameters(self):
+        var_name = self.components.SaveParVar.text
+        if len(var_name.strip()) == 0: return
+        data_par = self.get_DataPar()
+        bgr_par = self.get_BgrParams()
+        pk_par  = self.get_PeakParams()
+        fit_par = self.get_FitArgs_fields()
+
+        vars = {'data_par':data_par,'bgr_par':bgr_par,
+                'pk_par':pk_par,'fit_par':fit_par}
+        self.setValue(var_name,vars)
+        return
+
     def update_gui_from_save(self):
         try:
             xrf = self.get_xrf() 
@@ -820,9 +928,24 @@ class wxXRF(model.Background, wxTdlUtil):
             self.components.NumMcas.text = "NumMcas = %i" % num_mca
         except:
             self.components.NumMcas.text = "NumMcas = 0"
-        #
-        # need more here...
-        #
+
+        # get save parameters
+        var_name = self.components.SaveParVar.text
+        if len(var_name.strip()) == 0: return
+        save_var = self.getValue(var_name)
+        try:
+            data_par = save_var['data_par']
+            bgr_par = save_var['bgr_par']
+            pk_par = save_var['pk_par']
+            fit_par = save_var['fit_par']
+            
+            # put stuff
+            self.put_DataPar(data_par)
+            self.components.BgrParams.items = bgr_par
+            self.components.PkParams.items  = pk_par
+            self.put_FitArgs_fields(fit_par)
+        except:
+            self.post_message("failed to read save parameters")
         return
     
     ###########################################################
@@ -839,6 +962,8 @@ class wxXRF(model.Background, wxTdlUtil):
         xrf.calc_peaks()
         self.set_xrf(xrf)
         self.update_gui_from_xrf()
+        if self.components.AutoUpdateCheck.checked == True:
+            self.plot_cmd()
         return
 
     def init_FitParams(self):
@@ -894,6 +1019,8 @@ class wxXRF(model.Background, wxTdlUtil):
                            energy_flag=FitEnFlag,chi_exp=FitChiExp)
         self.set_xrf(xrf)
         self.update_gui_from_xrf()
+        if self.components.AutoUpdateCheck.checked == True:
+            self.plot_cmd()
         return
 
     def fit_scan(self):
