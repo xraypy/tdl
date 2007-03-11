@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # test expression parsing
 
-from Num import Num
-from Eval       import Evaluator
-from Expression import ExpressionParser
-from Symbol     import SymbolTable
+import Num
+import Eval
 
 import unittest
 import types
@@ -18,16 +16,8 @@ def myf2(c=100,**kw):
 def myf3(x,b):
     return x * b
 
-parse_file = '../tests/core_parsing.txt'
-f = open(parse_file,'r')
-parse_tests = f.readlines()
-f.close()
-
-eval_file = '../tests/core_eval.txt'
-f = open(eval_file,'r')
-eval_tests = f.readlines()
-f.close()
-
+parse_tests = open('../tests/core_parsing.txt','r').readlines()
+eval_tests  = open('../tests/core_eval.txt','r').readlines()
 
 floattypes   = Num.sctypes['float']    + [types.FloatType]
 complextypes = Num.sctypes['complex']  + [types.ComplexType]
@@ -35,10 +25,9 @@ inttypes     = Num.sctypes['int']      + Num.sctypes['uint'] + [types.IntType]
 
 class ParserTest(unittest.TestCase):
     def setUp(self):
-        self.symtable  = SymbolTable()
-        self.parser    = ExpressionParser()
-        self.evaluator = Evaluator(symbolTable=self.symtable)
-        s = self.symtable
+        self.tdl = Eval.Evaluator()
+        self.compiler = self.tdl.expr_compile
+        s  = self.tdl.symbolTable
 
         b = Num.arange(64)
         b.shape=(8,8)
@@ -62,8 +51,9 @@ class ParserTest(unittest.TestCase):
         s.setFunction('f3', myf3)
         self.nlines = 0
 
-    def __testA_Load(self):
-        out = self.evaluator.eval('1')
+    def testA_Load(self):
+        print 'Load Test:' 
+        out = self.tdl.eval('1')
         self.assertEqual(out,1)
         
     def testB_ExpressionCompile(self):
@@ -78,7 +68,7 @@ class ParserTest(unittest.TestCase):
                 val.strip()
                 test  = val.split(',')
                 print 'parse ', expr, 
-                stack = self.parser.compile(expr)
+                stack = self.compiler(expr)
                 stack.reverse()
                 # print ' :: got     = ', stack
                 # print ' :: expected= ', test
@@ -105,7 +95,7 @@ class ParserTest(unittest.TestCase):
         print ' Compiled %i expressions successfully.'  % self.nlines
 
     def testC_ExpressionEval(self):
-        print 'Evaluation Test:'
+        print 'Evaluation Test ==== :'
         self.nlines = 0
         for line in eval_tests:
             line = line[:-1].strip()
@@ -114,7 +104,7 @@ class ParserTest(unittest.TestCase):
                 self.nlines = self.nlines + 1
                 expr, val= line.split('=>')
                 print 'eval ', expr,
-                out = self.evaluator.eval(expr)
+                out = self.tdl.eval(expr)
                 print ' = ', repr(out), 
                 if type(out) in floattypes:
                     self.assertAlmostEqual(out,float(val.strip()),6)
@@ -138,7 +128,7 @@ class ParserTest(unittest.TestCase):
                 else:
                     self.assertEqual(repr(out),(val.strip()))
 
-                print ' OK!'
+                print ' OK.'
         print ' Evaluated %i expressions successfully.'  % self.nlines                
 
 if __name__ == '__main__':

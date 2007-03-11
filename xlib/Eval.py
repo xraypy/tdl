@@ -490,7 +490,6 @@ class Evaluator:
         isSymGroup = (type(rhs) == symGroup)
         if isSymGroup:
             sym  = self.symbolTable.moveGroup(varname,rhs)
-            # self.symbolTable.showTable(skip=('_math','_builtin'))
             return
         else:
             sym  = self.symbolTable.getSymbolLocalGroup(varname)            

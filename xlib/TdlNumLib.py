@@ -8,7 +8,7 @@
 #  - Created, moved numeric related funs/cmds to this module
 #   from TdlLib
 ##########################################################################
-from Num import Num, num_version
+import Num
 import os
 import sys
 import types
@@ -110,7 +110,7 @@ def _tdl_minimize(residual,varlist,tdl=None, iter_function=None, debug=False, **
          minimize(f, variable_list)
     """
     if tdl is None: return varlist
-    if num_version.startswith('numpy'):
+    if Num.num_version.startswith('numpy'):
         print 'cannot use tdl minimize:  scipy required'
         return varlist
 

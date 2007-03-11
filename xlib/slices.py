@@ -1,4 +1,4 @@
-from numpy import arange, arraytype
+from numpy import arange, ndarray
 from types import FloatType, StringType, ListType
 class opcodes:
     empty = '@EMP'
@@ -8,7 +8,7 @@ def test_eval(s):
     r.append("==== %s:\n" % s)
     r.append(str(eval(s)))
     return ''.join(r)
-   
+
 
 def take_subarray(val,elems):
     # takes subarrays / slices of lists and numeric arrays,
@@ -19,7 +19,7 @@ def take_subarray(val,elems):
     for e in elems:
         if type(e) == FloatType: e = int(e)
         el.append(e)
-    if type(val) == arraytype:
+    if type(val) == ndarray:
         if len(el) > len(val.shape): el = el[:len(val.shape)]
         val = val[tuple(el)]
     else:

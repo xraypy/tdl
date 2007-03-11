@@ -14,7 +14,7 @@
 #     of tdl expressions.
 #
 ##########################################################################
-from Num import Num
+import Num
 import types
 
 import pyparsing
@@ -84,7 +84,7 @@ def take_subarray(val, ndim, work):
         if type(e) == types.FloatType:   e = int(e)
         elems.append(e)
     elems.reverse()
-    if type(val) == Num.arraytype:
+    if type(val) == Num.ArrayType:
         if len(elems) > len(val.shape): elems = elems[:len(val.shape)]
         val = val[tuple(elems)]
     else:

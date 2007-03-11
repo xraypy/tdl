@@ -21,13 +21,15 @@ print '== Test addTempGroup '
 for   i in range(3):
     print 'add temp group: ', s.addTempGroup()
 
-print '== Groups: Name      # of elements'
+print '== Groups: Name      elements    SearchGroup?'
+
 allgroups = s.listGroups()
 for i in s.searchGroups:
-    print '     %10.10s         %i ' % (i, len(s.getSymbol(i)))
-    allgroups.remove(i)
+    print '     %s         %i        yes' % ((i+' '*10)[:10], len(s.getSymbol(i)))
+    allgroups.pop(i)
+
 for i in allgroups:
-    print '     %10.10s         %i ' % (i, len(s.getSymbol(i)))    
+    print '     %s         %i        no' % ((i+' '*10)[:10], len(s.getSymbol(i)))    
     
 print '== Passed all tests for Symbol Test 01 '
 #s.showTable()

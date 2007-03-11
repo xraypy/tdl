@@ -4,6 +4,8 @@
 # --------------
 # Modifications
 # --------------
+#  12-Mar-2007  MN  simplified by *requiring* numpy 1.0 or higher, and
+#                   not using scipy
 #  23-Apr-2006  MN  added test for scipy 0.4.8 or higher, required for
 #                   some numeric functionality
 #
@@ -12,39 +14,21 @@
 ##########################################################################
 from __future__ import division
 
-ArrayType =  "<type 'numpy.ndarray'>"
-
-numpy_needed = 'Need SciPy 0.4.8 or (at least) NumPy version 0.9.6 or higher'
-num_version = None
 try:
-    import scipy as Num
-    import scipy.linalg as linalg
-    Num.linalg = linalg
-    v = [int(i) for i in Num.__version__.split('.')]
-    v.append(0) ;     v.append(0) 
-    v = 100*v[0] + 10*v[1] + v[2]
-    if v >= 47:
-        num_version = 'scipy %s' % Num.__version__
+    import numpy as Num
+    factor = 100.
+    version = 0.0
+    for v in [int(i) for i in Num.__version__.split('.')]:
+        version = version + v * factor
+        factor = factor / 10.
 
-    if not hasattr(Num,ArrayType):
-        Num.ArrayType = "<type 'numpy.ndarray'>"
-        
+    if version >= 100:   num_version = 'numpy %s' % Num.__version__
 except:
-    try:
-        import numpy as Num
-        v = [int(i) for i in Num.__version__.split('.')]
-        v.append(0) ;     v.append(0) ; 
-        v = 100*v[0] + 10*v[1] + v[2]
-        if v >= 96:
-            num_version = 'numpy %s' % Num.__version__
-        if not hasattr(Num,ArrayType):
-            Num.ArrayType = "<type 'numpy.ndarray'>"
-    except:
-        pass
+    raise ImportError, 'Need numpy version 1.0 or higher'
 
-if num_version is None:
-    raise ImportError, numpy_needed
+from numpy import *
+ArrayType = ndarray
 
 if __name__ == '__main__':
-    print 'tdl will use %s ' % num_version
+    print 'tdl will use numpy %s ' % num_version
     

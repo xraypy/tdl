@@ -38,9 +38,9 @@ import inspect
 import re
 from copy import deepcopy
 
-from Num import Num
+import Num
 from Util import find_unquoted_char, split_delim, datalen, set_path
-from Util import PrintExceptErr, SymbolError, ConstantError
+from Util import PrintExceptErr, SymbolError, ConstantError, show_more
 from string import ascii_lowercase, digits
 
 __version__  = '0.3'
@@ -609,20 +609,22 @@ class SymbolTable:
             ll = ll + list(libs)
         # 
         spath = self.getSymbolValue('_sys.path')
+
         if type(spath) == types.ListType:
             for p in spath: set_path(p)
         elif type(spath) == types.StringType:
             set_path(spath)
 
         # import all libraries
-        for i in ll: self.import_lib(i)
-
+        for i in ll:
+            self.import_lib(i)
 
             
     def import_lib(self,lib):
         " import or reload module given module name or object"
         if lib is None: return None
         if self.tdl is None: return None
+
         mod, msg = None, None
         if type(lib) == types.ModuleType:
             mod = lib
@@ -756,6 +758,7 @@ class SymbolTable:
     def listGroups(self):
         ret = {}
         self.__gather(self.data,ret,name=None,mylist=symTypes.group)
+        ret.pop('_top')
         return ret
 
 

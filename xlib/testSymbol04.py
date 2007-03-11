@@ -1,11 +1,14 @@
-from Symbol import SymbolTable, symTypes, symGroup, Symbol
+
+import Eval
 
 import numpy
+
+tdl = Eval.Evaluator()
+s = tdl.symbolTable
+
+
 x1 = numpy.arange(60)*1.20
 x1.shape = (5,3,4)
-
-
-s = SymbolTable()
 
 s.addSymbol('_main.a', value = 1)
 s.addGroup('g1')
@@ -26,18 +29,23 @@ s.ModuleGroup='_main'
 s.addSymbol('_sys.subgroup.foo', value=x1)
 
 
-s.showTable()
 
+for g in s.listGroups():
+    if g not in ('_plot', '_math','_builtin'):
+        tdl.help.show_group(g)
+    
 s.addSymbol('y', value = 'value for y')
 
 s.addSymbol('boo', value = 12)
 
-s.showTable()
+
+print '========================'
+for g in s.listGroups():
+    if g not in ('_plot', '_math','_builtin'):
+        tdl.help.show_group(g)
 
 
 print s.getSymbol('subgroup')
 
 # s.delGroup('subgroup.s2')
 # s.delSymbol('subgroup')
-print 'Groups '
-print s.listGroups()
