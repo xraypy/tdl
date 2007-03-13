@@ -21,17 +21,17 @@ def spec.plot(sf,scan,cols=None):
 
     """
     if cols == None or len(cols) == 2:
-        dat = spec.col(sf,scan)
+        dat = spec.col(sf,scan,cols=cols)
         x = dat[0]
         y = dat[1]
     elif len(cols) == 3:
-        dat = spec.col(sf,scan,cols)
+        dat = spec.col(sf,scan,cols=cols)
         x = dat[0]
         y = dat[1]/dat[2]
     else:
         print "Error parsing column labels"
     endif
-    newplot x,y
+    newplot(x,y)
 enddef
 
 def spec.oplot(sf,scan,cols=None):
@@ -51,6 +51,6 @@ def spec.oplot(sf,scan,cols=None):
     else:
         print "Error parsing column labels"
     endif
-    plot x,y
+    plot(x,y)
 enddef
     

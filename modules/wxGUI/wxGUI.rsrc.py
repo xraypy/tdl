@@ -55,8 +55,8 @@
 
 {'type':'StaticText', 
     'name':'Prompt', 
-    'position':(7, 575), 
-    'font':{'faceName': 'Microsoft Sans Serif', 'family': 'sansSerif', 'size': 10}, 
+    'position':(11, 582), 
+    'font':{'style': 'bold', 'faceName': u'Microsoft Sans Serif', 'family': 'sansSerif', 'size': 11}, 
     'text':u'>>>', 
     },
 

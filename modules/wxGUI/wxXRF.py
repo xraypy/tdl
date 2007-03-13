@@ -57,6 +57,7 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.BgrParams._autoresize = 0
         self.dir = '.'
         self.init_xrf_lines = True
+        self.startup = True
 
         # set up tdl
         self.shell = None
@@ -80,9 +81,12 @@ class wxXRF(model.Background, wxTdlUtil):
         # parameters and data
         #self.post_message("Initialize")
         #print "init"
-        self.init_ScanParams()
-        self.init_DataParams()
 
+        if self.startup:
+            self.init_ScanParams()
+            self.startup = False
+
+        self.init_DataParams()
         self.init_EnRange()
         self.init_XrfLineItems()
 
@@ -97,6 +101,10 @@ class wxXRF(model.Background, wxTdlUtil):
             self.update_xrf_from_gui()
         elif self.check_xrf_var():
             self.update_gui_from_xrf()
+
+        # probably easiest to do this here if xrf var check ok
+        if self.components.AutoUpdateCheck.checked:
+            self.plot_cmd()
         return
 
     def get_xrf_var_name(self):
@@ -122,7 +130,7 @@ class wxXRF(model.Background, wxTdlUtil):
             m = self.getValue(var_name)
             num_mca = m.med.n_detectors
             if num_mca > 0:
-                self.post_message("Valid XRF object")
+                #self.post_message("Valid XRF object")
                 return True
         except:
             self.post_message("Invalid XRF object")
@@ -195,14 +203,19 @@ class wxXRF(model.Background, wxTdlUtil):
         self.init()
         return
 
-    def on_NodePfx_textUpdate(self,event):
-        "select a variable name and check it out"
-        self.init()
-        return
+    #def on_NodePfx_textUpdate(self,event):
+    #    "select a variable name and check it out"
+    #    #print "update Node text"
+    #    self.init()
+    #    return
 
-    def on_NodePfx_textEnter(self,event):
+    def on_NodePfx_keyDown(self,event):
         "select a variable name and check it out"
-        self.init()
+        keyCode = event.keyCode
+        if keyCode == wx.WXK_RETURN:
+            self.init()
+        else:
+            event.skip()
         return
     
     ###########################################################
@@ -211,42 +224,143 @@ class wxXRF(model.Background, wxTdlUtil):
 
     def init_ScanParams(self):
         " Initialize the scan parameter data (except grp and node)"
-        self.components.AutoIncCheck.checked = False
-        self.components.AutoIncStart.text = '0' 
-        self.components.AutoIncStop.text = '0'
-        self.components.AutoIncInc.text = '1'
-        self.components.NodeInc.value = 0
+        self.components.ScanCheck.checked = False
+        self.components.ScanNodePfx.text = ''
+        self.components.ScanStart.text = '0' 
+        self.components.ScanEnd.text = '0'
+        self.components.ScanFmt.text = '3'
+        self.components.ScanInc.text = '0'
+        self.ScanParamsToggle()
         return
 
+    def on_ScanCheck_mouseClick(self,event):
+        self.ScanParamsToggle()
+        
+    def ScanParamsToggle(self):
+        if self.components.ScanCheck.checked == True:
+            self.components.ScanNodePfx.editable = True
+            self.components.ScanNodePfx.backgroundColor = (255, 255, 255)
+            self.components.ScanStart.editable = True 
+            self.components.ScanStart.backgroundColor = (255, 255, 255)
+            self.components.ScanEnd.editable = True
+            self.components.ScanEnd.backgroundColor = (255, 255, 255)
+            self.components.ScanFmt.editable = True
+            self.components.ScanFmt.backgroundColor = (255, 255, 255)
+            self.components.ScanInc.editable = True
+            self.components.ScanInc.backgroundColor = (255, 255, 255)
+            self.components.ScanDown.enabled = True
+            self.components.ScanUp.enabled = True
+            self.components.FitScan.enabled = True
+        else:
+            self.components.ScanNodePfx.editable = False
+            self.components.ScanNodePfx.backgroundColor = (192, 192, 192)
+            self.components.ScanStart.editable = False 
+            self.components.ScanStart.backgroundColor = (192, 192, 192)
+            self.components.ScanEnd.editable = False
+            self.components.ScanEnd.backgroundColor = (192, 192, 192)
+            self.components.ScanFmt.editable = False
+            self.components.ScanFmt.backgroundColor = (192, 192, 192)
+            self.components.ScanInc.editable = False
+            self.components.ScanInc.backgroundColor = (192, 192, 192)
+            self.components.ScanDown.enabled = False
+            self.components.ScanUp.enabled = False
+            self.components.FitScan.enabled = False
+            
     def get_ScanPar(self):
         """ Return ScanPar from the info in GUI components
         Note all the data is stored as strings"""
         scan_par = {}
-        grp = self.components.Grp.text  
-        if len(grp) == 0: grp = ''
-        scan_par['grp'] = grp
-        node = self.components.NodePfx.text
-        if len(node) == 0: node = ''
-        scan_par['node'] = node
-        scan = self.components.AutoIncCheck.checked
+        scan = self.components.ScanCheck.checked
         scan_par['scan'] = str(scan)
-        sc_start = self.components.AutoIncStart.text
-        scan_par['sc_start'] = str(int(sc_start))
-        sc_stop = self.components.AutoIncStop.text
-        scan_par['sc_stop'] = str(int(sc_stop))
-        sc_inc = self.components.AutoIncInc.text
-        scan_par['sc_inc'] = str(int(sc_inc))
-        sc_step = self.components.NodeInc.value  #??????
-        scan_par['sc_step'] = str(int(sc_step))
+        node_pfx = self.components.ScanNodePfx.text
+        if len(node_pfx) == 0: node_pfx = ''
+        scan_par['node_pfx'] = node_pfx
+        start = self.components.ScanStart.text
+        scan_par['start'] = str(int(start))
+        end = self.components.ScanEnd.text
+        scan_par['end'] = str(int(end))
+        fmt = self.components.ScanFmt.text
+        scan_par['fmt'] = str(int(fmt))
+        inc = self.components.ScanInc.text
+        scan_par['inc'] = str(int(inc))
+        return scan_par
 
     def put_ScanPar(self,scan_par):
-        self.components.Grp.text = scan_par['grp']
-        self.components.NodePfx.text = scan_par['node']
-        self.components.AutoIncCheck.checked = eval(scan_par['scan'])
-        self.components.AutoIncStart.text = scan_par['sc_start'] 
-        self.components.AutoIncStop.text = scan_par['sc_stop']
-        self.components.AutoIncInc.text = scan_par['sc_inc']
-        self.components.NodeInc.value = scan_par['sc_step']
+        self.components.ScanCheck.checked = eval(scan_par['scan'])
+        self.components.ScanNodePfx.text = scan_par['node_pfx']
+        self.components.ScanStart.text = scan_par['start'] 
+        self.components.ScanEnd.text = scan_par['end']
+        self.components.ScanFmt.text = scan_par['fmt']
+        self.components.ScanInc.text = scan_par['inc']
+
+    def on_ScanStart_textUpdate(self,event):
+        try:
+            st = int(self.components.ScanStart.text)
+        except:
+            print "need integer"
+
+    def on_AutoIncStop_textUpdate(self,event):
+        try:
+            en = int(self.components.ScanEnd.text)
+        except:
+            print "need integer"
+
+    def on_ScanDown_mouseClick(self,event):
+        try:
+            st = int(self.components.ScanStart.text)
+            en = int(self.components.ScanEnd.text)
+            cur = int(self.components.ScanInc.text)
+            if cur - 1 < st:
+                self.components.ScanInc.text = str(en)
+            else:
+                self.components.ScanInc.text = str(cur-1)
+            self.ScanExec()
+        except:
+            print "error in scan params"
+
+    def on_ScanUp_mouseClick(self,event):
+        try:
+            st = int(self.components.ScanStart.text)
+            en = int(self.components.ScanEnd.text)
+            cur = int(self.components.ScanInc.text)
+            if cur + 1 > en:
+                self.components.ScanInc.text = str(st)
+            else:
+                self.components.ScanInc.text = str(cur+1)
+            self.ScanExec()
+        except:
+            print "error in scan params"
+
+    def on_ScanInc_keyDown(self,event):
+        keyCode = event.keyCode
+        if keyCode == wx.WXK_RETURN:
+            self.ScanExec()
+        else:
+            event.skip()
+        return
+
+    def ScanExec(self):
+        if not self.components.ScanCheck.checked:
+            return
+        inc = int(self.components.ScanInc.text)
+        node_name = self.BuildScanName(inc)
+        self.components.NodePfx.text = node_name
+        # execute
+        self.init()
+        #if self.components.AutoUpdateCheck.checked:
+        #    self.plot_cmd()
+
+    def BuildScanName(self,inc):
+        try:
+            grp = self.components.Grp.text
+            node_pfx = self.components.ScanNodePfx.text
+            nc = self.components.ScanFmt.text
+            fmt = "%s" + "%" + nc + "." + nc + "d"
+            node_name = fmt % (node_pfx,inc)
+            self.post_message(node_name)
+            return node_name
+        except:
+            self.post_message("error building var name")
 
     ###########################################################
     # Data Parameters
@@ -970,18 +1084,14 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.FitFWHMFlag.stringSelection = '1' 
         self.components.FitEnFlag.stringSelection = '1'
         self.components.FitChiExp.stringSelection = '0.0'
-        self.components.InitScanIdx.stringSelection = '1'
-        self.components.UsePrevFit.checked = False
         self.components.BgrCheck.checked = True 
 
     def get_FitArgs_fields(self):
-        fit_args = ['']*6
+        fit_args = ['']*4
         fit_args[0] = self.components.FitFWHMFlag.stringSelection
         fit_args[1] = self.components.FitEnFlag.stringSelection 
         fit_args[2] = self.components.FitChiExp.stringSelection
-        fit_args[3] = self.components.InitScanIdx.stringSelection
-        fit_args[4] = str(self.components.UsePrevFit.checked)
-        fit_args[5] = str(self.components.BgrCheck.checked) 
+        fit_args[3] = str(self.components.BgrCheck.checked) 
         #print fit_args
         return fit_args
 
@@ -989,9 +1099,7 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.FitFWHMFlag.stringSelection = fit_args[0] 
         self.components.FitEnFlag.stringSelection = fit_args[1]
         self.components.FitChiExp.stringSelection = fit_args[2]
-        self.components.InitScanIdx.stringSelection = fit_args[3]
-        self.components.UsePrevFit.checked = eval(fit_args[4])
-        self.components.BgrCheck.checked = eval(fit_args[5]) 
+        self.components.BgrCheck.checked = eval(fit_args[3]) 
         return
 
     def on_Fit_mouseClick(self,event):
@@ -999,7 +1107,8 @@ class wxXRF(model.Background, wxTdlUtil):
         return
 
     def on_FitScan_mouseClick(self,event):
-        pass
+        self.fit_scan()
+        return
 
     def fit(self):
         self.update_xrf_from_gui()
@@ -1008,7 +1117,7 @@ class wxXRF(model.Background, wxTdlUtil):
         FitFWHMFlag = int(fit_args[0]) 
         FitEnFlag   = int(fit_args[1])  
         FitChiExp   = float(fit_args[2])
-        fit_bgr     = eval(fit_args[5])
+        fit_bgr     = eval(fit_args[3])
         if self.components.Total.checked == True:
             xrf.fit(fwhm_flag=FitFWHMFlag,energy_flag=FitEnFlag,
                     chi_exp=FitChiExp,fit_bgr=fit_bgr)
@@ -1024,17 +1133,36 @@ class wxXRF(model.Background, wxTdlUtil):
         return
 
     def fit_scan(self):
-        self.update_xrf_from_gui()
-        xrf = self.get_xrf()
-        fit_args = self.get_FitArgs_fields()
-        FitFWHMFlag = int(fit_args[0]) 
-        FitEnFlag   = int(fit_args[1])  
-        FitChiExp   = float(fit_args[2]) 
-        InitScanIdx = int(fit_args[3]) 
-        UsePrevFit  = eval(fit_args[4]) 
-        fit_bgr     = eval(fit_args[5])
-        #xrf.fit()
-        #self.set_xrf(xrf)
+        if not self.components.ScanCheck.checked:
+            return
+        if not self.components.SetParFromSave.checked:
+            self.post_message("You must chose save parameters")
+        if self.components.AutoUpdateCheck.checked:
+            reset_auto = True
+            self.components.AutoUpdateCheck.checked = False
+        else:
+            reset_auto = False
+            
+        st = int(self.components.ScanStart.text)
+        en = int(self.components.ScanEnd.text)
+        for j in range(st,en+1):
+            node_name = self.BuildScanName(j)
+            self.components.NodePfx.text = node_name
+            # not sure need below?
+            self.update_xrf_from_gui()
+            xrf = self.get_xrf()
+            fit_args = self.get_FitArgs_fields()
+            FitFWHMFlag = int(fit_args[0]) 
+            FitEnFlag   = int(fit_args[1])  
+            FitChiExp   = float(fit_args[2]) 
+            fit_bgr     = eval(fit_args[3])
+            xrf.fit()
+            self.set_xrf(xrf)
+
+        if reset_auto:
+            self.components.AutoUpdateCheck.checked = True
+        self.components.SetParFromSave.checked = False
+        
         return
 
     ###########################################################
@@ -1043,7 +1171,10 @@ class wxXRF(model.Background, wxTdlUtil):
 
     def on_Plot_mouseClick(self,event):
         "make a plot"
+        # update data and plot params
+        self.update_xrf_from_gui()
         self.plot_cmd()
+        self.update_gui_from_xrf()
         return
 
     def init_PlotParams(self):
@@ -1052,8 +1183,10 @@ class wxXRF(model.Background, wxTdlUtil):
     def plot_cmd(self):
         "run xrf.plot cmd"
         # update data and plot params
-        self.update_xrf_from_gui()
-        
+        #self.update_xrf_from_gui()
+        if not self.check_xrf_var():
+            return
+
         # build cmd
         xrf   = self.get_xrf_var_name()
         if self.components.FitPlotCheck.checked:
@@ -1076,7 +1209,7 @@ class wxXRF(model.Background, wxTdlUtil):
 
         self.post_message(cmd_str)
         self.execLine(cmd_str)
-        self.update_gui_from_xrf()
+        #self.update_gui_from_xrf()
         return
 
     def plot_par_update(self):
