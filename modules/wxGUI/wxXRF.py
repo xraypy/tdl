@@ -76,6 +76,7 @@ class wxXRF(model.Background, wxTdlUtil):
         self.init_NodePfxItems()
         self.init_SaveParVarItems()
         self.init_DetAndTauItems()
+        self.init_ExtractResultsVarItems()
 
     def init(self):
         # parameters and data
@@ -107,9 +108,9 @@ class wxXRF(model.Background, wxTdlUtil):
             self.plot_cmd()
         return
 
-    def get_xrf_var_name(self):
-        node = self.components.NodePfx.text
-        grp = self.components.Grp.text  
+    def get_xrf_var_name(self,grp=None,node=None):
+        if grp == None: grp = self.components.Grp.text  
+        if node == None: node = self.components.NodePfx.text
         if len(grp.strip()) == 0:
             var_name = node
         else:
@@ -1133,16 +1134,23 @@ class wxXRF(model.Background, wxTdlUtil):
         return
 
     def fit_scan(self):
+        # must be a scan
         if not self.components.ScanCheck.checked:
             return
+        # must have save params set 
         if not self.components.SetParFromSave.checked:
+            self.components.SetParFromSave.checked = True
+        if len(self.components.SaveParVar.text.strip()) == 0:
             self.post_message("You must chose save parameters")
+            return 
+        # shut off autoupdate
         if self.components.AutoUpdateCheck.checked:
             reset_auto = True
             self.components.AutoUpdateCheck.checked = False
         else:
             reset_auto = False
             
+        # fit all the spectra
         st = int(self.components.ScanStart.text)
         en = int(self.components.ScanEnd.text)
         for j in range(st,en+1):
@@ -1158,12 +1166,53 @@ class wxXRF(model.Background, wxTdlUtil):
             fit_bgr     = eval(fit_args[3])
             xrf.fit()
             self.set_xrf(xrf)
-
+            
+        # tun auto update back on if needed
         if reset_auto:
             self.components.AutoUpdateCheck.checked = True
+            
+        # shut off set parameters from save
         self.components.SetParFromSave.checked = False
         
         return
+
+    ###########################################################
+    # Extract Results
+    ###########################################################
+    def init_ExtractResultsVarItems(self):
+        " Initialize the items from tdl    "
+        lst = self.listAllData()
+        t = self.components.ExtractResultsVar.text
+        self.components.ExtractResultsVar.items = lst
+        self.components.ExtractResultsVar.text = t
+        return
+
+    def on_ExtractResults_mouseClick(self,event):
+        self.extract_results()
+        self.init_tdl_list_items()
+        return
+
+    def extract_results(self):
+        res_name = self.components.ExtractResultsVar.text
+        if len(res_name.strip()) == 0: return
+        results = []
+        if self.components.ScanCheck.checked == False:
+            xrf = self.get_xrf()
+            results.append(xrf.get_peaks())
+            self.setValue(res_name,results)
+        else:
+            st = int(self.components.ScanStart.text)
+            en = int(self.components.ScanEnd.text)
+            for j in range(st,en+1):
+                node_name = self.BuildScanName(j)
+                var_name = self.get_xrf_var_name(node=node_name)
+                self.post_message(var_name)
+                xrf = self.getValue(var_name)
+                print xrf
+                results.append(xrf.get_peaks())
+            self.setValue(res_name,results)
+        return
+
 
     ###########################################################
     # Plotting

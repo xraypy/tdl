@@ -529,6 +529,25 @@ def xrf_get_peaks(xrf):
     results = xrf.get_peaks()
     return results
 
+##############################################################################
+def xrf_peak_areas(peaks,label='',det=-1):
+    """
+    """
+    if label == '':
+        print "need a valid peak label"
+
+    results = []    
+    for j in range(len(peaks)):
+        if det > -1:
+            x = peaks[j][int(det)][label]['area']
+            results.append(x)
+        else:
+            x = 0.
+            for k in range(len(peaks[j])):
+                x = x + peaks[j][k][label]['area']
+            results.append(x)
+    return results
+
 ###############################################################################
 def xrf_get_rois(xrf,background_width=1):
     """
@@ -637,6 +656,7 @@ _func_ = {"xrf.read":(xrf_read,xrf_read_cmd),
           "xrf.fit_peaks":xrf_fit_peaks,
           "xrf.calc_peaks":xrf_calc_peaks,
           "xrf.get_peaks":xrf_get_peaks,
+          "xrf.peak_areas":xrf_peak_areas,
           "xrf.data_dict":xrf_data_dict,
           "xrf.rois":(xrf_get_rois,xrf_get_rois_cmd),
           "xrf.show_rois":xrf_show_rois,
