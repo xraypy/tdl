@@ -1,4 +1,4 @@
-# T. Trainor (2006)
+# T. Trainor fftpt@uaf.edu
 # Deadtime calculations for CARS MED/MCA library
 # T. Trainor, 6-10-2006
 #
