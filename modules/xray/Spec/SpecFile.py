@@ -201,3 +201,9 @@ class SpecFile:
         # all done
         return sc_dict
         
+###########################
+def make_spec_med_fname(spec_fname,scan_num,pt_num):
+    fmt_scan_num = '%03d' % int(scan_num)
+    fmt_pt_num = '%03d' % int(pt_num)   
+    name_str = spec_fname + '_' + fmt_scan_num + '.' + fmt_pt_num
+    return(name_str)

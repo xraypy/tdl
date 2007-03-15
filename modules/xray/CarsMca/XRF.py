@@ -10,7 +10,6 @@ import fitBgr
 import xrf_lookup
 import CarsMcaFile
 
-
 """
 Conventions:
  - If total == true then data array etc has only a single entry --> the sum.

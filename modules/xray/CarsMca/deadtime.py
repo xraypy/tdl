@@ -267,14 +267,14 @@ def fit_deadtime_curve(Io,ocr):
     return result
 
 
-def deadtime_function(params,Io):
+def calc_ocr(params,Io):
     a,tau = params
     icr = a*Io
     ocr = icr * Num.exp(-icr*tau)
     return ocr
 
 def deadtime_residual(params,Io,ocr):
-    ocr_calc = deadtime_function(params,Io)
+    ocr_calc = calc_ocr(params,Io)
     return ocr - ocr_calc
 
 

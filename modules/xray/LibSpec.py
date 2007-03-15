@@ -15,6 +15,8 @@ from Num import Num
 import os
 import types
 from SpecFile import SpecFile
+import ScanData
+import XRF
 
 ####################################################
 def read_spec(fname,tdl=None,**kws):
@@ -36,6 +38,26 @@ def read_spec_cmd(val,tdl=None,**kws):
     if '.' in name: name = name.split('.',1)[0]
     name = 'spec.%s' % name
     tdl.setVariable(name,val=val)
+
+#
+#def read_spec_med(spec_file,scan_num, spectra_dir='.',bad_mca_idx=[],
+#                  total=True,align=True,tau=None,**kws):
+#
+#    first = SpecFile.make_spec_med_fname(spec_fname,scan_num,0)
+#    fname = first
+#    spectra = []
+#    while os.path.exists(fname):
+#        xrf =  XRF.read_xrf_file(file=fname,bad_mca_idx=bad_mca_idx,
+#                                    total=total,align=align,tau=tau)
+#        spectra.append(xrf) 
+#        fname = CarsMcaFile.increment_filename(fname)
+#
+#    npts = len(spectra)
+#    sd = ScanData.ScanData(name=first,scan_dims=[npts],spectra=spectra)
+#    return sd
+#
+#    return
+#
 
 def show_scan(sf,scan=None,all=False,**kws):
     """    >>show spec_file, [scan=10,all=True]
