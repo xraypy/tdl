@@ -7,6 +7,7 @@
 from Num import Num
 import os
 import types
+import ScanData
 
 class SpecFile:
     def __init__(self, fname):
@@ -200,10 +201,23 @@ class SpecFile:
         sc_dict['data'] = data_dict
         # all done
         return sc_dict
+
+    def get_scan_data(self,sc_num):
+        d = self.get_scan_dict(sc_num)
+        scalers = {}
+        positioners = d['P']
+        for key in d['data'].keys():
+            if key in positioners.keys():
+                positioners[key] = d['data'][key]
+            else:
+                scalers[key] = d['data'][key]
+        name = d['file'] + ' Scan ' + str(int(sc_num))
+        dims = d['nrow']
+        paxis = d['labels'][0]
+        pdet = d['labels'][-1]
+        sd = ScanData.ScanData(name=name,scan_dims=[dims],scalers = scalers,
+                               positioners=positioners,primary_axis=[paxis],
+                               primary_det=pdet)
+        return sd
         
 ###########################
-def make_spec_med_fname(spec_fname,scan_num,pt_num):
-    fmt_scan_num = '%03d' % int(scan_num)
-    fmt_pt_num = '%03d' % int(pt_num)   
-    name_str = spec_fname + '_' + fmt_scan_num + '.' + fmt_pt_num
-    return(name_str)

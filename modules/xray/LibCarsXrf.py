@@ -137,52 +137,26 @@ def xrf_read_cmd(val,file=None,tdl=None,**kws):
     tdl.setVariable(name,val=val)
     return
 
-
-def read_xrf_scan(first='',bad_mca_idx=[],
+def read_xrf_scan(first='',scan_dir='.',sd=None,bad_mca_idx=[],
                   total=True,align=True,tau=None,**kws):
-    fname = first
     spectra = []
+    path=os.path.abspath(scan_dir)
+    fname = os.path.join(path,first)
+    print fname
+    #print os.path.exists(fname)
     while os.path.exists(fname):
         xrf =  XRF.read_xrf_file(file=fname,bad_mca_idx=bad_mca_idx,
-                                    total=total,align=align,tau=tau)
-        spectra.append(xrf) 
+                                 total=total,align=align,tau=tau)
+        spectra.append(xrf)
         fname = CarsMcaFile.increment_filename(fname)
 
-    npts = len(spectra)
-    sd = ScanData.ScanData(name=first,scan_dims=[npts],spectra=spectra)
-    return sd
-
-def get_spectrum(sd,pnt,**kws):
-    return sd.get_spectrum(pnt)
-
-def get_spectra_OCR(sd,**kws):
-    return sd.get_spectra_OCR()
-
-def fit_deadtime(sd,io=None,plot=True,tdl=None,**kws):
-    ocr = sd.get_spectra_OCR()
-    if io == None:
-        io = sd.get_scaler()
-    elif type(io) == types.StringType:
-        io = sd.get_scaler(label=io)
-    
-    tau = []
-    for j in range(len(ocr)):
-        (params,msg) = deadtime.fit_deadtime_curve(io,ocr[j])
-        a = params[0]
-        t = params[1]
-        tau.append(t)
-        # test
-        if plot:
-            ocr_calc = deadtime.calc_ocr(params,io)
-            tdl.setVariable('xocr_c',val=ocr_calc)
-            tdl.setVariable('xocr',val=ocr[j])
-            tdl.setVariable('xio',val=io)
-            cmd = "plot(xio,xocr,fmt='o')"
-            tdl.eval(cmd)
-            cmd = "plot(xio,xocr_c)"
-            tdl.eval(cmd)
-            
-    return tau
+    if sd == None:
+        npts = len(spectra)
+        sd = ScanData.ScanData(name=first,scan_dims=[npts],spectra=spectra)
+        return sd
+    else:
+        sd.spectra = spectra
+        return sd
 
 #############################################################################
 def xrf_set_data(xrf,bad_mca_idx=None,total=None,align=None,correct=None,tau=None):
@@ -695,10 +669,7 @@ _groups_ = [('xrf',True)]
 
 # tdl functions
 _func_ = {"xrf.read":(xrf_read,xrf_read_cmd),
-          "scan.xrf_scan":read_xrf_scan,
-          "scan.get_spectrum":get_spectrum,
-          "scan.get_ocr":get_spectra_OCR,
-          "xrf.fit_deadtime":fit_deadtime,
+          "xrf.read_scan":read_xrf_scan,
           "xrf.set_data":xrf_set_data,
           "xrf.data":xrf_data,
           "xrf.energy":xrf_energy,

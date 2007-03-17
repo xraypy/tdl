@@ -39,26 +39,6 @@ def read_spec_cmd(val,tdl=None,**kws):
     name = 'spec.%s' % name
     tdl.setVariable(name,val=val)
 
-#
-#def read_spec_med(spec_file,scan_num, spectra_dir='.',bad_mca_idx=[],
-#                  total=True,align=True,tau=None,**kws):
-#
-#    first = SpecFile.make_spec_med_fname(spec_fname,scan_num,0)
-#    fname = first
-#    spectra = []
-#    while os.path.exists(fname):
-#        xrf =  XRF.read_xrf_file(file=fname,bad_mca_idx=bad_mca_idx,
-#                                    total=total,align=align,tau=tau)
-#        spectra.append(xrf) 
-#        fname = CarsMcaFile.increment_filename(fname)
-#
-#    npts = len(spectra)
-#    sd = ScanData.ScanData(name=first,scan_dims=[npts],spectra=spectra)
-#    return sd
-#
-#    return
-#
-
 def show_scan(sf,scan=None,all=False,**kws):
     """    >>show spec_file, [scan=10,all=True]
     
@@ -132,6 +112,16 @@ def scan_dict(sf,scan,**kws):
     if not sf.ok: return None
     return sf.get_scan_dict(scan)
 
+def scan_data_struct(sf,scan):
+    """    >>dat = data_struct(spec_file,scan)
+    
+    The spec_file argument may be a file name or a spec_file object (see read_spec).
+    The returned value is a ScanData class.
+    """
+    if type(sf) == types.StringType:
+        sf = SpecFile(sf)
+    if not sf.ok: return None
+    return sf.get_scan_data(scan)
 
 def scan_cols(sf,scan,cols=None,**kws):
     """    >>dat = col(spec_file,scan,cols=[column_lables])
@@ -161,12 +151,23 @@ def scan_cols(sf,scan,cols=None,**kws):
         dat.append(dd[lbls[ncol-1]])
     return dat
 
+def filename(sf,**kws):
+    """    >>file = filename(spec_file)
+    
+    return the filename
+    """
+    if not sf.ok: return None
+    return sf.fname
+
+
 #################################################
 _groups_ = [('spec',True)]
 _func_ = {"spec.read":(read_spec,read_spec_cmd),
           "spec.show":(show_scan,None),
           "spec.data":scan_data,
           "spec.dict":scan_dict,
-          "spec.col":scan_cols}
+          "spec.data_struct":scan_data_struct,
+          "spec.col":scan_cols,
+          "spec.filename":filename}
 
 _scripts_ = ['spec_scripts.tdl']

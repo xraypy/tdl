@@ -20,11 +20,13 @@ scalers = {'io':[],'i1':[]}  -> each array has dims = scan_dims
 positioners  = {'E':[]}      -> these may be single values, or same size as scalers
 primary_axis = ['E']         -> if multi-dim, list of outer, inner
 primary_det  = 'i1'          -> use for default plotting
+
+Need to add methods for extracting, simple curve fitting, plotting etc.
 """
 
 class ScanData:
-    def __init__(self,name='',scan_dims=[],spectra=[],scalers={},
-                 positioners={},primary_axis=[],primary_det=None):
+    def __init__(self,name='',scan_dims=[],scalers={},positioners={},
+                 primary_axis=[],primary_det=None,spectra=[]):
         self.name         = name
         self.scan_dims    = scan_dims
         self.spectra      = spectra
