@@ -246,6 +246,8 @@ def fit_deadtime_curve(Io,ocr):
         tau = params[1]
 
     """
+    Io = Num.array(Io)
+    ocr = Num.array(ocr)
     
     npts = len(Io)
     if len(ocr) != npts: return None

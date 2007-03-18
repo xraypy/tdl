@@ -890,8 +890,7 @@
     'name':'FitFmt', 
     'position':(154, 154), 
     'size':(177, -1), 
-    'items':[u'Fit', u'Fit+Bgr', u'Fit and Bgr'], 
-    'stringSelection':u'Fit', 
+    'items':[u'Fit', u'Fit Components', u'Fit+Bgr', u'Fit and Bgr'], 
     'text':u'Fit', 
     },
 

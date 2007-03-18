@@ -36,8 +36,8 @@ def fit_deadtime(sd,io=None,plot=True,tdl=None,**kws):
         io = sd.get_scaler()
     elif type(io) == types.StringType:
         io = sd.get_scaler(label=io)
-    print ocr
-    print io
+    io = Num.array(io)
+    ocr = Num.array(ocr)
     tau = []
     for j in range(len(ocr)):
         (params,msg) = deadtime.fit_deadtime_curve(io,ocr[j])
@@ -52,7 +52,7 @@ def fit_deadtime(sd,io=None,plot=True,tdl=None,**kws):
             tdl.setVariable('xio',val=io)
             cmd = "plot(xio,xocr,fmt='o')"
             tdl.eval(cmd)
-            cmd = "plot(xio,xocr_c)"
+            cmd = "plot(xio,xocr_c,fmt='r')"
             tdl.eval(cmd)
             
     return tau

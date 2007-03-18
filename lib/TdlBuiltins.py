@@ -606,11 +606,15 @@ def tdl_savestate(fname, tdl=None,debug=False,**kw):
 
     import cPickle
     try:
-        f = open(fname,'w')
+        #print os.path.abspath(fname)
+        #f = open(fname,'w')
+        f = file(fname,'w')
         cPickle.dump(d,f)
         f.close()
     except:
-        print 'error saving state to %s ' % fname        
+        s = 'error saving state to %s ' % fname
+        PrintExceptErr(s)
+
 
 def tdl_restorestate(fname, tdl=None,debug=False,**kw):
     " restore state from a file"
@@ -625,7 +629,9 @@ def tdl_restorestate(fname, tdl=None,debug=False,**kw):
         d = cPickle.load(f)
         f.close()
     except:
-        print 'error restoring state from %s ' % fname        
+        s = 'error restoring state from %s ' % fname        
+        PrintExceptErr(s)
+
     #
     isOK = True
     try:

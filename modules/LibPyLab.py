@@ -9,6 +9,7 @@
 # setup for matplotlib with Tk as default
 import sys
 import matplotlib
+from Num import Num
 
 # default to Tk, should work from system shell
 DEFAULT_BACKEND = "TkAgg"
@@ -179,7 +180,7 @@ def plot(x, y=None, fmt = '', ylog=False,xlog=False,over = True, norm_dat = None
             y[j] = y[j]/norm_dat[j]
 
     if norm_max != 0:
-        m1 = MLab.max(y)
+        m1 = max(y)
         c = norm_max/m1
         for j in range(len(y)):
             y[j] = y[j] * c

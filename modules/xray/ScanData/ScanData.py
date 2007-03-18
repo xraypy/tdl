@@ -4,6 +4,7 @@
 # Note spec.get_scan should ret one of these....
 #################
 
+import types
 from Num import Num
 
 #################
@@ -35,21 +36,66 @@ class ScanData:
         self.primary_axis = primary_axis
         self.primary_det  = primary_det
 
+    """
+    def __setitem__(self,arg,val):
+        # note this currenlty craps for sub arrays.
+        # ie x[0][0].  In such a case arg is a tuple
+        # first is the name, the rest are the subscripts
+        #print arg, type(arg)
+        #print val, type(val)
+        if type(arg) == types.StringType:
+            if arg.startswith("_"):
+                raise TypeError, "Private attribute"
+        #if hasattr(self,arg):
+        #    setattr(self,arg,val)
+        setattr(self,arg,val)
+        return
+    
+    def __getitem__(self,arg):
+        #print arg
+        if type(arg) == types.StringType:
+            if arg.startswith("_"):
+                raise TypeError, "Private attribute"
+        return getattr(self,arg)
+    """
+    
+    def __getitem__(self,arg):
+        print arg
+        if type(arg) == types.StringType:
+            for key in self.scalers.keys():
+                if key == arg:
+                    return self.scalers[key]
+            for key in self.positioners.keys():
+                if key == arg:
+                    return self.positioners[key]
+        return None
+
+
     def __repr__(self):
-        lout = "Scan Name = %s\n" % self.name
-        lout = lout + "Scan Dimensions = %s\n" % str(self.scan_dims)
-        lout = lout + "Scalers:\n"
+        lout = "* Scan Name = %s\n" % self.name
+        lout = lout + "* Scan Dimensions = %s\n" % str(self.scan_dims)
+        lout = lout + "* Scalers:\n"
+        ct = 0
         for sc in self.scalers.keys():
-            lout = lout + "    %s" % sc
-        lout = lout + "\nPositioners:\n"
+            lout = lout + "%12s" % sc
+            ct = ct + 1
+            if ct > 7:
+                lout = lout + '\n'
+                ct = 0
+        lout = lout + "\n* Positioners:\n"
+        ct = 0
         for p in self.positioners.keys():
-            lout = lout + "    %s" % p
+            lout = lout + "%12s" % p
+            ct = ct + 1
+            if ct > 7:
+                lout = lout + '\n'
+                ct = 0
+        lout = lout + "\n* Primary scan axis = %s\n"  % str(self.primary_axis)
+        lout = lout + "* Primary detector = %s\n"  % self.primary_det
         if self.spectra != []:
-            lout = lout + "\nScan includes spectra data:\n"
+            lout = lout + "* Scan includes %i spectra\n" % len(self.spectra)
         else:
-            lout = lout + "\nScan does not include mca data:\n"
-        lout = lout + "Primary scan axis = %s\n"  % str(self.primary_axis)
-        lout = lout + "Primary detector = %s\n"  % self.primary_det
+            lout = lout + "* Scan does not include spectra\n"
         return lout
 
     def get_scaler(self,label=None):
