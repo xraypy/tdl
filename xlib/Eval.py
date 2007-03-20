@@ -496,13 +496,12 @@ class Evaluator:
         ndim_lhs = lhs.pop()
         varname  = lhs.pop()
 
+        sym  = self.symbolTable.getSymbolLocalGroup(varname)
+       
         # if the rhs evaluates to a symbol group, figure out where to place it
         if isGroup(rhs):
-            # print 'RHS is a group! ', rhs
-            u = self.symbolTable.placeGroup(rhs,varname)
-            return u
-        
-        sym  = self.symbolTable.getSymbolLocalGroup(varname)
+            return self.symbolTable.placeGroup(rhs,sym.name)
+
 
         if sym is None:
             self.raise_error('Cannot make assignment to %s??' % varname)

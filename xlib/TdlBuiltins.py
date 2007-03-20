@@ -493,7 +493,7 @@ def tdl_setvar(name,val,tdl=None,debug=False,**kws):
 def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
     "add a group"
     verify_tdl(tdl, 'newgroup')
-    x = symGroup(name=None,toplevel=toplevel,**kw)
+    x = symGroup(name='_',toplevel=toplevel,**kw)
     return x
 # 
 # def tdl_showtable(extra=None, tdl=None,skip=None, **kw):

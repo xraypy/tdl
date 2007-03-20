@@ -449,15 +449,15 @@ class SymbolTable:
         if not isGroup(group):  raise SymbolError, ' cannot assign %s as a group.'% group
 
         parent,sym,parts = self._lookup(name)
-        sym = self._normalize_sym(sym,toplevel=toplevel)
 
-        if isGroup(sym):  # a group was found -- we are replacing it.
-            if len(parts)==0:
-                parent.delGroup(sym.name)
-                parent.addGroup(name,group=group,status=status)
-            else:
-                if len(parts)>1: print ' More than 1 subgroup ', parts
-                sym.addGroup(parts[0],status=status)
+        nam = sym.name.split('.')[-1]
+        parent.delSymbol(name)
+        parent.addGroup(nam,group=group,status=status)
+        parent[nam].setname(nam)
+        for elem in  parent[nam].values():
+            names = elem.name.split('.')
+            elem.name = "%s.%s" % (nam,names[-1])
+
 
     def __gather(self,x, _type=None,recurse=True):
         for k,v in x.items():
@@ -584,7 +584,7 @@ class SymbolTable:
                 p = parts.pop(0)
                 sym = sym.addGroup(p)
         return sym.setSymbol(parts[0],None)
-# 
+
 #         parent,sym, parts = self._lookup(name)
 #         print 'getSym Local Group = ', name, parent, sym, parts, self.LocalGroup        
 #         if sym is None:   sym = self._normalize_sym(sym)
