@@ -78,6 +78,7 @@ def take_subarray(val, ndim, work):
     # takes subarrays / slices of lists and numeric arrays,
     # including syntax like: x[:2], x[3:], x[2:5,3], x[2:40:2,4:8]
     elems = []
+
     for i in range(ndim):
         e = work.pop()
         if type(e) == types.ComplexType: e = int(e.real)
@@ -89,6 +90,7 @@ def take_subarray(val, ndim, work):
         val = val[tuple(elems)]
     else:
         for e in elems: val = val[e]
+
     return val
 
 ########################################################
@@ -212,7 +214,6 @@ class ExpressionParser:
         self.expr = expr + restOfLine.setParseAction(self.pushRestOfLine) + StringEnd()
         self.expr.streamline()
 
-
     def compile(self,s,reverse=False):
         self.exprStack = []
         self.argcount  = 0
@@ -237,8 +238,8 @@ class ExpressionParser:
         n = 0
         if len(toks)>1:
             for i in toks[1:]:
-                if i == ']':  n = n + 1
-        if n>0: self.pushOp(opcodes.subarray, count=n)
+                if i in (']',','): n = n + 1
+        if n>0:  self.pushOp(opcodes.subarray, count=n)
 
     def pushSlice1(self, s, loc, toks ):
         if len(toks)==0: self.exprStack.append(opcodes.empty)
@@ -481,7 +482,9 @@ class Expression:
         code = stack[:]
 
         if self.debug>=8:        print ' evaluate ', expr, '\n -> ', code
+
         # print ' evaluate ', expr, '\n -> ', code
+        # if opcodes.array in code or opcodes.subarray in code:    print 'Array Code: ', code
 
         while len(code)> 0:
             val = tok = code.pop()
@@ -505,19 +508,26 @@ class Expression:
                             val = sym.value
                         except AttributeError:
                             val = sym
-                    elif tok in (opcodes.array,opcodes.subarray): # array slice / subarray
+                    elif tok == opcodes.array: # for simple array slices: variable[slice]
                         ndim = work.pop()
-                        val  = work.pop()        # for (expr)[slice] and fcn(...)[slice]
-                        if tok == opcodes.array:  # for "more normal" name[slice] syntax
-                            sym = self.get_symbol(val)
-                            try:
-                                if sym.type == symTypes.defvar:
-                                    # re-evaluate defined variables here
-                                    sym.value = self.eval(sym.code)
-                                val = sym.value
-                            except AttributeError:
-                                val = sym
+                        val  = work.pop()        
+                        sym = self.get_symbol(val)
+                        try:
+                            if sym.type == symTypes.defvar:
+                                # re-evaluate defined variables here
+                                sym.value = self.eval(sym.code)
+                            val = sym.value
+                        except AttributeError:
+                            val = sym
+
                         val  = take_subarray(val,ndim,work)
+
+                    elif tok == opcodes.subarray: # subarray used for (expr)[slice] and fcn(...)[slice]
+                        ndim = work.pop()
+                        tmp = [work.pop() for i in range(ndim)]
+                        tmp.reverse()
+                        val  = take_subarray(work.pop(),ndim,tmp)
+
                     elif tok in (opcodes.function,opcodes.arrayfunc,opcodes.command):
                         if tok == opcodes.arrayfunc:  ndim = work.pop()
                         nargs = work.pop()
