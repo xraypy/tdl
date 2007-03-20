@@ -21,6 +21,7 @@
 #
 ##########################################################################
 from Num import Num
+   
 import types
 import exceptions
 import sys
@@ -43,12 +44,13 @@ class ConstantError(exceptions.Exception):
     def __init__(self,args=None):
         self.args = args
 
-
 def verify_tdl(tdl,name='unknown',msg=''):
-    if tdl is None:
-        mout = "No tdl reference in python function '%s'" % (name)
+    #     print ' verify  tdl ', tdl,  type(tdl), dir(tdl), hasattr(tdl,'symbolTable')
+    if (type(tdl) != types.InstanceType or
+        not hasattr(tdl,'symbolTable')):
+        mout = "no tdl referenced in python function '%s'" % (name)
         if msg != '': mout = "%s\n%s" % (mout,msg)
-        raise RunTimeError, mout
+        raise exceptions.RuntimeError, mout
     
 ####
 def datalen(x):

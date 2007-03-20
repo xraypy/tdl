@@ -18,12 +18,21 @@ import copy
 import Help
 
 from Expression import Expression, opcodes
-from Symbol import Symbol, SymbolTable, symGroup,symTypes
+import Symbol
+from Symbol import symTypes, symGroup, isGroup
+
+def XisGroup(x):
+    print 'IS GROUP ', x, type(x), isinstance(x, (Symbol.symGroup,symGroup))
+    return isinstance(x, (Symbol.symGroup,symGroup))
+def isSymbol(x): return isinstance(x,Symbol.Symbol)
+
 import version
 from Num import num_version
 from Util import split_delim, find_unquoted_char, parens_matched
 from Util import split_list, trimstring
 from Util import EvalError, Command2Expr
+import exceptions
+
 
 class Evaluator:
     """ main evaluation class for tdl language.
@@ -39,9 +48,9 @@ class Evaluator:
         self.output      = output   or  sys.stdout
 
         self.help        = Help.Help(tdl=self,output=self.output)
-        self.symbolTable = symbolTable or SymbolTable(libs=libs,
-                                                      tdl=self,
-                                                      writer=self.output)
+        self.symbolTable = symbolTable or Symbol.SymbolTable(libs=libs,
+                                                             tdl=self,
+                                                             writer=self.output)
         self.symbolTable.setVariable('_builtin.GUI',GUI,constant=True)
         self.Expression  = Expression(symbolTable=self.symbolTable,
                                       run_procedure = self.run_procedure)
@@ -118,6 +127,7 @@ class Evaluator:
 
     def execute(self,t):
         " evaluate tdl statement or list of tdl statements"
+
         if type(t) != types.ListType:
             self.load_statements([t])
         else:
@@ -152,9 +162,7 @@ class Evaluator:
             if len(s)<=0: continue
             s.strip()
             if s.startswith('#'): continue
-            # print 'run compile: ',s
             x = self.compile(s = s)
-            # print 'run interpret : ', x
             if x is not None:
                 ret = self.interpret(x, text=s)
                 self._status = True
@@ -232,7 +240,7 @@ class Evaluator:
 
     def compile(self,s = None):
         " main parsing and compilation of tdl statements"
-        # print "compile <%s>" %  s,
+        # print "compile <%s>" %  s
         s,key = self.get_next_statement(s=s)
         # print " :key <%s>" % key
         # print " :s  <%s>"  % s
@@ -450,6 +458,7 @@ class Evaluator:
         else:
             # check if command-like interpretation is reasonable
             # print 'check for command / assignment '
+            # print 'REGULAR assignment ', s
             try:
                 next_char = s[len(key):].strip()[0]
             except:
@@ -457,7 +466,8 @@ class Evaluator:
             if (key.find('(')==-1  and key.find(',')==-1 and key.find('=')==-1 and
                 next_char != '='):
                 if self.symbolTable.hasFunction(key):
-                    stack= self.expr_compile(Command2Expr(s,symtable=self.symbolTable))
+                    t = Command2Expr(s,symtable=self.symbolTable)
+                    stack= self.expr_compile(t)
                     if stack[0] != opcodes.function:
                         raise EvalError, 'syntax error: weird error with commad '
                     stack[0] = opcodes.command
@@ -486,20 +496,20 @@ class Evaluator:
 
         ndim_lhs = lhs.pop()
         varname  = lhs.pop()
-        # sym  = self.symbolTable.getSymbolLocalGroup(varname)
-        isSymGroup = (type(rhs) == symGroup)
-        if isSymGroup:
-            sym  = self.symbolTable.moveGroup(varname,rhs)
-            return
-        else:
-            sym  = self.symbolTable.getSymbolLocalGroup(varname)            
 
+        # if the rhs evaluates to a symbol group, figure out where to place it
+        if isGroup(rhs):
+            # print 'RHS is a group! ', rhs
+            u = self.symbolTable.placeGroup(rhs,varname)
+            return u
+        
+        sym  = self.symbolTable.getSymbol(varname, create=True)                    
         if sym is None:
             self.raise_error('Cannot make assignment to %s??' % varname)
         for i in range(len(lhs)):
             if type(lhs[i]) == types.FloatType: lhs[i] = int(lhs[i])
 
-        if isinstance(sym,Symbol):
+        if isSymbol(sym):
             if sym.constant:
                 self.raise_error('Cannot reassign value of %s' % sym.name)
             if len(lhs)>0 and  sym.type==symTypes.defvar:
@@ -554,7 +564,7 @@ class Evaluator:
                     vname = s[1].pop()
                     if xtok != opcodes.variable:
                         raise EvalError, 'cannot delete %s ' % vname
-                    self.symbolTable.deleteSymbol(vname)
+                    self.symbolTable.delSymbol(vname)
             except:
                 raise EvalError, 'Invalid "del" statement'
         elif tok == 'print':

@@ -5,7 +5,7 @@
 # Modifications
 # --------------
 #  12-Mar-2007  MN  simplified by *requiring* numpy 1.0 or higher, and
-#                   not using scipy
+#                   not using scipy here.
 #  23-Apr-2006  MN  added test for scipy 0.4.8 or higher, required for
 #                   some numeric functionality
 #
@@ -14,21 +14,42 @@
 ##########################################################################
 from __future__ import division
 
-try:
-    import numpy as Num
+def ParseVersion(s):
+    """ parse a version string to an integer '1.0.1' -> 101"""
     factor = 100.
     version = 0.0
-    for v in [int(i) for i in Num.__version__.split('.')]:
+    for v in [int(i) for i in s.split('.')]:
         version = version + v * factor
         factor = factor / 10.
+    return version
+    
+def NoNumpy():
+    raise ImportError, 'Need numpy version 1.0 or higher'    
 
-    if version >= 100:   num_version = 'numpy %s' % Num.__version__
+def NoScipy():
+    print """Warning: scipy version 0.4.8 or higher not found.
+        This means that some modules will not work properly!!"""
+    has_scipy = False
+
+try:
+    import numpy as Num
+    version = ParseVersion(Num.__version__)
+    if version < 100:  NoNumpy()
+    num_version = 'numpy %s' % Num.__version__
 except:
-    raise ImportError, 'Need numpy version 1.0 or higher'
+    NoNumpy()
+
+try:
+    import scipy
+    has_scipy = True
+    version = ParseVersion(scipy.__version__)
+    if version < 48: NoScipy()
+    num_version = '%s with scipy %s ' % (num_version,scipy.__version__)
+except:
+    NoScipy()
 
 from numpy import *
 ArrayType = ndarray
 
 if __name__ == '__main__':
-    print 'tdl will use numpy %s ' % num_version
-    
+    print 'tdl will use %s ' % num_version

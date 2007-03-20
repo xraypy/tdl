@@ -26,7 +26,7 @@ print '== Groups: Name      elements    SearchGroup?'
 allgroups = s.listGroups()
 for i in s.searchGroups:
     print '     %s         %i        yes' % ((i+' '*10)[:10], len(s.getSymbol(i)))
-    allgroups.pop(i)
+    allgroups.remove(i)
 
 for i in allgroups:
     print '     %s         %i        no' % ((i+' '*10)[:10], len(s.getSymbol(i)))    

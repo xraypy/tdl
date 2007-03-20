@@ -33,7 +33,6 @@ import types
 import getopt
 import traceback
 
-
 class shell(cmd.Cmd):
     banner = """
     Tiny Data Language %s  M. Newville, T. Trainor (2006)
@@ -43,7 +42,7 @@ class shell(cmd.Cmd):
     ps2    = "...> "
     max_save_lines = 500
 
-    def __init__(self, completekey='tab', libs=None, debug=False,
+    def __init__(self, completekey='tab', scripts=None,libs=None, debug=False,
                  stdin=None, stdout=None, intro=None, GUI='TkAgg'):
 
         cmd.Cmd.__init__(self,completekey='tab')
@@ -72,6 +71,10 @@ class shell(cmd.Cmd):
         # override builtin open function
         # is this a bad idea?????
         # __builtins__['open'] = Util.file_open(sym=self.tdl)
+        if scripts is not None:
+            for i in scripts:
+                self.default('load("%s")' % i)
+                
 
     def emptyline(self):
         pass
@@ -79,13 +82,11 @@ class shell(cmd.Cmd):
     def do_shell(self, arg):
         import os
         os.system(arg)
-
     def do_help(self,arg):
-        s_inp = "help '%s'" % arg
+        s_inp = "help('%s')" % arg
         self.default(s_inp)
-
     def do_show(self,arg):
-        s_inp = "show '%s'" % arg
+        s_inp = "show('%s')" % arg
         self.default(s_inp)
 
     def tdl_execute(self,s_inp):
@@ -101,6 +102,7 @@ class shell(cmd.Cmd):
         else:
             self._status = False
             ret,x,detail = None, None, None
+            # print " tdl execute : " , s
             try:
                 ret = self.tdl.execute(s)
                 self._status = True
@@ -152,7 +154,8 @@ class shell(cmd.Cmd):
 
 if (__name__ == '__main__'):
     debug=False
-    #main(sys.argv[1:])
-    t = shell(debug=debug)
+
+    t = shell(debug=debug,     scripts = sys.argv[1:])
+
     t.cmdloop()
 

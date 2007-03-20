@@ -51,8 +51,8 @@ import types
 import time
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
-from Util import set_path,  verify_tdl
-from Symbol import isGroup, isSymbol
+from Util import set_path, verify_tdl
+from Symbol import isGroup, isSymbol, symGroup
 
 title = "builtin library functions"
 
@@ -168,9 +168,11 @@ HelpImport = """
 
 #################################################################
 def _help(arg='',tdl=None,**kw):
+    verify_tdl(tdl,name='help')
     tdl.help.help(arg)
 
 def _show(arg='',tdl=None,**kw):
+    verify_tdl(tdl,name='show')
     tdl.help.show(arg)
 
 def _dir(x,tdl=None,**kws):
@@ -210,9 +212,8 @@ def _dictvals(x):
 
 def _pop(x,item=None):
     "???  pop last element from a list"
-    print 'this is pop ', x, type(x)
+
     if type(x) == Num.ArrayType: x = x.tolist()
-    print 'this is pop ', x, type(x)    
     if type(x) == types.ListType:
         out = x.pop()
         x = x
@@ -348,7 +349,6 @@ def _more(name,pagesize=24):
 def _type(x):
     "return data type of data"
     t = type(x)
-    # print 'XX TDL TYPE ', x, type(x)
     typecodes = {types.StringType:'string',
                  types.IntType: 'int',
                  types.LongType:'int',
@@ -434,7 +434,6 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
         else:
             debug = 0
     tdl.set_debug(debug)
-    print "Debug level = ", tdl.debug
     return None
 
 def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
@@ -493,25 +492,30 @@ def tdl_setvar(name,val,tdl=None,debug=False,**kws):
 
 def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
     "add a group"
-    verify_tdl(tdl, 'newgroup',msg='trying to create group %s' % name)
-    #return tdl.symbolTable.addTempGroup(toplevel=toplevel,**kw)
-    return tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
-
-def tdl_showtable(extra=None, tdl=None,skip=('_math','_builtin'), **kw):
-    "add a group"
-    verify_tdl(tdl, 'showtable')
-    return tdl.symbolTable.showTable(skip=skip)
-
-def tdl_showfunctions(extra=None,tdl=None):
-    "add a group"
-    print 'This is tdl show funcs ', tdl
-    verify_tdl(tdl, 'showfunctions')
-    return tdl.symbolTable.listFunctions()
-
-def tdl_showgroups(extra=None,tdl=None):
-    "add a group"
-    verify_tdl(tdl, 'showgroups')
-    return tdl.symbolTable.listGroups()
+    verify_tdl(tdl, 'newgroup')
+    x = symGroup(name=None,toplevel=toplevel,**kw)
+    return x
+# 
+# def tdl_showtable(extra=None, tdl=None,skip=None, **kw):
+#     "add a group"
+#     verify_tdl(tdl, 'showtable')
+#     return tdl.symbolTable.showTable(skip=skip)
+# 
+# def tdl_showfunctions(extra=None,tdl=None):
+#     "add a group"
+#     print 'This is tdl show funcs ', tdl
+#     verify_tdl(tdl, 'showfunctions')
+#     return tdl.symbolTable.listFunctions()
+# 
+# def tdl_showgroup(name=None,functions=None,extra=None,tdl=None):
+#     "add a group"
+#     verify_tdl(tdl, 'showgroup')
+#     return tdl.symbolTable.showGroup(name=name,functions=functions)
+# 
+# def tdl_showgroups(extra=None,tdl=None):
+#     "add a group"
+#     verify_tdl(tdl, 'showgroups')
+#     return tdl.symbolTable.listGroups()
         
 def tdl_delvar(name,tdl=None,**kw):
     "delete a variable "
@@ -522,7 +526,7 @@ def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
     "convert all data in a group to a single dictionary"
     verify_tdl(tdl, 'group2dict')
     
-    if gname is None: gname = tdl.symbolTable.getDataGroup()
+    if gname is None: gname = tdl.symbolTable.LocalGroup
     gname = gname.strip()
     dict = {}
     dat = tdl.symbolTable.getAllData(group=gname)
@@ -535,7 +539,7 @@ def tdl_func_as_cmd(name,tdl=None):
     "allow functions to act as commands"
     verify_tdl(tdl, 'func as cmd')
 
-    if tdl.symbolTable.hasFunc(name):
+    if tdl.symbolTable.hasFunction(name):
         sym = tdl.symbolTable.getSymbol(name)
         sym.as_cmd = True
     return
@@ -600,7 +604,7 @@ def tdl_restorestate(fname, tdl=None,debug=False,**kw):
 
 ##    
 ## Simple python interface
-##
+
 def _python(arg=None,tdl=None,**kws):
     """Execute raw python commands
        >>python arg
@@ -666,9 +670,6 @@ _func_ = {'_builtin.load':(tdl_load, None),
           '_builtin.eval':(tdl_eval,None),
           '_builtin.setvar':(tdl_setvar,None),
           '_builtin.newgroup':tdl_newgroup,
-          '_builtin.showtable':tdl_showtable,
-          '_builtin.showfuncs':tdl_showfunctions,
-          '_builtin.showgroups':tdl_showgroups,
           '_builtin.delete':tdl_delvar,
           '_builtin.debug':(tdl_set_debug,None),
           "_builtin.cd":(_cd,None),

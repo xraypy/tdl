@@ -12,25 +12,25 @@ main['v']   = Symbol(name='v', value=22.3)
 s = SymbolTable()
 
 
-s.addSymbol('_main.a', value = 1)
+s.setSymbol('_main.a', value = 1)
 s.addGroup('g1')
 
-s.addSymbol('_sys.var', value=1)
-s.addSymbol('_main.b',  value=2)
-s.addSymbol('_main.g1.s', value='a string')
-s.addSymbol('_main.g1.t', value='another string')
+s.setSymbol('_sys.var', value=1)
+s.setSymbol('_main.b',  value=2)
+s.setSymbol('_main.g1.s', value='a string')
+s.setSymbol('_main.g1.t', value='another string')
 
 s.addGroup('g2')
 s.addGroup('_sys.subgroup')
 s.addGroup('_sys.subgroup.subsubgroup')
 
-s.addSymbol('_main.c', value = 44)
-s.addSymbol('g1.y', value = 'a')
-s.addSymbol('g2.y', value = 'b')
-s.addSymbol('g2.boo', value = 1222)
+s.setSymbol('_main.c', value = 44)
+s.setSymbol('g1.y', value = 'a')
+s.setSymbol('g2.y', value = 'b')
+s.setSymbol('g2.boo', value = 1222)
 
-s.addSymbol('_sys.y', value = 'this is _sys.y')
-s.addSymbol('_main.b', value =6000)
+s.setSymbol('_sys.y', value = 'this is _sys.y')
+s.setSymbol('_main.b', value =6000)
 
 # s.showTable()
 
@@ -49,18 +49,18 @@ print s.getSymbol('_main.g1.t')
 # s.searchGroups.append('_main.g2')
    
 # 
-print s.addSymbol('kexp', value='90.3')
+print s.setSymbol('kexp', value='90.3')
 
-s.addSymbol('_main.x',value = 'main x')
-s.addSymbol('_main.g1.x',value = 'main g1 x')
-s.addSymbol('_main.g2.x',value = 'main g2 x')
+s.setSymbol('_main.x',value = 'main x')
+s.setSymbol('_main.g1.x',value = 'main g1 x')
+s.setSymbol('_main.g2.x',value = 'main g2 x')
 
 n = 0
 for i in ('_main', '_main.g1', '_main.g2'):
     n = n + 1
     s.LocalGroup = i
     print ':: ', i, s.getSymbol('y').value
-    s.addSymbol('x', n)
+    s.setSymbol('x', n)
 
 s.showTable()
 
@@ -69,7 +69,7 @@ print s.searchGroups
 x1 = numpy.arange(60)*1.20
 x1.shape = (5,3,4)
 s.LocalGroup = '_main'
-s.addSymbol('foo', value=x1)
+s.setSymbol('foo', value=x1)
 # 
  
 # s.initialize()
