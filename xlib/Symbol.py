@@ -79,18 +79,17 @@ class symGroup(dict):
         # return "status=%s, id=%s" % (self.status, hex(id(self)))
         return "status=%s" % (self.status)
 
-    def addGroup(self,name,group=None,filename=None,status=None,toplevel=False):
+    def addGroup(self,name,group=None,filename=None,status='normal',toplevel=False):
         if self.status=='frozen' and not self.has_key(name):
             raise SymbolError, ' group %s is frozen, and cannot be extended.' % self.name
         fn = filename or self.filename
-        st = status   or self.status
         sname = "%s.%s" %(self.name,name)
         if toplevel: sname = name
         if isGroup(group):
             self[name] = group
             self[name].setname(name)
         else:
-            self[name] = symGroup(name=sname,filename=fn,status=st)
+            self[name] = symGroup(name=sname,filename=fn,status=status)
             
         return self[name]
 
@@ -376,7 +375,10 @@ class SymbolTable:
         p     = parts[0]
         parent,sym = None,None
 
-        if p == _TopGroupName:
+        if (self.data.has_key(self.LocalGroup) and 
+            self.data[self.LocalGroup].has_key(p)):
+            parent = self.data[self.LocalGroup]
+        elif p == _TopGroupName:
             parent,sym = None,self.data
         elif p in self.data.keys():
             parent = self.data
@@ -385,6 +387,7 @@ class SymbolTable:
                 if self.data[g].has_key(p):
                     parent = self.data[g]
                     break
+
         if parent is not None: sym = parent[p]
         if sym is not None: parts.pop(0)
 
@@ -505,7 +508,7 @@ class SymbolTable:
     def setSymbol(self,name,value,create=True,**kw):
         parent,sym,parts = self._lookup(name)
         sym = self._normalize_sym(sym)
-            
+
         if isSymbol(sym):
             sym.value = value
         elif isGroup(sym) and len(parts)>0:
@@ -516,7 +519,6 @@ class SymbolTable:
                         sym = sym.addGroup(p)
                 else:
                     raise SymbolError, 'cannot add Symbol %s: would need to create subgroups.' % (name,sym.name)
-
             sym = sym.setSymbol(parts[0],value,**kw)
         else:
             raise SymbolError, ' cannot add Symbol  %s: %s is not a group '% (name, sym.name)
@@ -562,11 +564,46 @@ class SymbolTable:
         return self.setSymbol(name,value=func,type=ftype,code=code,
                               desc=desc,cmd_out=cmd_out,**fcn_kws)
 
-    def getSymbol(self,name,create=False):
+
+    def getSymbolLocalGroup(self,name):
+        parts = splitname(name)
+        p     = parts[0]
+        parent,sym = None,None
+
+
+        if p in self.data.keys():
+            sym = self.data[p]
+            parts.pop(0)
+        elif self.data.has_key(self.LocalGroup):
+            sym = self.data[self.LocalGroup]
+        else:
+            sym = self.data
+
+        if isGroup(sym) and len(parts)>1:
+            while len(parts)>1:
+                p = parts.pop(0)
+                sym = sym.addGroup(p)
+        return sym.setSymbol(parts[0],None)
+# 
+#         parent,sym, parts = self._lookup(name)
+#         print 'getSym Local Group = ', name, parent, sym, parts, self.LocalGroup        
+#         if sym is None:   sym = self._normalize_sym(sym)
+# 
+#         print 'getSym Local Group = ', name, parent, sym, parts, self.LocalGroup
+# 
+# 
+
+
+    def getSymbol(self,name):
+        
         parent,sym, parts = self._lookup(name)
-        if create and sym is None:
-            sym = self._normalize_sym(sym)
-            
+        if sym is None:   sym = self._normalize_sym(sym)
+
+        if len(parts)==1 and isGroup(sym):
+            if sym.has_key(parts[0]):  return sym[parts[0]]
+
+        if sym is  None: sym  = self.data[self.LocalGroup]
+        
         for i in parts:
             stmp  = None
             try:
@@ -577,10 +614,7 @@ class SymbolTable:
                 except:
                     pass
             if stmp is None:
-                if create and isGroup(sym):
-                    stmp = sym.setSymbol(i,value=0)
-                else:
-                    raise SymbolError, 'cannot find or create "%s" in "%s"' % (i,sym)
+                raise SymbolError, 'cannot find or create "%s" in "%s"' % (i,sym)
             sym = stmp
         return sym
             
@@ -636,22 +670,26 @@ class SymbolTable:
         except SymbolError:
             return False
 
+
     def delSymbol(self,name):
         "delete a symbol"
         parent,sym,parts = self._lookup(name)
         name = splitname(name).pop()
 
         if not isGroup(parent):
-            raise SymbolError, 'cannot resolve symbol for delete %s' % name            
+            raise SymbolError, 'cannot resolve symbol for delete %s' % name
         if isGroup(sym):
             if sym.status  == 'nodelete':
                 raise SymbolError, 'cannot delete group %s  (nodelete)' % name            
             parent.delGroup(name)
-
         elif isSymbol(sym):
             if len(parts)>0:
                 raise SymbolError, 'cannot delete symbol: "%s" not resolved (python attribute??)' % name
             parent.delSymbol(name)
+            
+
+    def delGroup(self,name):
+        self.delSymbol(name)
         
     def showTable(self,skip=None):
         ignoregroups = []

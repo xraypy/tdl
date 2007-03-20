@@ -460,7 +460,7 @@ class Expression:
         # print 'get_symbol ', symbol, type(symbol), len(symbol), vtype
         x = None
         if vtype in ('variable','defvar'):
-            x = self.symbolTable.getVariable(symbol)
+            x = self.symbolTable.getSymbol(symbol)
         elif vtype == 'function':
             x = self.symbolTable.getFunction(symbol)
 
@@ -501,6 +501,7 @@ class Expression:
                     elif tok == opcodes.symbol:   # special case for assignments...
                         return work
                     elif tok == opcodes.variable: # simple variable reference
+                        
                         nam = work.pop()
                         sym = self.get_symbol(nam)
                         try:

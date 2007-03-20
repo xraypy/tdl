@@ -22,7 +22,6 @@ import Symbol
 from Symbol import symTypes, symGroup, isGroup
 
 def XisGroup(x):
-    print 'IS GROUP ', x, type(x), isinstance(x, (Symbol.symGroup,symGroup))
     return isinstance(x, (Symbol.symGroup,symGroup))
 def isSymbol(x): return isinstance(x,Symbol.Symbol)
 
@@ -493,7 +492,7 @@ class Evaluator:
         lhs  = left_hs[:]
         # the symbol name for the lhs will be looked for only
         # in the 'current group' unless fully qualified
-
+        
         ndim_lhs = lhs.pop()
         varname  = lhs.pop()
 
@@ -503,7 +502,8 @@ class Evaluator:
             u = self.symbolTable.placeGroup(rhs,varname)
             return u
         
-        sym  = self.symbolTable.getSymbol(varname, create=True)                    
+        sym  = self.symbolTable.getSymbolLocalGroup(varname)
+
         if sym is None:
             self.raise_error('Cannot make assignment to %s??' % varname)
         for i in range(len(lhs)):
@@ -527,18 +527,18 @@ class Evaluator:
         else:
             x[tuple(lhs)] = rhs
         # 
-
+        # print 'SYM type ', sym.type in (symTypes.defvar,symTypes.defpro,symTypes.variable)
         if sym.type in (symTypes.defvar,symTypes.defpro,symTypes.variable):
             sym.value  = x
             sym.code   = None
             sym.type   = symTypes.variable
             sym.constant = False
-            
+        # print 'DO ASSIGN DONE ', sym.value
+        
 
     def interpret(self,s,text=''):
         "interpret parsed code from compile"
         tok = s[0]
-        # print 'INTERPRET ', s
         if text != '': self.Expression.text=text
         if tok == self.EOF:
             return None
@@ -556,6 +556,7 @@ class Evaluator:
             s[1].reverse()
             xtok = s[1].pop()
             nvar = s[1].pop()
+
             if xtok != opcodes.list:
                 raise EvalError, 'Invalid "del" statement'
             try:
@@ -659,30 +660,33 @@ class Evaluator:
         if len(args) != len(proc.args):
             raise EvalError, 'not enough arguments for procedure %s' % name
 
-        name = "$%s$" % name.replace('.','@') # mangle module/function name 
+        name = "%s" % name.replace('.','@') # mangle module/function name 
         locgroup = self.symbolTable.LocalGroup
         modgroup = self.symbolTable.ModuleGroup
 
         group = self.symbolTable.addTempGroup(prefix=name,nlen=4)
-        group.setname()
-        
+
         self.symbolTable.LocalGroup=group.name
         self.symbolTable.ModuleGroup= proc.mod
-       
+
+        
         # self.symbolTable.showTable(skip=('_math','_builtin','_plot'))
 
         if group is None:
             raise EvalError, 'cannot run procedure %s (cannot create group??)' % name
 
         for k,v in zip(proc.args,args):
-            self.symbolTable.setVariable(k,v)
+            self.symbolTable.setSymbol("%s.%s" % (group.name,k),v)
 
         kvals = {}
         kvals.update(proc.kws)
         kvals.update(kws)
         for k,v in kvals.items():
-            self.symbolTable.setVariable(k,v)
+            self.symbolTable.setSymbol("%s.%s" % (group.name,k),v)
 
+#         print 'GO '
+#         print self.symbolTable.data.keys()
+#         print self.symbolTable.data[group.name].items()
         ret = None
         try:
             for i in proc.code:
@@ -695,7 +699,6 @@ class Evaluator:
             s = 'Error in procedure %s\n    %s' % (name, i[-1])
             self.ShowError(msg=s,showtraceback=False)
             
-            
         try:
             if len(ret) == 1: ret= ret[0]
         except TypeError:
@@ -705,9 +708,6 @@ class Evaluator:
         self.symbolTable.LocalGroup=locgroup
         self.symbolTable.ModuleGroup= modgroup
         
-        # remove this Group, return to previous default Group
-        # self.symbolTable.deleteGroup(group)
-        # self.symbolTable.setDataGroup(savegroup)
         return ret
 
     def ShowError(self,msg=None,showtraceback=True):
