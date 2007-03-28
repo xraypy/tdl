@@ -383,6 +383,10 @@ class SymbolTable:
         if (self.data.has_key(self.LocalGroup) and 
             self.data[self.LocalGroup].has_key(p)):
             parent = self.data[self.LocalGroup]
+        elif (self.LocalGroup != self.ModuleGroup and
+              self.data.has_key(self.ModuleGroup) and 
+              self.data[self.ModuleGroup].has_key(p)):
+            parent = self.data[self.ModuleGroup]            
         elif p == _TopGroupName:
             parent,sym = None,self.data
         elif p in self.data.keys():
@@ -404,9 +408,7 @@ class SymbolTable:
             else:
                 break
             parts.pop(0)
-
         return (parent,sym,parts)
-
 
     def _normalize_sym(self,sym,toplevel=False):
         " a common task: look up a group name or select the LocalGroup"
@@ -593,12 +595,11 @@ class SymbolTable:
 # 
 #         print 'getSym Local Group = ', name, parent, sym, parts, self.LocalGroup
 # 
-# 
-
 
     def getSymbol(self,name):
-        
         parent,sym, parts = self._lookup(name)
+        # print 'getSymbol ', name, self.LocalGroup,self.ModuleGroup
+        # print '   --> ', parent, sym, parts
         if sym is None:   sym = self._normalize_sym(sym)
 
         if len(parts)==1 and isGroup(sym):

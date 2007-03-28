@@ -404,6 +404,7 @@ def mod_import(name):
 
 def PrintExceptErr(err_str,print_trace=True):
     " print error on exceptions"
+    print 'PrintExceptErr', err_str
     try:
         print '\n***********************************'
         print err_str
@@ -417,6 +418,7 @@ def PrintExceptErr(err_str,print_trace=True):
 
 def PrintShortExcept(err_str):
     " print error on exceptions"
+    print 'PrintShortExcept', err_str
     try:
         print '\n***********************************'
         print err_str

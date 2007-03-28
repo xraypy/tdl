@@ -514,13 +514,13 @@ class Help:
             try:
                 sym = self.tdl.symbolTable.getSymbol(n)
             except SymbolError:
-                show_more([' variable %s not found\n' % (n)])
+                self.bprint([' variable %s not found' % (n)])
                 
             if isGroup(sym):
                 self._groupshow(sym)
             else:
                 self._symshow(sym)
-        show_more(self.buff)
+        self.__showbuff()
 
     def _symshow(self,sym, indent=1):
         vtab = '  '*(indent+1)
@@ -555,18 +555,24 @@ class Help:
         try:
             group = self.tdl.symbolTable.getGroup(groupname)
         except SymbolError:
-            show_more([' group %s not found\n' % (groupname)])
-        self.buff = []
+            self.bprint([' group %s not found' % (groupname)])
+            self.__showbuff()
+            return
+        
         self.bprint("  %s: group %s" %(group.name,group.getinfo()))
         self._groupshow(group,indent=1,groupname=group.name)
-        show_more(self.buff)
+        self.__showbuff()
 
-    def bprint(self,x): self.buff.append("%s\n" % x)
+    def bprint(self,x):
+        self.buff.append("%s\n" % x)
+
+    def __showbuff(self):
+        show_more(self.buff)
+        self.buff = []
     
     def show_allgroups(self):
         stable   = self.tdl.symbolTable
         topstats,gstats  = stable.getStats()
-        self.buff = []
         self.bprint("Default Data group = %s,  Function group = %s\n" % \
                     (stable.LocalGroup, stable.ModuleGroup))
         self.bprint(' %i top level groups:' %  (topstats[2]))
@@ -579,7 +585,7 @@ class Help:
         groups = gstats.keys()
         groups.sort()
         for g in groups:   _show("   %s"%g,gstats[g])
-        show_more(self.buff)
+        self.__showbuff()
         
 
     def show(self,arg=None):
@@ -589,7 +595,8 @@ class Help:
             if isSymbol(arg):    self.show_symbol(arg.name)
             elif isGroup(arg):   self.show_group(arg.name)
             elif type(arg)==types.FunctionType:
-                show_more(arg.__doc__)
+                self.bprint(arg.__doc__)
+                self.__showbuff()
                 
             elif type(arg)==types.StringType:
                 args = arg.replace('=',' ').strip().split()
@@ -614,8 +621,8 @@ class Help:
             self.bprint(show_list(self.help_topics, ncol = 5))
             self.bprint('')
         elif key in self.help_topics:
-            show_more(self.get_help(key),writer=self.output)
+            self.bprint(self.get_help(key),writer=self.output)
         else:
             args.insert(0,key)
-            self.show_symbols(args,msg='help')
-        show_more(self.buff)
+            self.show_symbol(args)
+        self.__showbuff()

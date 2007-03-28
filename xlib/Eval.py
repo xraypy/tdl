@@ -665,11 +665,8 @@ class Evaluator:
 
         group = self.symbolTable.addTempGroup(prefix=name,nlen=4)
 
-        self.symbolTable.LocalGroup=group.name
-        self.symbolTable.ModuleGroup= proc.mod
-
-        
-        # self.symbolTable.showTable(skip=('_math','_builtin','_plot'))
+        self.symbolTable.LocalGroup  = group.name
+        self.symbolTable.ModuleGroup = proc.mod
 
         if group is None:
             raise EvalError, 'cannot run procedure %s (cannot create group??)' % name
@@ -683,9 +680,6 @@ class Evaluator:
         for k,v in kvals.items():
             self.symbolTable.setSymbol("%s.%s" % (group.name,k),v)
 
-#         print 'GO '
-#         print self.symbolTable.data.keys()
-#         print self.symbolTable.data[group.name].items()
         ret = None
         try:
             for i in proc.code:
@@ -695,8 +689,9 @@ class Evaluator:
                     self.interrupt = 0
                     break
         except:
-            s = 'Error in procedure %s\n    %s' % (name, i[-1])
-            self.ShowError(msg=s,showtraceback=False)
+            sefl.output.write('Error in procedure %s: \n %s'  %(proc.name, i[-1]))
+            exctype, val, tb = sys.exc_info()
+            sys.excepthook(exctype,val,tb)
             
         try:
             if len(ret) == 1: ret= ret[0]
@@ -706,18 +701,5 @@ class Evaluator:
         self.symbolTable.delGroup(group.name)
         self.symbolTable.LocalGroup=locgroup
         self.symbolTable.ModuleGroup= modgroup
-        
-        return ret
 
-    def ShowError(self,msg=None,showtraceback=True):
-        " print error on exceptions"
-        w = self.output.write
-        try:
-            w('\n***********************************\n')
-            w("%s\n" % err_str)
-            exctype, val, tb  = sys.exc_info()
-            if not showtraceback: tb = None
-            sys.excepthook(excpe,val,tb)
-        except:
-            w('*****Error printing exception error******\n')
-            
+        return ret

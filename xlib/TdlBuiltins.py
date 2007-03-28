@@ -438,7 +438,7 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
 
 def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
     " load file of tdl code"
-    print 'TDL LOAD', fname, group, tdl, debug, kw
+
     verify_tdl(tdl, 'load',msg='loading file %s' % fname)
     symTab = tdl.symbolTable
     if not os.path.isfile(fname):
@@ -450,23 +450,19 @@ def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
             return None
 
     if group is None:
-        print fname, os.path.splitext(fname)
         group = os.path.basename(os.path.splitext(fname)[0])
         tdl.load_file(fname)
         tdl.run()
     else:
-        localsave  = symTab.LocalGroup
-        modulesave = symTab.ModuleGroup
+        _locgroup = symTab.LocalGroup
+        _modgroup = symTab.ModuleGroup
         symTab.addGroup(group,toplevel=True,status='module')
         symTab.LocalGroup = group
         symTab.ModuleGroup = group
         tdl.load_file(fname)
         tdl.run()
-        owner,grp = symTab.getGroup(group)
-        x = owner[grp]
-        if len(x.keys()) == 0: owner.pop(grp)
-        symTab.LocalGroup = localsave
-        symTab.ModuleGroup = modulesave
+        symTab.LocalGroup = _locgroup
+        symTab.ModuleGroup = _modgroup
 
     if debug: print 'load done.'
     return
