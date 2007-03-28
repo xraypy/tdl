@@ -45,8 +45,22 @@ class shell(cmd.Cmd):
     def __init__(self, completekey='tab', scripts=None,libs=None, debug=False,
                  stdin=None, stdout=None, intro=None, GUI='TkAgg'):
 
+        try:
+            import readline
+            self.rdline = readline
+        except ImportError:
+            self.rdline = None
+
         cmd.Cmd.__init__(self,completekey='tab')
 
+        self.historyfile = os.path.join(os.environ.get('HOME',os.getcwd()),'.tdl_history')
+        if self.rdline is not None:
+            try:
+                self.rdline.read_history_file(self.historyfile)
+
+            except IOError:
+                pass
+            
         self.use_rawinput = True
         if stdin is not None:
             sys.stdin = stdin
@@ -58,7 +72,7 @@ class shell(cmd.Cmd):
         self.stdout = sys.stdout
 
         print self.banner % (version.version,num_version)
-
+        
         self.tdl       = Evaluator(interactive= True, debug= debug,
                                    input=self.stdin, output = self.stdout,
                                    libs= libs, GUI=GUI)
@@ -75,6 +89,11 @@ class shell(cmd.Cmd):
             for i in scripts:
                 self.default('load("%s")' % i)
                 
+    def __del__(self):
+        
+        if (self.rdline):
+            self.rdline.set_history_length(1000)
+            self.rdline.write_history_file(self.historyfile)
 
     def emptyline(self):
         pass

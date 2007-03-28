@@ -689,9 +689,10 @@ class Evaluator:
                     self.interrupt = 0
                     break
         except:
-            sefl.output.write('Error in procedure %s: \n %s'  %(proc.name, i[-1]))
-            exctype, val, tb = sys.exc_info()
-            sys.excepthook(exctype,val,tb)
+            s = 'Error in procedure %s\n    %s' % (proc.name, i[-1])
+            self.ShowError(msg=s,showtraceback=False)
+
+            print proc.code
             
         try:
             if len(ret) == 1: ret= ret[0]
@@ -701,5 +702,16 @@ class Evaluator:
         self.symbolTable.delGroup(group.name)
         self.symbolTable.LocalGroup=locgroup
         self.symbolTable.ModuleGroup= modgroup
-
         return ret
+
+    def ShowError(self,msg=None,showtraceback=True):
+        " print error on exceptions"
+        w = self.output.write
+        if True: # try:
+            w('************************************\n')
+            w("%s\n" % msg)
+            exctype, val, tb  = sys.exc_info()
+            if not showtraceback: tb = None
+            sys.excepthook(exctype,val,tb)
+        else: # except:
+            w('***Error printing exception error***\n')
