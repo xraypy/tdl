@@ -17,10 +17,11 @@ package_data = {'tdl.modules':['README.modules','startup.tdl']}
 ### Add-on modules
 packages.append('tdl.modules.TkPlotter')
 packages.append('tdl.modules.ASCIIFile')
-packages.append('tdl.modules.GUI')
+packages.append('tdl.modules.wxGUI')
 packages.append('tdl.modules.xray')
 packages.append('tdl.modules.xray.CarsMca')
 packages.append('tdl.modules.xray.Spec')
+packages.append('tdl.modules.xray.ScanData')
 package_data.update({'tdl.modules.xray':['spec_scripts.tdl','xrf_scripts.tdl']})
 
 ### Additional data files 

@@ -118,14 +118,14 @@ class ScanData:
 
     def get_spectra_OCR(self):
         ndet = self.spectra[0].ndet
-        ocr = []
-        for s in self.spectra:
-            cts = s.get_count_totals()
-            det_ocr = []
-            for j in range(ndet):
-                det_ocr.append(cts[j]['OCR'])
-            ocr.append(det_ocr)
+        npnt = len(self.spectra)
+        ocr = Num.zeros((npnt,ndet))
+        for j in range(npnt):
+            cts = self.spectra[j].get_count_totals()
+            for k in range(ndet):
+                ocr[j][k] = cts[k]['OCR']
         return Num.transpose(ocr)
+        return ocr
 
 ##############################################################################
 

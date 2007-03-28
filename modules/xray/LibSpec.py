@@ -15,7 +15,7 @@ from Num import Num
 import os
 import types
 from SpecFile import SpecFile
-import ScanData
+import SD as ScanData
 import XRF
 
 ####################################################

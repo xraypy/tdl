@@ -73,7 +73,9 @@ try:
     import lib as tdl
     print '  ############## This is TDL devel ##############'
 except ImportError:
-    import tdl
+    #import tdl
+    from tdl import lib as tdl
+
     
 lib_path    = os.path.abspath(tdl.__path__[0])
 tdl_root    = os.path.dirname(lib_path)
@@ -82,6 +84,7 @@ module_path = os.path.join(tdl_root,'modules')
 try:
     if verbose:
         print ' == tdl paths:'
+        print '    lib_path   = %s  ' % lib_path
         print '    tdl_root   = %s  ' % tdl_root
         print '    module_path = %s  ' % module_path
     tdl.Util.set_path(lib_path,verbose=verbose)

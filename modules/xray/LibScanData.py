@@ -12,7 +12,7 @@
 # --------------
 import Util
 from Num import Num
-import ScanData
+import SD as ScanData
 import XRF
 import deadtime
 import types
@@ -37,7 +37,7 @@ def fit_deadtime(sd,io=None,plot=True,tdl=None,**kws):
     elif type(io) == types.StringType:
         io = sd.get_scaler(label=io)
     io = Num.array(io)
-    ocr = Num.array(ocr)
+    #ocr = Num.array(ocr)
     tau = []
     for j in range(len(ocr)):
         (params,msg) = deadtime.fit_deadtime_curve(io,ocr[j])

@@ -82,7 +82,7 @@ import fitPeaks
 import fitBgr
 import XRF
 import deadtime
-import ScanData
+import SD as ScanData
 
 title = "CARS XRF Library "
 
@@ -142,9 +142,9 @@ def read_xrf_scan(first='',scan_dir='.',sd=None,bad_mca_idx=[],
     spectra = []
     path=os.path.abspath(scan_dir)
     fname = os.path.join(path,first)
-    print fname
     #print os.path.exists(fname)
     while os.path.exists(fname):
+        print fname
         xrf =  XRF.read_xrf_file(file=fname,bad_mca_idx=bad_mca_idx,
                                  total=total,align=align,tau=tau)
         spectra.append(xrf)

@@ -55,11 +55,13 @@ def spec.oplot(sf,scan,cols=None):
 enddef
     
 #####################################################
-def spec.read_spectra(sf,scan,spectra_dir='.'):
+def spec.read_spectra(sf,scan,spectra_dir='.',bad_mca_idx=[],
+                      total=True,align=True,tau=None):
     sd = spec.data_struct(sf,scan)
     fname = spec.filename(sf)
     first_scan = make_spec_med_fname(fname,scan,0)
-    sd = xrf.read_scan(first_scan,scan_dir=spectra_dir,sd=sd)
+    sd = xrf.read_scan(first_scan,scan_dir=spectra_dir,sd=sd,
+                       total=total,align=align,tau=tau)
     return(sd)
 enddef
 
