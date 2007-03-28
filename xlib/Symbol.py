@@ -24,9 +24,13 @@
 #
 #########################################################################
 
+__version__  = '0.6'
+
 # symbol Groups that must always be present, and starting search order
-initGroups    = ('_sys','_math','_plot','_builtin')
+initGroups    = ('_main','_sys','_math','_plot','_builtin')
 init_loadLibs = ['TdlBuiltins','TdlNumLib']
+_TopGroupName = '_TDL_'
+
 
 import types
 import os
@@ -40,8 +44,6 @@ import Num
 from Util import find_unquoted_char, split_delim, datalen, set_path
 from Util import PrintExceptErr, SymbolError, ConstantError, show_more
 from string import ascii_lowercase, digits
-
-__version__  = '0.5'
 
 isValidName = re.compile(r'^[a-zA-Z_\$&@][a-zA-Z_\$&@0-9]*$').match
 def randomName(n=6):
@@ -62,11 +64,14 @@ class symTypes:
 class symGroup(dict):
     """ symbol group is an extended dictionary that holds symbols and other symbol groups"""
     type = symTypes.group
-    def __init__(self,name=None,filename=None,toplevel=False,status='normal'):
+    def __init__(self,name=None,filename=None,toplevel=False,status='normal',
+                 vars=None):
         self.filename = filename
         self.status   = status
         self.toplevel = toplevel
         self.setname(name)
+        if vars is not None:
+            for k,v in vars.items(): self.setSymbol(k,v)
         
     def setname(self,name=None):
         if name is None: name = ''
@@ -222,7 +227,7 @@ class Symbol:
 
 ############################################################
 
-_TopGroupName = '_main'
+
 def splitname(s):
     parts = s.split('.')
     for i,p in enumerate(parts):
@@ -258,9 +263,9 @@ class SymbolTable:
         self.searchGroups = []
 
         self.data = symGroup(name=_TopGroupName, status='nodelete')
-       
-        self.LocalGroup  = _TopGroupName
-        self.ModuleGroup = _TopGroupName
+
+        self.LocalGroup  = '_main' 
+        self.ModuleGroup = '_main' 
         for i in initGroups:
             self.addGroup(i,toplevel=True)
             self.searchGroups.append(i)
@@ -422,8 +427,6 @@ class SymbolTable:
         for p in parts:  sym = sym.addGroup(p,status=status,toplevel=toplevel)
         return sym
 
-
-
     def clearTempGroups(self):
         " clear all toplevel groups with delete status"
         k = self.data.keys()
@@ -434,7 +437,7 @@ class SymbolTable:
     def addTempGroup(self,prefix=None,nlen=6,**kw):
         " add a randomly named group, as for procedure namespaces"
         if prefix is None: prefix = ''
-        if nlen < 2: nlen  = 2
+        if nlen < 3: nlen  = 3
         gname= "@%s_%s" % (prefix,randomName(n = nlen))
         ntry = 0
         while self.data.has_key(gname):  # avoid name collision!!
@@ -495,14 +498,13 @@ class SymbolTable:
         for sym in self.data.values():
             if isGroup(sym):
                 nam = sym.name
-                if nam.startswith(_TopGroupName):
+                if nam.startswith('%s.' % _TopGroupName):
                     nam = nam[len(_TopGroupName)+1:]
                 out[nam] = groupcount(sym)
                 ngroup = ngroup + 1
             elif sym.type in (symTypes.defpro,symTypes.pyfunc):
                 nfunc  = nfunc  + 1
             else: nvar = nvar + 1
-
         return ((nvar,nfunc,ngroup), out)
             
     def setSymbol(self,name,value,create=True,**kw):

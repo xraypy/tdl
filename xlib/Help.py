@@ -31,13 +31,10 @@ HelpHelp =  """
 
 HelpShow =  """
   ###########################################################################
-   = Show options =
-    show                  # summary list of groups, functions and variables
-    show groups    (-g)   # list currently defined groups
-    show group <name>     # list functions and variables in named group
-    show functions (-f)   # list functions, organized by group
-    show variables (-v)   # list variables, organized by group
-    show <name>           # show details on specific function, or variable
+   = show: show list groups and variables =
+    show              # summary of all top-level groups
+    show mygroup      # list variables and sub-groups of mygroup
+    show myvariable   # summaray for variable myvariable
     (see also: 'help' and 'help topics')
   ###########################################################################
 """
@@ -477,6 +474,11 @@ from Util   import show_list, split_arg_str, show_more, SymbolError
 class Help:
     """ basic help mechanism for Tdl """
     def __init__(self,tdl=None,output=None):
+        self.tdl = tdl
+        self.output = output
+        if self.output is None: self.output = sys.stdout
+
+        self.buff = []
         h = self.topics = {}
         h['help']  = HelpHelp
         h['show']  = HelpShow
@@ -487,20 +489,12 @@ class Help:
         h['arrays'] =  HelpArrays
         h['lists'] =   HelpLists
         h['control'] = HelpControl
-        self.list_topics()
-
-        self.tdl = tdl
-
-        
-        if output is not None:
-            self.output = output
-        else:
-            self.output = sys.stdout
+        self.help_topics = self.list_topics()
 
     def list_topics(self):
-        x = " ".join(self.topics.keys())
-        self.help_topics = x.split()
-        self.help_topics.sort()
+        x = self.topics.keys()
+        x.sort()
+        return x
 
     def add_topic(self,name,text):
         if type(name) != types.StringType:
@@ -531,16 +525,17 @@ class Help:
     def _symshow(self,sym, indent=1):
         vtab = '  '*(indent+1)
         nam  = sym.name
+
         if isGroup(sym):
-            self.buff.append("%s%s: group %s" %(vtab,nam,sym.getinfo()))
+            self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
             self._groupshow(sym,indent=indent+1, groupname=sym.name)
         elif isSymbol(sym):
-            nam  = (nam + ' '*16)[:max(16,len(sym.name))]
-            self.buff.append( "%s%s: %s\n" % (vtab,nam, sym.getinfo(extended=True)))
-
+            nam  = nam + ' '*(16-len(nam))
+            self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
 
     def _groupshow(self,group, groupname='',indent=1):
         vtab = '  '*(indent+1)
+        print 'Show Group ', group.name, indent
         gname = group.name
         if gname.startswith(groupname) and gname!=groupname:
             gname = gname[len(groupname):]
@@ -548,11 +543,11 @@ class Help:
             nam  = sym.name
             if nam.startswith(gname):  nam = nam[len(gname)+1:]                    
             if isGroup(sym):
-                self.buff.append("%s%s: group %s" %(vtab,nam,sym.getinfo()))
+                self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
                 self._groupshow(sym,indent=indent+1, groupname=sym.name)
             elif isSymbol(sym):
-                nam  = (nam + ' '*16)[:max(16,len(sym.name))]
-                self.buff.append( "%s%s: %s\n" % (vtab,nam, sym.getinfo()))
+                nam  = nam + ' '*(16-len(nam))
+                self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo()))
 
 
     def show_group(self,groupname):
@@ -562,23 +557,25 @@ class Help:
         except SymbolError:
             show_more([' group %s not found\n' % (groupname)])
         self.buff = []
-        self.buff.append("  %s: group %s" %(group.name,group.getinfo()))
+        self.bprint("  %s: group %s" %(group.name,group.getinfo()))
         self._groupshow(group,indent=1,groupname=group.name)
         show_more(self.buff)
 
+    def bprint(self,x): self.buff.append("%s\n" % x)
+    
     def show_allgroups(self):
         stable   = self.tdl.symbolTable
         topstats,gstats  = stable.getStats()
         self.buff = []
-        self.buff.append("Default Data group = %s,  Function group = %s\n\n" % \
-                         (stable.LocalGroup, stable.ModuleGroup))
-            
+        self.bprint("Default Data group = %s,  Function group = %s\n" % \
+                    (stable.LocalGroup, stable.ModuleGroup))
+        self.bprint(' %i top level groups:' %  (topstats[2]))
+
         def _show(nam,st):
-            nam = (nam + ' '*16)[:max(16,len(nam))]
-            self.buff.append(
-                '%s: %i variables, %i functions, %i subgroups\n' % (nam,st[0],st[1],st[2]))
-                
-        _show('_main',topstats)
+            nam  = nam + ' '*(16-len(nam))
+            self.bprint(
+                '%s: %i variables, %i functions, %i subgroups' % (nam,st[0],st[1],st[2]))
+
         groups = gstats.keys()
         groups.sort()
         for g in groups:   _show("   %s"%g,gstats[g])
@@ -608,16 +605,17 @@ class Help:
         args = argin.strip().split()
         key = None
         if len(args) > 0:  key = args.pop(0).strip()
+        self.buff = []
+        self.help_topics = self.list_topics()
         if key is None:
-            print self.topics['help']
+            self.bprint( self.topics['help'])
         elif key in ('-t','topics'):
-            self.list_topics()
-            print "\n==Additional help is avaiable on the following topics:\n"
-            print  show_list(self.help_topics, ncol = 5)
-            print ""
+            self.bprint("\n==Additional help is avaiable on the following topics:")
+            self.bprint(show_list(self.help_topics, ncol = 5))
+            self.bprint('')
         elif key in self.help_topics:
             show_more(self.get_help(key),writer=self.output)
         else:
             args.insert(0,key)
             self.show_symbols(args,msg='help')
-    
+        show_more(self.buff)

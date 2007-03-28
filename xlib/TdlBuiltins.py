@@ -438,16 +438,20 @@ def tdl_set_debug(debug=None,tdl=None,**kw):
 
 def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
     " load file of tdl code"
+    print 'TDL LOAD', fname, group, tdl, debug, kw
     verify_tdl(tdl, 'load',msg='loading file %s' % fname)
-
     symTab = tdl.symbolTable
     if not os.path.isfile(fname):
-        print 'file error: cannot find file %s ' % fname
-        return None
+        ftdl = '%s.tdl' % fname
+        if os.path.isfile(ftdl):
+            fname = ftdl
+        else:
+            print 'file error: cannot find file to load for %s ' % fname
+            return None
 
     if group is None:
-        # print fname, os.path.splitext(fname)
-        #group = os.path.basename(os.path.splitext(fname)[0])
+        print fname, os.path.splitext(fname)
+        group = os.path.basename(os.path.splitext(fname)[0])
         tdl.load_file(fname)
         tdl.run()
     else:
@@ -493,7 +497,7 @@ def tdl_setvar(name,val,tdl=None,debug=False,**kws):
 def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
     "add a group"
     verify_tdl(tdl, 'newgroup')
-    x = symGroup(name='_',toplevel=toplevel,**kw)
+    x = symGroup(name='_',toplevel=toplevel,vars=kw)
     return x
 # 
 # def tdl_showtable(extra=None, tdl=None,skip=None, **kw):

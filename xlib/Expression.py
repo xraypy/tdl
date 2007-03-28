@@ -552,6 +552,7 @@ class Expression:
                             if fcn.type==symTypes.defpro and self.run_procedure:
                                 val = self.run_procedure(fcn,args=arr,kws=kws)
                             elif fcn.type==symTypes.pyfunc:
+                                # print 'PyFunc Call ', arr,  kws
                                 val = fcn.call(*arr,**kws)
                             else:
                                 self.raise_error('evaluation error for function %s' % fname)
