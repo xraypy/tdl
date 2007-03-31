@@ -18,12 +18,8 @@ import copy
 import Help
 
 from Expression import Expression, opcodes
-import Symbol
-from Symbol import symTypes, symGroup, isGroup
 
-def XisGroup(x):
-    return isinstance(x, (Symbol.symGroup,symGroup))
-def isSymbol(x): return isinstance(x,Symbol.Symbol)
+from Symbol import SymbolTable, symTypes, Group, isGroup, isSymbol
 
 import version
 from Num import num_version
@@ -47,9 +43,9 @@ class Evaluator:
         self.output      = output   or  sys.stdout
 
         self.help        = Help.Help(tdl=self,output=self.output)
-        self.symbolTable = symbolTable or Symbol.SymbolTable(libs=libs,
-                                                             tdl=self,
-                                                             writer=self.output)
+        self.symbolTable = symbolTable or SymbolTable(libs=libs,
+                                                      tdl=self,
+                                                      writer=self.output)
         self.symbolTable.setVariable('_builtin.GUI',GUI,constant=True)
         self.Expression  = Expression(symbolTable=self.symbolTable,
                                       run_procedure = self.run_procedure)

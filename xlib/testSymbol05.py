@@ -1,9 +1,9 @@
-from Symbol import SymbolTable, symTypes, symGroup, Symbol
+from Symbol import SymbolTable, symTypes, Group, Symbol
 
 import numpy
-main = symGroup(name='maingroup')
+main = Group(name='maingroup')
 main['u'] = Symbol(name='u',value=15)
-main['subgroup1'] = symGroup(name='subgroup1')
+main['subgroup1'] = Group(name='subgroup1')
 main['subgroup1']['x'] = Symbol(name='x', value='a string')
 main['subgroup1']['y'] = Symbol(name='y', value=99)
 main['v']   = Symbol(name='v', value=22.3)
@@ -99,12 +99,12 @@ s.setSymbol('foo', value=x1)
 # 
 # # print 'TopLevel Groups: '
 # # for k,v in  s.data.items():
-# #     if type(v)==symGroup:    print k
+# #     if type(v)==Group:    print k
 # # 
 # # 
 # # print 'Groups under _main: '
 # # for k,v in  s.data['_main'].items():
-# #     if type(v)==symGroup: print k
+# #     if type(v)==Group: print k
 # # 
 # 
 # # 

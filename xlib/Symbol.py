@@ -61,7 +61,7 @@ class symTypes:
     Funcs     = (pyfunc,defpro)
     All       = Data + Funcs
 
-class symGroup(dict):
+class Group(dict):
     """ symbol group is an extended dictionary that holds symbols and other symbol groups"""
     type = symTypes.group
     def __init__(self,name=None,filename=None,toplevel=False,status='normal',
@@ -94,13 +94,13 @@ class symGroup(dict):
             self[name] = group
             self[name].setname(name)
         else:
-            self[name] = symGroup(name=sname,filename=fn,status=status)
+            self[name] = Group(name=sname,filename=fn,status=status)
             
         return self[name]
 
     def delGroup(self,name):
         if self.status=='frozen': raise SymbolError, ' group %s is frozen.' % self.name
-        if (self.has_key(name) and type(self[name])  == symGroup and
+        if (self.has_key(name) and type(self[name])  == Group and
             self[name].status != 'nodelete'):   
             self.pop(name)
 
@@ -239,20 +239,11 @@ def splitname(s):
             raise SymbolError, msg
     return parts
 
+__group  = Group('__group')
+__symbol = Symbol('__symbol')
 
-def isGroup(x):
-    try:
-        return (x.type == symTypes.group)
-    except:
-        return False
-    
-def isSymbol(x):
-    return (hasattr(x,'value') and hasattr(x,'getCode'))
-# 
-#     try:
-#         return (x.type in symTypes.All)
-#     except:
-#         return False
+def isGroup(x):   return __group.__class__  == x.__class__
+def isSymbol(x):  return __symbol.__class__ == x.__class__
 
 
 class SymbolTable:
@@ -262,7 +253,7 @@ class SymbolTable:
         self.loaded_libs  = []
         self.searchGroups = []
 
-        self.data = symGroup(name=_TopGroupName, status='nodelete')
+        self.data = Group(name=_TopGroupName, status='nodelete')
 
         self.LocalGroup  = '_main' 
         self.ModuleGroup = '_main' 
@@ -433,7 +424,7 @@ class SymbolTable:
         " clear all toplevel groups with delete status"
         k = self.data.keys()
         for i in k:
-            if type(self.data[i]) == symGroup and self.data[i].status=='delete':
+            if type(self.data[i]) == Group and self.data[i].status=='delete':
                 self.data.pop(i)
     
     def addTempGroup(self,prefix=None,nlen=6,**kw):
@@ -450,7 +441,7 @@ class SymbolTable:
         return self.addGroup(gname,toplevel=True,status='delete')
 
     def placeGroup(self, group, name, toplevel=False,status='normal'):
-        """ place an existing symGroup in the SymbolTable"""
+        """ place an existing Group in the SymbolTable"""
         if not isGroup(group):  raise SymbolError, ' cannot assign %s as a group.'% group
 
         parent,sym,parts = self._lookup(name)

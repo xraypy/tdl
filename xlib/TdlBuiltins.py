@@ -52,7 +52,7 @@ import time
 
 from Util import show_list, show_more, datalen, unescape_string, list2array
 from Util import set_path, verify_tdl
-from Symbol import isGroup, isSymbol, symGroup
+from Symbol import isGroup, isSymbol, Group
 
 title = "builtin library functions"
 
@@ -467,7 +467,6 @@ def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
     if debug: print 'load done.'
     return
 
-
 def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
     """
     import python modules that define tdl functions,
@@ -493,47 +492,12 @@ def tdl_setvar(name,val,tdl=None,debug=False,**kws):
 def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
     "add a group"
     verify_tdl(tdl, 'newgroup')
-    x = symGroup(name='_',toplevel=toplevel,vars=kw)
-    return x
-# 
-# def tdl_showtable(extra=None, tdl=None,skip=None, **kw):
-#     "add a group"
-#     verify_tdl(tdl, 'showtable')
-#     return tdl.symbolTable.showTable(skip=skip)
-# 
-# def tdl_showfunctions(extra=None,tdl=None):
-#     "add a group"
-#     print 'This is tdl show funcs ', tdl
-#     verify_tdl(tdl, 'showfunctions')
-#     return tdl.symbolTable.listFunctions()
-# 
-# def tdl_showgroup(name=None,functions=None,extra=None,tdl=None):
-#     "add a group"
-#     verify_tdl(tdl, 'showgroup')
-#     return tdl.symbolTable.showGroup(name=name,functions=functions)
-# 
-# def tdl_showgroups(extra=None,tdl=None):
-#     "add a group"
-#     verify_tdl(tdl, 'showgroups')
-#     return tdl.symbolTable.listGroups()
-        
+    return Group(name='_',toplevel=toplevel,vars=kw)
+
 def tdl_delvar(name,tdl=None,**kw):
     "delete a variable "
     verify_tdl(tdl, 'delvar',msg='trying to delete variable %s' % name)
     return tdl.symbolTable.delSymbol(name)
-
-def tdl_group2dict(gname=None,tdl=None,debug=False,**kw):
-    "convert all data in a group to a single dictionary"
-    verify_tdl(tdl, 'group2dict')
-    
-    if gname is None: gname = tdl.symbolTable.LocalGroup
-    gname = gname.strip()
-    dict = {}
-    dat = tdl.symbolTable.getAllData(group=gname)
-    for i in dat:
-        if i.type not in ('pyfunc','defpro'):
-            dict[i.name] = i.value
-    return dict
 
 def tdl_func_as_cmd(name,tdl=None):
     "allow functions to act as commands"

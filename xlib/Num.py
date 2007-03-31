@@ -19,8 +19,11 @@ def ParseVersion(s):
     factor = 100.
     version = 0.0
     for v in [int(i) for i in s.split('.')]:
-        version = version + v * factor
-        factor = factor / 10.
+        try:
+            version = version + v * factor
+        except:
+            pass
+        factor = factor * 0.1000
     return version
     
 def NoNumpy():
