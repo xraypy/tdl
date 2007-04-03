@@ -15,12 +15,13 @@ s.setSymbol('_main.g1.t', value='another string')
 s.addGroup('g2')
 s.addGroup('_main.g3')
 s.setSymbol('g2.data',value=[1,2,3])
+s.setSymbol('g2.a' ,value = 'hello')
 s.addTempGroup()
 s.addTempGroup()
 
 print '>>>>>>>Groups: ' 
-# for g in s.listGroups():
-#    tdl.help.show_group(g)
-s.showTable(skip=['_builtin','_math'])
+for g in s.listGroups():
+    tdl.help.show_group(g)
+# s.showTable(skip=['_builtin','_math'])
 
 
