@@ -171,7 +171,7 @@ class ExpressionParser:
         _sym  = (name + Optional(_lpar + arg_list + _rpar)
                  + ZeroOrMore(_lbrack + _slice + _rbrack)).setParseAction(self.pushSymbol)
         _expr = ((_lpar  + expr + _rpar) +
-                ZeroOrMore(_lbrack + _slice + _rbrack).setParseAction(self.pushSubArray))
+                 ZeroOrMore(_lbrack + _slice + _rbrack).setParseAction(self.pushSubArray))
         _list = (_lbrack + lit_list + _rbrack).setParseAction(self.pushList)
         _dict = (_lbrace + lit_dict + _rbrace).setParseAction(self.pushDict)
 
@@ -182,14 +182,14 @@ class ExpressionParser:
 
         # define exponentiation as "atom [ ^ expr ]..." instead of "atom [ ^ atom ]...",
         # to get right associative
-        atom = atom + ZeroOrMore((_op_exp + term).setParseAction(self.pushFirst))
+        atom = atom + ZeroOrMore( (_op_exp + term).setParseAction(self.pushBinOp) )
         term << atom
         # put Unary operations next:
         term = (OneOrMore(_op_una) + term).setParseAction(self.pushUnary) | atom
 
         # add other operators in order of precedence.
         for op in (_op_mul,_op_add,_op_eq,_op_and,_op_or):
-            term = term + ZeroOrMore((op + term).setParseAction(self.pushFirst))
+            term = term + ZeroOrMore( (op + term).setParseAction(self.pushBinOp) )
 
         # argument list member, either simple expression or keyword/val assignment
         arg  = (vname + _equal + expr).setParseAction(self.pushKeyValArg) | \
@@ -374,7 +374,10 @@ class ExpressionParser:
         if op:     self.exprStack.append(op)
         if reset:  self.argcount=0
 
-    def pushFirst(self, s, loc, toks,op=None,count=None,count2=None,reset=False):
+    def pushBinOp(self, s, loc, toks):
+        return self.pushFirst(s,loc, toks)
+    
+    def pushFirst(self, s, loc, toks,op=None,count=None,count2=None,reset=False,**kw):
         if self.debug>=32:
             print ' ExprParse: pushFirst ', toks, op, count, count2, reset, self.exprStack
         if toks:
@@ -660,15 +663,15 @@ if __name__ == '__main__':
          " format1  % ['a',3.3]")
     #" format1  % dlist",         )
     st = (' (x+1)', 'sqrt((x+1)) ' ,
-         'sqrt((a+1)/4)[3]' , 'cos(x)' ,
+         'sqrt((a+1)/4)[3]' , 'sqrt(x)' ,
          'st[2:8]',
-         'st[2:len(st)-7]',
          'a[2]',
          'adict["key1"][1:4]',
          'dlist[0,1:4]',
          '[3, 4, 5]',
          )
-    t = ('b', 'g1.a','sqrt(g1.b)','sqrt(b)','s1', 's1.upper()')
+    t = ('b', 'g1.a','sqrt(g1.b)','sqrt(b)','s1', 's1.upper()','(x+1)')
+    t = ('b', 'x', '(x+1)','2*3/4')
     for i in t:
         print '========================\n< ', i , ' > '
         x = p.compile(i)

@@ -60,7 +60,8 @@ class symTypes:
     Data      = (variable,group,pyobj,file,defvar)
     Funcs     = (pyfunc,defpro)
     All       = Data + Funcs
-
+    NonGroups = (variable,pyobj,file,defvar,pyfunc,defpro)
+    
 class Group(dict):
     """ symbol group is an extended dictionary that holds symbols and other symbol groups"""
     type = symTypes.group
@@ -99,16 +100,20 @@ class Group(dict):
         return self[name]
 
     def delGroup(self,name):
+        # print 'delGroup ', self.name, name, self.has_key(name), type(self[name])
         if self.status=='frozen': raise SymbolError, ' group %s is frozen.' % self.name
-        if (self.has_key(name) and type(self[name])  == Group and
-            self[name].status != 'nodelete'):   
+        if (self.has_key(name) and isGroup(self[name]) and self[name].status != 'nodelete'):
             self.pop(name)
+        else:
+            raise SymbolError, ' cannot delete group %s.%s' % (self.name, name)
 
     def setSymbol(self,name,value=None,**kw):
+        # print 'Group: setSymbol ', self.name, name, value
         if self.status=='frozen': raise SymbolError, ' group %s is frozen.' % self.name
         if (self.has_key(name) and isSymbol(self[name]) and self[name].constant):
             raise ConstantError, ' cannot overwrite constant %s' % name
         self[name] = Symbol(name="%s.%s" %(self.name,name),value=value,**kw)
+        # print self.keys(), self.values()
         return self[name]
         
     def Symbols(self): return self.keys()
@@ -239,12 +244,14 @@ def splitname(s):
             raise SymbolError, msg
     return parts
 
-__group  = Group('__group')
-__symbol = Symbol('__symbol')
-
-def isGroup(x):   return __group.__class__  == x.__class__
-def isSymbol(x):  return __symbol.__class__ == x.__class__
-
+def isGroup(x):
+    try:
+        return (x.type == symTypes.group)
+    except:
+        return False
+    
+def isSymbol(x):
+    return (hasattr(x,'value') and hasattr(x,'getCode'))
 
 class SymbolTable:
     def __init__(self,libs=None, writer=None, tdl=None, init=True):
@@ -504,6 +511,8 @@ class SymbolTable:
         parent,sym,parts = self._lookup(name)
         sym = self._normalize_sym(sym)
 
+        # print 'set Symbol ', sym, isSymbol(sym), isGroup(sym)
+        
         if isSymbol(sym):
             sym.value = value
         elif isGroup(sym) and len(parts)>0:
@@ -565,27 +574,23 @@ class SymbolTable:
         p     = parts[0]
         parent,sym = None,None
 
-
-        if p in self.data.keys():
+        if self.data.has_key(p):
             sym = self.data[p]
             parts.pop(0)
         elif self.data.has_key(self.LocalGroup):
             sym = self.data[self.LocalGroup]
         else:
             sym = self.data
-
+            
         if isGroup(sym) and len(parts)>1:
             while len(parts)>1:
                 p = parts.pop(0)
-                sym = sym.addGroup(p)
-        return sym.setSymbol(parts[0],None)
+                if sym.has_key(p):
+                    sym = sym[p]
+                else:
+                    sym = sym.addGroup(p)
 
-#         parent,sym, parts = self._lookup(name)
-#         print 'getSym Local Group = ', name, parent, sym, parts, self.LocalGroup        
-#         if sym is None:   sym = self._normalize_sym(sym)
-# 
-#         print 'getSym Local Group = ', name, parent, sym, parts, self.LocalGroup
-# 
+        return sym.setSymbol(parts[0],None)
 
     def getSymbol(self,name):
         parent,sym, parts = self._lookup(name)
@@ -597,7 +602,8 @@ class SymbolTable:
             if sym.has_key(parts[0]):  return sym[parts[0]]
 
         if sym is  None: sym  = self.data[self.LocalGroup]
-        
+
+        # print '   Sym  / Parts ', sym, parts        
         for i in parts:
             stmp  = None
             try:
@@ -670,6 +676,7 @@ class SymbolTable:
         parent,sym,parts = self._lookup(name)
         name = splitname(name).pop()
 
+        # print 'del Symbol ', name, sym, parent, isGroup(sym), isSymbol(sym)
         if not isGroup(parent):
             raise SymbolError, 'cannot resolve symbol for delete %s' % name
         if isGroup(sym):

@@ -495,9 +495,10 @@ class Evaluator:
         sym  = self.symbolTable.getSymbolLocalGroup(varname)
        
         # if the rhs evaluates to a symbol group, figure out where to place it
+        # print 'Do Assign ', varname, sym, lhs, rhs
+
         if isGroup(rhs):
             return self.symbolTable.placeGroup(rhs,sym.name)
-
 
         if sym is None:
             self.raise_error('Cannot make assignment to %s??' % varname)
@@ -522,13 +523,12 @@ class Evaluator:
         else:
             x[tuple(lhs)] = rhs
         # 
-        # print 'SYM type ', sym.type in (symTypes.defvar,symTypes.defpro,symTypes.variable)
         if sym.type in (symTypes.defvar,symTypes.defpro,symTypes.variable):
             sym.value  = x
             sym.code   = None
             sym.type   = symTypes.variable
             sym.constant = False
-        # print 'DO ASSIGN DONE ', sym.value
+        # print 'DO ASSIGN DONE ', sym, sym.value
         
 
     def interpret(self,s,text=''):
@@ -548,10 +548,13 @@ class Evaluator:
                 self.retval = self.expr_eval(s[1])
                 return
         elif tok == 'del':
-            s[1].reverse()
-            xtok = s[1].pop()
-            nvar = s[1].pop()
-
+            try:
+                s[1].reverse()
+                xtok = s[1].pop()
+                nvar = s[1].pop()
+            except:
+                xtok = None
+                
             if xtok != opcodes.list:
                 raise EvalError, 'Invalid "del" statement'
             try:

@@ -526,6 +526,7 @@ class Help:
         vtab = '  '*(indent+1)
         nam  = sym.name
 
+
         if isGroup(sym):
             self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
             self._groupshow(sym,indent=indent+1, groupname=sym.name)
@@ -533,9 +534,11 @@ class Help:
             nam  = nam + ' '*(16-len(nam))
             self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
 
+
     def _groupshow(self,group, groupname='',indent=1):
         vtab = '  '*(indent+1)
-        print 'Show Group ', group.name, indent
+        # print 'This is Show Group ', group.name, indent, group
+        
         gname = group.name
         if gname.startswith(groupname) and gname!=groupname:
             gname = gname[len(groupname):]
