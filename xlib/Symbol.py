@@ -31,7 +31,6 @@ initGroups    = ('_main','_sys','_math','_plot','_builtin')
 init_loadLibs = ['TdlBuiltins','TdlNumLib']
 _TopGroupName = '_TDL_'
 
-
 import types
 import os
 import random
@@ -108,7 +107,7 @@ class Group(dict):
             raise SymbolError, ' cannot delete group %s.%s' % (self.name, name)
 
     def setSymbol(self,name,value=None,**kw):
-        # print 'Group: setSymbol ', self.name, name, value
+        # print 'Group: setSymbol ', self.name, name, value, kw
         if self.status=='frozen': raise SymbolError, ' group %s is frozen.' % self.name
         if (self.has_key(name) and isSymbol(self[name]) and self[name].constant):
             raise ConstantError, ' cannot overwrite constant %s' % name
@@ -223,6 +222,9 @@ class Symbol:
                 sout = "%s(%s), len=%i" % (vtype,t,nelem)
         elif vtype == symTypes.pyfunc:
             sout =  "%s" % (vtype)
+        elif vtype == symTypes.defvar:
+            sout =  "%s, value=%s, definition='%s'" % (vtype, repr(self.value), self.desc)
+            extended = False
         elif vtype == symTypes.defpro:
             args = ','.join(self.args)
             for k,v in  self.kws.items(): args = "%s,%s=%s" % (args,k,str(v))
@@ -231,7 +233,6 @@ class Symbol:
         return sout
 
 ############################################################
-
 
 def splitname(s):
     parts = s.split('.')
@@ -510,11 +511,13 @@ class SymbolTable:
     def setSymbol(self,name,value,create=True,**kw):
         parent,sym,parts = self._lookup(name)
         sym = self._normalize_sym(sym)
-
-        # print 'set Symbol ', sym, isSymbol(sym), isGroup(sym)
+        
         
         if isSymbol(sym):
             sym.value = value
+            for k,v in kw.items():
+                if hasattr(sym,k): setattr(sym,k,v)
+
         elif isGroup(sym) and len(parts)>0:
             if len(parts) > 1:
                 if create:
@@ -535,7 +538,11 @@ class SymbolTable:
     
     def setDefVariable(self, name, code, desc,**kws):
         "add defined variable" 
-        return self.setSymbol(name,value=None, type=symTypes.defvar,
+        try:
+            val = self.tdl.expr_eval(code)
+        except:
+            val = None        
+        return self.setSymbol(name,value=val, type=symTypes.defvar,
                               code=code,desc=desc,**kws)
 
     def setProcedure(self,name,code,desc=None,**kws):
