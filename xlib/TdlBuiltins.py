@@ -43,7 +43,7 @@
 #  
 ##########################################################################
 
-from Num import Num, num_version
+from Num import num_version, ndarray
 import version
 import os
 import sys
@@ -213,7 +213,7 @@ def _dictvals(x):
 def _pop(x,item=None):
     "???  pop last element from a list"
 
-    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == ndarray: x = x.tolist()
     if type(x) == types.ListType:
         out = x.pop()
         x = x
@@ -232,7 +232,7 @@ def _list(x):
 
 def _listappend(x,val):
     "append a value to a list"
-    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == ndarray: x = x.tolist()
     if type(x) == types.ListType:
         x.append(val)
         return list2array(x)
@@ -240,9 +240,9 @@ def _listappend(x,val):
 def _listjoin(x,y):
     "join two lists"    
     "return list of dictionary items"
-    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == ndarray: x = x.tolist()
     if type(x) == types.ListType:
-        if type(y) == Num.ArrayType: y = y.tolist()
+        if type(y) == ndarray: y = y.tolist()
         if type(y) == types.ListType:
             x.extend(y)
         elif datalen(y) == 1:
@@ -252,7 +252,7 @@ def _listjoin(x,y):
 def _listreverse(x):
     "join two lists"    
     "return list of dictionary items"
-    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == ndarray: x = x.tolist()
     if type(x) == types.ListType:
         x.reverse()
         return list2array(x)
@@ -260,7 +260,7 @@ def _listreverse(x):
 def _listsort(x):
     "join two lists"    
     "return list of dictionary items"
-    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == ndarray: x = x.tolist()
     if type(x) == types.ListType:
         x.sort()
         return list2array(x)
@@ -356,7 +356,7 @@ def _type(x):
                  types.ComplexType:'complex',
                  types.ListType:'list',
                  types.DictType:'dict',
-                 Num.ArrayType:'array'}
+                 ndarray:'array'}
     
     if t in typecodes.keys(): return typecodes[t]
     if isGroup(x): return 'group'
@@ -449,20 +449,21 @@ def tdl_load(fname, tdl=None,group=None,debug=False,**kw):
             print 'file error: cannot find file to load for %s ' % fname
             return None
 
+    _locgroup = None
+    _modgroup = None
     if group is None:
         group = os.path.basename(os.path.splitext(fname)[0])
-        tdl.load_file(fname)
-        tdl.run()
     else:
         _locgroup = symTab.LocalGroup
         _modgroup = symTab.ModuleGroup
         symTab.addGroup(group,toplevel=True,status='module')
         symTab.LocalGroup = group
         symTab.ModuleGroup = group
-        tdl.load_file(fname)
-        tdl.run()
-        symTab.LocalGroup = _locgroup
-        symTab.ModuleGroup = _modgroup
+
+    tdl.load_file(fname)
+    tdl.run()
+    if _locgroup is not None: symTab.LocalGroup = _locgroup
+    if _modgroup is not None: symTab.ModuleGroup = _modgroup
 
     if debug: print 'load done.'
     return

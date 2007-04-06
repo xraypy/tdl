@@ -146,13 +146,14 @@ class Evaluator:
     def run(self):
         " load a chunk of text to be parsed and possibly executed"
         # if s is not None: self.load_statements([s])
+
         ret = None
         while True:
             try:
                 s,nline,srcfile = self.text.pop()
             except IndexError:
                 break
-            if s == self.EOF: return None
+            if s == self.EOF:  return None
 
             if len(s)<=0: continue
             s.strip()
@@ -183,6 +184,7 @@ class Evaluator:
         " get and pre-process next program statement"
         if s is None:  s,nline,fname = self.get_next_textline()
         s.strip()
+
         if s.startswith('#'): return ('','')
         # handle the case of triple quotes:
         #    join strings with a '\n' instead of ' '
@@ -202,7 +204,8 @@ class Evaluator:
         while not is_complete:
             self.line_buff = s
             s,nline,fname = self.get_next_textline()
-            if s == self.EOF and not self.interactive:   break
+            if s == self.EOF and not self.interactive:
+                break
             s = "%s%s%s" % (self.line_buff,join,s)
             is_complete = parens_matched(s)
 
@@ -271,6 +274,8 @@ class Evaluator:
                 while True:
                     sn,nextkey = self.get_next_statement()
                     if sn == '': continue
+                    if sn == self.EOF:
+                        raise EvalError, "end of file in 'if' block, file ='%s'" % self.infile 
                     if nextkey == 'endif':
                         block.append(tmp)
                         break
@@ -312,6 +317,8 @@ class Evaluator:
                 while True:
                     sn,nextkey = self.get_next_statement()
                     if sn == '': continue
+                    if sn == self.EOF:
+                        raise EvalError, "end of file in 'try' block, file ='%s'" % self.infile 
                     if nextkey == 'endtry':
                         block.append(tmp)
                         break
@@ -421,6 +428,9 @@ class Evaluator:
                 while True:
                     sn,nextkey = self.get_next_statement()
                     if sn == '': continue
+                    if sn == self.EOF:
+                        raise EvalError, "end of file in '%s' block, file ='%s'" % (key,self.infile )
+                    
                     if nextkey == end:
                         break
                     else:

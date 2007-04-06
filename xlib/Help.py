@@ -547,11 +547,20 @@ class Help:
             if nam.startswith(gname):  nam = nam[len(gname)+1:]                    
             if isGroup(sym):
                 self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
+                # self._show_groupstats(sym.name,self.groupstats[sym.name])
                 self._groupshow(sym,indent=indent+1, groupname=sym.name)
             elif isSymbol(sym):
                 nam  = nam + ' '*(16-len(nam))
                 self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo()))
+        self.__showbuff()
 
+    def bprint(self,x):
+        self.buff.append("%s\n" % x)
+
+    def __showbuff(self):
+        show_more(self.buff)
+        self.buff = []
+    
 
     def show_group(self,groupname):
         " list all contents of a group "
@@ -562,36 +571,32 @@ class Help:
             self.__showbuff()
             return
         
-        self.bprint("  %s: group %s" %(group.name,group.getinfo()))
-        self._groupshow(group,indent=1,groupname=group.name)
+        # self.bprint("  %s: group %s" %(group.name,group.getinfo()))
+        self._show_groupstats(group.name,self.groupstats[group.name])
+        # self._groupshow(group,indent=1,groupname=group.name)
         self.__showbuff()
 
-    def bprint(self,x):
-        self.buff.append("%s\n" % x)
+    def _show_groupstats(self,nam,st):
+        nam  = nam + ' '*(16-len(nam))
+        self.bprint('%s: %i variables, %i functions, %i subgroups' % (nam,st[0],st[1],st[2]))
 
-    def __showbuff(self):
-        show_more(self.buff)
-        self.buff = []
-    
     def show_allgroups(self):
-        stable   = self.tdl.symbolTable
-        topstats,gstats  = stable.getStats()
         self.bprint("Default Data group = %s,  Function group = %s\n" % \
-                    (stable.LocalGroup, stable.ModuleGroup))
-        self.bprint(' %i top level groups:' %  (topstats[2]))
+                    (self.locgroup, self.modgroup))
+        self.bprint(' %i top level groups:' %  (self.topstats[2]))
 
-        def _show(nam,st):
-            nam  = nam + ' '*(16-len(nam))
-            self.bprint(
-                '%s: %i variables, %i functions, %i subgroups' % (nam,st[0],st[1],st[2]))
-
-        groups = gstats.keys()
+        groups = self.groupstats.keys()
         groups.sort()
-        for g in groups:   _show("   %s"%g,gstats[g])
+        for g in groups:   self._show_groupstats("   %s"%g,self.groupstats[g])
         self.__showbuff()
         
 
     def show(self,arg=None):
+        stable = self.tdl.symbolTable
+        self.topstats, self.groupstats = stable.getStats()
+        self.locgroup = stable.LocalGroup
+        self.modgroup = stable.ModuleGroup
+        
         if arg is None or arg=='':    return self.show_allgroups()
 
         try:

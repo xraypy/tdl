@@ -30,21 +30,21 @@ def _choose(x,y):
 
 def _int(x):
     "wrap builtin int or Numpy astype(int)"
-    if type(x) == Num.ArrayType:
+    if type(x) == Num.ndarray:
         return x.astype(int)
     else:
         return int(x)
 
 def _float(x):
     "wrap builtin float or numpy astype(float)"
-    if type(x) == Num.ArrayType:
+    if type(x) == Num.ndarray:
         return x.astype(float)
     else:
         return float(x)
 
 def _complex(x):
     "wrap builtin complex or numpy astype(complex)"
-    if type(x) == Num.ArrayType:
+    if type(x) == Num.ndarray:
         return x.astype(complex)
     else:
         return complex(x)
@@ -53,7 +53,7 @@ def _min(x,*args):
     "return mininum value of an array or list"
     t = []
     for i in args + (x,):
-        if type(i) == Num.ArrayType: i = i.min()
+        if type(i) == Num.ndarray: i = i.min()
         t.append(i)
     return min(t)
 
@@ -62,7 +62,7 @@ def _max(x,*args):
     "return maxinum value of an array or list"    
     t = []
     for i in args + (x,):
-        if type(i) == Num.ArrayType: i = i.max()
+        if type(i) == Num.ndarray: i = i.max()
         t.append(i)
     return max(t)
 
@@ -155,7 +155,7 @@ def _random_seed(x=None):
         except:
             return Num.random.seed()            
 
-def _random(a,b=1,c=1,npts=1,distribution='normal',**kw):
+def _random(a=1,b=1,c=1,npts=1,distribution='normal',**kw):
     "wrapper for numpy random distributions" 
     NR = Num.random
     if   distribution == 'binomial':        return NR.binomial(a,b,size=npts)

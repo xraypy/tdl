@@ -40,7 +40,7 @@ import re
 from copy import deepcopy
 
 import Num
-from Util import find_unquoted_char, split_delim, datalen, set_path
+from Util import find_unquoted_char, split_delim, datalen, set_path, list2array
 from Util import PrintExceptErr, SymbolError, ConstantError, show_more
 from string import ascii_lowercase, digits
 
@@ -71,7 +71,9 @@ class Group(dict):
         self.toplevel = toplevel
         self.setname(name)
         if vars is not None:
-            for k,v in vars.items(): self.setSymbol(k,v)
+            for k,v in vars.items():
+                if type(v) == types.ListType:  v = list2array(v)
+                self.setSymbol(k,v)
         
     def setname(self,name=None):
         if name is None: name = ''
@@ -223,7 +225,7 @@ class Symbol:
         elif vtype == symTypes.pyfunc:
             sout =  "%s" % (vtype)
         elif vtype == symTypes.defvar:
-            sout =  "%s, value=%s, definition='%s'" % (vtype, repr(self.value), self.desc)
+            sout =  "%s, ='%s', cached value=%s" % (vtype, self.desc, repr(self.value))
             extended = False
         elif vtype == symTypes.defpro:
             args = ','.join(self.args)
