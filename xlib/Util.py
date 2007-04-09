@@ -179,7 +179,7 @@ def split_delim(s,delim='='):
     close = ['}',')',']','"',"'"]
     depth = [ 0, 0, 0, 0, 0]
 
-    if not parens_matched(s): return (-1,s,'')
+    if parens_matched(s) != 0: return (-1,s,'')
     i,idel,p,n,t = (0,0,None,None,None)
     while i < len(s):
         if i>1:        p = s[i-1]
@@ -196,6 +196,7 @@ def split_delim(s,delim='='):
             if q[0]:
                 i = q[2]+i
             else:
+                print 'Split Delim: ', s, ' :: ', t
                 j = opens.index(t)
                 depth[j] = 1
         elif t in opens:
@@ -247,9 +248,8 @@ def list2array(s):
     Returns original list if the conversion is not possible"""
     if type(s) == types.ListType:
         try:
-            if _isnumericarray(s):
-                s = Num.array(s)
-        except (TypeError,AttributeError):
+            if _isnumericarray(s):return Num.array(s)
+        except:
             pass
     return s
 
@@ -277,7 +277,10 @@ def find_matching_quote(s,quote='"',match=None):
 def parens_matched(s):
     """ given a string of 'program text',
     skips over matching quotes, and checks for matching brackets,
-    braces,and parens.  returns True / False
+    braces,and parens.  returns:
+         0  for completely matched string
+        >0  for a string needing closing parens
+        <0  for a string with extra closing parens (ie, a syntax error)
     """
     delims = {'{':1,'(':1,'[':1, '}':-1,')':-1,']':-1}
     b = delims.keys()
@@ -291,13 +294,12 @@ def parens_matched(s):
             # print q
             if q[0]:
                 i = q[2]+i
-
             else: # if matching quote not found, string is not complete
-                return False
+                return 1
         elif t in b:
             depth = depth + delims[t]
         i = i + 1
-    return (depth == 0)
+    return depth
 
 def Command2Expr(s,symtable=None):
     """ convert command like syntax to function syntax:

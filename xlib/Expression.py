@@ -443,6 +443,7 @@ class Expression:
 
     def check_retval(self,val):
         # checks that return value is ok by raise exception for many error conditions
+
         if type(val) == types.NotImplementedType: self.raise_error('Not a Number')
         if type(val) == Num.ArrayType:
             if True in Num.isnan(val): self.raise_error('Not a Number')
@@ -622,7 +623,8 @@ class Expression:
                 elif tok == 'or':  x = work.pop() ; val = work.pop() or x
                 elif tok == 'and': x = work.pop() ; val = work.pop() and x
                 #
-            if type(val)==types.TupleType: val = list(val)
+            if type(val)==types.TupleType:                  val = list(val)
+            if type(val) == types.ListType and len(val)>1:  val = list2array(val)
             work.append(val)
             if self.debug >=32: print ' work ', work
         #

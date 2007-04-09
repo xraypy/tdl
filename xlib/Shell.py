@@ -101,12 +101,15 @@ class shell(cmd.Cmd):
     def do_shell(self, arg):
         import os
         os.system(arg)
-    def do_help(self,arg):
-        s_inp = "help('%s')" % arg
-        self.default(s_inp)
-    def do_show(self,arg):
-        s_inp = "show('%s')" % arg
-        self.default(s_inp)
+
+    def _helpshow(self,arg, cmd='help'):
+        if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
+        if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
+        self.default("%s('%s')"% (cmd,arg))
+        
+    def do_help(self,arg):   self._helpshow(arg, cmd='help')
+    def do_show(self,arg):   self._helpshow(arg, cmd='show')
+
 
     def tdl_execute(self,s_inp):
         self.default(s_inp)
@@ -121,8 +124,8 @@ class shell(cmd.Cmd):
         else:
             self._status = False
             ret,x,detail = None, None, None
-            # print " tdl execute : " , s
             try:
+                # print " tdl execute : " , s
                 ret = self.tdl.execute(s)
                 self._status = True
             except (ParseError,Util.ParseError), detail:

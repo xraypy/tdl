@@ -507,9 +507,15 @@ class Help:
         return "No help available for %s" % (name)
 
     ###
+    def bprint(self,x): self.buff.append("%s\n" % x)
+    def __showbuff(self):
+        show_more(self.buff)
+        self.buff = []
+    
     def show_symbol(self,args):
         " list all contents of a group "
-        self.buff = []
+        print 'Show Sym ', args
+        self.__showbuff()
         for n in args:
             try:
                 sym = self.tdl.symbolTable.getSymbol(n)
@@ -525,20 +531,15 @@ class Help:
     def _symshow(self,sym, indent=1):
         vtab = '  '*(indent+1)
         nam  = sym.name
-
-
-        if isGroup(sym):
-            self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
-            self._groupshow(sym,indent=indent+1, groupname=sym.name)
-        elif isSymbol(sym):
-            nam  = nam + ' '*(16-len(nam))
-            self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
-
-
+        nam  = nam + ' '*(16-len(nam))
+        self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
+        print 'sym show ', sym
+        
     def _groupshow(self,group, groupname='',indent=1):
         vtab = '  '*(indent+1)
-        # print 'This is Show Group ', group.name, indent, group
+        print 'This is _groupshow ', group.name, indent, group, group.keys()
         
+        self.__showbuff()
         gname = group.name
         if gname.startswith(groupname) and gname!=groupname:
             gname = gname[len(groupname):]
@@ -547,34 +548,13 @@ class Help:
             if nam.startswith(gname):  nam = nam[len(gname)+1:]                    
             if isGroup(sym):
                 self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
-                # self._show_groupstats(sym.name,self.groupstats[sym.name])
+                print ':: ', sym, sym.name
+                print self.groupstats.keys()
                 self._groupshow(sym,indent=indent+1, groupname=sym.name)
             elif isSymbol(sym):
                 nam  = nam + ' '*(16-len(nam))
                 self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo()))
-        self.__showbuff()
-
-    def bprint(self,x):
-        self.buff.append("%s\n" % x)
-
-    def __showbuff(self):
-        show_more(self.buff)
-        self.buff = []
-    
-
-    def show_group(self,groupname):
-        " list all contents of a group "
-        try:
-            group = self.tdl.symbolTable.getGroup(groupname)
-        except SymbolError:
-            self.bprint([' group %s not found' % (groupname)])
-            self.__showbuff()
-            return
-        
-        # self.bprint("  %s: group %s" %(group.name,group.getinfo()))
-        self._show_groupstats(group.name,self.groupstats[group.name])
-        # self._groupshow(group,indent=1,groupname=group.name)
-        self.__showbuff()
+            
 
     def _show_groupstats(self,nam,st):
         nam  = nam + ' '*(16-len(nam))
@@ -583,7 +563,7 @@ class Help:
     def show_allgroups(self):
         self.bprint("Default Data group = %s,  Function group = %s\n" % \
                     (self.locgroup, self.modgroup))
-        self.bprint(' %i top level groups:' %  (self.topstats[2]))
+        # self.bprint(' %i top level groups:' %  (self.topstats[2]))
 
         groups = self.groupstats.keys()
         groups.sort()
@@ -591,14 +571,28 @@ class Help:
         self.__showbuff()
         
 
+    def _groupcount(g):
+        nvar, nfunc, ngroup = 0,0,0
+        for sym in g.values():
+            if  isGroup(sym):
+                ngroup = ngroup + 1
+            elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+                nfunc  = nfunc  + 1
+            else: nvar = nvar + 1
+        return (nvar,nfunc, ngroup)
+
     def show(self,arg=None):
         stable = self.tdl.symbolTable
-        self.topstats, self.groupstats = stable.getStats()
+        self.groupstats = stable.getStats()
         self.locgroup = stable.LocalGroup
         self.modgroup = stable.ModuleGroup
-        
-        if arg is None or arg=='':    return self.show_allgroups()
 
+        #         print 'Show: ', self.topstats
+        #         print 'Show  ', self.groupstats
+        if arg is None or arg=='':
+            return self.show_allgroups()
+        # print 'show arg ', arg, type(arg)
+        
         try:
             if isSymbol(arg):    self.show_symbol(arg.name)
             elif isGroup(arg):   self.show_group(arg.name)
@@ -612,6 +606,7 @@ class Help:
                     if args[0] == 'groups': self.show_allgroups()
                     else:
                         if args[0]=='group': args.pop(0)
+                        # print 'show sym args = ', args
                         self.show_symbol(args)
         except:
             pass
@@ -620,7 +615,7 @@ class Help:
         args = argin.strip().split()
         key = None
         if len(args) > 0:  key = args.pop(0).strip()
-        self.buff = []
+        self.__showbuff()
         self.help_topics = self.list_topics()
         if key is None:
             self.bprint( self.topics['help'])

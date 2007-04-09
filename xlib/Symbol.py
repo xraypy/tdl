@@ -483,10 +483,9 @@ class SymbolTable:
     def listVariables(self):  return self.__list(_type=symTypes.Data)
     def listFunctions(self):  return self.__list(_type=symTypes.Funcs)
         
-    def getStats(self):
+    def getStats(self,groupname=None):
         'returns statistics about toplevel symbol table'
         out = {}
-        nvar, nfunc, ngroup =  0,0,0
 
         def groupcount(g):
             nvar, nfunc, ngroup = 0,0,0
@@ -504,11 +503,10 @@ class SymbolTable:
                 if nam.startswith('%s.' % _TopGroupName):
                     nam = nam[len(_TopGroupName)+1:]
                 out[nam] = groupcount(sym)
-                ngroup = ngroup + 1
-            elif sym.type in (symTypes.defpro,symTypes.pyfunc):
-                nfunc  = nfunc  + 1
-            else: nvar = nvar + 1
-        return ((nvar,nfunc,ngroup), out)
+#             elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+#                 nfunc  = nfunc  + 1
+#             else: nvar = nvar + 1
+        return out
             
     def setSymbol(self,name,value,create=True,**kw):
         parent,sym,parts = self._lookup(name)
@@ -598,6 +596,8 @@ class SymbolTable:
                     sym = sym[p]
                 else:
                     sym = sym.addGroup(p)
+
+        if sym.hasSymbol(parts[0]):return sym[parts[0]]
 
         return sym.setSymbol(parts[0],None)
 
@@ -701,21 +701,41 @@ class SymbolTable:
     def delGroup(self,name):
         self.delSymbol(name)
         
-    def showTable(self,skip=None):
+    def _groupstats(self,group):
+        nvar, nfunc, ngroup = 0,0,0
+        for sym in group.values():
+            if  isGroup(sym):
+                ngroup = ngroup + 1
+            elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+                nfunc  = nfunc  + 1
+            else: nvar = nvar + 1
+        return (nvar,nfunc, ngroup)
+    
+    def showTable(self,skip=None,do_print=True):
+        print '::Symbol Table::'
         ignoregroups = []
         if skip is not None: ignoregroups = skip
-        indent = -1
-        def _showGroup(grp,indent):
-            indent = indent + 1
-            sp     = ' '*3*indent
-            l  = []
-            for k,v in grp.items():
-                l.append("%s%s = %s\n" % (sp, k, v))
-                if isGroup(v) and v not in ignoregroups: _showGroup(v,indent)
-            show_more(l)
-        _showGroup(self.data,indent)
+        indent = 1
+        buff = []
+        def _showGroup(grp,indent=1, show_subgroups=False):
+            st    = self._groupstats(grp)
+            otab  = '   '*indent
+            vtab  = '   '*(indent+1)
+            nam   = grp.name + ' '*(16-len(grp.name))
+            buff.append('%s%s: %i variables, %i functions, %i subgroups' % (otab,nam,st[0],st[1],st[2]))
+            if show_subgroups:
+                for k,v in grp.items():
+                    if isGroup(v):
+                        if v not in ignoregroups:  _showGroup(v,indent+1)
+                    elif isSymbol(v):
+                        buff.append("%s%s = %s\n" % (vtab, k, v.getinfo()))
 
-
+        for g in self.data.values():  _showGroup(g,indent,show_subgroups=True)
+        print '=================='
+        if do_print:
+            show_more(buff)
+        return buff
+    
 
 def _splitName(name,check=True):
     parts = name.split('.')

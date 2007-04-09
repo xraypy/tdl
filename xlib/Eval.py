@@ -22,7 +22,7 @@ from Expression import Expression, opcodes
 from Symbol import SymbolTable, symTypes, Group, isGroup, isSymbol
 
 import version
-from Num import num_version
+from Num import num_version, ArrayType
 from Util import split_delim, find_unquoted_char, parens_matched
 from Util import split_list, trimstring
 from Util import EvalError, Command2Expr
@@ -145,8 +145,6 @@ class Evaluator:
 
     def run(self):
         " load a chunk of text to be parsed and possibly executed"
-        # if s is not None: self.load_statements([s])
-
         ret = None
         while True:
             try:
@@ -182,7 +180,8 @@ class Evaluator:
 
     def get_next_statement(self,s = None):
         " get and pre-process next program statement"
-        if s is None:  s,nline,fname = self.get_next_textline()
+        if s is None:
+            s,nline,fname = self.get_next_textline()
         s.strip()
 
         if s.startswith('#'): return ('','')
@@ -200,14 +199,17 @@ class Evaluator:
         jcom =find_unquoted_char(s,char='#')
         s = s[:jcom]
 
-        is_complete = parens_matched(s)
-        while not is_complete:
-            self.line_buff = s
-            s,nline,fname = self.get_next_textline()
-            if s == self.EOF and not self.interactive:
-                break
-            s = "%s%s%s" % (self.line_buff,join,s)
-            is_complete = parens_matched(s)
+        n_parens = None
+
+        while n_parens != 0:
+            n_parens = parens_matched(s)
+            if n_parens < 0:  raise EvalError, 'syntax error: parens not matched: %s' % s
+            if n_parens > 0:
+                self.line_buff = s
+                s,nline,fname = self.get_next_textline()
+                if s == self.EOF and not self.interactive:
+                    break
+                s = "%s%s%s" % (self.line_buff,join,s)
 
         #
         self.line_buff = ''
@@ -528,10 +530,15 @@ class Evaluator:
 
         if len(lhs)==0:
             x = rhs
-        elif len(lhs)==1:
-            x[lhs[0]] = rhs
         else:
-            x[tuple(lhs)] = rhs
+            if len(lhs)==1:
+                # print 'LHS 1 element: ', x, type(x), lhs, ' ==> ', rhs
+                # print 'TYPES Compatible??? ', type(x),  type(rhs)
+                # if type(x) == ArrayType: print 'x is a Numarray'
+                x[lhs[0]] = rhs
+            else:
+                x[tuple(lhs)] = rhs
+
         # 
         if sym.type in (symTypes.defvar,symTypes.defpro,symTypes.variable):
             sym.value  = x
@@ -724,3 +731,4 @@ class Evaluator:
             sys.excepthook(exctype,val,tb)
         else: # except:
             w('***Error printing exception error***\n')
+            
