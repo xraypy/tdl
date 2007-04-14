@@ -80,11 +80,15 @@ class Group(dict):
         self.name = name
 
     def __repr__(self):
-        return "<%s, group, %s>" % (self.name, self.getinfo())
+        return "<%s, %s>" % (self.name, self.getinfo())
     
-    def getinfo(self):
+    def getinfo(self,extended=False):
         # return "status=%s, id=%s" % (self.status, hex(id(self)))
-        return "status=%s" % (self.status)
+        s = "group(%s)" % self.status
+        if extended:
+            nv,nf,ng = self.stats()            
+            s = "%s: %i variables, %i functions, %i subgroups" % (s,nv,nf,ng)
+        return s
 
     def addGroup(self,name,group=None,filename=None,status='normal',toplevel=False):
         if self.status=='frozen' and not self.has_key(name):
@@ -114,7 +118,6 @@ class Group(dict):
         if (self.has_key(name) and isSymbol(self[name]) and self[name].constant):
             raise ConstantError, ' cannot overwrite constant %s' % name
         self[name] = Symbol(name="%s.%s" %(self.name,name),value=value,**kw)
-        # print self.keys(), self.values()
         return self[name]
         
     def Symbols(self): return self.keys()
@@ -125,6 +128,18 @@ class Group(dict):
         if self.status=='frozen': raise SymbolError, ' group %s is frozen.' % self.name
         if self.has_key(name) and isSymbol(self[name]):
             self.pop(name)
+
+    def stats(self):
+        "return (n_variables, n_functions, n_groups) in a group"
+        nvar, nfunc, ngroup = 0,0,0
+        for sym in self.values():
+            if  isGroup(sym):
+                ngroup = ngroup + 1
+            elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+                nfunc  = nfunc  + 1
+            else: nvar = nvar + 1
+        return (nvar,nfunc, ngroup)
+
 
 class Symbol:
     """

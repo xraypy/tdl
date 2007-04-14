@@ -473,6 +473,7 @@ from Util   import show_list, split_arg_str, show_more, SymbolError
 
 class Help:
     """ basic help mechanism for Tdl """
+    charlen = 16
     def __init__(self,tdl=None,output=None):
         self.tdl = tdl
         self.output = output
@@ -508,108 +509,77 @@ class Help:
 
     ###
     def bprint(self,x): self.buff.append("%s\n" % x)
+
     def __showbuff(self):
         show_more(self.buff)
         self.buff = []
-    
-    def show_symbol(self,args):
+        
+
+    def show_symbols(self,args,indent=1,title=None,groupname=None,followgroups=False):
         " list all contents of a group "
-        print 'Show Sym ', args
-        self.__showbuff()
-        for n in args:
-            try:
-                sym = self.tdl.symbolTable.getSymbol(n)
-            except SymbolError:
-                self.bprint([' variable %s not found' % (n)])
-                
-            if isGroup(sym):
-                self._groupshow(sym)
-            else:
-                self._symshow(sym)
-        self.__showbuff()
 
-    def _symshow(self,sym, indent=1):
-        vtab = '  '*(indent+1)
-        nam  = sym.name
-        nam  = nam + ' '*(16-len(nam))
-        self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
-        print 'sym show ', sym
-        
-    def _groupshow(self,group, groupname='',indent=1):
-        vtab = '  '*(indent+1)
-        print 'This is _groupshow ', group.name, indent, group, group.keys()
-        
-        self.__showbuff()
-        gname = group.name
-        if gname.startswith(groupname) and gname!=groupname:
-            gname = gname[len(groupname):]
-        for sym in group.values():
+        print "==Show Symbols " , args, indent, title, groupname
+        vtab = '  '*indent
+        ttab = '  '*(indent-1)
+        if title is not None: self.bprint("%s==%s==" % (ttab,title))
+        if groupname is None: groupname=''
+
+        for sym in args:
             nam  = sym.name
-            if nam.startswith(gname):  nam = nam[len(gname)+1:]                    
-            if isGroup(sym):
-                self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
-                print ':: ', sym, sym.name
-                print self.groupstats.keys()
-                self._groupshow(sym,indent=indent+1, groupname=sym.name)
-            elif isSymbol(sym):
-                nam  = nam + ' '*(16-len(nam))
-                self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo()))
+            if nam.startswith("%s."%groupname): nam = nam[len(groupname)+1:]
             
+            nam  = nam + ' '*(self.charlen - len(nam))
+            self.bprint("%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
 
-    def _show_groupstats(self,nam,st):
-        nam  = nam + ' '*(16-len(nam))
-        self.bprint('%s: %i variables, %i functions, %i subgroups' % (nam,st[0],st[1],st[2]))
-
-    def show_allgroups(self):
-        self.bprint("Default Data group = %s,  Function group = %s\n" % \
-                    (self.locgroup, self.modgroup))
-        # self.bprint(' %i top level groups:' %  (self.topstats[2]))
-
-        groups = self.groupstats.keys()
-        groups.sort()
-        for g in groups:   self._show_groupstats("   %s"%g,self.groupstats[g])
+            if isGroup(sym) and followgroups:
+                print ':: ', sym.keys(), sym.values()
+                self.show_symbols(sym.values(), title=sym.getinfo(extended=True),
+                                  groupname=sym.name, 
+                                  indent=indent+1,followgroups=followgroups)
         self.__showbuff()
         
+    def show_topgroups(self):
+        stable   = self.tdl.symbolTable
+        locgroup = stable.LocalGroup
+        modgroup = stable.ModuleGroup
 
-    def _groupcount(g):
-        nvar, nfunc, ngroup = 0,0,0
-        for sym in g.values():
-            if  isGroup(sym):
-                ngroup = ngroup + 1
-            elif sym.type in (symTypes.defpro,symTypes.pyfunc):
-                nfunc  = nfunc  + 1
-            else: nvar = nvar + 1
-        return (nvar,nfunc, ngroup)
+        self.bprint("Default Data group = %s,  Function group = %s\n" % (locgroup, modgroup))
+
+        groups = stable.data.values()
+        groups.sort()
+        self.show_symbols(groups)
+
+        self.bprint(" ")
+        gnames = [locgroup]
+        if modgroup not in gnames: gnames.append(modgroup)
+        for g in gnames:
+            grp = stable.getSymbol(g)
+            if len(grp.keys())>0:
+                self.show_symbols(grp.values(), indent=2,
+                                  title="%s: %s" % (g,grp.getinfo(extended=True)),
+                                  groupname=grp.name)
+
 
     def show(self,arg=None):
-        stable = self.tdl.symbolTable
-        self.groupstats = stable.getStats()
-        self.locgroup = stable.LocalGroup
-        self.modgroup = stable.ModuleGroup
-
-        #         print 'Show: ', self.topstats
-        #         print 'Show  ', self.groupstats
         if arg is None or arg=='':
-            return self.show_allgroups()
-        # print 'show arg ', arg, type(arg)
+            return self.show_topgroups()
         
         try:
-            if isSymbol(arg):    self.show_symbol(arg.name)
-            elif isGroup(arg):   self.show_group(arg.name)
+            sym = self.tdl.symbolTable.getSymbol(arg)
+            print 'SHOW ', arg, sym, isSymbol(sym), isGroup(sym)
+            if  isSymbol(sym):
+                self.show_symbols(sym)
+            elif isGroup(sym):
+                self.show_symbols(sym.values())
             elif type(arg)==types.FunctionType:
                 self.bprint(arg.__doc__)
                 self.__showbuff()
-                
             elif type(arg)==types.StringType:
                 args = arg.replace('=',' ').strip().split()
-                if len(args)>0:
-                    if args[0] == 'groups': self.show_allgroups()
-                    else:
-                        if args[0]=='group': args.pop(0)
-                        # print 'show sym args = ', args
-                        self.show_symbol(args)
+                self.show_symbols(args)
         except:
             pass
+        self.__showbuff()
 
     def help(self,argin):
         args = argin.strip().split()
@@ -624,8 +594,54 @@ class Help:
             self.bprint(show_list(self.help_topics, ncol = 5))
             self.bprint('')
         elif key in self.help_topics:
-            self.bprint(self.get_help(key),writer=self.output)
+            self.bprint(self.get_help(key))
         else:
             args.insert(0,key)
-            self.show_symbol(args)
+            self.show_symbols(args)
         self.__showbuff()
+
+# 
+#     def _group(g,indent=0):
+#         if not isGroup(g): return None
+#         tab = '   '*indent
+#         for k,v in g.items():
+#             print "%s %s %s" %(tab, k,  v.getinfo())
+#             if isGroup(v): show_group(v,indent=indent+1)
+# 
+#         
+#     def _groupshow(self,group, groupname='',indent=1):
+#         vtab = '  '*(indent+1)
+#         print 'This is _groupshow ', group.name, indent, group, group.keys()
+#         
+#         self.__showbuff()
+#         gname = group.name
+#         if gname.startswith(groupname) and gname!=groupname:
+#             gname = gname[len(groupname):]
+#         for sym in group.values():
+#             nam  = sym.name
+#             if nam.startswith(gname):  nam = nam[len(gname)+1:]                    
+#             if isGroup(sym):
+#                 self.bprint("%s%s: group %s" %(vtab,nam,sym.getinfo()))
+#                 print ':: ', sym, sym.name
+#                 print self.groupstats.keys()
+#                 self._groupshow(sym,indent=indent+1, groupname=sym.name)
+#             elif isSymbol(sym):
+#                 nam  = nam + ' '*(16-len(nam))
+#                 self.bprint( "%s%s: %s" % (vtab,nam, sym.getinfo()))
+#             
+# 
+#     def _show_groupstats(self,nam,st):
+#         nam  = nam + ' '*(16-len(nam))
+#         self.bprint('%s: %i variables, %i functions, %i subgroups' % (nam,st[0],st[1],st[2]))
+# 
+
+#     def _groupcount(g):
+#         nvar, nfunc, ngroup = 0,0,0
+#         for sym in g.values():
+#             if  isGroup(sym):
+#                 ngroup = ngroup + 1
+#             elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+#                 nfunc  = nfunc  + 1
+#             else: nvar = nvar + 1
+#         return (nvar,nfunc, ngroup)
+# 
