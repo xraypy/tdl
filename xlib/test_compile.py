@@ -23,8 +23,6 @@ evaluator = Evaluator(symbolTable=symtable)
 symtable.setVariable('a',Num.arange(7.))
 symtable.setVariable('pi',Num.pi)
 
-print 'parse ', expr, 
 stack = parser.compile(expr)
-stack.reverse()
-print ' :: got     = ', stack
+print expr, ' => ', ", ".join([repr(i) for i in stack])
 

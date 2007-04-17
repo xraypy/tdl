@@ -188,6 +188,10 @@ class ExpressionParser:
         atom  = _str | _num | _sym  | _expr | _list | _dict | _emptylist | _emptydict
 
         atom = atom + ZeroOrMore( (_point + atom).setParseAction(self.pushAttribute) )
+        #
+        # FIXME:  f()[1] works, but a[0]() does not!!
+        # atom = atom + ZeroOrMore( (_lpar + arg_list + _rpar).setParseAction(self.pushFCN) )
+        
 
         # define exponentiation as "atom [ ^ expr ]..." instead of "atom [ ^ atom ]...",
         # to get right associative
@@ -232,12 +236,10 @@ class ExpressionParser:
         self.argcount  = 0
         self.dictcount = 0
         s = s.strip()
-        self.expr.parseString(s)
-# 
-#         try:
-#             self.expr.parseString(s)
-#         except (ParseError,pyparsing.ParseException):
-#             raise ParseError, s
+        try:
+            self.expr.parseString(s)
+        except (ParseError,pyparsing.ParseException):
+            raise ParseError, s
         # reversing the stack is the default...
         # set reverse=True to NOT reverse the stack
         if not reverse: self.exprStack.reverse()
@@ -249,6 +251,10 @@ class ExpressionParser:
         if self.debug>=16:    print ' ExprParse: CountArgs ', len(toks)
         self.argcount = len(toks)
 
+    def pushFCN(self, s, loc, toks ):
+        # print 'bFCN ', s, toks, self.argcount,  self.exprStack
+        return toks
+    
     def pushAttribute(self, s, loc, toks ):
         # print 'push Attr ', s, loc, toks
         if len(toks)>0:

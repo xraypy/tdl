@@ -64,34 +64,18 @@ class ParserTest(unittest.TestCase):
             if line.startswith('#') or len(line)<2: continue
             if line.find('=>') > 3:
                 self.nlines = self.nlines + 1
-                expr, val= line.split('=>')
-                val.strip()
-                test  = val.split(',')
+                expr, result = line.split('=>')
+                out  = [i.strip() for i in result.split(',')]
+                test = [repr(i) for i in self.compiler(expr)]
+
                 print 'parse ', expr, 
-                stack = self.compiler(expr)
-                stack.reverse()
-                # print ' :: got     = ', stack
-                # print ' :: expected= ', test
-                for i in range(len(stack)):
-                    out = stack[i]
-                    val  = test[i]
-                    if type(out) in floattypes:
-                        self.assertAlmostEqual(out,float(val.strip()),6)
+                if test == out:
+                    print 'OK.'
+                else:
+                    print 'failed: ',
+                    for t, o in zip(test,out):
+                        if t!=o: print 'expected element: ', o, ', got ', t
 
-                    elif type(out) in inttypes:
-                        self.assertEqual(str(out),str(val.strip()))
-                        
-                    elif type(out) in complextypes:
-                        val = complex(val.strip())
-                        self.assertAlmostEqual(out.real,val.real,6)
-                        self.assertAlmostEqual(out.imag,val.imag,6)
-
-                    elif type(out) == types.StringType:
-                        self.assertEqual(str(out.strip()),str(val.strip()))                        
-                    else:
-                        print ' Unknown type for element ', out, ' in ', expr, type(out)
-                        self.assertEqual(out,val)
-                print ' OK.'
         print ' Compiled %i expressions successfully.'  % self.nlines
 
     def testC_ExpressionEval(self):
@@ -124,6 +108,10 @@ class ParserTest(unittest.TestCase):
                     for v,o in zip(val,out):
                         self.assertAlmostEqual(o,float(v),6)
                 elif type(out) == types.BooleanType: 
+                    self.assertEqual(repr(out),(val.strip()))
+                elif type(out) == types.DictType:
+                    # print 'Dict: ', repr(out)
+                    # print 'Dict : ', val.strip()
                     self.assertEqual(repr(out),(val.strip()))
                 else:
                     self.assertEqual(repr(out),(val.strip()))
