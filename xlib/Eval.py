@@ -28,7 +28,6 @@ from Util import split_list, trimstring
 from Util import EvalError, Command2Expr
 import exceptions
 
-
 class Evaluator:
     """ main evaluation class for tdl language.
     parses  / compiles tdl statements and evaluates them:
@@ -369,7 +368,7 @@ class Evaluator:
                     status,s1,s2 = split_delim(t, delim='=')
                     if status<1:
                         raise EvalError, 'syntax error: invalid def statement'
-                    # it's of the simple form:   def x = expr
+                    # it is of the simple form:   def x = expr
                     stack = self.expr_compile(s1, reverse=True)
                     tok = stack.pop()
                     if tok != opcodes.variable:
@@ -378,6 +377,10 @@ class Evaluator:
 
                     return ['defvar',stack, self.expr_compile(s2),s2]
                 else:
+                    n1,n2 =  s1.find('('), s1.rfind(')')
+                    if n1 <1 or n2<n1:
+                        raise EvalError, 'syntax error: invalid def statement'
+
                     try:
                         t = self.expr_compile(s1,  reverse=True)
                     except:
@@ -387,10 +390,6 @@ class Evaluator:
                     if ftype != opcodes.function:
                         raise EvalError, 'syntax error: invalid def statement'
 
-                    n1,n2 =  s1.find('('), s1.rfind(')')
-                    if n1 <1 or n2<n1:
-                        raise EvalError, 'syntax error: invalid def statement'
-                    # print 'n1 = ', n1, n2
                     # construct tuple and keywords of function arguments
                     vargs = [] ; kws = {} ; iargs = 0; eq_seen = False
                     if n2>n1+1:
@@ -530,14 +529,10 @@ class Evaluator:
 
         if len(lhs)==0:
             x = rhs
+        elif len(lhs)==1:
+            x[lhs[0]] = rhs
         else:
-            if len(lhs)==1:
-                # print 'LHS 1 element: ', x, type(x), lhs, ' ==> ', rhs
-                # print 'TYPES Compatible??? ', type(x),  type(rhs)
-                # if type(x) == ArrayType: print 'x is a Numarray'
-                x[lhs[0]] = rhs
-            else:
-                x[tuple(lhs)] = rhs
+            x[tuple(lhs)] = rhs
 
         # 
         if sym.type in (symTypes.defvar,symTypes.defpro,symTypes.variable):
@@ -545,8 +540,6 @@ class Evaluator:
             sym.code   = None
             sym.type   = symTypes.variable
             sym.constant = False
-        # print 'DO ASSIGN DONE ', sym, sym.value
-        
 
     def interpret(self,s,text=''):
         "interpret parsed code from compile"

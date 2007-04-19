@@ -25,9 +25,9 @@ from pyparsing import QuotedString, StringEnd
 
 from Util import trimstring, list2array
 from Util import ParseError, EvalError
-from Symbol import SymbolTable, symTypes,Symbol,isGroup
+from Symbol import SymbolTable, symTypes,Symbol
 
-__version__ = '0.4.1'
+__version__ = '0.3.4'
 
 # opcodes for expression parsing and evaluation
 class opcodes:
@@ -45,18 +45,13 @@ class opcodes:
     slice =     "@SLI"
     slice3 =    "@SL3"
     assign =    "@ASN"
-
-    attrib =    "@ATR"
-    method =    "@MTH"
-    arrayattr = "@ATA"
-    arraymeth=  "@MTA"
     empty =     "@EMP"
     colon =     "@COL"
     symbol =    "@SYM"
     eof =       "@EOF"
     prefix =    "@"
-    attr_map  = {variable:attrib, function: method, array:arrayattr, arrayfunc:arraymeth}
-    
+
+
 def make_array(n,w):
     a = []
     for i in range(n): a.append(w.pop())
@@ -123,10 +118,14 @@ _op_eq  = Literal("==") | Literal("!=") | \
           Literal("<")  | Literal(">")
 _op_and = CaselessLiteral("and")
 _op_or  = CaselessLiteral("or")
+_op_or  = CaselessLiteral("or")
+__e__   = CaselessLiteral("e")
+__j__   = CaselessLiteral("j")
+__num__ = Word(nums,nums)
+
 
 unary_operators = {'!':'not','not':'not',
                    '-':opcodes.uminus,'+':opcodes.uplus}
-
 
 class ExpressionParser:
     """
@@ -157,28 +156,26 @@ class ExpressionParser:
         # name  = full name ( group:var.member, var.member, group:var,  etc)
         alphasx = alphas+"_"+"&"+"$"+"@"
         vname = Word(alphasx, alphasx+nums)
-        # name  = Combine(ZeroOrMore(vname + _point) +  vname)
-        name  = vname
+        name  = Combine(ZeroOrMore(vname + _point) +  vname)
 
-        fnum  = (Combine(Word(nums,nums) +
-                         Optional(_point + Optional(Word(nums,nums))) +
-                         Optional(CaselessLiteral("e") + Word("+-"+nums, nums)) +
-                         Optional(CaselessLiteral("j")))
-                 ) | ( Combine((_point + Word(nums,nums)) +
-                               Optional(CaselessLiteral("e") + Word("+-"+nums, nums)) +
-                               Optional(CaselessLiteral("j"))) )
+        
+        _num  =  ( Combine(__num__ +  Optional(_point + Optional(__num__)) +
+                           Optional(__e__ + Word("+-"+nums, nums)) +  Optional(__j__)  )
+                   |
+                   Combine((_point + __num__ ) +
+                           Optional(__e__ + Word("+-"+nums, nums)) + Optional( __j__ ) )
+                   ).setParseAction(self.pushNum)
 
         _str  = ( QuotedString("'''", multiline=True).setParseAction(self.pushString_SM) |
                   QuotedString('"""', multiline=True).setParseAction(self.pushString_DM) |
                   QuotedString("'").setParseAction(self.pushString_SS) |
                   QuotedString('"').setParseAction(self.pushString_DS) )
 
-        _num  = fnum.setParseAction(self.pushNum)
+
         _sym  = (name + Optional(_lpar + arg_list + _rpar)
                  + ZeroOrMore(_lbrack + _slice + _rbrack)).setParseAction(self.pushSymbol)
         _expr = ((_lpar  + expr + _rpar) +
                  ZeroOrMore(_lbrack + _slice + _rbrack).setParseAction(self.pushSubArray))
-
         _list = (_lbrack + lit_list + _rbrack).setParseAction(self.pushList)
         _dict = (_lbrace + lit_dict + _rbrace).setParseAction(self.pushDict)
 
@@ -187,19 +184,12 @@ class ExpressionParser:
 
         atom  = _str | _num | _sym  | _expr | _list | _dict | _emptylist | _emptydict
 
-        atom = atom + ZeroOrMore( (_point + atom).setParseAction(self.pushAttribute) )
-        #
-        # FIXME:  f()[1] works, but a[0]() does not!!
-        # atom = atom + ZeroOrMore( (_lpar + arg_list + _rpar).setParseAction(self.pushFCN) )
-        
-
         # define exponentiation as "atom [ ^ expr ]..." instead of "atom [ ^ atom ]...",
         # to get right associative
         atom = atom + ZeroOrMore( (_op_exp + term).setParseAction(self.pushBinOp) )
         term << atom
         # put Unary operations next:
         term = (OneOrMore(_op_una) + term).setParseAction(self.pushUnary) | atom
-
 
         # add other operators in order of precedence.
         for op in (_op_mul,_op_add,_op_eq,_op_and,_op_or):
@@ -225,10 +215,7 @@ class ExpressionParser:
         slice_item  = (short_slice ^ long_slice)
         _slice << (slice_item + ZeroOrMore((_comma + slice_item)))
 
-        # expr = expr + ZeroOrMore( (_point + expr).setParseAction(self.pushAttribute) )
-
         self.expr = expr + restOfLine.setParseAction(self.pushRestOfLine) + StringEnd()
-
         self.expr.streamline()
 
     def compile(self,s,reverse=False):
@@ -251,24 +238,6 @@ class ExpressionParser:
         if self.debug>=16:    print ' ExprParse: CountArgs ', len(toks)
         self.argcount = len(toks)
 
-    def pushFCN(self, s, loc, toks ):
-        # print 'bFCN ', s, toks, self.argcount,  self.exprStack
-        return toks
-    
-    def pushAttribute(self, s, loc, toks ):
-        # print 'push Attr ', s, loc, toks
-        if len(toks)>0:
-            # print self.exprStack
-            p = self.exprStack.pop()
-            if opcodes.attr_map.has_key(p):
-                self.exprStack.append(opcodes.attr_map[p])
-            else:
-                msg = "syntax error: %s.  " % s
-                msg = "%s\n   unrecognized tokens at pushAttr: %s" % (msg,toks[0])
-                raise ParseError, msg
-
-            return toks
-        
     def pushSubArray(self, s, loc, toks ):
         n = 0
         if len(toks)>1:
@@ -309,8 +278,6 @@ class ExpressionParser:
         if len(toks)>0: self.exprStack.append(opcodes.colon)
 
     def pushRestOfLine(self, s, loc, toks ):
-        # print 'Rest of Line ', s, loc, toks
-        # print self.exprStack
         if len(toks)>0 and len(toks[0]) > 0:
             msg = "syntax error: %s.  " % s
             msg = "%s\n   unrecognized tokens: %s" % (msg,toks[0])
@@ -372,7 +339,7 @@ class ExpressionParser:
     def pushNum(self, s, loc, toks ):
         """ push literal number, coerce to complex or float """
         cast = float
-        if toks[0].endswith('j'): cast = complex
+        if toks[0].endswith('j'):   cast = complex
         return self.pushFirst(s,loc,[cast(toks[0])])
 
     def pushString(self, s, loc, toks ,format='"%s"'):
@@ -480,7 +447,6 @@ class Expression:
 
     def check_retval(self,val):
         # checks that return value is ok by raise exception for many error conditions
-
         if type(val) == types.NotImplementedType: self.raise_error('Not a Number')
         if type(val) == Num.ArrayType:
             if True in Num.isnan(val): self.raise_error('Not a Number')
@@ -542,21 +508,14 @@ class Expression:
                     elif tok == opcodes.symbol:   # special case for assignments...
                         return work
                     elif tok == opcodes.variable: # simple variable reference
-                        sym = self.get_symbol(work.pop())
+                        
+                        nam = work.pop()
+                        sym = self.get_symbol(nam)
                         try:
-                            if sym.type == symTypes.defvar:
-                                sym.value = self.eval(sym.code)
+                            if sym.type == symTypes.defvar: sym.value = self.eval(sym.code)
                             val = sym.value
                         except AttributeError:
                             val = sym
-                    elif tok == opcodes.attrib: # attribute reference
-                        attr = work.pop()
-                        sym  = work.pop()
-                        if isGroup(sym) and sym.has_key(attr):
-                            val = sym[attr].value
-                        elif hasattr(sym,attr):
-                            val = getattr(sym,attr)
-                        
                     elif tok == opcodes.array: # for simple array slices: variable[slice]
                         ndim = work.pop()
                         val  = work.pop()        
@@ -568,20 +527,8 @@ class Expression:
                             val = sym.value
                         except AttributeError:
                             val = sym
+
                         val  = take_subarray(val,ndim,work)
-
-                    elif tok == opcodes.arrayattr: # array attributes
-                        ndim = work.pop()
-                        attr = work.pop()        
-                        s = [work.pop() for i in range(ndim)]
-                        s.reverse()
-                        sym  = work.pop()
-                        if isGroup(sym) and sym.has_key(attr):
-                            val = sym[attr].value
-                        elif hasattr(sym,attr):
-                            val = getattr(sym,attr)
-                        val  = take_subarray(val,ndim,s)
-
 
                     elif tok == opcodes.subarray: # subarray used for (expr)[slice] and fcn(...)[slice]
                         ndim = work.pop()
@@ -589,16 +536,14 @@ class Expression:
                         tmp.reverse()
                         val  = take_subarray(work.pop(),ndim,tmp)
 
-                    elif tok in (opcodes.function,opcodes.arrayfunc,opcodes.command,opcodes.method,opcodes.arraymeth):
-                        if tok == opcodes.method: pass
-                        if tok in (opcodes.arrayfunc,opcodes.arraymeth):
-                            ndim = work.pop()
+                    elif tok in (opcodes.function,opcodes.arrayfunc,opcodes.command):
+                        if tok == opcodes.arrayfunc:  ndim = work.pop()
                         nargs = work.pop()
                         fname = work.pop()
-
+                        fcn   = self.get_symbol(fname,vtype='function')
                         arr = []; kws = {}; elems = []
-                        if tok in (opcodes.arrayfunc,opcodes.arraymeth):
-                            elems = [work.pop() for i in range(ndim)]
+                        if tok == opcodes.arrayfunc:
+                            for i in range(ndim):  elems.append(work.pop())
                             elems.reverse()
 
                         for i in range(nargs):
@@ -609,35 +554,26 @@ class Expression:
                             else:
                                 arr.append(x)
                         arr.reverse()
-                        # print 'FUNC:: ' , tok, fname, elems, arr, kws, work
-                        
-                        if tok in (opcodes.method,opcodes.arraymeth):
-                            sym = work.pop()
-                            if isGroup(sym) and sym.has_key(fname):
-                                fcn = sym[fname]
-                            else:
-                                fcn = getattr(sym,fname)
-                        else:
-                            fcn   = self.get_symbol(fname,vtype='function')                        
                         # print 'PYFUNC :: ',fcn, isinstance(fcn,Symbol),callable(fcn)
                         if isinstance(fcn,Symbol):
                             if fcn.type==symTypes.defpro and self.run_procedure:
                                 val = self.run_procedure(fcn,args=arr,kws=kws)
                             elif fcn.type==symTypes.pyfunc:
+                                # print 'PyFunc Call ', arr,  kws
                                 val = fcn.call(*arr,**kws)
-                            elif fcn.type==symTypes.variable:
-                                val = fcn.value(*arr,**kws)
+                            else:
+                                self.raise_error('evaluation error for function %s' % fname)
                                 
                         elif callable(fcn):
                             try:
                                 val = fcn(*arr,**kws)
                             except:
                                 self.raise_error('evaluation error for function %s' % fname)
-                        if tok in (opcodes.arrayfunc,opcodes.arraymeth):
+                        if tok == opcodes.arrayfunc:
                             for i in elems:
                                 if type(i) == types.FloatType: i = int(i)
                                 val = val[i]
-                        elif tok == opcodes.command:
+                        if tok == opcodes.command:
                             val = fcn.cmdout(val,**kws)
 
                     elif tok in (opcodes.uminus,opcodes.uplus):
@@ -666,8 +602,9 @@ class Expression:
                         val = get_slice(work,use_step=(tok == opcodes.slice3))
                     elif tok != opcodes.assign:
                         self.raise_error('unknown token : %s in "%s"' % (tok , expr))
-                        
-                elif tok == '%':   # may mean modulo or string-format...
+
+                elif tok == '%':
+                    # may mean modulo or string-format...
                     x = work.pop() ;  y = work.pop()
                     if type(y) == types.StringType  and \
                        type(x) in (types.ListType, Num.ArrayType): x = tuple(x)
@@ -689,8 +626,7 @@ class Expression:
                 elif tok == 'or':  x = work.pop() ; val = work.pop() or x
                 elif tok == 'and': x = work.pop() ; val = work.pop() and x
                 #
-            if type(val)==types.TupleType:                  val = list(val)
-            if type(val) == types.ListType and len(val)>1:  val = list2array(val)
+            if type(val)==types.TupleType: val = list(val)
             work.append(val)
             if self.debug >=32: print ' work ', work
         #
@@ -707,12 +643,8 @@ if __name__ == '__main__':
     s = p.symbolTable
     s.setVariable('a',Num.arange(30.))
     s.addGroup('g1')
-    m = Num.arange(70)
-    m.shape = (10,7)
     s.setVariable('g1.a',3.2)
     s.setVariable('g1.b',99.0)
-    s.setVariable('g1.c', m)
-    s.setVariable('g1.f',Num.arange)
     s.setVariable('b',Num.arange(15.))
     s.setVariable('s1','A long StrinG')
     s.setFunction('sqrt',Num.sqrt)
@@ -732,28 +664,20 @@ if __name__ == '__main__':
          "' %s = %f ' % ['a',3.3]",
          " format1  % ['a',3.3]")
     #" format1  % dlist",         )
-    t = (' (x+1)', 'sqrt((x+1)) ' ,
+    st = (' (x+1)', 'sqrt((x+1)) ' ,
          'sqrt((a+1)/4)[3]' , 'sqrt(x)' ,
          'st[2:8]',
          'a[2]',
          'adict["key1"][1:4]',
          'dlist[0,1:4]',
          '[3, 4, 5]',
-         'b', 'g1.a', 'g1.c', '(g1.c)[2:5]',
-         'sqrt(3)','sqrt(b)','s1', 's1.upper()','(x+1)')
-
-    t= ('g1.a', '0.2+g1.c',  'sqrt(g1.a)', 'g1.c[2,:4]', 'sqrt(g1.c)[2,:4]', 'g1.f(4)', 'g1.f(8)[2:6]')
-
-
-    # 'f.c(x)', 'c[3].a()', 'f(x+2)', 'f(g1.c())')
-    
+         )
+    t = ('b', 'g1.a','sqrt(g1.b)','sqrt(b)','s1', 's1.upper()','(x+1)')
     # t = ('b', 'x', '(x+1)','2*3/4')
-    t = ('x', 'xtal.y.n(22)')
-    
+    t = ('1.1', '0.2','0.3j','.3e3','.1','1.','a','g1.a')
     for i in t:
-        print '== ', i , ' => ', 
+        print '========================\n< ', i , ' > '
         x = p.compile(i)
-        print x
+        print '--> ', x
         y = p.eval(x)
         print '=> ', y
-    # print m[2,:4]
