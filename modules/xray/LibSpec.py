@@ -21,7 +21,7 @@ import XRF
 ####################################################
 def read_spec(fname,tdl=None,**kws):
     """    >>sf = read("file_name")
-    >>read_spec file_name
+    >>spec.read file_name
     
     The spec file variable is an object that contains all the information
     this can be passed to the various functions for extracting and plotting
@@ -34,13 +34,13 @@ def read_spec(fname,tdl=None,**kws):
     return sf
 
 def read_spec_cmd(val,tdl=None,**kws):
-    name = val.fname
+    name = val._fname
     if '.' in name: name = name.split('.',1)[0]
     name = 'spec.%s' % name
     tdl.setVariable(name,val=val)
 
 def show_scan(sf,scan=None,all=False,**kws):
-    """    >>show spec_file, [scan=10,all=True]
+    """    >>spec.show spec_file, [scan=10,all=True]
     
     Show spec file/scan information.  If no scan number is provided this outputs
     a summary of the data file other wise a summary of the scan is provided.
@@ -49,13 +49,13 @@ def show_scan(sf,scan=None,all=False,**kws):
     
     if type(sf) == types.StringType:
         sf = SpecFile(sf)
-    if not sf.ok: return
+    if not sf._ok: return
     
     if scan == None:
         print sf
         return
-    if sf.check_range(scan):
-        sum = sf.get_summary(scan)
+    if sf._check_range(scan):
+        sum = sf.scan_info(scan)
     else:
         sum = None
     if sum:
@@ -87,7 +87,7 @@ def show_scan(sf,scan=None,all=False,**kws):
         print sf
 
 def scan_data(sf,scan,**kws):
-    """    >>dat = data(spec_file,scan)
+    """    >>dat = spec.data(spec_file,scan)
     
     The spec_file argument may be a file name or a spec_file object (see read_spec).
     The returned array is the scan data:
@@ -96,35 +96,12 @@ def scan_data(sf,scan,**kws):
     """
     if type(sf) == types.StringType:
         sf = SpecFile(sf)
-    if not sf.ok: return None
-    d = Num.array(sf.get_data(scan))
+    if not sf._ok: return None
+    d = Num.array(sf.scan_data(scan))
     return d.transpose()
 
-def scan_dict(sf,scan,**kws):
-    """    >>dat = dict(spec_file,scan)
-    
-    The spec_file argument may be a file name or a spec_file object (see read_spec).
-    The returned dictionary contains all the scan data and relevant scan information.
-    Use >dictkeys(dat) to veiw the contents.
-    """
-    if type(sf) == types.StringType:
-        sf = SpecFile(sf)
-    if not sf.ok: return None
-    return sf.get_scan_dict(scan)
-
-def scan_data_struct(sf,scan):
-    """    >>dat = data_struct(spec_file,scan)
-    
-    The spec_file argument may be a file name or a spec_file object (see read_spec).
-    The returned value is a ScanData class.
-    """
-    if type(sf) == types.StringType:
-        sf = SpecFile(sf)
-    if not sf.ok: return None
-    return sf.get_scan_data(scan)
-
 def scan_cols(sf,scan,cols=None,**kws):
-    """    >>dat = col(spec_file,scan,cols=[column_lables])
+    """    >>dat = spec.col(spec_file,scan,cols=[column_lables])
     
     The spec_file argument may be a file name or a spec_file object (see read_spec).
     The returned array is the scan data:
@@ -133,8 +110,8 @@ def scan_cols(sf,scan,cols=None,**kws):
     """
     if type(sf) == types.StringType:
         sf = SpecFile(sf)
-    if not sf.ok: return None
-    d = sf.get_scan_dict(scan)
+    if not sf._ok: return None
+    d = sf.scan_dict(scan)
     dd = d['data']
     lbls = d['labels']
     ncol = d['ncol']
@@ -151,13 +128,37 @@ def scan_cols(sf,scan,cols=None,**kws):
         dat.append(dd[lbls[ncol-1]])
     return dat
 
+
+def scan_dict(sf,scan,**kws):
+    """    >>dat = spec.dict(spec_file,scan)
+    
+    The spec_file argument may be a file name or a spec_file object (see read_spec).
+    The returned dictionary contains all the scan data and relevant scan information.
+    Use >dictkeys(dat) to veiw the contents.
+    """
+    if type(sf) == types.StringType:
+        sf = SpecFile(sf)
+    if not sf._ok: return None
+    return sf.scan_dict(scan)
+
+def get_scan(sf,scan):
+    """    >>dat = spec.get_scan(spec_file,scan)
+    
+    The spec_file argument may be a file name or a spec_file object (see read_spec).
+    The returned value is a ScanData class.
+    """
+    if type(sf) == types.StringType:
+        sf = SpecFile(sf)
+    if not sf._ok: return None
+    return sf.get_scan(scan)
+
 def filename(sf,**kws):
-    """    >>file = filename(spec_file)
+    """    >>file = spec.filename(spec_file)
     
     return the filename
     """
-    if not sf.ok: return None
-    return sf.fname
+    if not sf._ok: return None
+    return sf._fname
 
 
 #################################################
@@ -165,9 +166,9 @@ _groups_ = [('spec',True)]
 _func_ = {"spec.read":(read_spec,read_spec_cmd),
           "spec.show":(show_scan,None),
           "spec.data":scan_data,
-          "spec.dict":scan_dict,
-          "spec.data_struct":scan_data_struct,
           "spec.col":scan_cols,
+          "spec.dict":scan_dict,
+          "spec.get_scan":get_scan,
           "spec.filename":filename}
 
 _scripts_ = ['spec_scripts.tdl']

@@ -505,6 +505,10 @@ class file_open:
             args = args[1:]
         else:
             raise IOError, "No file name given"
+
+        if len(args) > 0:
+            if args[0] == 'w':
+                return file(fname,*args,**kw) 
         
         if os.path.isfile(fname):
             #return open(fname)

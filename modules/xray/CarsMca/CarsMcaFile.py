@@ -196,7 +196,6 @@ def read_ascii_file(file):
 
             for d in range(n_detectors):
                 elapsed[d].total_counts = sum(data[d])
-
         else:
             for i in range(max_rois):
                 roi = 'ROI_'+str(i)+'_'
@@ -216,8 +215,8 @@ def read_ascii_file(file):
                         if (i < nrois[d]):
                             rois[d][i].label = string.strip(labels[d])
                     break
-            else:
-                print 'Unknown tag = '+tag+' in file: ' + file + '.'
+        #else:
+        #    print 'Unknown tag = '+tag+' in file: ' + file + '.'
 
     # Make sure DATA array is defined, else this was not a valid data file
     if (data == None): print 'Not a valid data file: ' + file + '.'

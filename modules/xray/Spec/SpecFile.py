@@ -11,45 +11,45 @@ import SD as ScanData
 
 class SpecFile:
     def __init__(self, fname):
-        self.path, self.fname = os.path.split(fname)
-        self.mtime    = 0
-        self.lines    = []
-        self.summary  = []
-        self.max_scan = 0
-        self.min_scan = 0
-        self.ok       = False
+        self._path, self._fname = os.path.split(fname)
+        self._mtime    = 0
+        self._lines    = []
+        self._summary  = []
+        self._max_scan = 0
+        self._min_scan = 0
+        self._ok       = False
         self.read()
 
     def __repr__(self):
         self.read()
-        lout = "Spec file: %s" % self.fname
-        lout = "%s\nPath: %s" % (lout, os.path.join(self.path))
-        lout = "%s\nFirst scan number: %i" % (lout,self.min_scan)
-        lout = "%s\nLast scan number:  %i" % (lout,self.max_scan)
-        lout = "%s\nLast scan: %s" % (lout, self.summary[self.max_scan-1]['date'])
+        lout = "Spec file: %s" % self._fname
+        lout = "%s\nPath: %s" % (lout, os.path.join(self._path))
+        lout = "%s\nFirst scan number: %i" % (lout,self._min_scan)
+        lout = "%s\nLast scan number:  %i" % (lout,self._max_scan)
+        lout = "%s\nLast scan: %s" % (lout, self._summary[self._max_scan-1]['date'])
         return lout
 
     def read(self):
         try:
-            fname = os.path.join(self.path, self.fname)
-            if os.path.getmtime(fname) != self.mtime:
+            fname = os.path.join(self._path, self._fname)
+            if os.path.getmtime(fname) != self._mtime:
                 print "Reading spec file %s" % fname
                 #f  = Util.file_open(fname,default_path=self.path)
                 f  = open(fname)
-                self.mtime = os.path.getmtime(fname)
-                self.lines = f.readlines()
+                self._mtime = os.path.getmtime(fname)
+                self._lines = f.readlines()
                 f.close()
-                self.summarize()
-                self.ok = True
+                self._summarize()
+                self._ok = True
         except IOError:
             print  '**Error reading file ', fname
-            self.ok = False
+            self._ok = False
 
-    def summarize(self):
+    def _summarize(self):
         lineno = 0
         (mnames,cmnd,date,xtime,Gvals,q,Pvals,atten,lab) = (None,None,None,None,None,None,None,None,None)
         (index, ncols, n_sline) = (0,0,0)
-        for i in self.lines:
+        for i in self._lines:
             lineno = lineno + 1
             i  = i[:-1]
             # get motor names: they should be at the top of the file
@@ -81,7 +81,7 @@ class SpecFile:
                 atten = i[6:]
             elif (i[0:3] == '#L '):
                 lab = i[3:]
-                self.summary.append({'index':index,
+                self._summary.append({'index':index,
                                      'nl_start':n_sline,
                                      'cmd':cmnd,
                                      'date':date,
@@ -97,49 +97,50 @@ class SpecFile:
                 (cmnd,date,xtime,Gvals,q,Pvals,atten,lab) = (None,None,None,None,None,None,None,None)
                 (index, ncols, n_sline) = (0,0,0)
 
-        self.min_scan = self.summary[0]['index']
-        self.max_scan = self.summary[0]['index']
-        for i in self.summary:
+        self._min_scan = self._summary[0]['index']
+        self._max_scan = self._summary[0]['index']
+        for i in self._summary:
             k = i['index']
-            if (k > self.max_scan): self.max_scan = k
-            if (k < self.min_scan): self.min_scan = k
+            if (k > self._max_scan): self._max_scan = k
+            if (k < self._min_scan): self._min_scan = k
 
     def scan_min(self):
         self.read()
-        return self.min_scan
+        return self._min_scan
 
     def scan_max(self):
         self.read()
-        return self.max_scan
+        return self._max_scan
 
     def nscans(self):
         self.read()
-        return len(self.summary)
+        return len(self._summary)
 
-    def check_range(self,i):
+    def _check_range(self,i):
         self.read()
         j = True
-        if ((i > self.max_scan) or (i < self.min_scan)): j = False
+        if ((i > self._max_scan) or (i < self._min_scan)): j = False
         return j
 
-    def scan_info(self):
-        self.read()
-        return self.summary
+    #def scan_info(self):
+    #    self.read()
+    #    return self._summary
 
-    def get_summary(self,sc_num):
+    #def get_summary(self,sc_num):
+    def scan_info(self,sc_num):
         self.read()
-        for i in self.summary:
-            if (sc_num == i['index']):
-                return i
+        for s in self._summary:
+            if (sc_num == s['index']):
+                return s
         return None
     
-    def get_data(self, sc_num):
+    def scan_data(self, sc_num):
         self.read()
-        s = self.get_summary(sc_num)
+        s = self.scan_info(sc_num)
         if (s == None): return None
         dat = []
         nl  = s['lineno']
-        for i in (self.lines[nl:]):
+        for i in (self._lines[nl:]):
             if (i[0:3] == '#S '):
                 break
             elif (i[0:1] ==  '#'):
@@ -149,9 +150,9 @@ class SpecFile:
                 dat.append(map(float,q))
         return dat
 
-    def get_scan_dict(self, sc_num):
+    def scan_dict(self, sc_num):
         self.read()
-        sc_dict = {'file':self.fname,
+        sc_dict = {'file':self._fname,
                    'index':sc_num,
                    'cmd':'',
                    'date':'',
@@ -164,9 +165,9 @@ class SpecFile:
                    'nrow':0,
                    'data':{}
                    }
-        s = self.get_summary(sc_num)
+        s = self.scan_info(sc_num)
         if (s == None): return sc_dict
-        dat = self.get_data(sc_num)
+        dat = self.scan_data(sc_num)
         
         # parse the various data into the dict
         sc_dict['cmd']  = s['cmd']
@@ -202,8 +203,8 @@ class SpecFile:
         # all done
         return sc_dict
 
-    def get_scan_data(self,sc_num):
-        d = self.get_scan_dict(sc_num)
+    def get_scan(self,sc_num):
+        d = self.scan_dict(sc_num)
         scalers = {}
         positioners = d['P']
         for key in d['data'].keys():
@@ -215,9 +216,12 @@ class SpecFile:
         dims = d['nrow']
         paxis = d['labels'][0]
         pdet = d['labels'][-1]
+
+        state = {'G':d['G'],'Q':d['Q'], 'ATTEN':d['ATTEN']}
+
         sd = ScanData.ScanData(name=name,scan_dims=[dims],scalers = scalers,
                                positioners=positioners,primary_axis=[paxis],
-                               primary_det=pdet)
+                               primary_det=pdet,state=state)
         return sd
         
 ###########################

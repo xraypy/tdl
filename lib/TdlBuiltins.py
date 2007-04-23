@@ -609,6 +609,13 @@ def tdl_savestate(fname, tdl=None,debug=False,**kw):
         #print os.path.abspath(fname)
         #f = open(fname,'w')
         f = file(fname,'w')
+        
+        # cant pickle the plotter???
+        for x in d['data_table']:
+            if x.group == '_plot' and x.name == 'plotter':
+                x.constant = False
+                x.value = None
+
         cPickle.dump(d,f)
         f.close()
     except:

@@ -9,6 +9,7 @@ import fitPeaks
 import fitBgr
 import xrf_lookup
 import CarsMcaFile
+import EmsaFile
 
 """
 Conventions:
@@ -25,7 +26,7 @@ Conventions:
 """
 
 ##############################################################################
-def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=None):
+def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='CARS'):
     """
     Read detector files
     >>m = xrf.read("file_name",bad_mca_idx=[],total=True,align=True,tau=None)
@@ -63,7 +64,10 @@ def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=None):
     """
 
     if file:
-        med = CarsMcaFile.read_med(file=file)
+        if fmt == 'CARS':
+            med = CarsMcaFile.read_med(file=file)
+        elif fmt == 'EMSA':
+            med = EmsaFile.read_med(file=file)
     else:
         med = Med.Med()
     xrf = XRF(med=med,bad_mca_idx=bad_mca_idx,total=total,align=align,tau=tau)
