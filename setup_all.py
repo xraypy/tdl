@@ -1,4 +1,16 @@
 #!/usr/bin/env python
+"""
+This setup file defines the directory lib as tdl
+and the directory modules as tdl.modules.
+
+The resulting installed root package name is tdl
+and include all the modules defined in lib (ie lib/*.py) 
+We also define the root package to include a sub package tdl.modules
+which inlcudes all the modules defined in modules (ie modules/*.py).
+
+Additional packages under modules/ must be given 
+explicitly - see append below.
+"""
 
 import distutils
 from distutils.core import setup, Extension
@@ -6,12 +18,10 @@ from distutils.core import setup, Extension
 # Import tdl version information
 from  lib.version import name,version,author,email,desc
 
-# main package directory under .../python/.../site-packages will be named tdl
-package_dir = {'tdl': ''}
 
-# the packages to be installed include tdl (py files in same dir as this script)
-# and the lib and modules sub directories
-packages = ['tdl','tdl.lib','tdl.modules']
+### Define lib and modules as tdl and tdl.modules respectivley
+package_dir = {'tdl': 'lib','tdl.modules': 'modules'}
+packages = ['tdl','tdl.modules']
 package_data = {'tdl.modules':['README.modules','startup.tdl']}
 
 ### Add-on modules

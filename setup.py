@@ -1,21 +1,18 @@
 #!/usr/bin/env python
+"""
+Only install lib as the tdl package
+See setup_all.py to install modules as subpackages
+"""
 
 import distutils
 from distutils.core import setup, Extension
 
 from  lib.version import name,version,author,email,desc
 
-# still not sure where to look for
-# domain-specific modules and user modules
-# environmental variables??
-
 package_dir = {'tdl': 'lib'}
 
-## , 'tdl.modules': 'modules'}
-
-packages = ['tdl','tdl.TkPlotter','tdl.FileIO']
-## ,'tdl.modules','tdl.modules.GUI','tdl.modules.IO']
-
+#packages = ['tdl','tdl.TkPlotter','tdl.FileIO']
+packages = ['tdl']
 
 setup(
     name = name,

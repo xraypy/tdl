@@ -71,14 +71,17 @@ for o, a in opts:
 # additional paths should be set in the startup.tdl files
 try:
     import lib as tdl
+    devel = True
     print '  ############## This is TDL devel ##############'
 except ImportError:
-    #import tdl
-    from tdl import lib as tdl
-
+    import tdl
+    devel = False
     
 lib_path    = os.path.abspath(tdl.__path__[0])
-tdl_root    = os.path.dirname(lib_path)
+if devel:
+    tdl_root = os.path.dirname(lib_path)
+else:
+    tdl_root = lib_path 
 module_path = os.path.join(tdl_root,'modules')
     
 try:
