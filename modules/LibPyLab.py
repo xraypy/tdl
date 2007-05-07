@@ -1,25 +1,19 @@
 ############################################################################
-# A very simple pylab wrapper for plotting.
-# This is an interm solution for wx plotting till LibPlotter has
-# a wx wrapper
-#
-#
+# Make pylab plotting functions available to tdl
+# T. Trainor
 ############################################################################
 # imports
-# setup for matplotlib with Tk as default
 import sys
-import matplotlib
-from Num import Num
+import types
+from Util import PrintExceptErr
 
-# default to Tk, should work from system shell
+# setup for matplotlib with Tk as default
 DEFAULT_BACKEND = "TkAgg"
-ISINIT  = False
 PLOT_ROOT = None
 
-PLOTTER = "_plot.plotter"
+def _init_pylab(tdl):
+    backend = tdl.symbolTable.getSymbolValue('_builtin.GUI')
 
-####################################################################
-def init_matplotlib(backend=None):
     if backend == None:
         backend = DEFAULT_BACKEND
     try:
@@ -33,211 +27,161 @@ def init_matplotlib(backend=None):
     except:
         raise "Error assigning plot backend"
     
-    txt = "INIT MATPLOTLIB, backend = %s\n" % backend
+    txt = "    **INIT MATPLOTLIB, backend = %s\n" % backend
     sys.__stdout__.write(txt)
+    
     import matplotlib
     matplotlib.use(backend)
-    matplotlib.interactive(True)
-    import matplotlib.pylab
-    matplotlib.pylab.show._needmain=False
+    import matplotlib.pylab as pylab
+
+    pylab.show._needmain=False
+    #matplotlib.interactive(True)
+    pylab.ion()
+
     if backend=="TkAgg":
         try:
-            matplotlib.pylab.plot_root = PLOT_ROOT                
+            pylab.plot_root = PLOT_ROOT                
         except:
-            print_except_err("Error in plotter")
-            return  
-    ISINIT = True
-    return 
+            PrintExceptErr("Error in plotter")
+            return
 
-#######################################################
-# get the plot obj 
-#
-def get_plot(tdl):
-    if not tdl:
-        print "No TDL"
-        return(None)
-       
-    if tdl.symbolTable.hasSymbol(PLOTTER):
-        try:
-            p = tdl.symbolTable.getSymbolValue(PLOTTER)
-            if p == None:
-                new_plot(tdl)
-                return tdl.symbolTable.getSymbolValue(PLOTTER)
-            else:
-                return p
-        except:
-            new_plot(tdl)
-            return tdl.symbolTable.getSymbolValue(PLOTTER) 
-    else:
-        new_plot(tdl)
-        return tdl.symbolTable.getSymbolValue(PLOTTER)
+    #################################
+    _func_ = {'pylab.axes':pylab.axes,
+          'pylab.axis':pylab.axis,
+          'pylab.bar':pylab.bar,
+          'pylab.boxplot':pylab.boxplot,
+          'pylab.cla':pylab.cla,
+          'pylab.clf':pylab.clf,
+          'pylab.close':pylab.close,
+          'pylab.colorbar':pylab.colorbar,
+          'pylab.cohere':pylab.cohere,
+          'pylab.csd':pylab.csd,
+          'pylab.draw':pylab.draw,
+          'pylab.errorbar':pylab.errorbar,
+          'pylab.figlegend':pylab.figlegend,
+          'pylab.figtext':pylab.figtext,
+          'pylab.figimage':pylab.figimage,
+          'pylab.figure':pylab.figure,
+          'pylab.fill':pylab.fill,
+          'pylab.gca':pylab.gca,
+          'pylab.gcf':pylab.gcf,
+          'pylab.gci':pylab.gci,
+          'pylab.get':pylab.get,
+          'pylab.gray':pylab.gray,
+          'pylab.barh':pylab.barh,
+          'pylab.jet':pylab.jet,
+          'pylab.hist':pylab.hist,
+          'pylab.hold':pylab.hold,
+          'pylab.imread':pylab.imread,
+          'pylab.imshow':pylab.imshow,
+          'pylab.ioff':pylab.ioff,
+          'pylab.ion':pylab.ion,
+          'pylab.isinteractive':pylab.isinteractive,
+          'pylab.legend':pylab.legend,
+          'pylab.loglog':pylab.loglog,
+          'pylab.quiver':pylab.quiver,
+          'pylab.rc':pylab.rc,
+          'pylab.pcolor':pylab.pcolor,
+          'pylab.pcolormesh':pylab.pcolormesh,
+          'pylab.plot':pylab.plot,
+          'pylab.psd':pylab.psd,
+          'pylab.savefig':pylab.savefig,
+          'pylab.scatter':pylab.scatter,
+          'pylab.setp':pylab.setp,
+          'pylab.semilogx':pylab.semilogx,
+          'pylab.semilogy':pylab.semilogy,
+          'pylab.show':pylab.show,
+          'pylab.specgram':pylab.specgram,
+          'pylab.stem':pylab.stem,
+          'pylab.subplot':pylab.subplot,
+          'pylab.subplots_adjust':pylab.subplots_adjust,
+          'pylab.table':pylab.table,
+          'pylab.text':pylab.text,
+          'pylab.title':pylab.title,
+          'pylab.xlabel':pylab.xlabel,
+          'pylab.ylabel':pylab.ylabel,
+          'pylab.pie':pylab.pie,
+          'pylab.polar':pylab.polar}
+    for nam,val in _func_.items():
+        cmdOut = None
+        asCmd  = True
+        func   = val
+        #print nam
+        if type(val) == types.TupleType:
+            func = val[0]
+            if len(val) > 1: cmdOut = val[1]
+            if len(val) > 2: asCmd  = val[3]
+        x =tdl.symbolTable.addFunction(nam,func,cmd_out=cmdOut,as_cmd=asCmd)
 
-def new_plot(tdl):
-    backend = tdl.symbolTable.getSymbolValue('_builtin.GUI')
-    if ISINIT == False:
-        init_matplotlib(backend=backend)
-    p = plotter(backend)
-    tdl.symbolTable.addVariable(PLOTTER,p,constant=True)
-    return 
-
-#######################################################
-#
-def close_plot(tdl):
-    if tdl.symbolTable.hasSymbol(PLOTTER):
-        p = tdl.symbolTable.getSymbol(PLOTTER)
-        p.close()
-        tdl.symbolTable.deleteSymbol(PLOTTER,override=True)
-    else:
-        return 
-
-#######################################################
-# helper class for plots 
-#
-class plotter:
-    def __init__(self,backend):
-        self.plt = None
-        self.cfig = 1
-        self.x_cur = None
-        self.y_cur = None
-        self.backend = backend
-        self.root = PLOT_ROOT
-
-    def plot(self,x,y,fmt='',ylog=False,xlog=False,over=False,figure=1):
-        matplotlib.pylab.figure(figure)
-        if over == False:
-            matplotlib.pylab.clf()
-            self.plt = matplotlib.pylab.subplot(1,1,1)
-        else:
-            matplotlib.pylab.figure(figure)
-            self.plt = matplotlib.pylab.subplot(1,1,1)
-
-        if ylog and xlog:
-            self.plt.loglog(x,y,fmt)
-        elif ylog:
-            self.plt.semilogy(x,y,fmt)
-        elif xlog:
-            self.plt.semilogx(x,y,fmt)
-        else:
-            self.plt.plot(x,y,fmt)
-        matplotlib.pylab.show()
-        return
-    
-    ################################
-    # get cursor values from plot
-    # get the x and y coords, flip y from top to bottom
-    def on_click(self,event):
-        x, y = event.x, event.y
-        #if event.button==1:
-        if event.button==3:
-            if event.inaxes is not None:
-                #print 'data coords', event.xdata, event.ydata
-                self.x_cur = event.xdata
-                self.y_cur = event.ydata
-                self.clicked = True
-    ##############################
-    def is_clicked(self):
-        if self.clicked == True:
-            self.clicked = False
-            return(True)
-        return(False)
-    ##############################
-    def get_cur(self):
-        matplotlib.pylab.connect('button_press_event', self.on_click)
-        self.clicked = False
-        while self.is_clicked() == False:
-            if self.backend == "TkAgg":
-                self.root.update()
-            elif self.backend == "WXAgg":
-                time.sleep(.05)
-                wx.YieldIfNeeded()
-                #wx.UpdateUIEvent()
-        return (self.x_cur, self.y_cur)
-    ##############################
-    def close(self):
-        return matplotlib.pylab.close()
-
-
-#######################################################
-# plot function
-#
-def plot(x, y=None, fmt = '', ylog=False,xlog=False,over = True, norm_dat = None, norm_max = 0, tdl = None):
-    """Plot data
-       plot x,y,[fmt=fmt,norm=norm,max=max,over=True]
-       x, y = variables or eval type expressions
-       norm = variable for y normalization
-       max  = normalize the max of y to specified value
-       fmt  = matlab style format string"""
-
-    p = get_plot(tdl)
-    if p == None:
-        print "No Plotter"
-        return 
-
-    if y == None: y = x
-
-    if norm_dat:
-        for j in range(len(y)):
-            y[j] = y[j]/norm_dat[j]
-
-    if norm_max != 0:
-        m1 = max(y)
-        c = norm_max/m1
-        for j in range(len(y)):
-            y[j] = y[j] * c
-
-    p.plot(x,y,ylog=ylog,xlog=xlog,over=over,fmt=fmt)
     return
 
-def newplot(x, y=None, fmt = '', ylog=False,xlog=False,norm_dat = None, norm_max = 0, tdl = None):
-    plot(x=x, y=y, fmt = fmt,ylog=ylog,xlog=xlog, over = False, norm_dat = norm_dat,
-         norm_max = norm_max, tdl = tdl)
-    
-############################################################    
+##########################################################################
+
+_groups_ = [('pylab',True)]
+#_var_    = {'pylab.var':None}
+_func_ = {'pylab._init':_init_pylab}
+
+# code to run on initialization (no args, but will get a 'tdl reference')
+#_init_ = _init_pylab
+
 
 """
-def cur_fun(ds_arg, arg_str, **kw):
-
-    # parse the arg string based on comma delimiters
-    opt = {'name':'cursor'}
-    args = dsi.ParseArgStr(arg_str,nreq=0,opt=opt)
-    
-    # get the arguments
-    var_name = opt['name']
-
-    p = DSPlot.get_plot(ds_arg)
-    if p == None:
-        print "no plot"
-        return(FAILURE)
-
-    print "Select point"
-    (x,y) = p.get_cur() 
-    d = dsi.AddNode(ds_arg,{'x':x,'y':y},var_name)
-        
-    return(SUCCESS)
-    
+#import pylab
+_func_ = {'pylab._init':_init_pylab,
+          'pylab.axes':pylab.axes,
+          'pylab.axis':pylab.axis,
+          'pylab.bar':pylab.bar,
+          'pylab.boxplot':pylab.boxplot,
+          'pylab.cla':pylab.cla,
+          'pylab.clf':pylab.clf,
+          'pylab.close':pylab.close,
+          'pylab.colorbar':pylab.colorbar,
+          'pylab.cohere':pylab.cohere,
+          'pylab.csd':pylab.csd,
+          'pylab.draw':pylab.draw,
+          'pylab.errorbar':pylab.errorbar,
+          'pylab.figlegend':pylab.figlegend,
+          'pylab.figtext':pylab.figtext,
+          'pylab.figimage':pylab.figimage,
+          'pylab.figure':pylab.figure,
+          'pylab.fill':pylab.fill,
+          'pylab.gca':pylab.gca,
+          'pylab.gcf':pylab.gcf,
+          'pylab.gci':pylab.gci,
+          'pylab.get':pylab.get,
+          'pylab.gray':pylab.gray,
+          'pylab.barh':pylab.barh,
+          'pylab.jet':pylab.jet,
+          'pylab.hist':pylab.hist,
+          'pylab.hold':pylab.hold,
+          'pylab.imread':pylab.imread,
+          'pylab.imshow':pylab.imshow,
+          'pylab.ioff':pylab.ioff,
+          'pylab.ion':pylab.ion,
+          'pylab.isinteractive':pylab.isinteractive,
+          'pylab.legend':pylab.legend,
+          'pylab.loglog':pylab.loglog,
+          'pylab.quiver':pylab.quiver,
+          'pylab.rc':pylab.rc,
+          'pylab.pcolor':pylab.pcolor,
+          'pylab.pcolormesh':pylab.pcolormesh,
+          'pylab.plot':pylab.plot,
+          'pylab.psd':pylab.psd,
+          'pylab.savefig':pylab.savefig,
+          'pylab.scatter':pylab.scatter,
+          'pylab.setp':pylab.setp,
+          'pylab.semilogx':pylab.semilogx,
+          'pylab.semilogy':pylab.semilogy,
+          'pylab.show':pylab.show,
+          'pylab.specgram':pylab.specgram,
+          'pylab.stem':pylab.stem,
+          'pylab.subplot':pylab.subplot,
+          'pylab.subplots_adjust':pylab.subplots_adjust,
+          'pylab.table':pylab.table,
+          'pylab.text':pylab.text,
+          'pylab.title':pylab.title,
+          'pylab.xlabel':pylab.xlabel,
+          'pylab.ylabel':pylab.ylabel,
+          'pylab.pie':pylab.pie,
+          'pylab.polar':pylab.polar}
 """
-## add to list
-#t = """Cursor"""
-#d = """Get coordinates from plot"""
-#u = """cursor [name=cursor]"""
-#######################################################################
-
-
-######################################################################
-# plot function
-#
-"""
-def close_fun(ds_arg, arg_str, **kw):
-    return(DSPlot.close_plot(ds_arg))
-
-"""    
-
-#######################################################################
-
-
-_groups_ = [('_plot',True)]
-_var_    = {'_plot.plotter':None}
-_func_ = {'_plot.plot':(plot,None),
-          '_plot.newplot':(newplot,None)}
-
-

@@ -20,6 +20,8 @@ try:
     import scipy as Num
     import scipy.linalg as linalg
     Num.linalg = linalg
+    import scipy.stats as stats
+    Num.stats = stats
     v = [int(i) for i in Num.__version__.split('.')]
     v = 100*v[0] + 10*v[1] + v[2]
     if v >= 47:

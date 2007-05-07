@@ -256,7 +256,7 @@ def _listsort(x):
         x.sort()
         return list2array(x)
 
-def _strsplit(var,sep=' '):
+def _strsplit(var,sep=None):
     "split a string"
     if type(var) != types.StringType:
         print ' %s is not a string ' % var

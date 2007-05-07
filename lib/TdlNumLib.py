@@ -325,7 +325,9 @@ _func_ = {
           "_math.zeros":Num.zeros,
           "_builtin.max":_max,
           "_builtin.min":_min,
-          }
+          "_math.polyval":Num.polyval,
+          "_math.polyfit":Num.polyfit,
+          "_math.linregress":Num.stats.linregress }
           
 
 if __name__ == '__main__':
