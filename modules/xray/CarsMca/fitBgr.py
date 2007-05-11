@@ -1,9 +1,11 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 ########################################################################
 # From Mca
 ########################################################################
 
 import copy
-import Numeric
+import numpy.oldnumeric as Numeric
 import CARSMath
 
 ########################################################################

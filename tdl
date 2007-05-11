@@ -149,6 +149,7 @@ elif use_wxGUI == True:
     wxGUI.debug    = debug
     wxGUI.files    = files
     wxGUI.sys_vars = sys_vars
+    wxGUI.rsrc_path = module_path
     rsrc = os.path.join(module_path,'wxGUI','wxGUI.rsrc.py')
     # the wxGUI code handles creation of tdl...
     gui = wxGUI.model.Application(wxGUI.wxGUI, aFileName=rsrc)

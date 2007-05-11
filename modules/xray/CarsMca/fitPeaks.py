@@ -1,3 +1,5 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 """
 Fits a spectrum to a set of Gaussian peaks.  This class is independent of the
 Mca class library, except that the "fit" and "peak" objects used must have
@@ -32,7 +34,7 @@ Modification history:
           field to McaPeak to work around this problem and use that field here.
 """
 
-import Numeric
+import numpy.oldnumeric as Numeric
 import mpfit
 
 ########################################################################

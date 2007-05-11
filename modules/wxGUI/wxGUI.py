@@ -22,6 +22,7 @@ intro = None
 debug = False
 files = []
 sys_vars = {}
+rsrc_path = '.'
 
 #####################################################
 
@@ -46,9 +47,9 @@ class wxGUI(model.Background):
         #redir stdio
         #sys.stdin  = self.readline
         #self.tdl = tdl
+        self.rsrc_path = rsrc_path
         self.shell = tdl.shell(libs=libs,stdin=self,stdout=self,
                                GUI='WXAgg',debug=debug)
-        
         for var in sys_vars.keys():
             self.shell.tdl.setVariable(var,sys_vars[var])
         for f,warn in files:
@@ -163,7 +164,8 @@ class wxGUI(model.Background):
     def on_menuWindowXRF_select(self, event):
         from wxXRF import wxXRF
         # the child has to get self.shell from the parent
-        self.XrfWindow = model.childWindow(self, wxXRF)
+        filename = os.path.join(self.rsrc_path,'wxGUI','wxXRF.rsrc.py')
+        self.XrfWindow = model.childWindow(self, wxXRF,filename=filename)
         self.XrfWindow.position = (200, 5)
         self.XrfWindow.visible = True
     

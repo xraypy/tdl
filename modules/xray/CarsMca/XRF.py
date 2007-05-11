@@ -1,3 +1,5 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 
 from Num import Num, num_version
 import types
@@ -667,7 +669,7 @@ class XRF:
         # delete rois
         for i in mcas:
             d = int(i)
-            if type(label) == types.IntType:
+            if isinstance(label, types.IntType):
                 med.mcas[d].delete_roi(label)
             elif type(label) == types.StringType:
                 idx =  med.mcas[d].find_roi_label(label=label)

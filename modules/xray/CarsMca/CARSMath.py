@@ -1,3 +1,5 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 """
 This module contains miscellaneous math functions
 
@@ -13,8 +15,8 @@ Modifications:
         need scipy
 """
 
-import Numeric
-import LinearAlgebra
+import numpy.oldnumeric as Numeric
+import numpy.oldnumeric.linear_algebra as LinearAlgebra
 
 ############################################################
 def polyfitw(x, y, w, ndegree, return_fit=0):

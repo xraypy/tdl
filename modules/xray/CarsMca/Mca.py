@@ -1,3 +1,5 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 """
 This module defines a device-independent MultiChannel Analyzer (MCA) class,
 and a number of support classes.
@@ -24,7 +26,7 @@ Modifications:
         - added printing of icr in write_ascii_file
 """
 
-import Numeric
+import numpy.oldnumeric as Numeric
 import copy
 import math
 import types
@@ -142,7 +144,7 @@ class McaCalibration:
             nchans  = clip
             channel = Numeric.clip(channel, 0, nchans-1)
 
-        if (type(channel) == Numeric.ArrayType): 
+        if (isinstance(channel, Numeric.ArrayType)): 
             return channel.astype(Numeric.Int)
         else:
             return int(channel)

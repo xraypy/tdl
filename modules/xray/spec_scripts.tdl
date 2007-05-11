@@ -31,7 +31,7 @@ def spec.plot(sf,scan,cols=None):
     else:
         print "Error parsing column labels"
     endif
-    newplot(x,y)
+    pylab.plot(x,y)
 enddef
 
 def spec.oplot(sf,scan,cols=None):
@@ -51,7 +51,8 @@ def spec.oplot(sf,scan,cols=None):
     else:
         print "Error parsing column labels"
     endif
-    plot(x,y)
+    pylab.hold(True)
+    pylab.plot(x,y)
 enddef
     
 #####################################################

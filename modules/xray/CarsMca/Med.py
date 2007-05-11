@@ -1,3 +1,5 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 """
 Support for Multi-Element Detectors (Med).
 
@@ -7,7 +9,7 @@ Modifications:
 """
 
 import Mca
-import Numeric
+import numpy.oldnumeric as Numeric
 import spline
 import copy
 

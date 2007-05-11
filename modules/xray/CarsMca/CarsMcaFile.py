@@ -1,10 +1,12 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 #
 # Read/Write CARS mca/med files
 #
 
 import Mca
 import Med
-import Numeric
+import numpy.oldnumeric as Numeric
 import string
 import os
 

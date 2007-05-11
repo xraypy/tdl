@@ -1,3 +1,5 @@
+## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
+
 """
 Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 
@@ -272,7 +274,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
                                    EXAMPLE
 
    import mpfit
-   import Numeric
+   import numpy.oldnumeric as Numeric
    x = Numeric.arange(100, Numeric.float)
    p0 = [5.7, 2.2, 500., 1.5, 2000.]
    y = ( p[0] + p[1]*[x] + p[2]*[x**2] + p[3]*Numeric.sqrt(x) +
@@ -401,10 +403,10 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
    August, 2002.  Mark Rivers
 """
 
-import Numeric
+import numpy.oldnumeric as Numeric
 import types
 
-
+
 #     Original FORTRAN documentation
 #     **********
 #
@@ -586,7 +588,7 @@ import types
 #     burton s. garbow, kenneth e. hillstrom, jorge j. more
 #
 #     **********
-
+
 class mpfit:
    def __init__(self, fcn, xall=None, functkw={}, parinfo=None,
                 ftol=1.e-10, xtol=1.e-10, gtol=1.e-10,
@@ -924,7 +926,11 @@ Keywords:
       if (len(wh) > 0):
          self.errmsg = 'ERROR: MPMINSTEP is greater than MPMAXSTEP'
          return
-      wh = Numeric.nonzero((qmin!=0.) & (qmax!=0.))
+      ##################################################################
+      ### http://osdir.com/ml/python.scientific.user/2004-08/index.html
+      #wh = Numeric.nonzero((qmin!=0.) & (qmax!=0.))
+      ##################################################################
+      wh = Numeric.nonzero((qmax!=0.))
       qminmax = len(wh > 0)
 
       ## Finish up the free parameters
@@ -1183,8 +1189,13 @@ Keywords:
                   nwa1 = wa1 * alpha
                   whmax = Numeric.nonzero((qmax != 0.) & (maxstep > 0))
                   if (len(whmax) > 0):
-                     mrat = max(Numeric.take(nwa1, whmax) /
-                                Numeric.take(maxstep, whmax))
+                     #####################################################################
+                     ## http://osdir.com/ml/python.scientific.user/2004-08/index.html
+                     #mrat = max(Numeric.take(nwa1, whmax) /
+                     #           Numeric.take(maxstep, whmax))
+                     #####################################################################
+                     mrat = max(abs(Numeric.take(nwa1, whmax)) /
+                                abs(Numeric.take(maxstep, whmax)) )
                      if (mrat > 1): alpha = alpha / mrat
 
                ## Scale the resulting vector
@@ -1334,7 +1345,7 @@ Keywords:
               Numeric.put(self.perror, wh, Numeric.sqrt(Numeric.take(d, wh)))
       return
 
-
+
    ## Default procedure to be called every iteration.  It simply prints
    ## the parameter values.
    def defiter(self, fcn, x, iter, fnorm=None, functkw=None, 
@@ -1379,7 +1390,7 @@ Keywords:
    ##      endif
    ##  endif
 
-
+
    ## Procedure to parse the parameter values in PARINFO, which is a list of dictionaries
    def parinfo(self, parinfo=None, key='a', default=None, n=0):
       if (self.debug): print 'Entering parinfo...'
@@ -1398,13 +1409,13 @@ Keywords:
       # Convert to numeric arrays if possible
       test = default
       if (type(default) == types.ListType): test=default[0]
-      if (type(test) == types.IntType):
+      if (isinstance(test, types.IntType)):
          values = Numeric.asarray(values, Numeric.Int)
-      elif (type(test) == types.FloatType):
+      elif (isinstance(test, types.FloatType)):
          values = Numeric.asarray(values, Numeric.Float)
       return(values)
 
-
+
    ## Call user function or procedure, with _EXTRA or not, with
    ## derivatives or not.
    def call(self, fcn, x, functkw, fjac=None):
@@ -1422,7 +1433,7 @@ Keywords:
       else:
          return(fcn(x, fjac=fjac, **functkw))
 
-
+
    def enorm(self, vec):
 
         if (self.debug): print 'Entering enorm...'
@@ -1453,7 +1464,7 @@ Keywords:
 
         return(ans)
 
-
+
    def fdjac2(self, fcn, x, fvec, step=None, ulimited=None, ulimit=None, dside=None,
               epsfcn=None, autoderivative=1,
               functkw=None, xall=None, ifree=None, dstep=None):
@@ -1516,9 +1527,16 @@ Keywords:
       ## limit, or if the user requested it.
       mask = dside == -1
       if len(ulimited) > 0 and len(ulimit) > 0:
-         mask = mask or (ulimited and (x > ulimit-h))
+         #mask = mask or (ulimited and (x > ulimit-h))
+         #if ulimited.any() and (x > ulimit-h):
+         xx = x > ulimit-h
+         if ulimited.any() and xx.any():
+             mask = xx
+         #else:
+         #    mask = mask 
          wh = Numeric.nonzero(mask)
-         if len(wh) > 0: Numeric.put(h, wh, -Numeric.take(h, wh))
+         if len(wh) > 0:
+             Numeric.put(h, wh, -Numeric.take(h, wh))
       ## Loop through parameters, computing the derivative for each
       for j in range(n):
          xp = xall.copy()
@@ -1544,7 +1562,7 @@ Keywords:
       return(fjac)
 
 
-
+
    #     Original FORTRAN documentation
    #     **********
    #
@@ -1666,7 +1684,7 @@ Keywords:
    #
    # Note that it is usually never necessary to form the Q matrix
    # explicitly, and MPFIT does not.
-   
+   
 
    def qrfac(self, a, pivot=0):
 
@@ -1742,7 +1760,7 @@ Keywords:
          rdiag[j] = -ajnorm
       return([a, ipvt, rdiag, acnorm])
 
-   
+   
    #     Original FORTRAN documentation
    #     **********
    #
@@ -1820,7 +1838,7 @@ Keywords:
    #     argonne national laboratory. minpack project. march 1980.
    #     burton s. garbow, kenneth e. hillstrom, jorge j. more
    #
-   
+   
    def qrsolv(self, r, ipvt, diag, qtb, sdiag):
       if (self.debug): print 'Entering qrsolv...'
       sz = Numeric.shape(r)
@@ -1894,7 +1912,7 @@ Keywords:
 
          
      
-   
+   
    #     Original FORTRAN documentation
    #
    #     subroutine lmpar
@@ -1988,7 +2006,7 @@ Keywords:
    #     argonne national laboratory. minpack project. march 1980.
    #     burton s. garbow, kenneth e. hillstrom, jorge j. more
    #
-   
+   
    def lmpar(self, r, ipvt, diag, qtb, delta, x, sdiag, par=None):
 
       if (self.debug): print 'Entering lmpar...'
@@ -2095,7 +2113,7 @@ Keywords:
       ## Termination
       return[r, par, x, sdiag]
 
-   
+   
    ## Procedure to tie one parameter to another.
    def tie(self, p, ptied=None):
       if (self.debug): print 'Entering tie...'
@@ -2105,8 +2123,8 @@ Keywords:
          cmd = 'p[' + str(i) + '] = ' + ptied[i]
          exec(cmd)
       return(p)
-
-   
+    
+   
    #     Original FORTRAN documentation
    #     **********
    #
@@ -2173,7 +2191,7 @@ Keywords:
    #     burton s. garbow, kenneth e. hillstrom, jorge j. more
    #
    #     **********
-   
+   
    def calc_covar(self, rr, ipvt=None, tol=1.e-14):
 
       if (self.debug): print 'Entering calc_covar...'
@@ -2249,5 +2267,5 @@ class machar:
       self.minlog = Numeric.log(self.minnum)
       self.rdwarf = Numeric.sqrt(self.minnum*1.5) * 10
       self.rgiant = Numeric.sqrt(self.maxnum) * 0.1
-
+
 

@@ -6,7 +6,7 @@ def xrf.plot(xrf,channel=False,hold=False,logplt=False):
     plot a spectrum
     >>xrf.plot(xrf)
     """
-    print xrf
+    #print xrf
     dat  = xrf.data(xrf)
     ndet = len(dat)
     nchan = len(dat[0])
@@ -23,9 +23,14 @@ def xrf.plot(xrf,channel=False,hold=False,logplt=False):
     for j in range(ndet,dtype='i'):
         if sum(dat[j]) > 0:
             if first==True and hold==False:
-                newplot(e[j],dat[j],ylog=logplt)
+                pylab.clf()
             else
-                plot(e[j],dat[j],ylog=logplt)
+                pylab.hold(True)
+            endif
+            if logplt:
+                pylab.semilogy(e[j],dat[j])
+            else:
+                pylab.plot(e[j],dat[j])
             endif
             first = False
         else:
@@ -41,7 +46,7 @@ def xrf.plot_fit(xrf,channel=False,hold=False,logplt=False):
     plot a fit spectrum
     >>xrf.plot(xrf)
     """
-    print xrf
+    #print xrf
     dat  = xrf.data(xrf)
     calc = xrf.calc_peaks(xrf)
     ndet = len(dat)
@@ -59,11 +64,18 @@ def xrf.plot_fit(xrf,channel=False,hold=False,logplt=False):
     for j in range(ndet,dtype='i'):
         if sum(dat[j]) > 0:
             if first==True and hold==False:
-                newplot(e[j],dat[j],fmt='b.',ylog=logplt)
-                plot(e[j],calc[j],fmt='r',ylog=logplt)
+                pylab.clf()
             else
-                plot(e[j],dat[j],fmt='b.',ylog=logplt)
-                plot(e[j],calc[j],fmt='r',ylog=logplt)
+                pylab.hold(True)
+            endif
+            if logplt:
+                pylab.semilogy(e[j],dat[j],'b.')
+                pylab.hold(True)
+                pylab.semilogy(e[j],calc[j],'r')
+            else
+                pylab.plot(e[j],dat[j],'b.')
+                pylab.hold(True)
+                pylab.plot(e[j],calc[j],'r')
             endif
             first = False
         else:
@@ -93,10 +105,15 @@ def xrf.plot_det(xrf,det=0,channel=False,hold=False,logplt=False):
         e = xrf.energy(xrf)[det]
     endif
 
-    if hold == False:
-        newplot(e,dat,ylog=logplt)
+    if hold==False:
+        pylab.clf()
     else
-        plot(e,dat,ylog=logplt)
+        pylab.hold(True)
+    endif
+    if logplt:
+        pylab.semilogy(e[j],dat[j])
+    else:
+        pylab.plot(e[j],dat[j])
     endif
 
 enddef
@@ -118,12 +135,20 @@ def xrf.plot_fit_det(xrf,det=0,channel=False,hold=False,logplt=False):
         e = xrf.energy(xrf)[det]
     endif
 
-    if hold == False:
-        newplot(e,dat,fmt='b.',ylog=logplt)
-        plot(e,calc,fmt='r',ylog=logplt)
-    else:
-        plot(e,dat,fmt='b.',ylog=logplt)
-        plot(e,calc,fmt='r',ylog=logplt)
+
+    if hold==False:
+        pylab.clf()
+    else
+        pylab.hold(True)
+    endif
+    if logplt:
+        pylab.semilogy(e[j],dat[j],'b.')
+        pylab.hold(True)
+        pylab.semilogy(e[j],calc[j],'r')
+    else
+        pylab.plot(e[j],dat[j],'b.')
+        pylab.hold(True)
+        pylab.plot(e[j],calc[j],'r')
     endif
 
 enddef
@@ -147,10 +172,19 @@ def xrf.plot_fit_components(xrf,det=0,channel=False,hold=False,logplt=False):
     endif
     bgr = dict['background']
     peaks = dict['peaks'][det]
-    newplot(e,dat,fmt='b.',ylog=logplt)
+    if logplt:
+        pylab.semilogy(e,dat,'b.')
+    else:
+        pylab.plot(e,dat,'b.')
+    endif
+
     for key in dictkeys(peaks):
         y = peaks[key] + bgr
-        plot(e,y,fmt='r',ylog=logplt)
+        if logplt:
+            pylab.semilogy(e,y,'r')
+        else:
+            pylab.plot(e,y,'r')
+        endif
     endfor
 
 enddef
