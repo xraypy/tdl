@@ -1,5 +1,3 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
-
 """
 Fits a spectrum to a set of Gaussian peaks.  This class is independent of the
 Mca class library, except that the "fit" and "peak" objects used must have
@@ -34,7 +32,7 @@ Modification history:
           field to McaPeak to work around this problem and use that field here.
 """
 
-import numpy.oldnumeric as Numeric
+import numpy as Num
 import mpfit
 
 ########################################################################
@@ -222,7 +220,7 @@ def fitPeaks(fit, peaks, observed):
             parameters for each peak to be fitted. The exact definition of 
             this structure is subject to change.  However, the following 
             "input" fields will always exist and can be used to control the fit
-            process.  Function <A HREF="#READ_PEAKS">READ_PEAKS</A> can be used 
+            process.  Function read_peaks() can be used
             to read a disk file into this structure.
             Further information on many of these fields can be found in the
             procedure description below.
@@ -411,16 +409,16 @@ def fitPeaks(fit, peaks, observed):
         fwhm_flag.append(peak.fwhm_flag)
         energy_flag.append(peak.energy_flag)
 
-    fwhm_flag   = Numeric.asarray(fwhm_flag)
-    energy_flag = Numeric.asarray(energy_flag)
+    fwhm_flag   = Num.asarray(fwhm_flag)
+    energy_flag = Num.asarray(energy_flag)
 
     # Do some sanity checks
     # Don't fit global FWHM parameters if no peaks use these
-    wh = Numeric.nonzero(fwhm_flag == 0)
+    wh = Num.nonzero(fwhm_flag == 0)
     if (len(wh) < 2): fit.fwhm_flag = 0
 
     # Don't fit global energy parameters if no peaks use these
-    wh = Numeric.nonzero(energy_flag == 0)
+    wh = Num.nonzero(energy_flag == 0)
     if (len(wh) < 2): fit.energy_flag = 0
 
     # Make max channels check
@@ -446,7 +444,7 @@ def fitPeaks(fit, peaks, observed):
     # Compute sigma of observations to computed weighted residuals
     # Treat special cases of fit.chi_exp=0, .5, 1.
     if   (fit.chi_exp == 0.0): weights = observed*0.0 + 1.0
-    elif (fit.chi_exp == 0.5): weights = 1./Numeric.sqrt(abs(min(observed,1.)))
+    elif (fit.chi_exp == 0.5): weights = 1./Num.sqrt(abs(min(observed,1.)))
     elif (fit.chi_exp == 1.0): weights = 1./abs(min(observed,1.))
     else:                      weights = 1./(abs(min(observed,1.))**fit.chi_exp)
 
@@ -522,7 +520,7 @@ def fitPeaks(fit, peaks, observed):
     predicted = predict_gaussian_spectrum(fit, peaks)
 
     # Convert fitted spectrum to integer
-    predicted  = Numeric.around(predicted).astype(Numeric.Int)
+    predicted  = Num.around(predicted).astype(int)
     fit.n_iter = m.niter
     fit.n_eval = m.nfev
     fit.chisqr = m.fnorm
@@ -562,7 +560,7 @@ def copy_fit_params(parameters, fit, peaks):
         np = np + 1
         if (peak.fwhm_flag == 0):
              peak.fwhm = (fit.fwhm_offset + 
-                          fit.fwhm_slope*Numeric.sqrt(peak.energy))
+                          fit.fwhm_slope*Num.sqrt(peak.energy))
         peak.ampl = parameters[np]
         np = np + 1
         if (peak.ampl_factor == 0.):
@@ -590,12 +588,12 @@ def predict_gaussian_spectrum(fit, peaks):
             A list of McaPeak objects, containing the fit parameters for each peak.
 
     Output:
-        Returns a Numeric array containing the predicted counts.
+        Returns a Num array containing the predicted counts.
     """
     MAX_SIGMA=5.
     SIGMA_TO_FWHM = 2.35482
-    predicted = Numeric.zeros(fit.nchans, Numeric.Float)
-    energy_range = fit.energy_offset + Numeric.arange(fit.nchans)*fit.energy_slope
+    predicted = Num.zeros(fit.nchans, dtype=float)
+    energy_range = fit.energy_offset + Num.arange(fit.nchans)*fit.energy_slope
 
     for peak in peaks:
 
@@ -611,11 +609,11 @@ def predict_gaussian_spectrum(fit, peaks):
         last_chan = min(max((first_chan + nchans), 0), (fit.nchans-1))
         chans = range(int(first_chan), int(last_chan))
 
-        energy = Numeric.take(energy_range, chans)
+        energy = Num.take(energy_range, chans)
 
-        counts = peak.ampl * Numeric.exp(-((energy - peak.energy)**2 / (2. * sigma**2)))
-        peak.area = Numeric.sum(counts)
-        Numeric.put(predicted, chans, Numeric.take(predicted, chans) + counts)
+        counts = peak.ampl * Num.exp(-((energy - peak.energy)**2 / (2. * sigma**2)))
+        peak.area = counts.sum()
+        Num.put(predicted, chans, Num.take(predicted, chans) + counts)
 
     return(predicted)
 

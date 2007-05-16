@@ -1,11 +1,10 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
 
 ########################################################################
 # From Mca
 ########################################################################
 
 import copy
-import numpy.oldnumeric as Numeric
+import numpy as Num
 import CARSMath
 
 ########################################################################
@@ -186,9 +185,9 @@ def fit_background(data, params):
         #   First make a lookup table of this function
         chan_width = top_width / (2. * slope)
         denom = chan_width**exponent
-        indices = Numeric.arange(float(nchans*2+1)) - nchans
+        indices = Num.arange(float(nchans*2+1)) - nchans
         power_funct = indices**exponent * (REFERENCE_AMPL / denom)
-        power_funct = Numeric.compress((power_funct <= max_counts), power_funct)
+        power_funct = Num.compress((power_funct <= max_counts), power_funct)
         max_index = len(power_funct)/2 - 1
 
         for center_chan in range(nchans):
@@ -198,7 +197,7 @@ def fit_background(data, params):
             l = last_chan - center_chan + max_index
             test = scratch[center_chan] + power_funct[f:l+1]
             sub = bckgnd[first_chan:last_chan+1] 
-            bckgnd[first_chan:last_chan+1] = Numeric.maximum(sub, test)
+            bckgnd[first_chan:last_chan+1] = Num.maximum(sub, test)
 
     # Copy this approximation of background to scratch
     scratch = copy.copy(bckgnd)
@@ -208,7 +207,7 @@ def fit_background(data, params):
     max_counts = max(scratch)
 
     # Fit functions which come up from below
-    bckgnd = Numeric.arange(float(nchans)) - HUGE
+    bckgnd = Num.arange(float(nchans)) - HUGE
 
     # First make a lookup table of this function
     chan_width = bottom_width / (2. * slope)
@@ -217,9 +216,9 @@ def fit_background(data, params):
     else:
         denom = chan_width**exponent
     
-    indices = Numeric.arange(float(nchans*2+1)) - nchans
+    indices = Num.arange(float(nchans*2+1)) - nchans
     power_funct = indices**exponent  * (REFERENCE_AMPL / denom)
-    power_funct = Numeric.compress((power_funct <= max_counts), power_funct)
+    power_funct = Num.compress((power_funct <= max_counts), power_funct)
     max_index = len(power_funct)/2 - 1
 
     for center_chan in range(nchans-1):
@@ -228,17 +227,17 @@ def fit_background(data, params):
             # Find slope of tangent to spectrum at this channel
             first_chan = max((center_chan - MAX_TANGENT), 0)
             last_chan = min((center_chan + MAX_TANGENT), (nchans-1))
-            denom = center_chan - Numeric.arange(float(last_chan - first_chan + 1))
+            denom = center_chan - Num.arange(float(last_chan - first_chan + 1))
             tangent_slope = (scratch[center_chan] - 
                              scratch[first_chan:last_chan+1]) / max(denom, 1)
-            tangent_slope = Numeric.sum(tangent_slope) / (last_chan - first_chan)
+            tangent_slope = Num.sum(tangent_slope) / (last_chan - first_chan)
 
         first_chan = max((center_chan - max_index), 0)
         last_chan = min((center_chan + max_index), (nchans-1))
         last_chan = max(last_chan, first_chan)
         nc = last_chan - first_chan + 1
         lin_offset = scratch[center_chan] + \
-                     (Numeric.arange(float(nc)) - nc/2) * tangent_slope
+                     (Num.arange(float(nc)) - nc/2) * tangent_slope
 
         # Find the maximum height of a function centered on this channel
         # such that it is never higher than the counts in any channel
@@ -254,12 +253,12 @@ def fit_background(data, params):
 
         test = height + lin_offset - power_funct[f:l+1]
         sub = bckgnd[first_chan:last_chan+1]
-        bckgnd[first_chan:last_chan+1] = Numeric.maximum(sub, test)
+        bckgnd[first_chan:last_chan+1] = Num.maximum(sub, test)
 
     # Expand spectrum
     if (compress > 1):
         bckgnd = CARSMath.expand_array(bckgnd, compress)
-    bgd = bckgnd.astype(Numeric.Int)
+    bgd = bckgnd.astype(int)
 
     return bgd
 

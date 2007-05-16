@@ -1,12 +1,10 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
-
 #
 # Read/Write CARS mca/med files
 #
 
 import Mca
 import Med
-import numpy.oldnumeric as Numeric
+import numpy as Num
 import string
 import os
 
@@ -106,7 +104,7 @@ def read_ascii_file(file):
         'calibration': [McaCalibration()],
         'elapsed':     [McaElapsed()],
         'rois':        [[McaROI()]]
-        'data':        [Numeric.array]
+        'data':        [Num.array]
         'environment': [[McaEnvironment()]]
         
     Example:
@@ -189,7 +187,7 @@ def read_ascii_file(file):
         elif (tag == 'DATA:'):
             data = []
             for d in range(n_detectors):
-                data.append(Numeric.zeros(nchans, 'i'))
+                data.append(Num.zeros(nchans, 'i'))
             for chan in range(nchans):
                 line = fp.readline()
                 counts = string.split(line)
@@ -305,7 +303,7 @@ def write_ascii_file(file, data, calibration, elapsed, rois, environment):
         
         environment: A list of McaEnvironment objects, or a list of lists of such objects.
     """
-    if (Numeric.rank(data) == 2):
+    if (Num.rank(data) == 2):
         n_det = len(data)
     else:
         n_det = 1
@@ -372,7 +370,7 @@ def write_ascii_file(file, data, calibration, elapsed, rois, environment):
                                         '="'  + str(e.value) +
                                         '" (' + str(e.description) + ')\n')
     fp.write('DATA: \n')
-    counts = Numeric.zeros(n_det)
+    counts = Num.zeros(n_det)
     for i in range(nchans):
         for d in range(n_det):
             counts[d]=data[d][i]

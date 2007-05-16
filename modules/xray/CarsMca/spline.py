@@ -1,5 +1,3 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
-
 """ Cubic spline approximation class.
 
 Last Modified 9/9/97 by Johann Hibschman <johann@physics.berkeley.edu>
@@ -21,8 +19,7 @@ versions.
 """
 
 import func
-#from Numeric import *
-import numpy
+import numpy as Num
 
 BadInput = "Bad xa input to routine splint."
 
@@ -49,8 +46,8 @@ class Spline(func.FuncOps):
         n = len(x_vals)
         #y2_vals  = zeros(n, Float)
         #u        = zeros(n-1, Float)
-        y2_vals  = numpy.zeros(n, numpy.float)
-        u        = numpy.zeros(n-1, numpy.float)
+        y2_vals  = Num.zeros(n, dtype=float)
+        u        = Num.zeros(n-1, dtype=float)
         
         if self.use_low_slope:
             u[0] = (3.0/(x_vals[1]-x_vals[0])) * \
@@ -107,7 +104,7 @@ class Spline(func.FuncOps):
         if x >= self.x_vals[-1]:
             return self.y_vals[-1]
 
-        pos = numpy.searchsorted(self.x_vals, x)
+        pos = Num.searchsorted(self.x_vals, x)
           
         h = self.x_vals[pos]-self.x_vals[pos-1]
         if h == 0.0:
@@ -142,7 +139,7 @@ class LinInt(func.FuncOps):
         if x >= self.x_vals[-1]:
             return self.y_vals[-1]
 
-        pos = numpy.searchsorted(self.x_vals, x)
+        pos = Num.searchsorted(self.x_vals, x)
           
         h = self.x_vals[pos]-self.x_vals[pos-1]
         if h == 0.0:
@@ -166,7 +163,7 @@ def logspline_interpolate(x1, y1, x2):
     evaluate it at points x2.
     """
     sp = Spline(log(x1), log(y1))
-    return numpy.exp(sp(log(x2)))
+    return Num.exp(sp(log(x2)))
 
 
 def linear_interpolate(x1, y1, x2):

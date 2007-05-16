@@ -1,5 +1,3 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
-
 #
 # func.py: general function objects
 # Author: Johann Hibschman <johann@physics.berkeley.edu>
@@ -13,16 +11,13 @@
 # some performance when the functions are used on scalar arguments,
 # but should give a big win on vectors.
 
-import numpy.oldnumeric as Numeric
-#from Numeric import *
-from numpy import *
+import numpy as Num
 import operator
 import math
 from types import *
 
-#ArrayType = type(asarray(1.0))
-ArrayType = type(Numeric.asarray(1.0))
-UfuncType = type(Numeric.add)
+ArrayType = type(Num.asarray(1.0))
+UfuncType = type(Num.add)
 
 # unary function objects (maybe rename to UN_FUNC?)
 
@@ -36,22 +31,22 @@ class FuncOps:
         return UnCompose(self, f)
    
     def __add__(self, f):
-        return BinCompose(Numeric.add, self, f)
+        return BinCompose(Num.add, self, f)
    
     def __sub__(self, f):
-        return BinCompose(Numeric.subtract, self, f)
+        return BinCompose(Num.subtract, self, f)
    
     def __mul__(self, f):
-        return BinCompose(Numeric.multiply, self, f)
+        return BinCompose(Num.multiply, self, f)
    
     def __div__(self, f):
-        return BinCompose(Numeric.divide, self, f)
+        return BinCompose(Num.divide, self, f)
    
     def __neg__(self):
-        return UnCompose(Numeric.negative, self)
+        return UnCompose(Num.negative, self)
 
     def __pow__(self, f):
-        return BinCompose(Numeric.power, self, f)
+        return BinCompose(Num.power, self, f)
 
     def __coerce__(self, x):
         if type(x) in [IntType, FloatType, LongType, ComplexType]:
@@ -61,16 +56,16 @@ class FuncOps:
    
     def __call__(self, arg):
         "Default call routine, used for ordinary functions."
-        if isinstance(arg, ArrayType):
+        if type(arg) == ArrayType:
             return array_map(self.call, arg)
         else:
             return self.call(arg)
 
     def exp(self):
-        return UnCompose(Numeric.exp, self)
+        return UnCompose(Num.exp, self)
    
     def log(self):
-        return UnCompose(Numeric.log, self)   
+        return UnCompose(Num.log, self)   
 
 # Bind a normal function
 # Should check if the argument is a function.
@@ -159,7 +154,7 @@ class BinFuncOps:
     def accumulate(self, a, axis=0):
         n = len(a.shape)
         sum = take(a, [0], axis)
-        out = zeros(a.shape, a.dtype.char)
+        out = zeros(a.shape, a.typecode())
         for i in range(1, a.shape[axis]):
             out[all_but_axis(i, axis, n)] = self(sum, take(a, [i], axis))
         return out
@@ -291,7 +286,7 @@ class BinBinCompose(BinFuncOps):
 def array_map(f, ar):
     "Apply an ordinary function to all values in an array."
     flat_ar = ravel(ar)
-    out = zeros(len(flat_ar), flat_ar.dtype.char)
+    out = zeros(len(flat_ar), flat_ar.typecode())
     for i in xrange(len(flat_ar)):
         out[i] = f(flat_ar[i])
         out.shape = ar.shape
@@ -302,7 +297,7 @@ def array_map_2(f, a, b):
         raise ShapeError
     flat_a = ravel(a)
     flat_b = ravel(b)
-    out    = zeros(len(flat_a), a.dtype.char)
+    out    = zeros(len(flat_a), a.typecode())
     for i in xrange(len(flat_a)):
         out[i] = f(flat_a[i], flat_b[i])
     return reshape(out, a.shape)

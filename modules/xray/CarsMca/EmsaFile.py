@@ -62,7 +62,7 @@ def read_ascii_file(file):
         'calibration': [McaCalibration()],
         'elapsed':     [McaElapsed()],
         'rois':        [[McaROI()]]
-        'data':        [Numeric.array]
+        'data':        [numpy.array]
         'environment': [[McaEnvironment()]]
         
     Example:

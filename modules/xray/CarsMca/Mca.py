@@ -1,4 +1,3 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
 
 """
 This module defines a device-independent MultiChannel Analyzer (MCA) class,
@@ -26,7 +25,7 @@ Modifications:
         - added printing of icr in write_ascii_file
 """
 
-import numpy.oldnumeric as Numeric
+import numpy as Num
 import copy
 import math
 import types
@@ -100,8 +99,8 @@ class McaCalibration:
             channels = [100, 200, 300]
             energy = mca.channel_to_energy(channels) 
         """
-        c  = Numeric.asarray(channels)
-        return self.offset +  self.slope * c + self.quad * Numeric.power(c, 2)
+        c  = Num.asarray(channels)
+        return self.offset +  c * (self.slope + c * self.quad)
 
     ########################################################################
     def energy_to_channel(self, energy, clip=0):
@@ -137,17 +136,14 @@ class McaCalibration:
             b = self.slope
             c = self.offset - energy
             # There are 2 roots.  I think we always want the "+" root?
-            channel = (-b + Numeric.sqrt(b**2 - 4.*a*c))/(2.*a)
-        channel = Numeric.around(channel)
+            channel = (-b + Num.sqrt(b**2 - 4.*a*c))/(2.*a)
+        channel = Num.around(channel)
         if (clip > 0): 
             #nchans = len(self.data)
             nchans  = clip
-            channel = Numeric.clip(channel, 0, nchans-1)
+            channel = Num.clip(channel, 0, nchans-1)
 
-        if (isinstance(channel, Numeric.ArrayType)): 
-            return channel.astype(Numeric.Int)
-        else:
-            return int(channel)
+        return int(channel)
 
     ########################################################################
     def channel_to_d(self, channels):
@@ -368,7 +364,7 @@ class McaROI:
 
         #net cts array
         n_sel        = right - left + 1
-        bgd_counts   = bgd_left + Numeric.arange(n_sel)/(n_sel-1.0) * (bgd_right - bgd_left)
+        bgd_counts   = bgd_left + Num.arange(n_sel)/(n_sel-1.0) * (bgd_right - bgd_left)
         net_counts   = total_counts - bgd_counts
 
         # do sums
@@ -391,7 +387,7 @@ class Mca:
         self.name        = name
         self.n_detectors = 1
         nchans           = 2048
-        self.data        = Numeric.zeros(nchans)
+        self.data        = Num.zeros(nchans)
         self.rois        = []
         self.calibration = McaCalibration()
         self.elapsed     = McaElapsed()
@@ -793,7 +789,7 @@ class Mca:
 
         Inputs:
             data:
-                A Numeric array of data (counts).
+                A numpy array of data (counts).
         """
         self.data = data
         return
@@ -811,7 +807,7 @@ class Mca:
              mca = Mca('mca.001')
              energy = mca.get_energy()
         """
-        channels = Numeric.arange(len(self.data))
+        channels = Num.arange(len(self.data))
         energy   = self.calibration.channel_to_energy(channels)
         return energy
 
@@ -836,7 +832,7 @@ class Mca:
             mca = Mca('mca.001')
             mca.initial_calibration(20.1)
         """
-        peak_chan = Numeric.argmax(self.data)
+        peak_chan = Num.argmax(self.data)
         peak_chan = max(peak_chan,1)
         self.calibration.offset = 0.
         self.calibration.slope = float(energy)/peak_chan

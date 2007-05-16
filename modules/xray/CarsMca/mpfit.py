@@ -1,5 +1,3 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
-
 """
 Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 
@@ -106,7 +104,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
  
  In general there are no restrictions on the number of dimensions in
  X, Y or ERR.  However the deviates *must* be returned in a
- one-dimensional Numeric array of type Float.
+ one-dimensional Numpy array of type Float.
 
  User functions may also indicate a fatal error condition using the
  status return described above. If status is set to a number between
@@ -137,7 +135,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
     # stop the calculation.
     status = 0
     if (dojac):
-       pderiv = Numeric.zeros([len(x), len(p)], Numeric.Float)
+       pderiv = numpy.zeros([len(x), len(p)], dtype=float)
        for j in range(len(p)):
          pderiv[:,j] = FGRAD(x, p, j)
     else:
@@ -274,11 +272,11 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
                                    EXAMPLE
 
    import mpfit
-   import numpy.oldnumeric as Numeric
-   x = Numeric.arange(100, Numeric.float)
+   import numpy as Num
+   x = Num.arange(100, dtype=float)
    p0 = [5.7, 2.2, 500., 1.5, 2000.]
-   y = ( p[0] + p[1]*[x] + p[2]*[x**2] + p[3]*Numeric.sqrt(x) +
-         p[4]*Numeric.log(x))
+   y = ( p[0] + p[1]*[x] + p[2]*[x**2] + p[3]*Num.sqrt(x) +
+         p[4]*Num.log(x))
    fa = {'x':x, 'y':y, 'err':err}
    m = mpfit('myfunct', p0, functkw=fa)
    print 'status = ', m.status
@@ -403,7 +401,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
    August, 2002.  Mark Rivers
 """
 
-import numpy.oldnumeric as Numeric
+import numpy as Num
 import types
 
 
@@ -807,7 +805,7 @@ Keywords:
          pcor = cov * 0.
          for i in range(n):
             for j in range(n):
-               pcor[i,j] = cov[i,j]/Numeric.sqrt(cov[i,i]*cov[j,j])
+               pcor[i,j] = cov[i,j]/Num.sqrt(cov[i,i]*cov[j,j])
 
       If nocovar is set or MPFIT terminated abnormally, then .covar is set to
       a scalar with value None.
@@ -837,7 +835,7 @@ Keywords:
 
          dof = len(x) - len(mpfit.params) # deg of freedom
          # scaled uncertainties
-         pcerror = mpfit.perror * Numeric.sqrt(mpfit.fnorm / dof)
+         pcerror = mpfit.perror * Num.sqrt(mpfit.fnorm / dof)
 
       """
       self.niter = 0
@@ -891,8 +889,8 @@ Keywords:
             self.errmsg = 'ERROR: either P or PARINFO(*)["value"] must be supplied.'
             return
 
-      ## Make sure parameters are Numeric arrays of type Numeric.Float
-      xall = Numeric.asarray(xall, Numeric.Float)
+      ## Make sure parameters are Num arrays of type float
+      xall = Num.asarray(xall, float)
 
       npar = len(xall)
       self.fnorm  = -1.
@@ -922,19 +920,19 @@ Keywords:
       minstep = self.parinfo(parinfo, 'mpminstep', default=0., n=npar)
       qmin = minstep * 0  ## Remove minstep for now!!
       qmax = maxstep != 0
-      wh = Numeric.nonzero(((qmin!=0.) & (qmax!=0.)) & (maxstep < minstep))
+      wh = Num.nonzero(((qmin!=0.) & (qmax!=0.)) & (maxstep < minstep))
       if (len(wh) > 0):
          self.errmsg = 'ERROR: MPMINSTEP is greater than MPMAXSTEP'
          return
       ##################################################################
       ### http://osdir.com/ml/python.scientific.user/2004-08/index.html
-      #wh = Numeric.nonzero((qmin!=0.) & (qmax!=0.))
+      #wh = Num.nonzero((qmin!=0.) & (qmax!=0.))
       ##################################################################
-      wh = Numeric.nonzero((qmax!=0.))
+      wh = Num.nonzero((qmax!=0.))
       qminmax = len(wh > 0)
 
       ## Finish up the free parameters
-      ifree = Numeric.nonzero(pfixed != 1)
+      ifree = Num.nonzero(pfixed != 1)
       nfree = len(ifree)
       if nfree == 0:
          self.errmsg = 'ERROR: no free parameters'
@@ -942,19 +940,19 @@ Keywords:
 
       ## Compose only VARYING parameters
       self.params = xall      ## self.params is the set of parameters to be returned
-      x = Numeric.take(self.params, ifree)  ## x is the set of free parameters
+      x = Num.take(self.params, ifree)  ## x is the set of free parameters
 
       ## LIMITED parameters ?
       limited = self.parinfo(parinfo, 'limited', default=[0,0])
       limits = self.parinfo(parinfo, 'limits', default=[0.,0.])
       if (limited != None) and (limits != None):
          ## Error checking on limits in parinfo
-         wh = Numeric.nonzero((limited[:,0] & (xall < limits[:,0])) |
+         wh = Num.nonzero((limited[:,0] & (xall < limits[:,0])) |
                               (limited[:,1] & (xall > limits[:,1])))
          if (len(wh) > 0):
             self.errmsg = 'ERROR: parameters are not within PARINFO limits'
             return
-         wh = Numeric.nonzero((limited[:,0] & limited[:,1]) &
+         wh = Num.nonzero((limited[:,0] & limited[:,1]) &
                               (limits[:,0] >= limits[:,1]) &
                               (pfixed == 0))
          if (len(wh) > 0):
@@ -962,17 +960,17 @@ Keywords:
             return
 
          ## Transfer structure values to local variables
-         qulim = Numeric.take(limited[:,1], ifree)
-         ulim  = Numeric.take(limits [:,1], ifree)
-         qllim = Numeric.take(limited[:,0], ifree)
-         llim  = Numeric.take(limits [:,0], ifree)
+         qulim = Num.take(limited[:,1], ifree)
+         ulim  = Num.take(limits [:,1], ifree)
+         qllim = Num.take(limited[:,0], ifree)
+         llim  = Num.take(limits [:,0], ifree)
 
-         wh = Numeric.nonzero((qulim!=0.) | (qllim!=0.))
+         wh = Num.nonzero((qulim!=0.) | (qllim!=0.))
          if (len(wh) > 0): qanylim = 1
          else: qanylim = 0
       else:
          ## Fill in local variables with dummy values
-         qulim = Numeric.zeros(nfree)
+         qulim = Num.zeros(nfree)
          ulim  = x * 0.
          qllim = qulim
          llim  = x * 0.
@@ -988,12 +986,12 @@ Keywords:
       if (rescale != 0):
          self.errmsg = 'ERROR: DIAG parameter scales are inconsistent'
          if (len(diag) < n): return
-         wh = Numeric.nonzero(diag <= 0)
+         wh = Num.nonzero(diag <= 0)
          if (len(wh) > 0): return
          self.errmsg = ''
 
-      # Make sure x is a Numeric array of type Numeric.Float
-      x = Numeric.asarray(x, Numeric.Float)
+      # Make sure x is a Numpy array of type float
+      x = Num.asarray(x, dtype=float)
       
       [self.status, fvec] = self.call(fcn, self.params, functkw)
       if (self.status < 0):
@@ -1019,7 +1017,7 @@ Keywords:
       while(1):
 
          ## If requested, call fcn to enable printing of iterates
-         Numeric.put(self.params, ifree, x)
+         Num.put(self.params, ifree, x)
          if (self.qanytied): self.params = self.tie(self.params, ptied)
 
          if (nprint > 0) and (iterfunct != None):
@@ -1041,7 +1039,7 @@ Keywords:
                ## If parameters were changed (grrr..) then re-tie
                if (max(abs(xnew0-self.params)) > 0):
                   if (self.qanytied): self.params = self.tie(self.params, ptied)
-                  x = Numeric.take(self.params, ifree)
+                  x = Num.take(self.params, ifree)
 
 
          ## Calculate the jacobian matrix
@@ -1058,20 +1056,20 @@ Keywords:
          ## Determine if any of the parameters are pegged at the limits
          if (qanylim):
             catch_msg = 'zeroing derivatives of pegged parameters'
-            whlpeg = Numeric.nonzero(qllim & (x == llim))
+            whlpeg = Num.nonzero(qllim & (x == llim))
             nlpeg = len(whlpeg)
-            whupeg = Numeric.nonzero(qulim & (x == ulim))
+            whupeg = Num.nonzero(qulim & (x == ulim))
             nupeg = len(whupeg)
             ## See if any "pegged" values should keep their derivatives
             if (nlpeg > 0):
                ## Total derivative of sum wrt lower pegged parameters
                for i in range(nlpeg):
-                  sum = Numeric.sum(fvec * fjac[:,whlpeg[i]])
+                  sum = Num.sum(fvec * fjac[:,whlpeg[i]])
                   if (sum > 0): fjac[:,whlpeg[i]] = 0
             if (nupeg > 0):
                ## Total derivative of sum wrt upper pegged parameters
                for i in range(nupeg):
-                  sum = Numeric.sum(fvec * fjac[:,whupeg[i]])
+                  sum = Num.sum(fvec * fjac[:,whupeg[i]])
                   if (sum < 0): fjac[:,whupeg[i]] = 0
 
          ## Compute the QR factorization of the jacobian
@@ -1083,8 +1081,8 @@ Keywords:
          if (self.niter == 1):
             if ((rescale==0) or (len(diag) < n)):
                diag = wa2.copy()
-               wh = Numeric.nonzero(diag == 0)
-               Numeric.put(diag, wh, 1.)
+               wh = Num.nonzero(diag == 0)
+               Num.put(diag, wh, 1.)
       
             ## On the first iteration, calculate the norm of the scaled x
             ## and initialize the step bound delta 
@@ -1103,13 +1101,13 @@ Keywords:
                fj = fjac[j:,lj]
                wj = wa4[j:]
                ## *** optimization wa4(j:*)
-               wa4[j:] = wj - fj * Numeric.sum(fj*wj) / temp3  
+               wa4[j:] = wj - fj * Num.sum(fj*wj) / temp3  
             fjac[j,lj] = wa1[j]
             qtf[j] = wa4[j]
          ## From this point on, only the square matrix, consisting of the
          ## triangle of R, is needed.
          fjac = fjac[0:n, 0:n]
-         fjac.shape = [n, n]
+         fjac.shape = (n, n)
          temp = fjac.copy()
          for i in range(n):
             temp[:,i] = fjac[:, ipvt[i]]
@@ -1128,7 +1126,7 @@ Keywords:
             for j in range(n):
                l = ipvt[j]
                if (wa2[l] != 0):
-                  sum = Numeric.sum(fjac[0:j+1,j]*qtf[0:j+1])/self.fnorm
+                  sum = Num.sum(fjac[0:j+1,j]*qtf[0:j+1])/self.fnorm
                   gnorm = max([gnorm,abs(sum/wa2[l])])
                   
          ## Test for convergence of the gradient norm
@@ -1138,7 +1136,7 @@ Keywords:
 
          ## Rescale if necessary
          if (rescale == 0):
-            diag = Numeric.choose(diag>wa2, (wa2, diag))
+            diag = Num.choose(diag>wa2, (wa2, diag))
 
          ## Beginning of the inner loop
          while(1):
@@ -1166,36 +1164,36 @@ Keywords:
                   ## Do not allow any steps out of bounds
                   catch_msg = 'checking for a step out of bounds'
                   if (nlpeg > 0):
-                     Numeric.put(wa1, whlpeg, Numeric.clip(
-                        Numeric.take(wa1, whlpeg), 0., max(wa1)))
+                     Num.put(wa1, whlpeg, Num.clip(
+                        Num.take(wa1, whlpeg), 0., max(wa1)))
                   if (nupeg > 0):
-                     Numeric.put(wa1, whupeg, Numeric.clip(
-                        Numeric.take(wa1, whupeg), min(wa1), 0.))
+                     Num.put(wa1, whupeg, Num.clip(
+                        Num.take(wa1, whupeg), min(wa1), 0.))
 
                   dwa1 = abs(wa1) > machep
-                  whl = Numeric.nonzero(((dwa1!=0.) & qllim) & ((x + wa1) < llim))
+                  whl = Num.nonzero(((dwa1!=0.) & qllim) & ((x + wa1) < llim))
                   if (len(whl) > 0):
-                     t = ((Numeric.take(llim, whl) - Numeric.take(x, whl)) /
-                           Numeric.take(wa1, whl))
+                     t = ((Num.take(llim, whl) - Num.take(x, whl)) /
+                           Num.take(wa1, whl))
                      alpha = min(alpha, min(t))
-                  whu = Numeric.nonzero(((dwa1!=0.) & qulim) & ((x + wa1) > ulim))
+                  whu = Num.nonzero(((dwa1!=0.) & qulim) & ((x + wa1) > ulim))
                   if (len(whu) > 0):
-                     t = ((Numeric.take(ulim, whu) - Numeric.take(x, whu)) /
-                           Numeric.take(wa1, whu))
+                     t = ((Num.take(ulim, whu) - Num.take(x, whu)) /
+                           Num.take(wa1, whu))
                      alpha = min(alpha, min(t))
 
                ## Obey any max step values.
                if (qminmax):
                   nwa1 = wa1 * alpha
-                  whmax = Numeric.nonzero((qmax != 0.) & (maxstep > 0))
+                  whmax = Num.nonzero((qmax != 0.) & (maxstep > 0))
                   if (len(whmax) > 0):
                      #####################################################################
                      ## http://osdir.com/ml/python.scientific.user/2004-08/index.html
-                     #mrat = max(Numeric.take(nwa1, whmax) /
-                     #           Numeric.take(maxstep, whmax))
+                     #mrat = max(Num.take(nwa1, whmax) /
+                     #           Num.take(maxstep, whmax))
                      #####################################################################
-                     mrat = max(abs(Numeric.take(nwa1, whmax)) /
-                                abs(Numeric.take(maxstep, whmax)) )
+                     mrat = max(abs(Num.take(nwa1, whmax)) /
+                                abs(Num.take(maxstep, whmax)) )
                      if (mrat > 1): alpha = alpha / mrat
 
                ## Scale the resulting vector
@@ -1204,10 +1202,10 @@ Keywords:
 
                ## Adjust the final output values.  If the step put us exactly
                ## on a boundary, make sure it is exact.
-               wh = Numeric.nonzero((qulim!=0.) & (wa2 >= ulim*(1-machep)))
-               if (len(wh) > 0): Numeric.put(wa2, wh, Numeric.take(ulim, wh))
-               wh = Numeric.nonzero((qllim!=0.) & (wa2 <= llim*(1+machep)))
-               if (len(wh) > 0): Numeric.put(wa2, wh, Numeric.take(llim, wh))
+               wh = Num.nonzero((qulim!=0.) & (wa2 >= ulim*(1-machep)))
+               if (len(wh) > 0): Num.put(wa2, wh, Num.take(ulim, wh))
+               wh = Num.nonzero((qllim!=0.) & (wa2 <= llim*(1+machep)))
+               if (len(wh) > 0): Num.put(wa2, wh, Num.take(llim, wh))
             # endelse
             wa3 = diag * wa1
             pnorm = self.enorm(wa3)
@@ -1215,7 +1213,7 @@ Keywords:
             ## On the first iteration, adjust the initial step bound
             if (self.niter == 1): delta = min([delta,pnorm])
 
-            Numeric.put(self.params, ifree, wa2)
+            Num.put(self.params, ifree, wa2)
  
             ## Evaluate the function at x+p and calculate its norm
             mperr = 0
@@ -1240,7 +1238,7 @@ Keywords:
             ## Remember, alpha is the fraction of the full LM step actually
             ## taken
             temp1 = self.enorm(alpha*wa3)/self.fnorm
-            temp2 = (Numeric.sqrt(alpha*par)*pnorm)/self.fnorm
+            temp2 = (Num.sqrt(alpha*par)*pnorm)/self.fnorm
             prered = temp1*temp1 + (temp2*temp2)/0.5
             dirder = -(temp1*temp1 + temp2*temp2)
 
@@ -1305,7 +1303,7 @@ Keywords:
       if (len(self.params) == 0):
          return
       if (nfree == 0): self.params = xall.copy()
-      else: Numeric.put(self.params, ifree, x)
+      else: Num.put(self.params, ifree, x)
       if (nprint > 0) and (self.status > 0):
          catch_msg = 'calling ' + str(fcn)
          [status, fvec] = self.call(fcn, self.params, functkw)
@@ -1321,28 +1319,28 @@ Keywords:
       ## (very carefully) set the covariance matrix COVAR
       if ((self.status > 0) and (nocovar==0) and (n != None)
                      and (fjac != None) and (ipvt != None)):
-         sz = Numeric.shape(fjac)
+         sz = fjac.shape()
          if ((n > 0) and (sz[0] >= n) and (sz[1] >= n)
              and (len(ipvt) >= n)):
             catch_msg = 'computing the covariance matrix'
             cv = self.calc_covar(fjac[0:n,0:n], ipvt[0:n])
-            cv.shape = [n, n]
+            cv.shape = (n, n)
             nn = len(xall)
           
             ## Fill in actual covariance matrix, accounting for fixed
             ## parameters.
-            self.covar = Numeric.zeros([nn, nn], Numeric.Float)
+            self.covar = Num.zeros([nn, nn], dtype=float)
             for i in range(n):
                indices = ifree+ifree[i]*n
-               Numeric.put(self.covar, indices, cv[:,i])
+               Num.put(self.covar, indices, cv[:,i])
           
             ## Compute errors in parameters
             catch_msg = 'computing parameter errors'
-            self.perror = Numeric.zeros(nn, Numeric.Float)
-            d = Numeric.diagonal(self.covar)
-            wh = Numeric.nonzero(d >= 0)
+            self.perror = Num.zeros(nn, dtype=float)
+            d = Num.diagonal(self.covar)
+            wh = Num.nonzero(d >= 0)
             if len(wh) > 0:
-              Numeric.put(self.perror, wh, Numeric.sqrt(Numeric.take(d, wh)))
+              Num.put(self.perror, wh, Num.sqrt(Num.take(d, wh)))
       return
 
 
@@ -1410,9 +1408,9 @@ Keywords:
       test = default
       if (type(default) == types.ListType): test=default[0]
       if (isinstance(test, types.IntType)):
-         values = Numeric.asarray(values, Numeric.Int)
+         values = Num.asarray(values, int)
       elif (isinstance(test, types.FloatType)):
-         values = Numeric.asarray(values, Numeric.Float)
+         values = Num.asarray(values, float)
       return(values)
 
 
@@ -1428,7 +1426,7 @@ Keywords:
             ## Apply the damping if requested.  This replaces the residuals
             ## with their hyperbolic tangent.  Thus residuals larger than
             ## DAMP are essentially clipped.
-            f = Numeric.tanh(f/self.damp)
+            f = Num.tanh(f/self.damp)
          return([status, f])
       else:
          return(fcn(x, fjac=fjac, **functkw))
@@ -1446,7 +1444,7 @@ Keywords:
 
         # Very simple-minded sum-of-squares
         if (self.fastnorm):
-           ans = Numeric.sqrt(Numeric.sum(vec*vec))
+           ans = Num.sqrt(Num.sum(vec*vec))
         else:
            agiant = self.machar.rgiant / len(vec)
            adwarf = self.machar.rdwarf * len(vec)
@@ -1458,9 +1456,9 @@ Keywords:
            mx = max(abs(mx), abs(mn))
            if mx == 0: return(vec[0]*0.)
            if mx > agiant or mx < adwarf:
-              ans = mx * Numeric.sqrt(Numeric.sum((vec/mx)*(vec/mx)))
+              ans = mx * Num.sqrt(Num.sum((vec/mx)*(vec/mx)))
            else:
-              ans = Numeric.sqrt(Numeric.sum(vec*vec))
+              ans = Num.sqrt(Num.sum(vec*vec))
 
         return(ans)
 
@@ -1473,19 +1471,19 @@ Keywords:
       machep = self.machar.machep
       if epsfcn == None:  epsfcn = machep
       if xall == None:    xall = x
-      if ifree == None:   ifree = Numeric.arange(len(xall))
+      if ifree == None:   ifree = Num.arange(len(xall))
       if step == None:    step = x * 0.
       nall = len(xall)
 
-      eps = Numeric.sqrt(max([epsfcn, machep]))
+      eps = Num.sqrt(max([epsfcn, machep]))
       m = len(fvec)
       n = len(x)
 
       ## Compute analytical derivative if requested
       if (autoderivative == 0):
          mperr = 0
-         fjac = Numeric.zeros(nall, Numeric.Float)
-         Numeric.Put(fjac, ifree, 1.0)  ## Specify which parameters need derivatives
+         fjac = Num.zeros(nall, dtype=float)
+         Num.put(fjac, ifree, 1.0)  ## Specify which parameters need derivatives
          [status, fp] = self.call(fcn, xall, functkw, fjac=fjac)
 
          if len(fjac) != m*nall:
@@ -1494,34 +1492,34 @@ Keywords:
 
          ## This definition is c1onsistent with CURVEFIT
          ## Sign error found (thanks Jesus Fernandez <fernande@irm.chu-caen.fr>)
-         fjac.shape = [m,nall]
+         fjac.shape = (m,nall)
          fjac = -fjac
          
          ## Select only the free parameters
          if len(ifree) < nall:
             fjac = fjac[:,ifree]
-            fjac.shape = [m, n]
+            fjac.shape = (m, n)
             return(fjac)
 
-      fjac = Numeric.zeros([m, n], Numeric.Float)
+      fjac = Num.zeros([m, n], dtype=float)
 
       h = eps * abs(x)
 
       ## if STEP is given, use that
       if step != None:
-         stepi = Numeric.take(step, ifree)
-         wh = Numeric.nonzero(stepi > 0)
-         if (len(wh) > 0): Numeric.put(h, wh, Numeric.take(stepi, wh))
+         stepi = Num.take(step, ifree)
+         wh = Num.nonzero(stepi > 0)
+         if (len(wh) > 0): Num.put(h, wh, Num.take(stepi, wh))
 
       ## if relative step is given, use that
       if (len(dstep) > 0):
-         dstepi = Numeric.take(dstep, ifree)
-         wh = Numeric.nonzero(dstepi > 0)
-         if len(wh) > 0: Numeric.put(h, wh, abs(Numeric.take(dstepi,wh)*Numeric.take(x,wh)))
+         dstepi = Num.take(dstep, ifree)
+         wh = Num.nonzero(dstepi > 0)
+         if len(wh) > 0: Num.put(h, wh, abs(Num.take(dstepi,wh)*Num.take(x,wh)))
 
       ## In case any of the step values are zero
-      wh = Numeric.nonzero(h == 0)
-      if len(wh) > 0: Numeric.put(h, wh, eps)
+      wh = Num.nonzero(h == 0)
+      if len(wh) > 0: Num.put(h, wh, eps)
 
       ## Reverse the sign of the step if we are up against the parameter
       ## limit, or if the user requested it.
@@ -1534,9 +1532,9 @@ Keywords:
              mask = xx
          #else:
          #    mask = mask 
-         wh = Numeric.nonzero(mask)
+         wh = Num.nonzero(mask)
          if len(wh) > 0:
-             Numeric.put(h, wh, -Numeric.take(h, wh))
+             Num.put(h, wh, -Num.take(h, wh))
       ## Loop through parameters, computing the derivative for each
       for j in range(n):
          xp = xall.copy()
@@ -1690,17 +1688,15 @@ Keywords:
 
       if (self.debug): print 'Entering qrfac...'
       machep = self.machar.machep
-      sz = Numeric.shape(a)
-      m = sz[0]
-      n = sz[1]
+      m,n = a.shape()
 
       ## Compute the initial column norms and initialize arrays
-      acnorm = Numeric.zeros(n, Numeric.Float)
+      acnorm = Num.zeros(n, dtype=float)
       for j in range(n):
          acnorm[j] = self.enorm(a[:,j])
       rdiag = acnorm.copy()
       wa = rdiag.copy()
-      ipvt = Numeric.arange(n)
+      ipvt = Num.arange(n)
 
       ## Reduce a to r with householder transformations
       minmn = min([m,n])
@@ -1708,7 +1704,7 @@ Keywords:
          if (pivot != 0):
             ## Bring the column of largest norm into the pivot position
             rmax = max(rdiag[j:])
-            kmax = Numeric.nonzero(rdiag[j:] == rmax)
+            kmax = Num.nonzero(rdiag[j:] == rmax)
             ct = len(kmax)
             kmax = kmax + j
             if ct > 0:
@@ -1749,10 +1745,10 @@ Keywords:
                ## *** Note optimization a(j:*,lk) 
                ## (corrected 20 Jul 2000)
                if a[j,lj] != 0: 
-                  a[j:,lk] = ajk - ajj * Numeric.sum(ajk*ajj)/a[j,lj]
+                  a[j:,lk] = ajk - ajj * Num.sum(ajk*ajj)/a[j,lj]
                   if ((pivot != 0) and (rdiag[k] != 0)):
                      temp = a[j,lk]/rdiag[k]
-                     rdiag[k] = rdiag[k] * Numeric.sqrt(max((1.-temp**2), 0.))
+                     rdiag[k] = rdiag[k] * Num.sqrt(max((1.-temp**2), 0.))
                      temp = rdiag[k]/wa[k]
                      if ((0.05*temp*temp) <= machep):
                         rdiag[k] = self.enorm(a[j+1:,lk])
@@ -1841,16 +1837,14 @@ Keywords:
    
    def qrsolv(self, r, ipvt, diag, qtb, sdiag):
       if (self.debug): print 'Entering qrsolv...'
-      sz = Numeric.shape(r)
-      m = sz[0]
-      n = sz[1]
+      m,n = r.shape()
 
       ## copy r and (q transpose)*b to preserve input and initialize s.
       ## in particular, save the diagonal elements of r in x.
 
       for j in range(n):
          r[j:n,j] = r[j,j:n]
-      x = Numeric.diagonal(r)
+      x = Num.diagonal(r)
       wa = qtb.copy()
 
       ## Eliminate the diagonal matrix d using a givens rotation
@@ -1869,11 +1863,11 @@ Keywords:
             if (sdiag[k] == 0): break
             if (abs(r[k,k]) < abs(sdiag[k])):
                cotan  = r[k,k]/sdiag[k]
-               sine   = 0.5/Numeric.sqrt(.25 + .25*cotan*cotan)
+               sine   = 0.5/Num.sqrt(.25 + .25*cotan*cotan)
                cosine = sine*cotan
             else:
                tang   = sdiag[k]/r[k,k]
-               cosine = 0.5/Numeric.sqrt(.25 + .25*tang*tang)
+               cosine = 0.5/Num.sqrt(.25 + .25*tang*tang)
                sine   = cosine*tang
              
             ## Compute the modified diagonal element of r and the
@@ -1894,7 +1888,7 @@ Keywords:
       ## Solve the triangular system for z.  If the system is singular
       ## then obtain a least squares solution
       nsing = n
-      wh = Numeric.nonzero(sdiag == 0)
+      wh = Num.nonzero(sdiag == 0)
       if (len(wh) > 0):
          nsing = wh[0]
          wa[nsing:] = 0
@@ -1903,11 +1897,11 @@ Keywords:
          wa[nsing-1] = wa[nsing-1]/sdiag[nsing-1] ## Degenerate case
          ## *** Reverse loop ***
          for j in range(nsing-2,-1,-1):  
-            sum = Numeric.sum(r[j+1:nsing,j]*wa[j+1:nsing])
+            sum = Num.sum(r[j+1:nsing,j]*wa[j+1:nsing])
             wa[j] = (wa[j]-sum)/sdiag[j]
 
       ## Permute the components of z back to components of x
-      Numeric.put(x, ipvt, wa)
+      Num.put(x, ipvt, wa)
       return(r, x, sdiag)
 
          
@@ -2011,15 +2005,13 @@ Keywords:
 
       if (self.debug): print 'Entering lmpar...'
       dwarf = self.machar.minnum
-      sz = Numeric.shape(r)
-      m = sz[0]
-      n = sz[1]
+      m,n = r.shape()
 
       ## Compute and store in x the gauss-newton direction.  If the
       ## jacobian is rank-deficient, obtain a least-squares solution
       nsing = n
       wa1 = qtb.copy()
-      wh = Numeric.nonzero(Numeric.diagonal(r) == 0)
+      wh = Num.nonzero(Num.diagonal(r) == 0)
       if len(wh) > 0:
          nsing = wh[0]
          wa1[wh[0]:] = 0
@@ -2031,7 +2023,7 @@ Keywords:
                wa1[0:j] = wa1[0:j] - r[0:j,j]*wa1[j]
 
       ## Note: ipvt here is a permutation array
-      Numeric.put(x, ipvt, wa1)
+      Num.put(x, ipvt, wa1)
 
       ## Initialize the iteration counter.  Evaluate the function at the
       ## origin, and test for acceptance of the gauss-newton direction
@@ -2048,10 +2040,10 @@ Keywords:
       
       parl = 0.
       if nsing >= n:
-         wa1 = Numeric.take(diag, ipvt)*Numeric.take(wa2, ipvt)/dxnorm
+         wa1 = Num.take(diag, ipvt)*Num.take(wa2, ipvt)/dxnorm
          wa1[0] = wa1[0] / r[0,0] ## Degenerate case 
          for j in range(1,n):   ## Note "1" here, not zero
-            sum = Numeric.sum(r[0:j,j]*wa1[0:j])
+            sum = Num.sum(r[0:j,j]*wa1[0:j])
             wa1[j] = (wa1[j] - sum)/r[j,j]
 
          temp = self.enorm(wa1)
@@ -2059,7 +2051,7 @@ Keywords:
 
       ## Calculate an upper bound, paru, for the zero of the function
       for j in range(n):
-         sum = Numeric.sum(r[0:j+1,j]*qtb[0:j+1])
+         sum = Num.sum(r[0:j+1,j]*qtb[0:j+1])
          wa1[j] = sum/diag[ipvt[j]]
       gnorm = self.enorm(wa1)
       paru = gnorm/delta
@@ -2078,7 +2070,7 @@ Keywords:
       
          ## Evaluate the function at the current value of par
          if par == 0: par = max([dwarf, paru*0.001])
-         temp = Numeric.sqrt(par)
+         temp = Num.sqrt(par)
          wa1 = temp * diag
          [r, x, sdiag] = self.qrsolv(r, ipvt, wa1, qtb, sdiag)
          wa2 = diag*x
@@ -2091,7 +2083,7 @@ Keywords:
             (iter == 10)): break;
 
          ## Compute the newton correction
-         wa1 = Numeric.take(diag, ipvt)*Numeric.take(wa2, ipvt)/dxnorm
+         wa1 = Num.take(diag, ipvt)*Num.take(wa2, ipvt)/dxnorm
 
          for j in range(n-1):
             wa1[j] = wa1[j]/sdiag[j]
@@ -2195,18 +2187,17 @@ Keywords:
    def calc_covar(self, rr, ipvt=None, tol=1.e-14):
 
       if (self.debug): print 'Entering calc_covar...'
-      if Numeric.rank(rr) != 2:
+      if Num.rank(rr) != 2:
          print 'ERROR: r must be a two-dimensional matrix'
          return(-1)
-      s = Numeric.shape(rr)
-      n = s[0]
-      if s[0] != s[1]:
+      n,m = rr.shape()
+      if n != m:
          print 'ERROR: r must be a square matrix'
          return(-1)
 
-      if (ipvt == None): ipvt = Numeric.arange(n)
+      if (ipvt == None): ipvt = Num.arange(n)
       r = rr.copy()
-      r.shape = [n,n]
+      r.shape = (n,n)
 
       ## For the inverse of r in the full upper triangle of r
       l = -1
@@ -2232,7 +2223,7 @@ Keywords:
 
       ## For the full lower triangle of the covariance matrix
       ## in the strict lower triangle or and in wa
-      wa = Numeric.repeat([r[0,0]], n)
+      wa = Num.repeat([r[0,0]], n)
       for j in range(n):
          jj = ipvt[j]
          sing = j > l
@@ -2263,9 +2254,9 @@ class machar:
          self.minnum = 2.2250739e-308
          self.maxgam = 171.624376956302725
          
-      self.maxlog = Numeric.log(self.maxnum)
-      self.minlog = Numeric.log(self.minnum)
-      self.rdwarf = Numeric.sqrt(self.minnum*1.5) * 10
-      self.rgiant = Numeric.sqrt(self.maxnum) * 0.1
+      self.maxlog = Num.log(self.maxnum)
+      self.minlog = Num.log(self.minnum)
+      self.rdwarf = Num.sqrt(self.minnum*1.5) * 10
+      self.rgiant = Num.sqrt(self.maxnum) * 0.1
 
 

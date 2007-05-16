@@ -1,5 +1,3 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
-
 """
 Support for Multi-Element Detectors (Med).
 
@@ -9,7 +7,7 @@ Modifications:
 """
 
 import Mca
-import numpy.oldnumeric as Numeric
+import numpy as Num
 import spline
 import copy
 
@@ -367,7 +365,7 @@ class Med:
         nchans = len(temp)
 
         # init all data to zeros
-        data = Numeric.zeros((self.n_detectors, nchans))
+        data = Num.zeros((self.n_detectors, nchans))
 
         for d in range(self.n_detectors):
             if d not in bad_mca_idx:
@@ -381,10 +379,10 @@ class Med:
                 if d not in bad_mca_idx:
                     energy = self.mcas[d].get_energy()
                     temp = spline.spline_interpolate(energy, data[d,:], ref_energy)
-                    data[d,:] = (temp+.5).astype(Numeric.Int)
+                    data[d,:] = int(temp+.5)
 
         if total == True and self.n_detectors > 1:
-            data = Numeric.sum(data)
+            data = data.sum()
             return [data]
         else:
             return data

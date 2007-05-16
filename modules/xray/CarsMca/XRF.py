@@ -1,7 +1,5 @@
-## Automatically adapted for numpy.oldnumeric May 08, 2007 by 
 
-
-from Num import Num, num_version
+import numpy as Num
 import types
 import time
 import copy
