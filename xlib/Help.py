@@ -514,11 +514,10 @@ class Help:
         show_more(self.buff)
         self.buff = []
         
-
     def show_symbols(self,args,indent=1,title=None,groupname=None,followgroups=False):
         " list all contents of a group "
 
-        print "==Show Symbols " , args, indent, title, groupname
+        # print "==Show Symbols " , args, indent, title, groupname
         vtab = '  '*indent
         ttab = '  '*(indent-1)
         if title is not None: self.bprint("%s==%s==" % (ttab,title))
@@ -529,6 +528,7 @@ class Help:
             if nam.startswith("%s."%groupname): nam = nam[len(groupname)+1:]
             
             nam  = nam + ' '*(self.charlen - len(nam))
+            # print ' >> ', nam,sym
             self.bprint("%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
 
             if isGroup(sym) and followgroups:
@@ -536,6 +536,7 @@ class Help:
                 self.show_symbols(sym.values(), title=sym.getinfo(extended=True),
                                   groupname=sym.name, 
                                   indent=indent+1,followgroups=followgroups)
+
         self.__showbuff()
         
     def show_topgroups(self):
@@ -566,9 +567,8 @@ class Help:
         
         try:
             sym = self.tdl.symbolTable.getSymbol(arg)
-            print 'SHOW ', arg, sym, isSymbol(sym), isGroup(sym)
             if  isSymbol(sym):
-                self.show_symbols(sym)
+                self.show_symbols([sym])
             elif isGroup(sym):
                 self.show_symbols(sym.values())
             elif type(arg)==types.FunctionType:
@@ -587,6 +587,7 @@ class Help:
         if len(args) > 0:  key = args.pop(0).strip()
         self.__showbuff()
         self.help_topics = self.list_topics()
+
         if key is None:
             self.bprint( self.topics['help'])
         elif key in ('-t','topics'):
@@ -597,7 +598,8 @@ class Help:
             self.bprint(self.get_help(key))
         else:
             args.insert(0,key)
-            self.show_symbols(args)
+            for a in args: self.show(a)
+
         self.__showbuff()
 
 # 

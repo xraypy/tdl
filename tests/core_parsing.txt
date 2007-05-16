@@ -1,114 +1,108 @@
 ##
 ## core parsing tests
-
-## regular math precedence
- 1+2*3                   =>  1.0,  2.0,  3.0,  *,  +
- 2*(4/3)                 =>  2.0,  4.0,  3.0,  /,  *
- 2*4/3                   =>  2.0,  4.0,  *,  3.0,  /
- 2*(4+3)                 =>  2.0,  4.0,  3.0,  +,  *
- 2*4+3                   =>  2.0,  4.0,  *,  3.0,  +
- 5/2+3                   =>  5.0,  2.0,  /,  3.0,  +
- 5/2*3                   =>  5.0,  2.0,  /,  3.0,  *
- 6/2/3                   =>  6.0,  2.0,  /,  3.0,  /
- 2^3+3                   =>  2.0,  3.0,  ^,  3.0,  +
- 2^(3+3)                 =>  2.0,  3.0,  3.0,  +,  ^
- 2^(3*3)                 =>  2.0,  3.0,  3.0,  *,  ^
- 3 * -2                  =>  3.0,  2.0,  @UN-,  *
- -3^2                    =>  3.0,  2.0,  ^,  @UN-
- 2^3^2                   =>  2.0,  3.0,  2.0,  ^,  ^
- 2^4 + 1                 =>  2.0,  4.0,  ^,  1.0,  +
- 8*3^2 + 2               =>  8.0,  3.0,  2.0,  ^,  *,  2.0,  +
- -1**3                   =>  1.0,  3.0,  **,  @UN-
-
- 0.2                     =>  0.2
- 0.223e+4                =>  2230.0
- .32101e+3j              =>  321.01j
-
-## with variables and array slices
- -pi/3                   =>  pi,  @VAR,  @UN-,  3.0,  /
- a[2]                    =>  2.0, a,  1, @ARR
- a[2] + 3                =>  2, a, 1,  @ARR,  3.0,  +
- b[2][5]                 =>  2.0, 5.0, b,  2, @ARR
- b[2,5]                  =>   2.0, 5.0, b,  2, @ARR
- c[2:3]                  =>   2.0,  3.0,  @SLI,  c, 1,  @ARR
- c[3:4:5]                =>  3.0,  4.0,  5.0,  @SL3,  c,  1, @ARR
- (a+x)[3:6][6]           =>  a, @VAR,  x,  @VAR,  +,  3.0,  6.0,  @SLI,  6.0,  2,  @SUB
- a[3:6][6:12]            =>  3.0,  6.0,  @SLI,  6.0,  12.0,  @SLI, a,  2, @ARR
- a[3:6,6:12]             =>  3.0,  6.0,  @SLI,  6.0,  12.0,  @SLI,  a,  2, @ARR
- (a[3:6])[6:12]          =>  3.0,  6.0,  @SLI,  a, 1, @ARR,  6.0,  12.0,  @SLI,  1,  @SUB
-
-
- e^(1j*pi) + 1           =>  e,  @VAR,  1j,  pi,  @VAR,  *,  ^,  1.0,  +
-
- -(a[3:5] + 2)           =>  3.0,  5.0,  @SLI, a, 1, @ARR,  2.0,  +,  @UN-
- -a[3:7] + 2.0           =>  3.0,  7.0,  @SLI,  a,  1, @ARR,  @UN-,  2.0,  +
-
-  a[3+1]                 => 3, 1, +, a, 1, @ARR
-
-## logic and more precedence tests
- x == 2                  =>  x,  @VAR,  2.0,  ==
- x == 3                  =>  x,  @VAR,  3.0,  ==
- x != 3                  =>  x,  @VAR,  3.0,  !=
- x >= 1                  =>  x,  @VAR,  1.0,  >=
- x >= 3                  =>  x,  @VAR,  3.0,  >=
- x >= 4                  =>  x,  @VAR,  4.0,  >=
- x < 99                  =>  x,  @VAR,  99.0,  <
- (x>u) or x*u>100        =>  x,  @VAR,  u,  @VAR,  >,  x,  @VAR,  u,  @VAR,  *,  100.0,  >,  or
- not yes                 =>  yes,  @VAR,  not
- not no                  =>  no,  @VAR,  not
- ! yes                   =>  yes,  @VAR,  not
- ! no                    =>  no,  @VAR,  not
- yes and no or nottrue   =>  yes,  @VAR,  no,  @VAR,  and,  nottrue,  @VAR,  or
- yes and (no or nottrue) =>  yes,  @VAR,  no,  @VAR,  nottrue,  @VAR,  or,  and
- (yes and no) or nottrue =>  yes,  @VAR,  no,  @VAR,  and,  nottrue,  @VAR,  or
- yes or no and nottrue   =>  yes,  @VAR,  no,  @VAR,  nottrue,  @VAR,  and,  or
- yes or (no and nottrue) =>  yes,  @VAR,  no,  @VAR,  nottrue,  @VAR,  and,  or
- (yes or no) and nottrue =>  yes,  @VAR,  no,  @VAR,  or,  nottrue,  @VAR,  and
- yes or not no           =>  yes,  @VAR,  no,  @VAR,  not,  or
- not (no or yes)         =>  no,  @VAR,  yes,  @VAR,  or,  not
- not no or yes           =>  no,  @VAR,  not,  yes,  @VAR,  or
-
- a[0] and a[1]           =>  0.0, a,  1, @ARR,  1.0, a, 1,  @ARR,  and
- not a[0]                =>  0.0, a,  1, @ARR, not
- not a[2]                =>  2.0, a,  1, @ARR, not
-
-## function calls
- a(3,4)                  =>  3.0,  4.0,  a,  2, @FCN
- f2()                    =>  f2,  0,  @FCN
- fcn(3,4,a=2)            =>  3.0,  4.0,  2.0,  a,  @ASN,  fcn,  3,  @FCN
- sqrt(33.2j / cos(88.0)) =>  33.2j,  88.0,  cos,  1, @FCN,  /,  sqrt,  1,  @FCN
- cos(0.1)                =>  0.1,  cos,  1,  @FCN
- sin(0.1)                =>  0.1,  sin,  1,  @FCN
- sin(pi/2 - tan(0.1))    =>  pi,  @VAR,  2.0,  /,  0.1,  tan,  1,  @FCN,  -,  sin,  1,  @FCN
- sin(a*pi/20)            =>  a,  @VAR,  pi,  @VAR,  *,  20.0,  /,  sin,  1, @FCN
- tan(0.2 + 1.0j)         =>  0.2,  1j,  +,  tan,  1,  @FCN
- xtal.y.n(22)            =>  22.0,  xtal.y.n,  1,  @FCN
-
-
- f1(2,8.0)               =>  2.0,  8.0,  f1,  2, @FCN
- f1(2,2*7,c=11.0)        =>  2.0,  2.0,  7.0,  *,  11.0,  c,  @ASN,  f1,  3,  @FCN
- f1(2,8.0,c=sin(0.3))    =>  2.0,  8.0,  0.3,  sin,  1,  @FCN,  c,  @ASN,  f1,  3,  @FCN
-
- f2(c=99)               =>  99.0,  c,  @ASN,  f2,  1,  @FCN
-
- max(a[3]*01,9,3)       =>  3.0, a,  1, @ARR, 1.0,  *,  9.0,  3.0,  max,  3,  @FCN
- f3(2.5,b)[3]           =>  2.5,  b,  @VAR,  3.0, f3,  2,  1, @AFN
- f3(2.5,b)[3][4]        =>  2.5,  b,  @VAR,  3.0,  4.0, f3,  2,  2,  @AFN
-
-
-## strings
- 'a simple string ' =>  'a simple string ',  @STR
- ' %s = %g '  % ['sqrt(22.3)',sqrt(22.3)] =>  ' %s = %g ', @STR, 'sqrt(22.3)', @STR, 22.3, sqrt, 1, @FCN, 2, @LIS, %
-
-## dictionaries and lists
-
- [0,1,2,4,8,16,32]      =>  0.0,  1.0,  2.0,  4.0,  8.0,  16.0,  32.0,  7,  @LIS
- adict['b']             =>  'b',  @STR, adict,  1, @ARR
- adict['c'] /adict['b'] =>  'c',  @STR,  adict,  1, @ARR, 'b',  @STR, adict,  1, @ARR,  /
-
-
- [1,2,['a', 'b','c'], 4.0] =>  1.0,  2.0,  'a',  @STR,  'b',  @STR,  'c',  @STR,  3,  @LIS,  4.0,  4,  @LIS
- {'a':1, 'b':2.0, 'c':[1,2,3]} =>  1.0,  a,  @ASN,  2.0,  b,  @ASN,  1.0,  2.0,  3.0,  3,  @LIS,  c,  @ASN,  3,  @DIC
-
-
 ##
+# math precedence
+1+2*3                     =>  '+', '*', 3.0, 2.0, 1.0
+2*(4/3)                   =>  '*', '/', 3.0, 4.0, 2.0
+2*4/3                     =>  '/', 3.0, '*', 4.0, 2.0
+2*(4+3)                   =>  '*', '+', 3.0, 4.0, 2.0
+2*4+3                     =>  '+', 3.0, '*', 4.0, 2.0
+5/2+3                     =>  '+', 3.0, '/', 2.0, 5.0
+5/2*3                     =>  '*', 3.0, '/', 2.0, 5.0
+6/2/3                     =>  '/', 3.0, '/', 2.0, 6.0
+2^3+3                     =>  '+', 3.0, '^', 3.0, 2.0
+2^(3+3)                   =>  '^', '+', 3.0, 3.0, 2.0
+2^(3*3)                   =>  '^', '*', 3.0, 3.0, 2.0
+3 * -2                    =>  '*', '@UN-', 2.0, 3.0
+-3^2                      =>  '@UN-', '^', 2.0, 3.0
+2^3^2                     =>  '^', '^', 2.0, 3.0, 2.0
+2^4 + 1                   =>  '+', 1.0, '^', 4.0, 2.0
+8*3^2 + 2                 =>  '+', 2.0, '*', '^', 2.0, 3.0, 8.0
+-1**3                     =>  '@UN-', '**', 3.0, 1.0
+
+0.2                       =>  0.20000000000000001
+0.223e+4                  =>  2230.0
+.32101e+3j                =>  321.00999999999999j
+-pi/3                     =>  '/', 3.0, '@UN-', '@VAR', 'pi'
+
+# variables and array slices
+a[2]                      =>  '@ARR', 1, 'a', 2.0
+a[2] + 3                  =>  '+', 3.0, '@ARR', 1, 'a', 2.0
+b[2][5]                   =>  '@ARR', 2, 'b', 5.0, 2.0
+b[2,5]                    =>  '@ARR', 2, 'b', 5.0, 2.0
+c[2:3]                    =>  '@ARR', 1, 'c', '@SLI', 3.0, 2.0
+c[3:4:5]                  =>  '@ARR', 1, 'c', '@SL3', 5.0, 4.0, 3.0
+(a+x)[3:6][6]             =>  '@SUB', 2, 6.0, '@SLI', 6.0, 3.0, '+', '@VAR', 'x', '@VAR', 'a'
+a[3:6][6:12]              =>  '@ARR', 2, 'a', '@SLI', 12.0, 6.0, '@SLI', 6.0, 3.0
+a[3:6,6:12]               =>  '@ARR', 2, 'a', '@SLI', 12.0, 6.0, '@SLI', 6.0, 3.0
+(a[3:6])[6:12]            =>  '@SUB', 1, '@SLI', 12.0, 6.0, '@ARR', 1, 'a', '@SLI', 6.0, 3.0
+e^(1j*pi) + 1             =>  '+', 1.0, '^', '*', '@VAR', 'pi', 1j, '@VAR', 'e'
+-(a[3:5] + 2)             =>  '@UN-', '+', 2.0, '@ARR', 1, 'a', '@SLI', 5.0, 3.0
+-a[3:7] + 2.0             =>  '+', 2.0, '@UN-', '@ARR', 1, 'a', '@SLI', 7.0, 3.0
+a[3+1]                    =>  '@ARR', 1, 'a', '+', 1.0, 3.0
+
+
+# logic and more precedence tests
+x == 2                    =>  '==', 2.0, '@VAR', 'x'
+x == 3                    =>  '==', 3.0, '@VAR', 'x'
+x != 3                    =>  '!=', 3.0, '@VAR', 'x'
+x >= 1                    =>  '>=', 1.0, '@VAR', 'x'
+x >= 3                    =>  '>=', 3.0, '@VAR', 'x'
+x >= 4                    =>  '>=', 4.0, '@VAR', 'x'
+x < 99                    =>  '<', 99.0, '@VAR', 'x'
+(x>u) or x*u>100          =>  'or', '>', 100.0, '*', '@VAR', 'u', '@VAR', 'x', '>', '@VAR', 'u', '@VAR', 'x'
+not yes                   =>  'not', '@VAR', 'yes'
+not no                    =>  'not', '@VAR', 'no'
+! yes                     =>  'not', '@VAR', 'yes'
+! no                      =>  'not', '@VAR', 'no'
+yes and no or nottrue     =>  'or', '@VAR', 'nottrue', 'and', '@VAR', 'no', '@VAR', 'yes'
+yes and (no or nottrue)   =>  'and', 'or', '@VAR', 'nottrue', '@VAR', 'no', '@VAR', 'yes'
+(yes and no) or nottrue   =>  'or', '@VAR', 'nottrue', 'and', '@VAR', 'no', '@VAR', 'yes'
+yes or no and nottrue     =>  'or', 'and', '@VAR', 'nottrue', '@VAR', 'no', '@VAR', 'yes'
+yes or (no and nottrue)   =>  'or', 'and', '@VAR', 'nottrue', '@VAR', 'no', '@VAR', 'yes'
+(yes or no) and nottrue   =>  'and', '@VAR', 'nottrue', 'or', '@VAR', 'no', '@VAR', 'yes'
+yes or not no             =>  'or', 'not', '@VAR', 'no', '@VAR', 'yes'
+not (no or yes)           =>  'not', 'or', '@VAR', 'yes', '@VAR', 'no'
+not no or yes             =>  'or', '@VAR', 'yes', 'not', '@VAR', 'no'
+
+a[0] and a[1]             =>  'and', '@ARR', 1, 'a', 1.0, '@ARR', 1, 'a', 0.0
+not a[0]                  =>  'not', '@ARR', 1, 'a', 0.0
+not a[2]                  =>  'not', '@ARR', 1, 'a', 2.0
+
+# function calls
+f1(3,4)                   =>  '@FCN', 2, 'f1', 4.0, 3.0
+f2()                      =>  '@FCN', 0, 'f2'
+fcn(3,4,a=2)              =>  '@FCN', 3, 'fcn', '@ASN', 'a', 2.0, 4.0, 3.0
+sqrt(33.2j / cos(88.0))   =>  '@FCN', 1, 'sqrt', '/', '@FCN', 1, 'cos', 88.0, 33.200000000000003j
+cos(0.1)                  =>  '@FCN', 1, 'cos', 0.10000000000000001
+sin(pi/2 - tan(0.1))      =>  '@FCN', 1, 'sin', '-', '@FCN', 1, 'tan', 0.10000000000000001, '/', 2.0, '@VAR', 'pi'
+sin(a*pi/20)              =>  '@FCN', 1, 'sin', '/', 20.0, '*', '@VAR', 'pi', '@VAR', 'a'
+tan(0.2 + 1.0j)           =>  '@FCN', 1, 'tan', '+', 1j, 0.20000000000000001
+f1(2,2*7,c=11.0)          =>  '@FCN', 3, 'f1', '@ASN', 'c', 11.0, '*', 7.0, 2.0, 2.0
+f1(2,8.0,c=sin(0.3))      =>  '@FCN', 3, 'f1', '@ASN', 'c', '@FCN', 1, 'sin', 0.29999999999999999, 8.0, 2.0
+max(a[3]*01,9,3)          =>  '@FCN', 3, 'max', 3.0, 9.0, '*', 1.0, '@ARR', 1, 'a', 3.0
+f3(2.5,b)[3]              =>  '@AFN', 1, 2, 'f3', 3.0, '@VAR', 'b', 2.5
+f3(2.5,b)[3][4]           =>  '@AFN', 2, 2, 'f3', 4.0, 3.0, '@VAR', 'b', 2.5
+
+# strings and string interpolation
+'a simple string '        =>  '@STR', "'a simple string '"
+' %s = %g '  % ['sqrt(22.3)',sqrt(22.3)]   =>  '%', '@LIS', 2, '@FCN', 1, 'sqrt', 22.300000000000001, '@STR', "'sqrt(22.3)'", '@STR', "' %s = %g '"
+
+# lists and dictionaries
+[0,1,2,4,8,16,32]              =>  '@LIS', 7, 32.0, 16.0, 8.0, 4.0, 2.0, 1.0, 0.0
+adict['b']                     =>  '@ARR', 1, 'adict', '@STR', "'b'"
+adict['c'] /adict['b']         =>  '/', '@ARR', 1, 'adict', '@STR', "'b'", '@ARR', 1, 'adict', '@STR', "'c'"
+[1,2,['a', 'b','c'], 4.0]      =>  '@LIS', 4, 4.0, '@LIS', 3, '@STR', "'c'", '@STR', "'b'", '@STR', "'a'", 2.0, 1.0
+{'a':1, 'b':2.0, 'c':[1,2,3]}  =>  '@DIC', 3, '@ASN', 'c', '@LIS', 3, 3.0, 2.0, 1.0, '@ASN', 'b', 2.0, '@ASN', 'a', 1.0
+
+
+
+## attributes and methods
+## currently (r221) these tests all fail: work in progress on parser
+# group.x    =>  '@ATR', 'x', '@VAR', 'group'
+# group.x()    =>  '@MTH', 0, 'x', '@VAR', 'group'
+# group.x(file='bob.dat')    =>  '@MTH', 1, 'x', '@ASN', 'file', '@STR', "'bob.dat'", '@VAR', 'group'
+# group[0].x    =>  '@ATR', 'x', '@ARR', 1, 'group', 0.0
+# group[2:10,3].x    =>  '@ATR', 'x', '@ARR', 2, 'group', 3.0, '@SLI', 10.0, 2.0
+# group.x['a'].value    =>  '@ATR', 'value', '@ATA', 1, 'x', '@STR', "'a'", '@VAR', 'group'
+# group.x[0].method()    =>  '@MTH', 0, 'method', '@ATA', 1, 'x', 0.0, '@VAR', 'group'
