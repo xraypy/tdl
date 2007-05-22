@@ -4,11 +4,12 @@
 #   Author:  Mark Rivers
 #   Created: Sept. 16, 2002
 #   Modifications:
+#      M Newville cleaned up, May-22-2007
 
 nels = 100   # Number of elements in table
 nlines = 14  # Number of x-ray lines in table
 
-atomic_symbols = (
+atomic_symbols = [None,
    'H',  'He', 'Li', 'Be', 'B',  'C',  'N',  'O',  'F',  'Ne', 'Na', 'Mg', 'Al',
    'Si', 'P',  'S',  'Cl', 'Ar', 'K',  'Ca', 'Sc', 'Ti', 'V',  'Cr', 'Mn', 'Fe',
    'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 
@@ -16,7 +17,7 @@ atomic_symbols = (
    'I',  'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb',
    'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W',  'Re', 'Os', 'Ir', 'Pt',
    'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa',
-   'U',  'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm')
+   'U',  'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm']
 
 # The xrf_lines database is a dictionary in the form {'FE': {'KA':6.400}}
 from xrf_lines import xrf_lines
@@ -40,11 +41,10 @@ def atomic_number(symbol):
         This function returns the atomic number of the input element.  If an
         invalid atomic symbol is input then the function returns 0.
     """
-    s = symbol.split()[0].upper()
-    for i in range(len(atomic_symbols)):
-        if (s == atomic_symbols[i].upper()): return i+1
-    return None
-
+    try:
+        return atomic_symbols.index(symbol.title())
+    except:
+        return None
 
 def atomic_symbol(z):
     """
@@ -60,9 +60,11 @@ def atomic_symbol(z):
         string.  If Z is an invalid atomic number then the function returns 
         None.
     """
-    if (z > 0) and (z <= len(atomic_symbols)): return(atomic_symbols[z-1])
-    return None
-
+    try:
+        return atomic_symbols[z]
+    except:
+        return None
+    
 
 def lookup_xrf_line(xrf_line):
     """
@@ -106,12 +108,10 @@ def lookup_xrf_line(xrf_line):
     """
 
     try:
-       words = xrf_line.split()
-       element = words[0].strip().upper()
-       line    = words[1].strip().upper()
-       return xrf_lines[element][line]
+        element,line = [i.strip().upper() for i in xrf_line.split()]
+        return xrf_lines[element][line]
     except:
-       return None
+        return None
 
 
 def lookup_gamma_line(gamma_line):
@@ -148,10 +148,8 @@ def lookup_gamma_line(gamma_line):
         energy = lookup_gamma_line('Co57 g1')  ; Look up 14 keV line of Co-57
     """
     try:
-       words = gamma_line.split()
-       isotope = words[0].strip().upper()
-       line    = words[1].strip().upper()
-       return gamma_lines[isotope][line]
+        isotope,line = [i.strip().upper() for i in gamma_line.split()]
+        return gamma_lines[isotope][line]
     except:
        return None
 
@@ -161,23 +159,18 @@ def list_lines(Emin=0.01,Emax=40.,short=False):
     by energy, flags for looking at specific elements,ignoring
     line types etc......
     """
-    if short == True:
-        xlines = xrf_lines_short
-    else:
-        xlines = xrf_lines
+    xlines = xrf_lines
+    if short: xlines = xrf_lines_short
+
     if Emin == Emax:
-        Emin = 0.01
-        Emax = 40.
+        Emin,Emax = 0.01,40.0
+
     if Emin <= 0: Emin = 0.001
     lines = []
     for el in xlines.keys():
         for line in xlines[el].keys():
-            if xlines[el][line] >= Emin and \
-               xlines[el][line] <= Emax:
-                lbl = el[0]
-                if len(el) > 1: lbl = lbl + el[1].lower()
-                lbl = '%s %s' % (lbl,line)
-                lines.append(lbl)
+            if xlines[el][line] >= Emin and xlines[el][line] <= Emax:
+                lines.append('%s %s' % (el.title(),line))
     lines.sort()
     return lines
     
