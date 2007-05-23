@@ -1,3 +1,17 @@
+#Converted to use numpy 5-22-07
+#
+#TPT
+# Number of issues with numpy vs Numeric.  The main prblem is with the use of Num.nonzero
+# With Numeric this returned a vector of indicies, and failed if applied to a non-vector(?)
+# This beahviour was assumed throughout this module
+# Numpy returns a tuple of arrays holding indicies, so it should work with any array, but operations
+# like len(Num.nonzero( x == 0) ) fail.
+#
+# Currently, the code does work with numpy.  But it could use a
+# a careful vetting to better use numpy capabilties and check for more bugs.
+# Many of the trouble spots have been flagged with TPT (and a quick/crude hack to get it to work)
+#
+
 """
 Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 
@@ -938,8 +952,14 @@ Keywords:
       ## Finish up the free parameters
       ifree = Num.nonzero(pfixed != 1)
       #TPT
-      #nfree = len(ifree)
-      nfree = len(Num.transpose(ifree))
+      # note this is a big cause of
+      # the problems since numpy.nonzero rets a tuple
+      # behaves very different than with Numeric
+      # using ifree = ifree[0] should give same behavior
+      # as with numeric.
+      #nfree = len(Num.transpose(ifree))
+      ifree = ifree[0]
+      nfree = len(ifree)
       if nfree == 0:
          self.errmsg = 'ERROR: no free parameters'
          return
@@ -948,8 +968,12 @@ Keywords:
       self.params = xall      ## self.params is the set of parameters to be returned
       x = Num.take(self.params, ifree)  ## x is the set of free parameters
       #TPT
-      # this could probably just be
-      # x = self.params(ifree)
+      # this could just be
+      #x = self.params[ifree]
+      # if left ifree as a tuple
+      #print self.params
+      #print ifree
+      #print x
 
       ## LIMITED parameters ?
       limited = self.parinfo(parinfo, 'limited', default=[0,0])
@@ -1075,12 +1099,15 @@ Keywords:
             catch_msg = 'zeroing derivatives of pegged parameters'
             whlpeg = Num.nonzero(qllim & (x == llim))
             #TPT
-            #nlpeg = len(whlpeg)
-            nlpeg = len(Num.transpose(whlpeg))
+            #nlpeg = len(Num.transpose(whlpeg))
+            whlpeg = whlpeg[0]
+            nlpeg = len(whlpeg)
+            
             whupeg = Num.nonzero(qulim & (x == ulim))
             #TPT
-            #nupeg = len(whupeg)
-            nupeg = len(Num.transpose(whupeg))
+            #nupeg = len(Num.transpose(whupeg))
+            whupeg = whupeg[0]
+            nupeg = len(whupeg)
             ## See if any "pegged" values should keep their derivatives
             if (nlpeg > 0):
                ## Total derivative of sum wrt lower pegged parameters
@@ -1193,12 +1220,16 @@ Keywords:
 
                   dwa1 = abs(wa1) > machep
                   whl = Num.nonzero(((dwa1!=0.) & qllim) & ((x + wa1) < llim))
-                  if (len(whl) > 0):
+                  #TPT
+                  #if (len(whl) > 0):
+                  if (len(Num.transpose(whl)) > 0):
                      t = ((Num.take(llim, whl) - Num.take(x, whl)) /
                            Num.take(wa1, whl))
                      alpha = min(alpha, min(t))
                   whu = Num.nonzero(((dwa1!=0.) & qulim) & ((x + wa1) > ulim))
-                  if (len(whu) > 0):
+                  #TPT
+                  #if (len(whu) > 0):
+                  if (len(Num.transpose(whu)) > 0):
                      t = ((Num.take(ulim, whu) - Num.take(x, whu)) /
                            Num.take(wa1, whu))
                      alpha = min(alpha, min(t))
@@ -1207,7 +1238,9 @@ Keywords:
                if (qminmax):
                   nwa1 = wa1 * alpha
                   whmax = Num.nonzero((qmax != 0.) & (maxstep > 0))
-                  if (len(whmax) > 0):
+                  #TPT
+                  #if (len(whmax) > 0):
+                  if (len(Num.transpose(whmax)) > 0):
                      #####################################################################
                      ## http://osdir.com/ml/python.scientific.user/2004-08/index.html
                      #mrat = max(Num.take(nwa1, whmax) /
@@ -1224,9 +1257,13 @@ Keywords:
                ## Adjust the final output values.  If the step put us exactly
                ## on a boundary, make sure it is exact.
                wh = Num.nonzero((qulim!=0.) & (wa2 >= ulim*(1-machep)))
-               if (len(wh) > 0): Num.put(wa2, wh, Num.take(ulim, wh))
+               #TPT
+               #if (len(wh) > 0): Num.put(wa2, wh, Num.take(ulim, wh))
+               if (len(Num.transpose(wh)) > 0): Num.put(wa2, wh, Num.take(ulim, wh))
                wh = Num.nonzero((qllim!=0.) & (wa2 <= llim*(1+machep)))
-               if (len(wh) > 0): Num.put(wa2, wh, Num.take(llim, wh))
+               #TPT
+               #if (len(wh) > 0): Num.put(wa2, wh, Num.take(llim, wh))
+               if (len(Num.transpose(wh)) > 0): Num.put(wa2, wh, Num.take(llim, wh))
             # endelse
             wa3 = diag * wa1
             pnorm = self.enorm(wa3)
@@ -1340,7 +1377,9 @@ Keywords:
       ## (very carefully) set the covariance matrix COVAR
       if ((self.status > 0) and (nocovar==0) and (n != None)
                      and (fjac != None) and (ipvt != None)):
-         sz = fjac.shape()
+         #TPT
+         #sz = fjac.shape()
+         sz = fjac.shape
          if ((n > 0) and (sz[0] >= n) and (sz[1] >= n)
              and (len(ipvt) >= n)):
             catch_msg = 'computing the covariance matrix'
@@ -1360,7 +1399,9 @@ Keywords:
             self.perror = Num.zeros(nn, dtype=float)
             d = Num.diagonal(self.covar)
             wh = Num.nonzero(d >= 0)
-            if len(wh) > 0:
+            #TPT
+            #if len(wh) > 0:
+            if len(Num.transpose(wh)) > 0:
               Num.put(self.perror, wh, Num.sqrt(Num.take(d, wh)))
       return
 
@@ -1530,17 +1571,23 @@ Keywords:
       if step != None:
          stepi = Num.take(step, ifree)
          wh = Num.nonzero(stepi > 0)
-         if (len(wh) > 0): Num.put(h, wh, Num.take(stepi, wh))
+         #TPT
+         #if (len(wh) > 0): Num.put(h, wh, Num.take(stepi, wh))
+         if (len(Num.transpose(wh)) > 0): Num.put(h, wh, Num.take(stepi, wh))
 
       ## if relative step is given, use that
       if (len(dstep) > 0):
          dstepi = Num.take(dstep, ifree)
          wh = Num.nonzero(dstepi > 0)
-         if len(wh) > 0: Num.put(h, wh, abs(Num.take(dstepi,wh)*Num.take(x,wh)))
+         #TPT
+         #if len(wh) > 0: Num.put(h, wh, abs(Num.take(dstepi,wh)*Num.take(x,wh)))
+         if len(Num.transpose(wh)) > 0: Num.put(h, wh, abs(Num.take(dstepi,wh)*Num.take(x,wh)))
 
       ## In case any of the step values are zero
       wh = Num.nonzero(h == 0)
-      if len(wh) > 0: Num.put(h, wh, eps)
+      #TPT
+      #if len(wh) > 0: Num.put(h, wh, eps)
+      if len(Num.transpose(wh)) > 0: Num.put(h, wh, eps)
 
       ## Reverse the sign of the step if we are up against the parameter
       ## limit, or if the user requested it.
@@ -1554,7 +1601,9 @@ Keywords:
          #else:
          #    mask = mask 
          wh = Num.nonzero(mask)
-         if len(wh) > 0:
+         #TPT
+         #if len(wh) > 0:
+         if len(Num.transpose(wh)) > 0:
              Num.put(h, wh, -Num.take(h, wh))
       ## Loop through parameters, computing the derivative for each
       for j in range(n):
@@ -1709,7 +1758,9 @@ Keywords:
 
       if (self.debug): print 'Entering qrfac...'
       machep = self.machar.machep
-      m,n = a.shape()
+      #TPT
+      #m,n = a.shape()
+      m,n = a.shape
 
       ## Compute the initial column norms and initialize arrays
       acnorm = Num.zeros(n, dtype=float)
@@ -1726,6 +1777,8 @@ Keywords:
             ## Bring the column of largest norm into the pivot position
             rmax = max(rdiag[j:])
             kmax = Num.nonzero(rdiag[j:] == rmax)
+            #TPT
+            kmax = kmax[0]
             ct = len(kmax)
             kmax = kmax + j
             if ct > 0:
@@ -1858,7 +1911,9 @@ Keywords:
    
    def qrsolv(self, r, ipvt, diag, qtb, sdiag):
       if (self.debug): print 'Entering qrsolv...'
-      m,n = r.shape()
+      #TPT
+      #m,n = r.shape()
+      m,n = r.shape
 
       ## copy r and (q transpose)*b to preserve input and initialize s.
       ## in particular, save the diagonal elements of r in x.
@@ -1910,6 +1965,8 @@ Keywords:
       ## then obtain a least squares solution
       nsing = n
       wh = Num.nonzero(sdiag == 0)
+      #TPT
+      wh = wh[0]
       if (len(wh) > 0):
          nsing = wh[0]
          wa[nsing:] = 0
@@ -2026,13 +2083,17 @@ Keywords:
 
       if (self.debug): print 'Entering lmpar...'
       dwarf = self.machar.minnum
-      m,n = r.shape()
+      #TPT
+      #m,n = r.shape()
+      m,n = r.shape
 
       ## Compute and store in x the gauss-newton direction.  If the
       ## jacobian is rank-deficient, obtain a least-squares solution
       nsing = n
       wa1 = qtb.copy()
       wh = Num.nonzero(Num.diagonal(r) == 0)
+      #TPT
+      wh = wh[0]
       if len(wh) > 0:
          nsing = wh[0]
          wa1[wh[0]:] = 0
@@ -2211,7 +2272,9 @@ Keywords:
       if Num.rank(rr) != 2:
          print 'ERROR: r must be a two-dimensional matrix'
          return(-1)
-      n,m = rr.shape()
+      #TPT
+      #n,m = rr.shape()
+      n,m = rr.shape
       if n != m:
          print 'ERROR: r must be a square matrix'
          return(-1)
