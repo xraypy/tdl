@@ -165,6 +165,7 @@ class wxGUI(model.Background):
         from wxXRF import wxXRF
         # the child has to get self.shell from the parent
         filename = os.path.join(self.rsrc_path,'wxGUI','wxXRF.rsrc.py')
+        #print filename
         self.XrfWindow = model.childWindow(self, wxXRF,filename=filename)
         self.XrfWindow.position = (200, 5)
         self.XrfWindow.visible = True

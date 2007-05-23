@@ -921,7 +921,9 @@ Keywords:
       qmin = minstep * 0  ## Remove minstep for now!!
       qmax = maxstep != 0
       wh = Num.nonzero(((qmin!=0.) & (qmax!=0.)) & (maxstep < minstep))
-      if (len(wh) > 0):
+      #TPT
+      #if (len(wh) > 0):
+      if (len(Num.transpose(wh)) > 0):
          self.errmsg = 'ERROR: MPMINSTEP is greater than MPMAXSTEP'
          return
       ##################################################################
@@ -929,11 +931,15 @@ Keywords:
       #wh = Num.nonzero((qmin!=0.) & (qmax!=0.))
       ##################################################################
       wh = Num.nonzero((qmax!=0.))
-      qminmax = len(wh > 0)
+      #TPT
+      #qminmax = len(wh > 0)
+      qminmax = len(Num.transpose(wh) > 0)
 
       ## Finish up the free parameters
       ifree = Num.nonzero(pfixed != 1)
-      nfree = len(ifree)
+      #TPT
+      #nfree = len(ifree)
+      nfree = len(Num.transpose(ifree))
       if nfree == 0:
          self.errmsg = 'ERROR: no free parameters'
          return
@@ -941,6 +947,9 @@ Keywords:
       ## Compose only VARYING parameters
       self.params = xall      ## self.params is the set of parameters to be returned
       x = Num.take(self.params, ifree)  ## x is the set of free parameters
+      #TPT
+      # this could probably just be
+      # x = self.params(ifree)
 
       ## LIMITED parameters ?
       limited = self.parinfo(parinfo, 'limited', default=[0,0])
@@ -948,14 +957,18 @@ Keywords:
       if (limited != None) and (limits != None):
          ## Error checking on limits in parinfo
          wh = Num.nonzero((limited[:,0] & (xall < limits[:,0])) |
-                              (limited[:,1] & (xall > limits[:,1])))
-         if (len(wh) > 0):
+                          (limited[:,1] & (xall > limits[:,1])))
+         #TPT
+         #if (len(wh) > 0):
+         if (len(Num.transpose(wh)) > 0):
             self.errmsg = 'ERROR: parameters are not within PARINFO limits'
             return
          wh = Num.nonzero((limited[:,0] & limited[:,1]) &
-                              (limits[:,0] >= limits[:,1]) &
-                              (pfixed == 0))
-         if (len(wh) > 0):
+                          (limits[:,0] >= limits[:,1]) &
+                          (pfixed == 0))
+         #TPT
+         #if (len(wh) > 0):
+         if (len(Num.transpose(wh)) > 0):
             self.errmsg = 'ERROR: PARINFO parameter limits are not consistent'
             return
 
@@ -966,7 +979,9 @@ Keywords:
          llim  = Num.take(limits [:,0], ifree)
 
          wh = Num.nonzero((qulim!=0.) | (qllim!=0.))
-         if (len(wh) > 0): qanylim = 1
+         #TPT
+         #if (len(wh) > 0): qanylim = 1
+         if (len(Num.transpose(wh)) > 0): qanylim = 1
          else: qanylim = 0
       else:
          ## Fill in local variables with dummy values
@@ -987,7 +1002,9 @@ Keywords:
          self.errmsg = 'ERROR: DIAG parameter scales are inconsistent'
          if (len(diag) < n): return
          wh = Num.nonzero(diag <= 0)
-         if (len(wh) > 0): return
+         #TPT
+         #if (len(wh) > 0): return
+         if (len(Num.transpose(wh)) > 0): return
          self.errmsg = ''
 
       # Make sure x is a Numpy array of type float
@@ -1027,8 +1044,8 @@ Keywords:
 
                dof = max(len(fvec) - len(x), 0)
                status = iterfunct(fcn, self.params, self.niter, self.fnorm**2, 
-                  functkw=functkw, parinfo=parinfo, quiet=quiet, 
-                  dof=dof, **iterkw)
+                                  functkw=functkw, parinfo=parinfo, quiet=quiet, 
+                                  dof=dof, **iterkw)
                if (status != None): self.status = status
 
                ## Check for user termination
@@ -1046,9 +1063,9 @@ Keywords:
          self.status = 2
          catch_msg = 'calling MPFIT_FDJAC2'
          fjac = self.fdjac2(fcn, x, fvec, step, qulim, ulim, dside, 
-                       epsfcn=epsfcn, 
-                       autoderivative=autoderivative, dstep=dstep, 
-                       functkw=functkw, ifree=ifree, xall=self.params)
+                            epsfcn=epsfcn, 
+                            autoderivative=autoderivative, dstep=dstep, 
+                            functkw=functkw, ifree=ifree, xall=self.params)
          if (fjac == None):
             self.errmsg = 'WARNING: premature termination by FDJAC2'
             return
@@ -1057,9 +1074,13 @@ Keywords:
          if (qanylim):
             catch_msg = 'zeroing derivatives of pegged parameters'
             whlpeg = Num.nonzero(qllim & (x == llim))
-            nlpeg = len(whlpeg)
+            #TPT
+            #nlpeg = len(whlpeg)
+            nlpeg = len(Num.transpose(whlpeg))
             whupeg = Num.nonzero(qulim & (x == ulim))
-            nupeg = len(whupeg)
+            #TPT
+            #nupeg = len(whupeg)
+            nupeg = len(Num.transpose(whupeg))
             ## See if any "pegged" values should keep their derivatives
             if (nlpeg > 0):
                ## Total derivative of sum wrt lower pegged parameters

@@ -379,10 +379,11 @@ class Med:
                 if d not in bad_mca_idx:
                     energy = self.mcas[d].get_energy()
                     temp = spline.spline_interpolate(energy, data[d,:], ref_energy)
-                    data[d,:] = int(temp+.5)
-
+                    #data[d,:] = int(temp+.5)
+                    data[d,:] = (temp+.5).astype(Num.dtype('i'))
+                    
         if total == True and self.n_detectors > 1:
-            data = data.sum()
+            data = data.sum(axis=0)
             return [data]
         else:
             return data
