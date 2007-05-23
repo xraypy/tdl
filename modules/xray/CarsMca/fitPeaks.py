@@ -414,12 +414,16 @@ def fitPeaks(fit, peaks, observed):
 
     # Do some sanity checks
     # Don't fit global FWHM parameters if no peaks use these
-    wh = Num.nonzero(fwhm_flag == 0)
-    if (len(wh) < 2): fit.fwhm_flag = 0
+    #wh = Num.nonzero(fwhm_flag == 0)
+    #if (len(wh) < 2): fit.fwhm_flag = 0
+    wh = fwhm_flag == 0
+    if (wh.sum() < 2): fit.fwhm_flag = 0
 
     # Don't fit global energy parameters if no peaks use these
-    wh = Num.nonzero(energy_flag == 0)
-    if (len(wh) < 2): fit.energy_flag = 0
+    #wh = Num.nonzero(energy_flag == 0)
+    #if (len(wh) < 2): fit.energy_flag = 0
+    wh = energy_flag == 0
+    if (wh.sum() < 2): fit.energy_flag = 0
 
     # Make max channels check
     fit.nchans = min(fit.nchans, len(observed))

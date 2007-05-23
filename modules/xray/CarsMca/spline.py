@@ -10,7 +10,7 @@ def spline_interpolate_general(oldx, oldy, newx, smoothing=0.001, **kw):
      much slower than spline_interpolate for 1d cubic splines
 
     """
-    rep = splrep(oldx,oldy,s=smoothness,full_output=False,**kw)
+    rep = splrep(oldx,oldy,s=smoothing,full_output=False,**kw)
     return splev(newx, rep)
 
 def spline_interpolate(oldx, oldy, newx, smoothing=0.001, **kw):
