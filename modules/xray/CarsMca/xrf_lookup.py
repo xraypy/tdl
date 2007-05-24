@@ -1,10 +1,14 @@
+##############################################################
 #   This module provides a number of utility functions for
 #   X-ray fluorescence (XRF)
-#
-#   Author:  Mark Rivers
-#   Created: Sept. 16, 2002
-#   Modifications:
-#      M Newville cleaned up, May-22-2007
+#############################################################
+
+"""
+   Author:  Mark Rivers
+   Created: Sept. 16, 2002
+   Modifications:
+      M Newville cleaned up, May-22-2007
+"""
 
 nels = 100   # Number of elements in table
 nlines = 14  # Number of x-ray lines in table
@@ -154,7 +158,8 @@ def lookup_gamma_line(gamma_line):
        return None
 
 def list_lines(Emin=0.01,Emax=40.,short=False):
-    """return the list of all lines that fall between Emin/Emax
+    """
+    Return the list of all lines that fall between Emin/Emax
     This needs to be faster and smarter, eg. return list sorted
     by energy, flags for looking at specific elements,ignoring
     line types etc......

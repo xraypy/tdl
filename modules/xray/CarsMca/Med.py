@@ -1,3 +1,10 @@
+########################################################################
+# Methods for Multi-element detectors
+# From Med written by Mark Rivers
+# Modified for tdl
+########################################################################
+
+
 """
 Support for Multi-Element Detectors (Med).
 

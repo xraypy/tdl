@@ -1,3 +1,9 @@
+########################################################################
+# Methods for fitting spectral
+# Written by Mark Rivers
+# Modified for tdl
+########################################################################
+
 """
 Fits a spectrum to a set of Gaussian peaks.  This class is independent of the
 Mca class library, except that the "fit" and "peak" objects used must have

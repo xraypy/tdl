@@ -1,3 +1,7 @@
+########################################################################
+# XRF class for data handling and fitting
+# T. Trainor
+########################################################################
 
 import numpy as Num
 import types
@@ -22,7 +26,6 @@ Conventions:
 - self.ndet refers to the length of the data array, which is either 1 if just sum, or
   equal to the number of mca's
 
-
 """
 
 ##############################################################################
@@ -40,9 +43,8 @@ def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='C
             File name
             
         bad_mca_idx:
-            A list of bad detectors to be used.  An empty
-            list (default) means use all the detectors.  Note detector indexing
-            starts at zero!
+            A list of bad detectors.  An empty list (default) means use all
+            the detectors.  Note detector indexing starts at zero!
 
         total:
             Set this keyword to toggle the total flag in xrf.  Processing will work
@@ -138,6 +140,38 @@ class XRF:
     #########################################################################
     def init_data(self,bad_mca_idx=None,total=None,align=None,correct=None,
                   tau=None,init_params=True):
+        """
+        Initialize or re-initialize the data.
+        Note during re-initialization only passed parameters will modified, ie
+        the orginal values set during file read will only be changed if set explicitly.
+
+        Inputs:
+
+        bad_mca_idx:
+            A list of bad detectors.  An empty list (default) means use all
+            the detectors.  Note detector indexing starts at zero!
+
+        total:
+            Set this keyword to toggle the total flag in xrf.  Processing will work
+            on the sum of detectors.
+            
+        align:
+            Set this keyword to return spectra which have been shifted and
+            and stretched to match the energy calibration parameters of the
+            first detector.
+
+        tau:
+            None or a list of deadtime factors for each detector (dimesion should
+            be the same as the total number of detectors)
+                     ocr = icr * exp(-icr*tau)
+                     cor = (icr/ocr)*(rt/lt)
+                     max_icr = 1/tau
+                     max_ocr = max_icr*exp(-1)
+
+        init_parameters:
+            Set to True to reset all fitting parameters
+
+        """
 
         if self.med == None: return
 
@@ -182,8 +216,11 @@ class XRF:
     #########################################################################
     def init_params(self,lines = [], bottom_width=4.,top_width=0.,
                     exponent=2, tangent=0, compress=4):
+        """
+        Reset all peak and bgr parameters to defaults
+        
+        """
 
-        # reset all peak and bgr parameters to defaults
         #self.fit_params  = self.ndet * [[]]
         #self.bgr_params  = self.ndet * [[]]
         #self.peak_params = self.ndet * [[]]

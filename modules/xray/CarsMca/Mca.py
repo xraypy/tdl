@@ -1,3 +1,8 @@
+########################################################################
+# MCA class
+# From Mca written by Mark Rivers
+# Modified for tdl
+########################################################################
 
 """
 This module defines a device-independent MultiChannel Analyzer (MCA) class,

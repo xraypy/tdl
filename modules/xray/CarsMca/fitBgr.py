@@ -1,6 +1,7 @@
-
 ########################################################################
-# From Mca
+# Methods for fitting backgrounds
+# From Mca written by Mark Rivers
+# Modified for tdl
 ########################################################################
 
 import copy
