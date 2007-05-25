@@ -217,15 +217,69 @@ class XRF:
     def init_params(self,lines = [], bottom_width=4.,top_width=0.,
                     exponent=2, tangent=0, compress=4):
         """
-        Reset all peak and bgr parameters to defaults
-        
+        Reset all peak and bgr parameters to defaults. Note xrf lines and background
+        parameters are copied to all detectors (if total = False).  See the following
+        XRF methods for more details/control over fitting parameters
+            init_peak_line
+            init_peak_line_all
+            init_peak_en
+            init_peak_en_all
+            set_peak
+            set_peak_all
+            set_bgr
+            set_bgr_all
+            
+        Inputs:
+
+        lines:
+            A list of xrf lines to be fit. The elements of the list should be strings
+            such as ['Mn ka', 'Fe ka', 'Fe kb'].  See xrf_lookup.py for more details.
+
+         bottom_width:
+            Specifies the width of the polynomials which are concave downward.
+            The bottom_width is the full width in energy units at which the
+            magnitude of the polynomial is 100 counts. The default is 4.
+
+        top_width:
+            Specifies the width of the polynomials which are concave upward.
+            The top_width is the full width in energy units at which the
+            magnitude of the polynomial is 100 counts. The default is 0, which
+            means that concave upward polynomials are not used.
+
+         exponent:
+            Specifies the power of polynomial which is used. The power must be
+            an integer. The default is 2, i.e. parabolas. Higher exponents,
+            for example EXPONENT=4, results in polynomials with flatter tops
+            and steeper sides, which can better fit spectra with steeply
+            sloping backgrounds.
+
+         tangent:
+            Specifies that the polynomials are to be tangent to the slope of the
+            spectrum. The default is vertical polynomials. This option works
+            best on steeply sloping spectra. It has trouble in spectra with
+            big peaks because the polynomials are very tilted up inside the
+            peaks.
+
+         compress:
+            Compression factor to apply before fitting the background.
+            Default=4, which means, for example, that a 2048 channel spectrum
+            will be rebinned to 512 channels before fitting.
+            The compression is done on a temporary copy of the input spectrum,
+            so the input spectrum itself is unchanged.
+            The algorithm works best if the spectrum is compressed before it
+            is fitted. There are two reasons for this. First, the background
+            is constrained to never be larger than the data itself. If the
+            spectrum has negative noise spikes they will cause the fit to be
+            too low. Compression will smooth out such noise spikes.
+            Second, the algorithm requires about 3*N^2 operations, so the time
+            required grows rapidly with the size of the input spectrum. On a
+            200 MHz Pentium it takes about 3 seconds to fit a 2048 channel
+            spectrum with COMPRESS=1 (no compression), but only 0.2 seconds
+            with COMPRESS=4 (the default).
+
+        see fitBgr.py for more details            
         """
 
-        #self.fit_params  = self.ndet * [[]]
-        #self.bgr_params  = self.ndet * [[]]
-        #self.peak_params = self.ndet * [[]]
-        #self.bgr         = self.ndet * [[]]
-        #self.predicted   = self.ndet * [[]]
         self.fit_params  = []
         self.bgr_params  = []
         self.peak_params = []
@@ -254,14 +308,25 @@ class XRF:
 
     #########################################################################
     def get_params(self):
+        """ Returns the fit_params, bgr_params and peak_params""" 
         return (self.fit_params, self.bgr_params, self.peak_params)
 
     #########################################################################
     def get_data(self):
+        """
+        Returns the data array.
+        The data is always a list of dim [ndetectors, nchannels]
+        Note use the method init_data to change how the data is processed
+        """
         return self.data
 
     #########################################################################
     def get_energy(self):
+        """
+        Returns the energy array
+        The energy is always a list of dim [ndetectors, nchannels]
+        Note use the method init_data to change how the energy is handled
+        """
         en = self.ndet*[[]]
         if self.total:
             calib    = self.get_calibration(0)
@@ -309,7 +374,16 @@ class XRF:
     #######################################################################
     def init_peak_line(self,line, det_idx=0):
         """
-        create a new peak_param given an xrf line
+        Create a new peak_param for the specified detector given an xrf line
+        Inputs:
+
+        line:
+            A string representation of the line e.g. 'Mn ka', 'Fe ka', 'Fe kb'.
+            See xrf_lookup.py for more details.
+
+        det_idx:
+            The index of the detector to add the peak to.  Should be an integer
+            in the range 0 to ndetectors
         """
         if not det_idx in range(self.ndet): return
 
@@ -340,6 +414,16 @@ class XRF:
         return (len(self.peak_params[det_idx]) - 1)
 
     def init_peak_line_all(self,line):
+        """
+        Create a new peak_param for all detectors given an xrf line
+        Inputs:
+
+        line:
+            A string representation of the line e.g. 'Mn ka', 'Fe ka', 'Fe kb'.
+            See xrf_lookup.py for more details.
+
+        """
+        
         for det_idx in range(self.ndet):
             self.init_peak_line(line, det_idx=det_idx)
         return
@@ -347,7 +431,20 @@ class XRF:
     #######################################################################
     def init_peak_en(self,label=None, energy=0.0, det_idx=0):
         """
-        create a new peak_param given a name and energy
+        Create a new peak_param for the specified detector given a label
+        and energy
+        
+        Inputs:
+
+        label:
+            A string representation label for the peak.
+
+        energy:
+            Peak energy in keV
+
+        det_idx:
+            The index of the detector to add the peak to.  Should be an integer
+            in the range 0 to ndetectors
         """
         if not det_idx in range(self.ndet): return
 
@@ -371,6 +468,18 @@ class XRF:
         return (len(self.peak_params[det_idx]) - 1)
 
     def init_peak_en_all(self,label=None, energy=0.0):
+        """
+        Create a new peak_param for all detectors given a label
+        and energy
+        
+        Inputs:
+
+        label:
+            A string representation label for the peak.
+
+        energy:
+            Peak energy in keV
+        """
 
         for det_idx in range(self.ndet):
             self.init_peak_en(label=label, energy=energy, det_idx=det_idx)
@@ -392,6 +501,46 @@ class XRF:
     #########################################################################
     def set_peak(self,pk_idx=0,energy=None,ampl=None,fwhm=None, energy_flag=None,
                  fwhm_flag=None,ampl_factor=None,ignore=False,det_idx=0):
+        """
+        Set peak parameters for the specified detector and peak
+        
+        Inputs:
+
+        pk_idx:
+            Integer index of the peak (see peak_idx)
+
+        energy:
+            Peak energy in keV
+
+        ampl:
+            Peak amplitude
+
+        fwhm:
+            Peak full width at half max
+
+        energy_flag:
+            Flag for fitting energy.  0 = fix the peak energy, 1 = optimize the peak
+            energy.  Note peak energy can be fixed, while optimizing the spectra energy
+            calibration.  See the energy_flag in fit method.  
+
+        fwhm_flag:
+            Flag for fitting peak fwhm. 0 = Fix fwhm to global curve. 1 = optimize
+            the peak fwhm, 2 = fix the fwhm to input value.
+
+        ampl_factor:
+            Fixed amplitude ratio to previous peak
+            0.  = Optimize amplitude of this peak
+            >0. = Fix amplitude to this value relative
+                  to amplitude of previous free peak
+            -1.0 = Fix amplitude at 0.0
+
+        ignore:
+            Flag to ignore peak (True/False)
+
+        det_idx:
+            The index of the detector to add the peak to.  Should be an integer
+            in the range 0 to ndetectors
+        """
 
         if not det_idx in range(self.ndet): return
 
@@ -436,7 +585,62 @@ class XRF:
     #########################################################################
     def set_bgr(self,slope=None,exponent=None,top_width=None, bottom_width=None,
                 tangent=None, compress=None,det_idx=0):
+        """
+        Set background parameters for a detector
+        
+        Inputs:
 
+        slope:
+            Slope for channel to energy calculation
+        
+        bottom_width:
+            Specifies the width of the polynomials which are concave downward.
+            The bottom_width is the full width in energy units at which the
+            magnitude of the polynomial is 100 counts. The default is 4.
+
+        top_width:
+            Specifies the width of the polynomials which are concave upward.
+            The top_width is the full width in energy units at which the
+            magnitude of the polynomial is 100 counts. The default is 0, which
+            means that concave upward polynomials are not used.
+
+         exponent:
+            Specifies the power of polynomial which is used. The power must be
+            an integer. The default is 2, i.e. parabolas. Higher exponents,
+            for example EXPONENT=4, results in polynomials with flatter tops
+            and steeper sides, which can better fit spectra with steeply
+            sloping backgrounds.
+
+         tangent:
+            Specifies that the polynomials are to be tangent to the slope of the
+            spectrum. The default is vertical polynomials. This option works
+            best on steeply sloping spectra. It has trouble in spectra with
+            big peaks because the polynomials are very tilted up inside the
+            peaks.
+
+         compress:
+            Compression factor to apply before fitting the background.
+            Default=4, which means, for example, that a 2048 channel spectrum
+            will be rebinned to 512 channels before fitting.
+            The compression is done on a temporary copy of the input spectrum,
+            so the input spectrum itself is unchanged.
+            The algorithm works best if the spectrum is compressed before it
+            is fitted. There are two reasons for this. First, the background
+            is constrained to never be larger than the data itself. If the
+            spectrum has negative noise spikes they will cause the fit to be
+            too low. Compression will smooth out such noise spikes.
+            Second, the algorithm requires about 3*N^2 operations, so the time
+            required grows rapidly with the size of the input spectrum. On a
+            200 MHz Pentium it takes about 3 seconds to fit a 2048 channel
+            spectrum with COMPRESS=1 (no compression), but only 0.2 seconds
+            with COMPRESS=4 (the default).
+
+        det_idx:
+            The index of the detector to set parameters for.  Should be an integer
+            in the range 0 to ndetectors
+  
+        see fitBgr.py for more details
+        """
         if not det_idx in range(self.ndet): return
         if slope        is not None: self.bgr_params[det_idx].slope        = slope
         if exponent     is not None: self.bgr_params[det_idx].exponent     = exponent
@@ -458,7 +662,36 @@ class XRF:
 
     #########################################################################
     def fit(self,fwhm_flag=1,energy_flag=1,chi_exp=0.0,fit_bgr=True):
+        """
+        Fit the data.
+        Inputs:
 
+        fwhm_flag:
+            0 = Fix global FWHM coefficients
+            1 = Optimize global FWHM coefficients (Default)
+
+        energy_flag:
+            0 = Fix energy calibration coefficients
+            1 = Optimize energy calibration coefficients (Default)
+
+        chi_exp:
+            Exponent of chi (Default = 0.0). The fit function assumes that:
+                sigma[i] = y_obs[i] ** chi_exponent
+            e.g. that the standard deviation in each channel is equal to the counts
+            in the channel to some power. For photon counting spectra where Poisson
+            statistics apply chi_exponent=0.5. Setting chi_exponent=0. will set all
+            of the sigma[i] values to 1., and the fit
+            would then be minimizing the sum of the squares of the residuals. This
+            should tend to result in a better fit for the large peaks in a spectrum
+            and a poorer fit for the smaller peaks. Setting chi_exponent=1.0 will
+            result in a minimization of the sum of the squares of the relative error
+            in each channel. This should tend to weight the fit more strongly toward
+            the small peaks.
+
+        fit_bgr: (True/False)
+            Flag to indicate if the background should be fit (and removed)
+            before fitting peaks (default = True)
+        """
         for i in range(self.ndet):
             #print i, fit_bgr
             if fit_bgr: self._fit_bgr(i)
@@ -468,7 +701,7 @@ class XRF:
     #########################################################################
     def fit_bgr(self):
         """
-        Remove the background from a spectrum
+        Fit the background
         """
         for i in range(self.ndet):
             self._fit_bgr(i)

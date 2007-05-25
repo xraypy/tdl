@@ -124,7 +124,7 @@ class McaPeak:
     Class for defining the input and output parameters for each peak in
     fit_peaks().
     Input fields set bfore calling fit_peaks(), defaults and descriptions
-        .label =       ""      # Peak label
+        .label = ""            # Peak label
         .ignore =False         # Flag to ignore peak
         .self.energy_flag = 0  # Flag for fitting energy
                                #   0 = Fix energy 
