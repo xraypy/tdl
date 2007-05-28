@@ -4,7 +4,7 @@
     {'type':'Background',
           'name':'tdl_wxGUI_bgTemplate',
           'title':u'TDL',
-          'size':(838, 716),
+          'size':(826, 702),
           'statusBar':1,
           'style':['resizeable'],
 
@@ -38,6 +38,10 @@
                   {'type':'MenuItem',
                    'name':'menuWindowXRF',
                    'label':'XRF',
+                  },
+                  {'type':'MenuItem',
+                   'name':'menuWindowPlotSelection',
+                   'label':u'PlotSelection',
                   },
               ]
              },

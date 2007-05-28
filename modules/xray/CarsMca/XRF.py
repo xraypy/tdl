@@ -360,7 +360,7 @@ class XRF:
 
     #########################################################################
     def get_calibration_idx(self,det_idx):
-        "get an mca's calibration"
+        "get an mca's calibration index"
         # note if you did a total without aligning
         # there is no way to return a "correct" calibration
         # so if self.total == True will always return the

@@ -6,11 +6,85 @@
 import sys
 import types
 from Util import PrintExceptErr
+import numpy as Num
 
 # setup for matplotlib with Tk as default
 DEFAULT_BACKEND = "TkAgg"
 PLOT_ROOT = None
 
+#####################################################################################
+def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1,yscale=1,xnorm=False,ynorm=False,
+            xoff=0,yoff=0,xcen=False,ycen=False,xlog=False,ylog=False,nr=1,nc=1,np=1,hold=True,**kw):
+    """
+    plotting with many options
+    """
+    import pylab
+    if y == None:
+        y = x
+        x = Num.arange(len(y))
+
+    # calc x and y
+    if xcen == True:
+        ave_x = (Num.min(x) + Num.max(x))/2.
+    else:
+        ave_x = 0
+    if ycen == True:
+        ave_y = (Num.min(y) + Num.max(y))/2.
+    else:
+        ave_y = 0
+        
+    if xnorm == True:
+        xscale = xscale/Num.max(x-ave_x)
+    if ynorm == True:
+        yscale = yscale/Num.max(y-ave_y)
+        
+    x_plot = (x-ave_x)*xscale + xoff
+    y_plot = (y-ave_y)*yscale + yoff
+
+    # check hold and set subplot (double check this...)
+    # if clf: pylab.clf()
+    #pylab.hold(hold)
+    pylab.subplot(nr,nc,np)
+    if hold == False:
+        pylab.cla()
+    else:
+        pylab.hold(True)
+    
+    # if errbars, make an errorbar plot
+    if (xerr!=None) or (yerr != None):
+        if xerr != None:
+            xerr_plot = xerr*xscale
+        else:
+            xerr_plot = None
+        if yerr != None:
+            yerr_plot = yerr*yscale
+        else:
+            yerr_plot = None
+        try:
+            pylab.errorbar(x_plot,y_plot,xerr=xerr_plot,yerr=yerr_plot,fmt=fmt,**kw)
+        except:
+            PrintExceptErr('Error bar plot failed')
+    else:
+        try:
+            pylab.plot(x_plot,y_plot,fmt,**kw)
+        except:
+            PrintExceptErr('Plot failed')
+
+    # check logs
+    if xlog:
+        try:
+            pylab.semilogx()
+        except:
+            PrintExceptErr('X log failed')
+    if ylog:
+        try:
+            pylab.semilogy()
+        except:
+            PrintExceptErr('X log failed')
+
+    return
+
+#########################################################################
 def _init_pylab(tdl):
     backend = tdl.symbolTable.getSymbolValue('_builtin.GUI')
 
@@ -101,7 +175,8 @@ def _init_pylab(tdl):
           'pylab.xlabel':pylab.xlabel,
           'pylab.ylabel':pylab.ylabel,
           'pylab.pie':pylab.pie,
-          'pylab.polar':pylab.polar}
+          'pylab.polar':pylab.polar,
+          'pylab.plotter':plotter}
     for nam,val in _func_.items():
         cmdOut = None
         asCmd  = True

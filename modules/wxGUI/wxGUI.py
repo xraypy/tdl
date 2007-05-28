@@ -169,6 +169,15 @@ class wxGUI(model.Background):
         self.XrfWindow = model.childWindow(self, wxXRF,filename=filename)
         self.XrfWindow.position = (200, 5)
         self.XrfWindow.visible = True
+
+    def on_menuWindowPlotSelection_select(self, event):
+        from wxPlotSelection import wxPlotSelection
+        # the child has to get self.shell from the parent
+        filename = os.path.join(self.rsrc_path,'wxGUI','wxPlotSelection.rsrc.py')
+        print filename
+        self.PlotSelectionWindow = model.childWindow(self, wxPlotSelection,filename=filename)
+        self.PlotSelectionWindow.position = (200, 5)
+        self.PlotSelectionWindow.visible = True        
     
     ###########################################################
     #             EVENTS                                      #
