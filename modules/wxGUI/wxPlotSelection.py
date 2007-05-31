@@ -11,6 +11,7 @@ import os
 import xrf_lookup
 from wxTdlUtil import wxTdlUtil
 from Util import PrintExceptErr
+import numpy as Num
 
 """
 Plot GUI
@@ -56,11 +57,14 @@ class wxPlotSelection(model.Background, wxTdlUtil):
         self.init_YItems()
         self.init_XerrItems()
         self.init_YerrItems()
+        self.init_PlotNumItems()
+        self.init_PlotNum_axisItems()
 
     def updateOnEnter(self,event):
         "Update the list"
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN:
+            self.init_PlotNumItems()
             self.PlotParams_update_from_fields()
         else:
             event.skip()
@@ -70,12 +74,26 @@ class wxPlotSelection(model.Background, wxTdlUtil):
         "Update the list"
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN:
+            self.init_PlotNum_axisItems()
             self.AxisParams_update_from_fields()
         else:
             event.skip()
         return
 
-
+    def calc_PlotNumList(self):
+        nr = self.components.Nrow.text.strip()
+        nc = self.components.Ncol.text.strip()
+        sel = self.components.PlotNum.stringSelection
+        if len(nr) == 0:
+            nr = '1'
+            self.components.Nrow.text = nr
+        if len(nc) == 0:
+            nc = '1'
+            self.components.Ncol.text = nc
+        nplot = int(nr)*int(nc)
+        list = Num.arange(1,nplot+1,dtype='int')
+        list = map(str,list)
+        return list
     ###########################################################
     #             Menus                                       #
     ###########################################################
@@ -96,19 +114,32 @@ class wxPlotSelection(model.Background, wxTdlUtil):
     ###########################################################
     #   PlotNum / Ncol / Nrow
     ###########################################################
-    def on_PlotNum_keyDown(self,event):
+    #def on_PlotNum_keyDown(self,event):
+    #    "Update the list"
+    #    self.updateOnEnter(event)
+    #    return
+    def init_PlotNumItems(self):
+        list = self.calc_PlotNumList()
+        sel = self.components.PlotNum.stringSelection
+        self.components.PlotNum.items = list
+        self.components.PlotNum.stringSelection = sel
+        return
+
+    def on_PlotNum_select(self,event):
         "Update the list"
-        self.updateOnEnter(event)
+        self.PlotParams_update_from_fields()
         return
 
     def on_Ncol_keyDown(self,event):
         "Update the list"
         self.updateOnEnter(event)
+        self.init_PlotNum_axisItems()
         return
 
     def on_Nrow_keyDown(self,event):
         "Update the list"
         self.updateOnEnter(event)
+        self.init_PlotNum_axisItems()
         return
 
     ###########################################################
@@ -297,7 +328,7 @@ class wxPlotSelection(model.Background, wxTdlUtil):
         plot_params = ['']*19
         # gather all the info
         plot_params[0] = self.components.Label.text.strip()        
-        plot_params[1] = self.components.PlotNum.text.strip()
+        plot_params[1] = self.components.PlotNum.stringSelection.strip()
         plot_params[2] = self.components.X.text.strip()
         plot_params[3] = self.components.Y.text.strip()
         plot_params[4] = self.components.Xerr.text.strip()
@@ -321,7 +352,7 @@ class wxPlotSelection(model.Background, wxTdlUtil):
         "reverse of above"
         if plot_params == None: return
         self.components.Label.text      = plot_params[0]
-        self.components.PlotNum.text    = plot_params[1]
+        self.components.PlotNum.stringSelection    = plot_params[1]
         self.components.X.text          = plot_params[2]
         self.components.Y.text          = plot_params[3] 
         self.components.Xerr.text       = plot_params[4] 
@@ -345,9 +376,20 @@ class wxPlotSelection(model.Background, wxTdlUtil):
     # Axis
     ###########################################################
 
-    def on_PlotNum_axis_keyDown(self,event):
+    #def on_PlotNum_axis_keyDown(self,event):
+    #    "Update the list"
+    #    self.updateAxisOnEnter(event)
+    #    return
+    def init_PlotNum_axisItems(self):
+        list = self.calc_PlotNumList()
+        sel = self.components.PlotNum_axis.stringSelection
+        self.components.PlotNum_axis.items = list
+        self.components.PlotNum_axis.stringSelection = sel
+        return
+
+    def on_PlotNum_axis_select(self,event):
         "Update the list"
-        self.updateAxisOnEnter(event)
+        self.AxisParams_update_from_fields()
         return
 
     def on_Xmin_keyDown(self,event):
@@ -446,7 +488,7 @@ class wxPlotSelection(model.Background, wxTdlUtil):
         "ret a list of all the peak parameter info in the entry fields"
         axis_params = ['']*13
         # gather all the info
-        axis_params[0] = self.components.PlotNum_axis.text.strip()        
+        axis_params[0] = self.components.PlotNum_axis.stringSelection.strip()        
         axis_params[1] = self.components.Xmin.text.strip()
         axis_params[2] = self.components.Xmax.text.strip()
         axis_params[3] = self.components.Ymin.text.strip()
@@ -464,7 +506,7 @@ class wxPlotSelection(model.Background, wxTdlUtil):
     def put_AxisPar_fields(self,axis_params):
         "reverse of above"
         if axis_params == None: return
-        self.components.PlotNum_axis.text = axis_params[0]
+        self.components.PlotNum_axis.stringSelection = axis_params[0]
         self.components.Xmin.text         = axis_params[1]
         self.components.Xmax.text         = axis_params[2]
         self.components.Ymin.text         = axis_params[3] 
@@ -529,6 +571,9 @@ class wxPlotSelection(model.Background, wxTdlUtil):
     ###########################################################
     # Plotting
     ###########################################################
+    # note, Plot function should pack up data similiar to the save
+    # function, and we can then move plot_cmd to the Pylab module
+    # and call from here
     def on_Plot_mouseClick(self,event):
         "make a plot"
         # update data and plot params
