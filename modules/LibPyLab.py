@@ -84,6 +84,15 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1,yscale=1,xnorm=False,
 
     return
 
+
+########################################################
+def on_click(event):
+    # get the x and y coords, flip y from top to bottom
+    x, y = event.x, event.y
+    if event.button==1:
+        if event.inaxes is not None:
+            print 'data coords', event.xdata, event.ydata
+
 #########################################################################
 def _init_pylab(tdl):
     backend = tdl.symbolTable.getSymbolValue('_builtin.GUI')
@@ -119,10 +128,15 @@ def _init_pylab(tdl):
             PrintExceptErr("Error in plotter")
             return
 
+    # use this to print clicks to screen
+    def cursor():
+        pylab.connect('button_press_event', on_click)
+    
     #################################
     _func_ = {'pylab.axes':pylab.axes,
           'pylab.axis':pylab.axis,
           'pylab.bar':pylab.bar,
+          'pylab.barh':pylab.barh,
           'pylab.boxplot':pylab.boxplot,
           'pylab.cla':pylab.cla,
           'pylab.clf':pylab.clf,
@@ -130,6 +144,7 @@ def _init_pylab(tdl):
           'pylab.colorbar':pylab.colorbar,
           'pylab.cohere':pylab.cohere,
           'pylab.csd':pylab.csd,
+          'pylab.cursor':cursor,
           'pylab.draw':pylab.draw,
           'pylab.errorbar':pylab.errorbar,
           'pylab.figlegend':pylab.figlegend,
@@ -142,6 +157,7 @@ def _init_pylab(tdl):
           'pylab.gci':pylab.gci,
           'pylab.get':pylab.get,
           'pylab.gray':pylab.gray,
+          'pylab.grid':pylab.grid,
           'pylab.barh':pylab.barh,
           'pylab.jet':pylab.jet,
           'pylab.hist':pylab.hist,
@@ -173,7 +189,9 @@ def _init_pylab(tdl):
           'pylab.text':pylab.text,
           'pylab.title':pylab.title,
           'pylab.xlabel':pylab.xlabel,
+          'pylab.xticks':pylab.xticks,
           'pylab.ylabel':pylab.ylabel,
+          'pylab.yticks':pylab.yticks,
           'pylab.pie':pylab.pie,
           'pylab.polar':pylab.polar,
           'pylab.plotter':plotter}

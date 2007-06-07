@@ -5,7 +5,8 @@
 #################
 
 import types
-from Num import Num
+#from Num import Num
+import numpy as Num
 
 #################
 

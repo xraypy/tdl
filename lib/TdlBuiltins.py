@@ -223,15 +223,21 @@ def _list(x):
 
 def _listappend(x,val):
     "append a value to a list"
-    if type(x) == Num.ArrayType: x = x.tolist()
+    arr = False
+    if type(x) == Num.ArrayType:
+        x = x.tolist()
+        arr = True
     if type(x) == types.ListType:
         x.append(val)
-        return list2array(x)
+        if arr:
+            return list2array(x)
+        return(x)
 
 def _listjoin(x,y):
     "join two lists"    
     "return list of dictionary items"
-    if type(x) == Num.ArrayType: x = x.tolist()
+    if type(x) == Num.ArrayType:
+        x = x.tolist()
     if type(x) == types.ListType:
         if type(y) == Num.ArrayType: y = y.tolist()
         if type(y) == types.ListType:
