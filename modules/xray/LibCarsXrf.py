@@ -82,7 +82,8 @@ import fitPeaks
 import fitBgr
 import XRF
 import deadtime
-import SD as ScanData
+#import SD as ScanData
+import ScanData
 
 title = "CARS XRF Library "
 

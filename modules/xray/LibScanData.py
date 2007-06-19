@@ -12,7 +12,8 @@
 # --------------
 import Util
 from Num import Num
-import SD as ScanData
+#import SD as ScanData
+import ScanData
 import XRF
 import deadtime
 import types

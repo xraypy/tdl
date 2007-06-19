@@ -7,7 +7,8 @@
 from Num import Num
 import os
 import types
-import SD as ScanData
+#import SD as ScanData
+import ScanData
 
 class SpecFile:
     def __init__(self, fname):
