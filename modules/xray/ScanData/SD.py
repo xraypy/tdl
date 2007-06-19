@@ -5,7 +5,6 @@
 #################
 
 import types
-#from Num import Num
 import numpy as Num
 
 #################
@@ -25,7 +24,7 @@ spectra = []                 -> array has dims = scan_dims or is [] for No mca
 images = []                  -> array has dims = scan_dims or is [] for No images
 state = {}                   -> arbitraty dictionary of additional state information
 
-Need to add methods for extracting, simple curve fitting, plotting etc.
+Need to add methods for extracting, merging, appending
 """
 
 class ScanData:
@@ -131,12 +130,9 @@ class ScanData:
             lout = lout + "* Scan includes %i images\n" % len(self.images)
         else:
             lout = lout + "* Scan does not include images\n"
-
-
-                    
+        
         return lout
     
-
     def get_scaler(self,label=None):
         if label == None:
             label = self.primary_det[0]
