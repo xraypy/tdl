@@ -29,7 +29,7 @@ import os, string, sys, getopt
 # test for command line switches
 use_wxGUI = False
 debug     = True
-verbose   = True
+verbose   = False
 do_shell  = True
 
 libs      = []
@@ -70,20 +70,24 @@ for o, a in opts:
 # import and set default paths
 # additional paths should be set in the startup.tdl files
 try:
-    import xlib as tdl
+    import lib as tdl
+    devel = True
     print '  ############## This is TDL EXPERIMENTAL ##############'
 except ImportError:
     print 'could not load '
     # import tdl
 
 lib_path    = os.path.abspath(tdl.__path__[0])
-tdl_root    = os.path.dirname(lib_path)
+if devel:
+    tdl_root    = os.path.dirname(lib_path)
+else:
+    tdl_root = lib_path
 module_path = os.path.join(tdl_root,'modules')
-verbose=False
 
 try:
     if verbose:
         print ' == tdl paths:'
+        print '    lib_path   = %s  ' % lib_path
         print '    tdl_root   = %s  ' % tdl_root
         print '    module_path = %s  ' % module_path
     tdl.Util.set_path(lib_path,verbose=verbose)
@@ -98,7 +102,7 @@ except:
 #   first site-wide ==> module_path/startup.tdl
 #   then from user's home dir ==> ~/.tdl_init
 # files contains tuples of (file, Warn_if_Not_Exist_Flag)
-files = [(os.path.join(module_path,'xstartup.tdl'),False)]
+files = [(os.path.join(module_path,'startup.tdl'),False)]
 user_home = os.path.expanduser('~')
 files.append((os.path.join(user_home,'.tdl_init'),False))
 

@@ -7,11 +7,9 @@
 
 #import LibTest
 import LibASCIIFile
-import LibPlotter
-#import LibPyLab
+#import LibPlotter
+import LibPyLab; pylab._init()
 import LibSpec
 import LibCarsXrf
 import LibScanData
 
-# x = 1
-# y = 33

@@ -70,7 +70,7 @@ for o, a in opts:
 # import and set default paths
 # additional paths should be set in the startup.tdl files
 try:
-    import lib as tdl
+    import lib_v035 as tdl
     devel = True
     print '  ############## This is TDL devel ##############'
 except ImportError:
@@ -102,7 +102,7 @@ except:
 #   first site-wide ==> module_path/startup.tdl
 #   then from user's home dir ==> ~/.tdl_init
 # files contains tuples of (file, Warn_if_Not_Exist_Flag)
-files = [(os.path.join(module_path,'startup.tdl'),False)]
+files = [(os.path.join(module_path,'startup_v035.tdl'),False)]
 user_home = os.path.expanduser('~')
 files.append((os.path.join(user_home,'.tdl_init'),False))
 
