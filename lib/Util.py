@@ -229,7 +229,6 @@ def trimstring(s,use_raw=False):
     elif (s.startswith("\"")  and s.endswith("\"")):   return unescape_string(s[1:-1])
     return s
 
-
 def _isnumericarray(x):
     """returns whether value (potentially nested list) can be coerced to numerical array.
     note that this insists on using numpy for numerical arrays, not record arrays.
@@ -472,22 +471,6 @@ def sub_dirs(pth,skip_txt=None):
                     sub_dirs.append(temp)
     return sub_dirs
 
-#def file_open(fname,default_path=None,**kw):
-#    "open a file using default path if passed"
-#    # two cases
-#    # 1. fname has full path (or rel path to cwd), or file is in cwd -> dont use def_path
-#    # 2. fname has rel path (or none) to default path -> join def_path and fname
-#    print "hello file open: %s" % default_path
-#    if os.path.isfile(fname):
-#        #return open(fname)
-#        return file(fname,**kw)
-#    elif default_path:
-#        fname = os.path.join(default_path,fname)
-#        #return open(fname)
-#        return file(fname,**kw)
-#    else:
-#        raise IOError, "Could not open file '%s'" % (fname)
-
 class file_open:
     """open a file using default path.  The default path may be
     passed as a kw or determined from a symbol table if present.
@@ -508,8 +491,8 @@ class file_open:
         if kw.has_key("default_path"):
             default_path = kw.pop("default_path")
         elif self.sym and self.file_path:
-            #default_path = self.sym.getSymbolValue("_sys.work")
-            default_path = self.sym.getVariableValue(self.file_path)
+            default_path = self.sym.getSymbolValue(self.file_path)
+            #default_path = self.sym.getVariableValue(self.file_path)
         else:
             default_path = None
         #print default_path

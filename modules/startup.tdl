@@ -8,10 +8,8 @@
 #import LibTest
 import LibASCIIFile
 import LibPlotter
-#import LibPyLab
+import LibPyLab
 import LibSpec
 import LibCarsXrf
 import LibScanData
 
-# x = 1
-# y = 33

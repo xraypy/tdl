@@ -204,18 +204,18 @@ def _init_pylab(tdl):
             func = val[0]
             if len(val) > 1: cmdOut = val[1]
             if len(val) > 2: asCmd  = val[3]
-        x =tdl.symbolTable.addFunction(nam,func,cmd_out=cmdOut,as_cmd=asCmd)
+        #x =tdl.symbolTable.addFunction(nam,func,cmd_out=cmdOut,as_cmd=asCmd)
+        x =tdl.symbolTable.setFunction(nam,func,cmd_out=cmdOut)
 
     return
 
 ##########################################################################
-
 _groups_ = [('pylab',True)]
-#_var_    = {'pylab.var':None}
 _func_ = {'pylab._init':_init_pylab}
+#_var_    = {'pylab.var':None}
 
 # code to run on initialization (no args, but will get a 'tdl reference')
-#_init_ = _init_pylab
+_init_ = _init_pylab
 
 
 """

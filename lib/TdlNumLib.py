@@ -4,9 +4,7 @@
 # Modifications
 # --------------
 #
-# * 1-28-06 T2:
-#  - Created, moved numeric related funs/cmds to this module
-#   from TdlLib
+#
 ##########################################################################
 import Num
 import os
@@ -56,7 +54,6 @@ def _min(x,*args):
         if type(i) == Num.ndarray: i = i.min()
         t.append(i)
     return min(t)
-
 
 def _max(x,*args):
     "return maxinum value of an array or list"    
@@ -327,6 +324,6 @@ _func_ = {
           "_builtin.min":_min,
           }
           
-
+#########################################
 if __name__ == '__main__':
-    print help
+    print title

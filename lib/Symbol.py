@@ -5,22 +5,6 @@
 # -------------
 #
 # Sept 10, 2006 MN  complete rewrite (version 0.3)
-
-#
-# 6-4-06 T2
-# In SymbolTable.import_lib added a case for _scripts_
-# If the lib module defines a list _scripts_ = [file1,file2]
-# then these will be loaded (eg to define various defs or data..)
-# Its assumed that these scripts live in the same directory as the
-# library module.  
-#
-# 4-2-06 T2
-# Modified symbolTable.initialize and symbolTable.import_lib
-# to correctly handle strings as module names
-#
-# * 2-12-06 T2
-# Added new methods for getting/putting to symbol table
-# back to a single dictionary of symbols
 #
 #########################################################################
 
@@ -40,6 +24,7 @@ import re
 from copy import deepcopy
 
 import Num
+from Num import num_version, ndarray
 from Util import find_unquoted_char, split_delim, datalen, set_path, list2array
 from Util import PrintExceptErr, SymbolError, ConstantError, show_more
 from string import ascii_lowercase, digits
@@ -60,19 +45,29 @@ class symTypes:
     Funcs     = (pyfunc,defpro)
     All       = Data + Funcs
     NonGroups = (variable,pyobj,file,defvar,pyfunc,defpro)
-    
+
+
+var_typecodes = {types.StringType:'string',
+                 types.IntType: 'int',
+                 types.LongType:'int',
+                 types.FloatType:'float',
+                 types.ComplexType:'complex',
+                 types.ListType:'list',
+                 types.DictType:'dict',
+                 ndarray:'array'}
+
 class Group(dict):
     """ symbol group is an extended dictionary that holds symbols and other symbol groups"""
     type = symTypes.group
-    def __init__(self,name=None,filename=None,toplevel=False,status='normal',
-                 vars=None):
+    def __init__(self,name=None,filename=None,toplevel=False,status='normal', vars=None):
         self.filename = filename
         self.status   = status
         self.toplevel = toplevel
         self.setname(name)
         if vars is not None:
             for k,v in vars.items():
-                if type(v) == types.ListType:  v = list2array(v)
+                # Remove automatic typecast of lists as arrays
+                #if type(v) == types.ListType: v = list2array(v)
                 self.setSymbol(k,v)
         
     def setname(self,name=None):
@@ -101,7 +96,6 @@ class Group(dict):
             self[name].setname(name)
         else:
             self[name] = Group(name=sname,filename=fn,status=status)
-            
         return self[name]
 
     def delGroup(self,name):
@@ -163,12 +157,11 @@ class Symbol:
        a Simple Name matches [a-zA-Z_\$][a-zA-Z_\$0-9]*
        Of course, a Symbol may be part of a hiearchy of Groups,
        and so may have a much longer Full Name.
-      
     """
     name     = ''
     constant = False
     def __init__(self, name, value=None, constant= False,
-                 type=symTypes.variable,
+                 stype=symTypes.variable,
                  desc=None, help=None, cmd_out=None,
                  code=None, args=None, mod=None, kws=None):
         self.constant = False
@@ -183,9 +176,9 @@ class Symbol:
         self.mod      = mod  or '_main'
         
         # check that type is valid
-        if type not in symTypes.All:
-            raise SymbolError, 'cannot add symbol "%s" with type=%s' % (name,type)
-        self.type = type
+        if stype not in symTypes.All:
+            raise SymbolError, 'cannot add symbol "%s" with type=%s' % (name,stype)
+        self.type = stype
         self.constant = constant
 
     def getHelp(self):
@@ -221,22 +214,28 @@ class Symbol:
     
     def getinfo(self,extended=False):
         "return informational string for symbol, used by __repr__"
+        
         vtype = self.type
         if self.constant: vtype = '%s (constant)' % vtype
-        sout = "%s, %s" % (vtype,repr(self.value))
+        #sout = "%s, %s" % (vtype,repr(self.value))
+        sout = "%s" % (vtype)
 
         if vtype == symTypes.variable:
-            nelem = datalen(self.value)
-            if nelem == 1:
-                sout = "%s(scalar), value=%s" % (vtype,repr(self.value))
-            elif type(self.value) == Num.ArrayType:
-                sout = "%s(array), npts=%i, shape=%s" % (vtype,self.value.size,self.value.shape)
-            elif type(self.value) == types.StringType:
-                sout = "%s(string), value=%s" % (vtype,repr(self.value))
-            elif type(self.value) in (types.DictType,types.TupleType,types.ListType):
-                t = str(type(self.value))[1:-1].replace('type','').strip()
-                t = t.replace("'","")
-                sout = "%s(%s), len=%i" % (vtype,t,nelem)
+            ty = type(self.value)
+            if (ty in var_typecodes.keys()) or (ty in Num.typeDict.values()): 
+                nelem = datalen(self.value)
+                if (nelem == 1): 
+                    sout = "%s(scalar), value=%s" % (vtype,repr(self.value))
+                elif type(self.value) == Num.ArrayType:
+                    sout = "%s(array), npts=%i, shape=%s" % (vtype,self.value.size,self.value.shape)
+                elif type(self.value) == types.StringType:
+                    sout = "%s(string), value=%s" % (vtype,repr(self.value))
+                elif type(self.value) in (types.DictType,types.TupleType,types.ListType):
+                    t = str(type(self.value))[1:-1].replace('type','').strip()
+                    t = t.replace("'","")
+                    sout = "%s(%s), len=%i" % (vtype,t,nelem)
+            else:
+                sout = "%s (%s)" % (vtype, ty)
         elif vtype == symTypes.pyfunc:
             sout =  "%s" % (vtype)
         elif vtype == symTypes.defvar:
@@ -246,7 +245,10 @@ class Symbol:
             args = ','.join(self.args)
             for k,v in  self.kws.items(): args = "%s,%s=%s" % (args,k,str(v))
             sout =  "%s args='%s'" % (vtype,args)
-        if extended: sout = "%s %s" % (sout,self.desc)
+
+        if extended:
+            sout = "%s\n  %s" % (sout,self.desc)
+
         return sout
 
 ############################################################
@@ -260,6 +262,16 @@ def splitname(s):
             msg = 'invalid name "%s"' % (s)
             if len(s)>1: msg = 'invalid name "%s" (error at "%s")' % (s,p)
             raise SymbolError, msg
+    return parts
+
+def _splitName(name,check=True):
+    parts = name.split('.')
+    if check:
+        for i in parts:
+            if not isValidName(i):
+                msg = 'invalid name "%s"' % (name)
+                if len(n)>1: msg = 'invalid name "%s" (error at "%s")' % (name,i)
+                raise SymbolError, msg
     return parts
 
 def isGroup(x):
@@ -297,7 +309,6 @@ class SymbolTable:
         # 
         spath = self.getSymbolValue('_sys.path')
 
-
         if type(spath) == types.ListType:
             for p in spath: set_path(p)
         elif type(spath) == types.StringType:
@@ -306,12 +317,12 @@ class SymbolTable:
         for i in ll:
             self.import_lib(i)
 
-            
     def import_lib(self,lib):
         " import or reload module given module name or object"
 
-        if lib is None: return None
         if self.tdl is None: return None
+
+        if lib is None: return None
 
         mod, msg = None, None
         if type(lib) == types.ModuleType:
@@ -360,7 +371,6 @@ class SymbolTable:
                     if type(val) == types.TupleType:
                         func = val[0]
                         if len(val) > 1: cmdOut = val[1]
-
                     x =self.setFunction(nam,func,cmd_out=cmdOut) 
             if hasattr(mod,'_scripts_'):
                 for nam in getattr(mod,'_scripts_',[]):
@@ -383,12 +393,24 @@ class SymbolTable:
                 s = self.setFunction(fname, f)
                 self.tdl.eval("%s()" % fname)
                 self.delSymbol(fname)
-            import_msg = 'ok.'
+            import_msg = '   ok.'
         except ImportError:
-            import_msg = 'import failed!'
+            import_msg = '   import failed!'
 
         self.writer.write(" %s\n" % import_msg)
-        
+
+    def reimport_libs(self):
+        """Reload all imported libraries"""
+        for mod in self.loaded_libs:
+            name = mod.__repr__()
+            name = name[1:name.find('from')]
+            try:
+                print "Reimport: %s" % name
+                self.import_lib(mod)
+            except:
+                print "\n    **Failed to reimport %s\n" % name
+        return
+
     def _lookup(self,name):
         """ simple lookup of where a name in the symbol table is:
         """
@@ -433,7 +455,6 @@ class SymbolTable:
                 sym = self.data
             else:
                 sym = self.data[self.LocalGroup]
-
         return sym
         
     def addGroup(self, name, toplevel=False, status='normal'):
@@ -479,7 +500,6 @@ class SymbolTable:
             names = elem.name.split('.')
             elem.name = "%s.%s" % (nam,names[-1])
 
-
     def __gather(self,x, _type=None,recurse=True):
         for k,v in x.items():
             if isSymbol(v):
@@ -518,15 +538,14 @@ class SymbolTable:
                 if nam.startswith('%s.' % _TopGroupName):
                     nam = nam[len(_TopGroupName)+1:]
                 out[nam] = groupcount(sym)
-#             elif sym.type in (symTypes.defpro,symTypes.pyfunc):
-#                 nfunc  = nfunc  + 1
-#             else: nvar = nvar + 1
+            #elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+            #    nfunc  = nfunc  + 1
+            #else: nvar = nvar + 1
         return out
             
     def setSymbol(self,name,value,create=True,**kw):
         parent,sym,parts = self._lookup(name)
         sym = self._normalize_sym(sym)
-        
         
         if isSymbol(sym):
             sym.value = value
@@ -544,12 +563,11 @@ class SymbolTable:
             sym = sym.setSymbol(parts[0],value,**kw)
         else:
             raise SymbolError, ' cannot add Symbol  %s: %s is not a group '% (name, sym.name)
-
         return sym
         
     def setVariable(self, name, value=None, **kws):
         "add a regular variable" 
-        return self.setSymbol(name,value=value,type=symTypes.variable,**kws)
+        return self.setSymbol(name,value=value,stype=symTypes.variable,**kws)
     
     def setDefVariable(self, name, code, desc,**kws):
         "add defined variable" 
@@ -557,11 +575,11 @@ class SymbolTable:
             val = self.tdl.expr_eval(code)
         except:
             val = None        
-        return self.setSymbol(name,value=val, type=symTypes.defvar,
+        return self.setSymbol(name,value=val, stype=symTypes.defvar,
                               code=code,desc=desc,**kws)
 
     def setProcedure(self,name,code,desc=None,**kws):
-        return self.setSymbol(name,value=name,type=symTypes.defpro,
+        return self.setSymbol(name,value=name,stype=symTypes.defpro,
                               mod=self.ModuleGroup,
                               code=code, desc=desc,**kws)
         
@@ -586,10 +604,8 @@ class SymbolTable:
                 pass
         except:
             raise SymbolError, 'cannot add function %s ' % name
-
-        return self.setSymbol(name,value=func,type=ftype,code=code,
+        return self.setSymbol(name,value=func,stype=ftype,code=code,
                               desc=desc,cmd_out=cmd_out,**fcn_kws)
-
 
     def getSymbolLocalGroup(self,name):
         parts = splitname(name)
@@ -694,7 +710,6 @@ class SymbolTable:
         except SymbolError:
             return False
 
-
     def delSymbol(self,name):
         "delete a symbol"
         parent,sym,parts = self._lookup(name)
@@ -712,7 +727,6 @@ class SymbolTable:
                 raise SymbolError, 'cannot delete symbol: "%s" not resolved (python attribute??)' % name
             parent.delSymbol(name)
             
-
     def delGroup(self,name):
         self.delSymbol(name)
         
@@ -750,15 +764,4 @@ class SymbolTable:
         if do_print:
             show_more(buff)
         return buff
-    
-
-def _splitName(name,check=True):
-    parts = name.split('.')
-    if check:
-        for i in parts:
-            if not isValidName(i):
-                msg = 'invalid name "%s"' % (name)
-                if len(n)>1: msg = 'invalid name "%s" (error at "%s")' % (name,i)
-                raise SymbolError, msg
-    return parts
 

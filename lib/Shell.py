@@ -8,13 +8,6 @@
 # - override open, so all open statements use Util.file_open class
 #   dangerous???
 #
-# 4-27-06 T2
-# - moved help stuff to Help
-#
-# 4-8-06 T2
-# - small tweak to setting stdin/stdout so tdl_wxGUI will work.
-# - small change to do_show_symbols, checks if key is a group.
-#
 ############################################################################
 
 from Num import Num, num_version
@@ -44,7 +37,6 @@ class shell(cmd.Cmd):
 
     def __init__(self, completekey='tab', scripts=None,libs=None, debug=False,
                  stdin=None, stdout=None, intro=None, GUI='TkAgg'):
-
         try:
             import readline
             self.rdline = readline
@@ -57,7 +49,6 @@ class shell(cmd.Cmd):
         if self.rdline is not None:
             try:
                 self.rdline.read_history_file(self.historyfile)
-
             except IOError:
                 pass
             

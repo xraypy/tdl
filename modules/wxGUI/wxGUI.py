@@ -177,7 +177,18 @@ class wxGUI(model.Background):
         print filename
         self.PlotSelectionWindow = model.childWindow(self, wxPlotSelection,filename=filename)
         self.PlotSelectionWindow.position = (200, 5)
-        self.PlotSelectionWindow.visible = True        
+        self.PlotSelectionWindow.visible = True
+
+    def on_menuWindowLTeQ_select(self, event):
+        ## currently hard wired need to fix!!
+        from vLTEQ import vLTEQ
+        # the child has to get self.shell from the parent
+        #filename = os.path.join(self.rsrc_path,'wxGUI','vLTEQ.rsrc.py')
+        filename = "C:\\user\\trainor\\work\\code\\tdl_src\\test_mods\\lteq_v3\\vLTEQ.rsrc.py"
+        print filename
+        self.PlotSelectionWindow = model.childWindow(self, vLTEQ,filename=filename)
+        self.PlotSelectionWindow.position = (200, 5)
+        self.PlotSelectionWindow.visible = True                
     
     ###########################################################
     #             EVENTS                                      #

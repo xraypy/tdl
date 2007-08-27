@@ -157,7 +157,6 @@ class ExpressionParser:
         alphasx = alphas+"_"+"&"+"$"+"@"
         vname = Word(alphasx, alphasx+nums)
         name  = Combine(ZeroOrMore(vname + _point) +  vname)
-
         
         _num  =  ( Combine(__num__ +  Optional(_point + Optional(__num__)) +
                            Optional(__e__ + Word("+-"+nums, nums)) +  Optional(__j__)  )
@@ -170,7 +169,6 @@ class ExpressionParser:
                   QuotedString('"""', multiline=True).setParseAction(self.pushString_DM) |
                   QuotedString("'").setParseAction(self.pushString_SS) |
                   QuotedString('"').setParseAction(self.pushString_DS) )
-
 
         _sym  = (name + Optional(_lpar + arg_list + _rpar)
                  + ZeroOrMore(_lbrack + _slice + _rbrack)).setParseAction(self.pushSymbol)
@@ -630,8 +628,9 @@ class Expression:
             work.append(val)
             if self.debug >=32: print ' work ', work
         #
-        if type(work) == types.ListType:
-            work = list2array([self.check_retval(i) for i in work])
+        # Remove automatic typecast of lists as numpy arrays (TPT)
+        #if type(work) == types.ListType:
+        #    work = list2array([self.check_retval(i) for i in work])
         if len(work)==1:
             work = work[0]
         if type(work) == types.StringType:

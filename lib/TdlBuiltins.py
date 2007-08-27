@@ -5,44 +5,9 @@
 # Modifications
 # --------------
 #
-# 6-14-06 T2:
-# - add a simple python command (ie access to interactive python prompt
-#   within tdl).  Currenlty only does one-line statements.  
-#
-# 4-27-06 T2:
-# - added help and show.  Also added an input function for cmd line input
-# - fixed a small bug in tdl_path, small fix to _cd
-#
-# 4-16-06 T2:
-# - modified the path function: moved most of it to Utils and
-#   added a recursive option
-#
-# - note it looks like output is fixed for windows path like stuff, so could
-#   remove the 4-8-2006 hacks (although printing paths with / always aint bad?)
-#
-# 4-8-2006 T2:
-# - fix (hack) to cwd, pwd and ls for win32
-# - added **kws to _ls.  is this the right way to make sure __cmdout can get
-#   additional kw arguments not used by the function?
-#
-# 20-Mar-06 MN:  much rearranging, so that this modules holds all "builtins",
-#             including some numeric stuff (sin,  pi, etc)
-#         - eliminated 'delvar', as 'del' is now a real keyword
-#         - renamed to TdlBuiltins (as this essentially holds all builtins"
-#
-# *1-28-06 T2:
-#  moved numeric stuff to TdlNumLib
-#
-# * 1-12-06 T2:
-#  - Renamed Lib -> TdlLib
-#  - Reformat _func_ etc to match generic function loader in Evaluator
-#  - Created a new tdl_import (import) to import/reload func modules
-#  - Added a new tdl_delvar (delvar) function to delete variables and groups
-#    works the same as setvar().  Note should del be added as a special keyword ?
-#  - Add debug function to toggle tdl.debug
 #  
 ##########################################################################
-
+import Num
 from Num import num_version, ndarray
 import version
 import os
@@ -173,7 +138,12 @@ def _help(arg='',tdl=None,**kw):
 
 def _show(arg='',tdl=None,**kw):
     verify_tdl(tdl,name='show')
-    tdl.help.show(arg)
+    if len(arg.strip())==0:
+        tdl.help.show_topgroups_fmt()
+    elif arg == "-l":
+        tdl.help.show(arg='',extended=True)    
+    else:
+        tdl.help.show(arg)
 
 def _dir(x,tdl=None,**kws):
     ll = dir(x)
@@ -232,38 +202,54 @@ def _list(x):
 
 def _listappend(x,val):
     "append a value to a list"
-    if type(x) == ndarray: x = x.tolist()
-    if type(x) == types.ListType:
+    if type(x) == ndarray:
+        x = x.tolist()
         x.append(val)
         return list2array(x)
+    if type(x) == types.ListType:
+        x.append(val)
+        return x
 
 def _listjoin(x,y):
     "join two lists"    
     "return list of dictionary items"
-    if type(x) == ndarray: x = x.tolist()
-    if type(x) == types.ListType:
+    if type(x) == ndarray:
+        x = x.tolist()
         if type(y) == ndarray: y = y.tolist()
         if type(y) == types.ListType:
             x.extend(y)
         elif datalen(y) == 1:
             x.append(y)
         return list2array(x)
+    if type(x) == types.ListType:
+        if type(y) == ndarray: y = y.tolist()
+        if type(y) == types.ListType:
+            x.extend(y)
+        elif datalen(y) == 1:
+            x.append(y)
+        #return list2array(x)
+        return x
     
 def _listreverse(x):
     "join two lists"    
     "return list of dictionary items"
-    if type(x) == ndarray: x = x.tolist()
-    if type(x) == types.ListType:
+    if type(x) == ndarray:
+        x = x.tolist()
         x.reverse()
         return list2array(x)
+    if type(x) == types.ListType:
+        x.reverse()
+        #return list2array(x)
+        return x
 
 def _listsort(x):
     "join two lists"    
     "return list of dictionary items"
-    if type(x) == ndarray: x = x.tolist()
+    if type(x) == ndarray:
+        return x.sort()
     if type(x) == types.ListType:
-        x.sort()
-        return list2array(x)
+        return x.sort()
+        #return list2array(x)
 
 def _strsplit(var,sep=' '):
     "split a string"
@@ -348,7 +334,6 @@ def _more(name,pagesize=24):
 
 def _type(x):
     "return data type of data"
-    t = type(x)
     typecodes = {types.StringType:'string',
                  types.IntType: 'int',
                  types.LongType:'int',
@@ -357,11 +342,11 @@ def _type(x):
                  types.ListType:'list',
                  types.DictType:'dict',
                  ndarray:'array'}
-    
+    t = type(x)
     if t in typecodes.keys(): return typecodes[t]
+    if t in Num.typeDict.values(): return t
     if isGroup(x): return 'group'
     if isSymbol(x): return x.type
-
     return 'object'
 
 def tdl_path(pth=None,recurse=False,tdl=None,**kw):
@@ -473,11 +458,13 @@ def tdl_import(lib='',tdl=None,debug=False,reloadAll=False,clearAll=False,**kw):
     import python modules that define tdl functions,
     import()               # re-imports all previously defined modules
     import('x.py')         # imports new module x.py
-    import(clearAll=True)  # re-imports modules AND clears all data  
+    ##import(clearAll=True)  # re-imports modules AND clears all data  
     """
     verify_tdl(tdl, 'import',msg='trying to import %s' % lib)
-
-    if lib: tdl.symbolTable.import_lib(lib)
+    if lib:
+        tdl.symbolTable.import_lib(lib)
+    else:
+        tdl.symbolTable.reimport_libs()
     if debug: print 'import done.'
 
 def tdl_eval(expr, tdl=None,debug=False,**kw):

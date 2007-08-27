@@ -5,20 +5,7 @@
 # -------------
 # Modifications
 # -------------
-# 4-29-06 T2:
-# - added some default _sys.vars
-# 4-18-06 T2:
-# - another small tweak to startup files.  may as well be .tdl_init
-#   for all systems.
-# 4-18-06 MN:
-# - several tweaks to startup paths and files stuff.
-# 4-16-06 T2:
-# - A bunch of changes to handle setting default paths and default
-#   startup files
-# - also a bit of work on startup switches
-# 4-8-06 T2
-# Added verbose option.  note -f doesnt do anything, ie shell
-# doesnt accept file on init.
+#
 #
 ############################################################################
 
@@ -28,7 +15,7 @@ import os, string, sys, getopt
 ##############################################################
 # test for command line switches
 use_wxGUI = False
-debug     = True
+debug     = False
 verbose   = False
 do_shell  = True
 
@@ -75,11 +62,12 @@ try:
     print '  ############## This is TDL EXPERIMENTAL ##############'
 except ImportError:
     print 'could not load '
-    # import tdl
+    import tdl
+    devel = False
 
-lib_path    = os.path.abspath(tdl.__path__[0])
+lib_path  = os.path.abspath(tdl.__path__[0])
 if devel:
-    tdl_root    = os.path.dirname(lib_path)
+    tdl_root  = os.path.dirname(lib_path)
 else:
     tdl_root = lib_path
 module_path = os.path.join(tdl_root,'modules')

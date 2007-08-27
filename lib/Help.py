@@ -1,6 +1,5 @@
-#
 # Help class for on-line documentation /help in tdl
-# M. Newville Univ of Chicago, T. Trainor, Univ of Alaska, Fairbanks (2005,2006)
+# M. Newville Univ of Chicago, T. Trainor, Univ of Alaska Fairbanks (2005,2006)
 #
 # --------------
 # Modifications
@@ -10,7 +9,6 @@
 #  20-Mar-06 MN - changed to have a Help class that contains a dictionary of
 #                 help topics
 #                
-#
 #
 ##########################################################################
 
@@ -33,8 +31,9 @@ HelpShow =  """
   ###########################################################################
    = show: show list groups and variables =
     show              # summary of all top-level groups
+    show -l           # short list of all top-level groups
     show mygroup      # list variables and sub-groups of mygroup
-    show myvariable   # summaray for variable myvariable
+    show myvariable   # summary for variable myvariable
     (see also: 'help' and 'help topics')
   ###########################################################################
 """
@@ -467,9 +466,8 @@ HelpControl = """
 #  one quote mark: ' to fix emacs colorization
 #########################################################
 import types, sys
-from Symbol import isGroup, isSymbol
+from Symbol import isGroup, isSymbol, symTypes
 from Util   import show_list, split_arg_str, show_more, SymbolError
-
 
 class Help:
     """ basic help mechanism for Tdl """
@@ -507,14 +505,54 @@ class Help:
             return self.topics[name]
         return "No help available for %s" % (name)
 
-    ###
-    def bprint(self,x): self.buff.append("%s\n" % x)
+    ##############################################
+    def bprint(self,x):
+        self.buff.append("%s\n" % x)
+        return
 
     def __showbuff(self):
         show_more(self.buff)
         self.buff = []
         
-    def show_symbols(self,args,indent=1,title=None,groupname=None,followgroups=False):
+    def show(self,arg=None, extended=False):
+        if arg is None or arg=='':
+            return self.show_topgroups()
+        try:
+            sym = self.tdl.symbolTable.getSymbol(arg)
+            if  isSymbol(sym):
+                self.show_symbols([sym], extended=extended)
+            elif isGroup(sym):
+                self.show_symbols(sym.values(),extended=extended)
+            #elif type(arg)==types.FunctionType:
+            #    self.bprint(arg.__doc__)
+            #    self.__showbuff()
+            elif type(arg)==types.StringType:
+                args = arg.replace('=',' ').strip().split()
+                self.show_symbols(args)
+        except:
+            print "Show failed"
+
+    def help(self,argin):
+        args = argin.strip().split()
+        key = None
+        if len(args) > 0:  key = args.pop(0).strip()
+        self.__showbuff()
+        self.help_topics = self.list_topics()
+        if key is None:
+            self.bprint( self.topics['help'])
+        elif key in ('-t','topics'):
+            self.bprint("\n==Additional help is avaiable on the following topics:")
+            self.bprint(show_list(self.help_topics, ncol = 5))
+            self.bprint('')
+        elif key in self.help_topics:
+            self.bprint(self.get_help(key))
+        else:
+            args.insert(0,key)
+            for a in args:
+                self.show(a, extended=True)
+        self.__showbuff()
+        
+    def show_symbols(self,args,indent=1,title=None,groupname=None,followgroups=False,extended=False):
         " list all contents of a group "
 
         # print "==Show Symbols " , args, indent, title, groupname
@@ -526,17 +564,19 @@ class Help:
         for sym in args:
             nam  = sym.name
             if nam.startswith("%s."%groupname): nam = nam[len(groupname)+1:]
-            
             nam  = nam + ' '*(self.charlen - len(nam))
-            # print ' >> ', nam,sym
-            self.bprint("%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
-
+            #print ' >> ', nam,sym
+            #self.bprint("%s%s: %s" % (vtab,nam, sym.getinfo(extended=True)))
+            inf = sym.getinfo(extended=extended)
+            txt = "%s%s: %s" % (vtab,nam,inf)
+            self.bprint(txt)
             if isGroup(sym) and followgroups:
-                print ':: ', sym.keys(), sym.values()
-                self.show_symbols(sym.values(), title=sym.getinfo(extended=True),
+                #print ':: ', sym.keys(), sym.values()
+                self.show_symbols(sym.values(),
+                                  title=sym.getinfo(extended=extended),
                                   groupname=sym.name, 
-                                  indent=indent+1,followgroups=followgroups)
-
+                                  indent=indent+1,
+                                  followgroups=followgroups)
         self.__showbuff()
         
     def show_topgroups(self):
@@ -547,8 +587,9 @@ class Help:
         self.bprint("Default Data group = %s,  Function group = %s\n" % (locgroup, modgroup))
 
         groups = stable.data.values()
-        groups.sort()
-        self.show_symbols(groups)
+        #groups.sort()
+        groups = self.sort_symbols(groups)
+        self.show_symbols(groups, extended=True)
 
         self.bprint(" ")
         gnames = [locgroup]
@@ -556,52 +597,129 @@ class Help:
         for g in gnames:
             grp = stable.getSymbol(g)
             if len(grp.keys())>0:
-                self.show_symbols(grp.values(), indent=2,
-                                  title="%s: %s" % (g,grp.getinfo(extended=True)),
+                self.show_symbols(grp.values(),
+                                  indent=2,
+                                  title="%s: %s" % (g,grp.getinfo(extended=False)),
                                   groupname=grp.name)
+        print " "
 
+    def show_topgroups_fmt(self):
+        stable   = self.tdl.symbolTable
+        locgroup = stable.LocalGroup
+        modgroup = stable.ModuleGroup
+        sgroups  = stable.searchGroups
 
-    def show(self,arg=None):
-        if arg is None or arg=='':
-            return self.show_topgroups()
+        print "=== Default Data Group = %s,  Function Group = %s" % (locgroup, modgroup)
+        print "    Search Groups: ", sgroups
+        print " "
         
-        try:
-            sym = self.tdl.symbolTable.getSymbol(arg)
-            if  isSymbol(sym):
-                self.show_symbols([sym])
-            elif isGroup(sym):
-                self.show_symbols(sym.values())
-            elif type(arg)==types.FunctionType:
-                self.bprint(arg.__doc__)
-                self.__showbuff()
-            elif type(arg)==types.StringType:
-                args = arg.replace('=',' ').strip().split()
-                self.show_symbols(args)
-        except:
-            pass
-        self.__showbuff()
+        print "=== Symbols Defined in Default Data Group:"
+        ncol = 8
+        txt = {'g':[],'f':[],'v':[]}
+        for sym in stable.data[locgroup].values():
+            name = sym.name
+            if name.startswith("%s."%locgroup):
+                name = name[len(locgroup)+1:]
+            if isGroup(sym):
+                txt['g'].append(name)
+            elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+                txt['f'].append(name)
+            else:
+                txt['v'].append(name)
+        txt['g'].sort()
+        txt['f'].sort()
+        txt['v'].sort()
+        if len(txt['g']) > 0:
+            t = "  Subgroups:  "
+            cnt = 0
+            for g in txt['g']:
+                t = "%s %s,  " % (t,g)
+                cnt = cnt + 1
+                if cnt > ncol:
+                    t = "%s \n              " % t
+                    cnt = 0
+            print t
+        if len(txt['f']) > 0:
+            t =  "  Functions:  "
+            cnt = 0
+            for f in txt['f']:
+                t = "%s %s,  " % (t,f)
+                cnt = cnt + 1
+                if cnt > ncol:
+                    t = "%s \n              " % t
+                    cnt = 0
+            print t
+        if len(txt['v']) > 0:
+            t = "  Variables:  "
+            cnt = 0
+            for v in txt['v']:
+                t = "%s %s,  " % (t,v)
+                cnt = cnt + 1
+                if cnt > ncol:
+                    t = "%s \n              " % t
+                    cnt = 0
+            print t
+        print " "
 
-    def help(self,argin):
-        args = argin.strip().split()
-        key = None
-        if len(args) > 0:  key = args.pop(0).strip()
-        self.__showbuff()
-        self.help_topics = self.list_topics()
+        print "=== Top Level Groups"        
+        ncol = 4
+        groups = stable.data.values()
+        groups = self.sort_symbols(groups)
+        txt = {'g':[],'f':[],'v':[],'s':[]}
+        ngrps = 0
+        for grp in groups:
+            if isGroup(grp): 
+                txt['g'].append("* Group: %s" % (grp.name))
+                (nvar,nfun,ngrp) = grp.stats()
+                txt['f'].append(" %i functions" % (nfun))
+                txt['v'].append(" %i variables" % (nvar))
+                txt['s'].append(" %i sub groups" % (ngrp))
+                ngrps = ngrps +1
 
-        if key is None:
-            self.bprint( self.topics['help'])
-        elif key in ('-t','topics'):
-            self.bprint("\n==Additional help is avaiable on the following topics:")
-            self.bprint(show_list(self.help_topics, ncol = 5))
-            self.bprint('')
-        elif key in self.help_topics:
-            self.bprint(self.get_help(key))
-        else:
-            args.insert(0,key)
-            for a in args: self.show(a)
+        j = 0; k = 0; 
+        while True:
+            t = ''
+            for k in range(ncol):
+                if j+k < ngrps:
+                    t = "%s %-20s\t" % (t,txt['g'][j+k])
+            print t
+            t= ''
+            for k in range(ncol):
+                if j+k < ngrps:
+                    t = "%s %-20s\t" % (t,txt['f'][j+k])
+            print t
+            t = ''
+            for k in range(ncol):
+                if j+k < ngrps:
+                    t = "%s %-20s\t" % (t,txt['v'][j+k])
+            print t
+            t = ''
+            for k in range(ncol):
+                if j+k < ngrps:
+                    t = "%s %-20s\t" % (t,txt['s'][j+k])
+            print t
+            ##
+            print "\n"
+            j = j + k + 1
+            if j >= ngrps: break
+        return
 
-        self.__showbuff()
+    def sort_symbols(self, syms):
+        """ Given a list of symbols, return the list sorted by name"""
+        #syms.sort()
+        # force sort
+        syms2 = []
+        syms2.append(syms.pop(0))
+        while len(syms) > 0:
+            j = 0
+            while j < len(syms2):
+                if syms2[j].name > syms[0].name:
+                    break
+                j = j+1
+            syms2.insert(j,syms.pop(0))
+        return syms2
 
+###########################################################################################
 # 
 #     def _group(g,indent=0):
 #         if not isGroup(g): return None
@@ -636,7 +754,6 @@ class Help:
 #         nam  = nam + ' '*(16-len(nam))
 #         self.bprint('%s: %i variables, %i functions, %i subgroups' % (nam,st[0],st[1],st[2]))
 # 
-
 #     def _groupcount(g):
 #         nvar, nfunc, ngroup = 0,0,0
 #         for sym in g.values():

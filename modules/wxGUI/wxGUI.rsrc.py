@@ -36,6 +36,10 @@
              'label':'Window',
              'items': [
                   {'type':'MenuItem',
+                   'name':'menuWindowLTeQ',
+                   'label':u'LTeQ',
+                  },
+                  {'type':'MenuItem',
                    'name':'menuWindowXRF',
                    'label':'XRF',
                   },
