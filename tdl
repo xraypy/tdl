@@ -14,6 +14,7 @@ import os, string, sys, getopt
 
 ##############################################################
 # test for command line switches
+##############################################################
 use_wxGUI = False
 debug     = False
 verbose   = False
@@ -56,6 +57,7 @@ for o, a in opts:
 #################################################################
 # import and set default paths
 # additional paths should be set in the startup.tdl files
+#################################################################
 try:
     import lib as tdl
     devel = True
@@ -90,20 +92,10 @@ except:
 #   first site-wide ==> module_path/startup.tdl
 #   then from user's home dir ==> ~/.tdl_init
 # files contains tuples of (file, Warn_if_Not_Exist_Flag)
+##############################################################
 files = [(os.path.join(module_path,'startup.tdl'),False)]
 user_home = os.path.expanduser('~')
 files.append((os.path.join(user_home,'.tdl_init'),False))
-
-# create a dictionary of default _sys variables
-sys_vars = {}
-sys_vars['_sys.home'] = user_home
-if os.getenv("work"):
-    sys_vars['_sys.work'] = os.getenv("work")
-elif os.getenv("WORK"):
-    sys_vars['_sys.work'] = os.getenv("WORK")
-else:
-    sys_vars['_sys.work'] = os.getcwd()
-#sys_vars['_sys.file_path'] = ''
 
 # the rest of the arg line are added files
 if args is not None:
@@ -115,7 +107,20 @@ if verbose:
     print " == Startup files:"
     for f in files: print f
 
+# create a dictionary of default _sys variables
+sys_vars = {}
+sys_vars['_sys.home'] = user_home
+if os.getenv("work"):
+    sys_vars['_sys.work'] = os.getenv("work")
+elif os.getenv("WORK"):
+    sys_vars['_sys.work'] = os.getenv("WORK")
+else:
+    sys_vars['_sys.work'] = os.getcwd()
+sys_vars['_sys.file_path'] = sys_vars['_sys.work']
+
+##########################################################
 # run it
+##########################################################
 if use_wxGUI == False:
     t = tdl.shell(libs=libs,debug=debug,GUI='TkAgg')
     for var in sys_vars.keys():

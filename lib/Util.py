@@ -60,7 +60,7 @@ def datalen(x):
     except:
         return 1
 
-def show_more(text,filename=None,writer=sys.stdout,pagesize=30,prefix=''):
+def show_more(text,filename=None,writer=None,pagesize=30,prefix=''):
     """ show lines of text in the style of more """
     txt = text[:]
     if type(txt)== types.StringType:  txt = txt.split('\n')
@@ -70,10 +70,15 @@ def show_more(text,filename=None,writer=sys.stdout,pagesize=30,prefix=''):
     ps = "%s (%%.2f%%%%) == " % prompt
     if filename: ps = "%s (%%.2f%%%%  of %s) == " % (prompt,filename)
 
+    if writer == None:
+        writer = sys.stdout
+
     i = 0
     for i in range(len(txt)):
-        if txt[i].endswith('\n'): writer.write("%s%s" % (prefix,txt[i]))
-        else:                     writer.write("%s%s\n" % (prefix,txt[i]))
+        if txt[i].endswith('\n'):
+            writer.write("%s%s" % (prefix,txt[i]))
+        else:
+            writer.write("%s%s\n" % (prefix,txt[i]))
         i = i + 1
         if i % pagesize == 0:
             try:

@@ -28,7 +28,6 @@ rsrc_path = '.'
 
 class wxGUI(model.Background):
 
-
     def on_initialize(self, event):
 
         # including sizer setup, do it here
@@ -63,8 +62,6 @@ class wxGUI(model.Background):
         time.sleep(.5)
         self.close()
         sys.exit()
-
-
 
     ################################################
     def run_tdl(self,fname=''):

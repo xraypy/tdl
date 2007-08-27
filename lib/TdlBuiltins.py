@@ -477,11 +477,50 @@ def tdl_setvar(name,val,tdl=None,debug=False,**kws):
     verify_tdl(tdl, 'setvar',msg='trying to setvar %s' % name)
     return tdl.symbolTable.setVariable(name,val,**kws)
 
-def tdl_newgroup(name=None,tdl=None,toplevel=False,debug=False,**kw):
+def tdl_newgroup(name=None,tdl=None,toplevel=True,debug=False,**kw):
     "add a group"
     verify_tdl(tdl, 'newgroup')
-    return Group(name='_',toplevel=toplevel,vars=kw)
+    if name == None: return
+    if len(name.strip) == 0: return
+    return tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
+    #return Group(name='_',toplevel=toplevel,vars=kw)
 
+def tdl_set_data_group(name=None,toplevel=True,tdl=None,**kw):
+    "set default data group"
+    verify_tdl(tdl, 'datagroup')
+    if name == None:
+        return tdl.symbolTable.LocalGroup        
+    if len(name.strip()) == 0:
+        return tdl.symbolTable.LocalGroup
+    
+    if tdl.symbolTable.hasGroup(name):
+        tdl.symbolTable.LocalGroup = name
+    else:
+        try:
+            g = tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
+            tdl.symbolTable.LocalGroup = name
+        except:
+            print "%s is an invalid group" % name
+    return 
+
+def tdl_set_module_group(name=None,toplevel=True,tdl=None,**kw):
+    "set default data group"
+    verify_tdl(tdl, 'funcgroup')
+    if name == None:
+        return tdl.symbolTable.ModuleGroup        
+    if len(name.strip()) == 0:
+        return tdl.symbolTable.ModuleGroup
+
+    if tdl.symbolTable.hasGroup(name):
+        tdl.symbolTable.ModuleGroup = name
+    else:
+        try:
+            g = tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
+            tdl.symbolTable.ModuleGroup = name
+        except:
+            print "%s is an invalid group" % name
+    return 
+    
 def tdl_delvar(name,tdl=None,**kw):
     "delete a variable "
     verify_tdl(tdl, 'delvar',msg='trying to delete variable %s' % name)
@@ -615,13 +654,17 @@ _help_  = {'builtins': HelpBuiltins,
            'import': HelpImport,
            }
 
-#'_builtin.del':(tdl_delvar,None),
+#_var_  = {'_builtin.data_group': None }
+
+
 # functions to add to namespace
 _func_ = {'_builtin.load':(tdl_load, None),
           '_builtin.import':(tdl_import, None),
           '_builtin.eval':(tdl_eval,None),
           '_builtin.setvar':(tdl_setvar,None),
-          '_builtin.newgroup':tdl_newgroup,
+          '_builtin.newgroup':(tdl_newgroup,None),
+          '_builtin.datagroup':(tdl_set_data_group,None),
+          '_builtin.funcgroup':(tdl_set_module_group,None),
           '_builtin.delete':tdl_delvar,
           '_builtin.debug':(tdl_set_debug,None),
           "_builtin.cd":(_cd,None),

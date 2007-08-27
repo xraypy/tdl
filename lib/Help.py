@@ -471,7 +471,8 @@ from Util   import show_list, split_arg_str, show_more, SymbolError
 
 class Help:
     """ basic help mechanism for Tdl """
-    charlen = 16
+    #charlen = 16
+    charlen = 24
     def __init__(self,tdl=None,output=None):
         self.tdl = tdl
         self.output = output
@@ -560,7 +561,7 @@ class Help:
         ttab = '  '*(indent-1)
         if title is not None: self.bprint("%s==%s==" % (ttab,title))
         if groupname is None: groupname=''
-
+        args = self.sort_symbols(args)
         for sym in args:
             nam  = sym.name
             if nam.startswith("%s."%groupname): nam = nam[len(groupname)+1:]
@@ -616,50 +617,53 @@ class Help:
         print "=== Symbols Defined in Default Data Group:"
         ncol = 8
         txt = {'g':[],'f':[],'v':[]}
-        for sym in stable.data[locgroup].values():
-            name = sym.name
-            if name.startswith("%s."%locgroup):
-                name = name[len(locgroup)+1:]
-            if isGroup(sym):
-                txt['g'].append(name)
-            elif sym.type in (symTypes.defpro,symTypes.pyfunc):
-                txt['f'].append(name)
-            else:
-                txt['v'].append(name)
-        txt['g'].sort()
-        txt['f'].sort()
-        txt['v'].sort()
-        if len(txt['g']) > 0:
-            t = "  Subgroups:  "
-            cnt = 0
-            for g in txt['g']:
-                t = "%s %s,  " % (t,g)
-                cnt = cnt + 1
-                if cnt > ncol:
-                    t = "%s \n              " % t
-                    cnt = 0
-            print t
-        if len(txt['f']) > 0:
-            t =  "  Functions:  "
-            cnt = 0
-            for f in txt['f']:
-                t = "%s %s,  " % (t,f)
-                cnt = cnt + 1
-                if cnt > ncol:
-                    t = "%s \n              " % t
-                    cnt = 0
-            print t
-        if len(txt['v']) > 0:
-            t = "  Variables:  "
-            cnt = 0
-            for v in txt['v']:
-                t = "%s %s,  " % (t,v)
-                cnt = cnt + 1
-                if cnt > ncol:
-                    t = "%s \n              " % t
-                    cnt = 0
-            print t
-        print " "
+        try:
+            for sym in stable.getSymbol(locgroup).values():
+                name = sym.name
+                if name.startswith("%s."%locgroup):
+                    name = name[len(locgroup)+1:]
+                if isGroup(sym):
+                    txt['g'].append(name)
+                elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+                    txt['f'].append(name)
+                else:
+                    txt['v'].append(name)
+            txt['g'].sort()
+            txt['f'].sort()
+            txt['v'].sort()
+            if len(txt['g']) > 0:
+                t = "  Subgroups:  "
+                cnt = 0
+                for g in txt['g']:
+                    t = "%s %s,  " % (t,g)
+                    cnt = cnt + 1
+                    if cnt > ncol:
+                        t = "%s \n              " % t
+                        cnt = 0
+                print t
+            if len(txt['f']) > 0:
+                t =  "  Functions:  "
+                cnt = 0
+                for f in txt['f']:
+                    t = "%s %s,  " % (t,f)
+                    cnt = cnt + 1
+                    if cnt > ncol:
+                        t = "%s \n              " % t
+                        cnt = 0
+                print t
+            if len(txt['v']) > 0:
+                t = "  Variables:  "
+                cnt = 0
+                for v in txt['v']:
+                    t = "%s %s,  " % (t,v)
+                    cnt = cnt + 1
+                    if cnt > ncol:
+                        t = "%s \n              " % t
+                        cnt = 0
+                print t
+            print " "
+        except:
+            print "          Cannot read default group"
 
         print "=== Top Level Groups"        
         ncol = 4
@@ -707,17 +711,20 @@ class Help:
     def sort_symbols(self, syms):
         """ Given a list of symbols, return the list sorted by name"""
         #syms.sort()
-        # force sort
-        syms2 = []
-        syms2.append(syms.pop(0))
-        while len(syms) > 0:
-            j = 0
-            while j < len(syms2):
-                if syms2[j].name > syms[0].name:
-                    break
-                j = j+1
-            syms2.insert(j,syms.pop(0))
-        return syms2
+        try:
+            # force sort
+            syms2 = []
+            syms2.append(syms.pop(0))
+            while len(syms) > 0:
+                j = 0
+                while j < len(syms2):
+                    if syms2[j].name > syms[0].name:
+                        break
+                    j = j+1
+                syms2.insert(j,syms.pop(0))
+            return syms2
+        except:
+            return syms
 
 ###########################################################################################
 # 

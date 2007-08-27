@@ -179,7 +179,9 @@ class wxXRF(model.Background, wxTdlUtil):
         " Initialize the menu    "
         grp = self.components.Grp.text
         if len(grp) == 0:
-            grp = self.getValue('_builtin.data_group')
+            #grp = self.getValue('_builtin.data_group')
+            grp = self.tdl.symbolTable.LocalGroup
+        print grp
         self.components.Grp.items = self.listGroups()
         self.components.Grp.text = grp
         return

@@ -26,20 +26,26 @@ class wxTdlUtil:
         return self.tdl.getVariable(var_name)
 
     def listGroups(self):
-        return self.tdl.symbolTable.listGroups()
+        data = self.tdl.symbolTable.listGroups()
+        print data.sort()
+        return data
 
     def listDataGroup(self,grp):
-        return self.tdl.symbolTable.listDataGroup(grp)
+        #return self.tdl.symbolTable.listDataGroup(grp)
+        data = self.tdl.symbolTable.listGroups()
+        print data.sort()
+        return data
 
     def listAllData(self):
-        data_dict = self.tdl.symbolTable.listData()
-        lst = []
-        for grp in data_dict.keys():
-            for node in data_dict[grp]:
-                name = "%s.%s" % (grp,node)
-                lst.append(name)
-        lst.sort()
-        return lst
+        #data_dict = self.tdl.symbolTable.listData()
+        #lst = []
+        #for grp in data_dict.keys():
+        #    for node in data_dict[grp]:
+        #        name = "%s.%s" % (grp,node)
+        #        lst.append(name)
+        data = self.tdl.symbolTable.listVariables()
+        print data.sort()
+        return data
 
     def execLine(self,line):
         #return self.tdl.execute(line)

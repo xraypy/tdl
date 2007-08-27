@@ -300,6 +300,7 @@ class SymbolTable:
 
         self.setSymbol('_sys.path',['.'])
         self.setSymbol('_sys.searchGroups',self.searchGroups)
+        
         if init: self.initialize()
 
     def initialize(self,libs=None):
@@ -462,7 +463,6 @@ class SymbolTable:
         sym = self._normalize_sym(sym,toplevel=toplevel)
         if not isGroup(sym):
             raise SymbolError, ' cannot create group %s '% name
-
         for p in parts:  sym = sym.addGroup(p,status=status,toplevel=toplevel)
         return sym
 
@@ -582,8 +582,7 @@ class SymbolTable:
         return self.setSymbol(name,value=name,stype=symTypes.defpro,
                               mod=self.ModuleGroup,
                               code=code, desc=desc,**kws)
-        
-        
+
     def setFunction(self,name,func,ftype=symTypes.pyfunc,code=None,
                     desc=None,cmd_out=None):
         "add a function"
