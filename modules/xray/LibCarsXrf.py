@@ -122,7 +122,6 @@ def xrf_read(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='CARS',
                      cor = (icr/ocr)*(rt/lt)
                      max_icr = 1/tau
                      max_ocr = max_icr*exp(-1)
-
     """
 
     xrf = XRF.read_xrf_file(file=file,bad_mca_idx=bad_mca_idx,total=total,align=align,tau=tau,fmt=fmt)
@@ -134,7 +133,7 @@ def xrf_read_cmd(val,file=None,tdl=None,**kws):
     if '.' in name:
         #name = name.split('.',1)[0]
         name = name.replace('.','_')
-    name = 'xrf_data.%s' % name
+    name = 'xrf.data.%s' % name
     tdl.setVariable(name,val=val)
     return
 
@@ -209,10 +208,10 @@ def xrf_set_data(xrf,bad_mca_idx=None,total=None,align=None,correct=None,tau=Non
     return
 
 #############################################################################
-def xrf_data(xrf):
+def xrf_counts(xrf):
     """
     Returns the data 
-    >>data = xrf.data(xrf)
+    >>data = xrf.counts(xrf)
 
     Inputs:
         xrf:
@@ -232,10 +231,10 @@ def xrf_data(xrf):
         The counts are the sum for all detectors
 
     Example:
-        >>data = xrf.data(xrf)  # xrf.total = True
-        >>total_counts = data[0]
+        >>data = xrf.counts(xrf)  # xrf.total = True
+        >>total_counts = counts[0]
 
-        >>data = xrf.data(xrf)  # xrf.total = False
+        >>data = xrf.counts(xrf)  # xrf.total = False
         >>cnts0 = data[0]
         >>cnts1 = data[1]
         
@@ -672,7 +671,7 @@ _groups_ = [('xrf',True)]
 _func_ = {"xrf.read":(xrf_read,xrf_read_cmd),
           "xrf.read_scan":read_xrf_scan,
           "xrf.set_data":xrf_set_data,
-          "xrf.data":xrf_data,
+          "xrf.counts":xrf_counts,
           "xrf.energy":xrf_energy,
           "xrf.set_bgr":xrf_set_bgr,
           "xrf.fit_bgr":xrf_fit_bgr,

@@ -481,8 +481,9 @@ def tdl_newgroup(name=None,tdl=None,toplevel=True,debug=False,**kw):
     "add a group"
     verify_tdl(tdl, 'newgroup')
     if name == None: return
-    if len(name.strip) == 0: return
-    return tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
+    if len(name.strip()) == 0: return
+    tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
+    #return tdl.symbolTable.addGroup(name,toplevel=toplevel,**kw)
     #return Group(name='_',toplevel=toplevel,vars=kw)
 
 def tdl_set_data_group(name=None,toplevel=True,tdl=None,**kw):

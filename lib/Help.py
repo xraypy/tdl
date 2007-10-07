@@ -466,7 +466,7 @@ HelpControl = """
 #  one quote mark: ' to fix emacs colorization
 #########################################################
 import types, sys
-from Symbol import isGroup, isSymbol, symTypes
+from Symbol import isGroup, isSymbol, symTypes, sort_symbols
 from Util   import show_list, split_arg_str, show_more, SymbolError
 
 class Help:
@@ -555,13 +555,12 @@ class Help:
         
     def show_symbols(self,args,indent=1,title=None,groupname=None,followgroups=False,extended=False):
         " list all contents of a group "
-
         # print "==Show Symbols " , args, indent, title, groupname
         vtab = '  '*indent
         ttab = '  '*(indent-1)
         if title is not None: self.bprint("%s==%s==" % (ttab,title))
         if groupname is None: groupname=''
-        args = self.sort_symbols(args)
+        args = sort_symbols(args)
         for sym in args:
             nam  = sym.name
             if nam.startswith("%s."%groupname): nam = nam[len(groupname)+1:]
@@ -589,7 +588,7 @@ class Help:
 
         groups = stable.data.values()
         #groups.sort()
-        groups = self.sort_symbols(groups)
+        groups = sort_symbols(groups)
         self.show_symbols(groups, extended=True)
 
         self.bprint(" ")
@@ -668,7 +667,7 @@ class Help:
         print "=== Top Level Groups"        
         ncol = 4
         groups = stable.data.values()
-        groups = self.sort_symbols(groups)
+        groups = sort_symbols(groups)
         txt = {'g':[],'f':[],'v':[],'s':[]}
         ngrps = 0
         for grp in groups:
@@ -708,23 +707,7 @@ class Help:
             if j >= ngrps: break
         return
 
-    def sort_symbols(self, syms):
-        """ Given a list of symbols, return the list sorted by name"""
-        #syms.sort()
-        try:
-            # force sort
-            syms2 = []
-            syms2.append(syms.pop(0))
-            while len(syms) > 0:
-                j = 0
-                while j < len(syms2):
-                    if syms2[j].name > syms[0].name:
-                        break
-                    j = j+1
-                syms2.insert(j,syms.pop(0))
-            return syms2
-        except:
-            return syms
+
 
 ###########################################################################################
 # 

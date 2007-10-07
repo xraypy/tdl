@@ -10,11 +10,6 @@
 
 __version__  = '0.6'
 
-# symbol Groups that must always be present, and starting search order
-initGroups    = ('_main','_sys','_math','_plot','_builtin')
-init_loadLibs = ['TdlBuiltins','TdlNumLib']
-_TopGroupName = '_TDL_'
-
 import types
 import os
 import random
@@ -29,9 +24,14 @@ from Util import find_unquoted_char, split_delim, datalen, set_path, list2array
 from Util import PrintExceptErr, SymbolError, ConstantError, show_more
 from string import ascii_lowercase, digits
 
+############################################################
+
+# symbol Groups that must always be present, and starting search order
+initGroups    = ('_main','_sys','_math','_plot','_builtin')
+init_loadLibs = ['TdlBuiltins','TdlNumLib']
+_TopGroupName = '_TDL_'
+
 isValidName = re.compile(r'^[a-zA-Z_\$&@][a-zA-Z_\$&@0-9]*$').match
-def randomName(n=6):
-    return ''.join([(ascii_lowercase + digits)[random.randrange(36)] for i in range(n)])
 
 class symTypes:
     variable  = 'variable'
@@ -46,7 +46,6 @@ class symTypes:
     All       = Data + Funcs
     NonGroups = (variable,pyobj,file,defvar,pyfunc,defpro)
 
-
 var_typecodes = {types.StringType:'string',
                  types.IntType: 'int',
                  types.LongType:'int',
@@ -55,6 +54,65 @@ var_typecodes = {types.StringType:'string',
                  types.ListType:'list',
                  types.DictType:'dict',
                  ndarray:'array'}
+
+def randomName(n=6):
+    return ''.join([(ascii_lowercase + digits)[random.randrange(36)] for i in range(n)])
+
+def splitname(s):
+    parts = s.split('.')
+    for i,p in enumerate(parts):
+        if i == 0 and p == _TopGroupName:
+            pass
+        elif not isValidName(p):
+            msg = 'invalid name "%s"' % (s)
+            if len(s)>1: msg = 'invalid name "%s" (error at "%s")' % (s,p)
+            raise SymbolError, msg
+    return parts
+
+def _splitName(name,check=True):
+    parts = name.split('.')
+    if check:
+        for i in parts:
+            if not isValidName(i):
+                msg = 'invalid name "%s"' % (name)
+                if len(n)>1: msg = 'invalid name "%s" (error at "%s")' % (name,i)
+                raise SymbolError, msg
+    return parts
+
+def isGroup(x):
+    try:
+        return (x.type == symTypes.group)
+    except:
+        return False
+    
+def isSymbol(x):
+    return (hasattr(x,'value') and hasattr(x,'getCode') )
+
+def isData(x):
+    if isSymbol(x):
+        if x.type in symTypes.Data:
+            return (True)
+    return (False)
+
+def sort_symbols(syms):
+    """ Given a list of symbols, return the list sorted by name"""
+    #syms.sort()
+    try:
+        # force sort
+        syms2 = []
+        syms2.append(syms.pop(0))
+        while len(syms) > 0:
+            j = 0
+            while j < len(syms2):
+                if syms2[j].name > syms[0].name:
+                    break
+                j = j+1
+            syms2.insert(j,syms.pop(0))
+        return syms2
+    except:
+        return syms
+
+############################################################
 
 class Group(dict):
     """ symbol group is an extended dictionary that holds symbols and other symbol groups"""
@@ -134,7 +192,8 @@ class Group(dict):
             else: nvar = nvar + 1
         return (nvar,nfunc, ngroup)
 
-
+############################################################
+    
 class Symbol:
     """
     Basic container for all tdl symbols. 
@@ -251,38 +310,9 @@ class Symbol:
 
         return sout
 
+
 ############################################################
-
-def splitname(s):
-    parts = s.split('.')
-    for i,p in enumerate(parts):
-        if i == 0 and p== _TopGroupName:
-            pass
-        elif not isValidName(p):
-            msg = 'invalid name "%s"' % (s)
-            if len(s)>1: msg = 'invalid name "%s" (error at "%s")' % (s,p)
-            raise SymbolError, msg
-    return parts
-
-def _splitName(name,check=True):
-    parts = name.split('.')
-    if check:
-        for i in parts:
-            if not isValidName(i):
-                msg = 'invalid name "%s"' % (name)
-                if len(n)>1: msg = 'invalid name "%s" (error at "%s")' % (name,i)
-                raise SymbolError, msg
-    return parts
-
-def isGroup(x):
-    try:
-        return (x.type == symTypes.group)
-    except:
-        return False
     
-def isSymbol(x):
-    return (hasattr(x,'value') and hasattr(x,'getCode'))
-
 class SymbolTable:
     def __init__(self,libs=None, writer=None, tdl=None, init=True):
         self.tdl          = tdl
@@ -499,49 +529,6 @@ class SymbolTable:
         for elem in  parent[nam].values():
             names = elem.name.split('.')
             elem.name = "%s.%s" % (nam,names[-1])
-
-    def __gather(self,x, _type=None,recurse=True):
-        for k,v in x.items():
-            if isSymbol(v):
-                if v.type in _type: self.workbuffer.append(k)
-            elif isGroup(v):
-                self.workbuffer.append(v.name)
-                if recurse: self.__gather(v,_type=_type)
-
-    def __list(self,_type=symTypes.All):
-        self.workbuffer = []
-        self.__gather(self.data,_type=_type)
-        return self.workbuffer
-
-    def listAll(self):        return self.__list(_type=symTypes.All)
-    def listGroups(self):     return self.__list(_type=symTypes.group)
-    def listVariables(self):  return self.__list(_type=symTypes.Data)
-    def listFunctions(self):  return self.__list(_type=symTypes.Funcs)
-        
-    def getStats(self,groupname=None):
-        'returns statistics about toplevel symbol table'
-        out = {}
-
-        def groupcount(g):
-            nvar, nfunc, ngroup = 0,0,0
-            for sym in g.values():
-                if  isGroup(sym):
-                    ngroup = ngroup + 1
-                elif sym.type in (symTypes.defpro,symTypes.pyfunc):
-                    nfunc  = nfunc  + 1
-                else: nvar = nvar + 1
-            return (nvar,nfunc, ngroup)
-            
-        for sym in self.data.values():
-            if isGroup(sym):
-                nam = sym.name
-                if nam.startswith('%s.' % _TopGroupName):
-                    nam = nam[len(_TopGroupName)+1:]
-                out[nam] = groupcount(sym)
-            #elif sym.type in (symTypes.defpro,symTypes.pyfunc):
-            #    nfunc  = nfunc  + 1
-            #else: nvar = nvar + 1
-        return out
             
     def setSymbol(self,name,value,create=True,**kw):
         parent,sym,parts = self._lookup(name)
@@ -728,7 +715,132 @@ class SymbolTable:
             
     def delGroup(self,name):
         self.delSymbol(name)
+    
+    def __gather(self,x, _type=None,recurse=True):
+        for k,v in x.items():
+            if isSymbol(v):
+                if v.type in _type: self.workbuffer.append(k)
+            elif isGroup(v):
+                self.workbuffer.append(v.name)
+                if recurse: self.__gather(v,_type=_type)
+
+    def __list(self,_type=symTypes.All):
+        self.workbuffer = []
+        self.__gather(self.data,_type=_type)
+        return self.workbuffer
+
+    def listAll(self):        return self.__list(_type=symTypes.All)
+    def listGroups(self):     return self.__list(_type=symTypes.group)
+    def listVariables(self):  return self.__list(_type=symTypes.Data)
+    def listFunctions(self):  return self.__list(_type=symTypes.Funcs)
+
+    def listGroupSymbols(self,group=None):
+        """ return a dictionary of symbol names"""
+        self.workbuffer = {}
         
+        def _getsyminfo(g):
+            self.workbuffer[g.name] = {'g':[],'f':[],'v':[]}
+            for sym in g.values():
+                name = sym.name.split('.')[-1]
+                if isGroup(sym):
+                    self.workbuffer[g.name]['g'].append(sym.name)
+                elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+                    self.workbuffer[g.name]['f'].append(sym.name)
+                else:
+                    self.workbuffer[g.name]['v'].append(sym.name)
+                    
+        if group == None:
+            groups = self.data.values()
+            for g in groups:
+                _getsyminfo(g)
+        else:
+            g = self.getGroup(group)
+            _getsyminfo(g)
+        return self.workbuffer
+
+    def listVariablesTree(self):
+        """create a tree list of variables
+        [x, x.y, x.y.z]
+        """
+        self.workbuffer = []
+        
+        def _decendgroup(grp):
+            for t in grp.values():
+                if isGroup(t):
+                    name = t.name
+                    _decendgroup(t)
+                elif isData(t):
+                    self.workbuffer.append(t.name)
+            return
+
+        groups = self.data.values()
+        for g in groups:
+            if isGroup(g):
+                _decendgroup(g)
+            #elif isData(g):
+            #    self.workbuffer.append(t.name)
+
+        self.workbuffer.sort()
+        return self.workbuffer        
+
+    def listGroupsTree(self):
+        """create a tree list of groups
+        [x, x.y, x.y.z]
+        """
+        self.workbuffer = []
+        def _decendgroup(grp):
+            for sg in grp.values():
+                if isGroup(sg):
+                    name = sg.name
+                    self.workbuffer.append(name)
+                    _decendgroup(sg)
+            return
+
+        groups = self.data.values()
+        for g in groups:
+            if isGroup(g):
+                self.workbuffer.append(g.name)
+                _decendgroup(g)
+
+        self.workbuffer.sort()
+        return self.workbuffer        
+
+    def listGroupVariables(self,group=None):
+        data = self.listGroupSymbols(group=group)
+        if group == None:
+            group = self.LocalGroup
+        vars = data[group]['v']
+        ret = []
+        for v in vars:
+            ret.append(v.split('.')[-1])
+        ret.sort()
+        return ret
+
+    
+    def getStats(self,groupname=None):
+        'returns statistics about toplevel symbol table'
+        out = {}
+        def groupcount(g):
+            nvar, nfunc, ngroup = 0,0,0
+            for sym in g.values():
+                if  isGroup(sym):
+                    ngroup = ngroup + 1
+                elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+                    nfunc  = nfunc  + 1
+                else: nvar = nvar + 1
+            return (nvar,nfunc, ngroup)
+            
+        for sym in self.data.values():
+            if isGroup(sym):
+                nam = sym.name
+                if nam.startswith('%s.' % _TopGroupName):
+                    nam = nam[len(_TopGroupName)+1:]
+                out[nam] = groupcount(sym)
+            #elif sym.type in (symTypes.defpro,symTypes.pyfunc):
+            #    nfunc  = nfunc  + 1
+            #else: nvar = nvar + 1
+        return out
+
     def _groupstats(self,group):
         nvar, nfunc, ngroup = 0,0,0
         for sym in group.values():

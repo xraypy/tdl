@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-#
+# M. Newville Univ of Chicago (2006)
 # Evaluator:  main TDL language evaluation class
 #
 # --------------
 # Modifications
 # --------------
-# 4-27-06 T2:
-# - Pass reference of Evaluator to Help
-# - Added 'input' to Evalutor
+#
 #
 ###########################################################################
 import sys
@@ -121,7 +119,6 @@ class Evaluator:
 
     def execute(self,t):
         " evaluate tdl statement or list of tdl statements"
-
         if type(t) != types.ListType:
             self.load_statements([t])
         else:
@@ -209,7 +206,6 @@ class Evaluator:
                 if s == self.EOF and not self.interactive:
                     break
                 s = "%s%s%s" % (self.line_buff,join,s)
-
         #
         self.line_buff = ''
         self.triple_dquote = False

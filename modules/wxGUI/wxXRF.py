@@ -73,7 +73,7 @@ class wxXRF(model.Background, wxTdlUtil):
         # to include tdl variables ie list items
         # (should not change selections)
         self.init_GrpItems()
-        self.init_NodePfxItems()
+        self.init_NodeItems()
         self.init_SaveParVarItems()
         self.init_DetAndTauItems()
         self.init_ExtractResultsVarItems()
@@ -110,7 +110,7 @@ class wxXRF(model.Background, wxTdlUtil):
 
     def get_xrf_var_name(self,grp=None,node=None):
         if grp == None: grp = self.components.Grp.text  
-        if node == None: node = self.components.NodePfx.text
+        if node == None: node = self.components.Node.text
         if len(grp.strip()) == 0:
             var_name = node
         else:
@@ -157,8 +157,8 @@ class wxXRF(model.Background, wxTdlUtil):
             self.execLine(line)
         
         # set select list to default grp etc..
-        self.components.Grp.text = 'xrf_data'
-        self.components.NodePfx.text = ''
+        self.components.Grp.text = 'xrf.data'
+        self.components.Node.text = ''
         self.init_tdl_list_items()
         return
 
@@ -181,38 +181,46 @@ class wxXRF(model.Background, wxTdlUtil):
         if len(grp) == 0:
             #grp = self.getValue('_builtin.data_group')
             grp = self.tdl.symbolTable.LocalGroup
-        print grp
         self.components.Grp.items = self.listGroups()
         self.components.Grp.text = grp
         return
 
     def on_Grp_select(self, event):
         "Re-init Node list given the new grp name"
-        self.init_NodePfxItems()
+        self.init_NodeItems()
         return
 
-    def init_NodePfxItems(self):
+    def on_Grp_keyDown(self,event):
+        "select a variable name and check it out"
+        keyCode = event.keyCode
+        if keyCode == wx.WXK_RETURN:
+            self.init_NodeItems()
+        else:
+            event.skip()
+        return
+
+    def init_NodeItems(self):
         """Initialize the menu. Use the group thats
         selected in the group menu"""
         grp = self.components.Grp.text  
         if len(grp) == 0: grp = None
-        node = self.components.NodePfx.text
-        self.components.NodePfx.items = self.listDataGroup(grp)
-        self.components.NodePfx.text = node
+        node = self.components.Node.text
+        self.components.Node.items = self.listDataGroup(grp)
+        self.components.Node.text = node
         return
 
-    def on_NodePfx_select(self,event):
+    def on_Node_select(self,event):
         "select a variable name and check it out"
         self.init()
         return
 
-    #def on_NodePfx_textUpdate(self,event):
+    #def on_Node_textUpdate(self,event):
     #    "select a variable name and check it out"
     #    #print "update Node text"
     #    self.init()
     #    return
 
-    def on_NodePfx_keyDown(self,event):
+    def on_Node_keyDown(self,event):
         "select a variable name and check it out"
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN:
@@ -347,7 +355,7 @@ class wxXRF(model.Background, wxTdlUtil):
             return
         inc = int(self.components.ScanInc.text)
         node_name = self.BuildScanName(inc)
-        self.components.NodePfx.text = node_name
+        self.components.Node.text = node_name
         # execute
         self.init()
         #if self.components.AutoUpdateCheck.checked:
@@ -1157,7 +1165,7 @@ class wxXRF(model.Background, wxTdlUtil):
         en = int(self.components.ScanEnd.text)
         for j in range(st,en+1):
             node_name = self.BuildScanName(j)
-            self.components.NodePfx.text = node_name
+            self.components.Node.text = node_name
             # not sure need below?
             self.update_xrf_from_gui()
             xrf = self.get_xrf()

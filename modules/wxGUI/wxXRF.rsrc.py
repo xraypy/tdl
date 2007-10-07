@@ -48,7 +48,7 @@
     'position':(497, 643), 
     'size':(196, -1), 
     'items':[], 
-    'text':u'results', 
+    'text':u'xrf.data.results', 
     },
 
 {'type':'Button', 
@@ -184,6 +184,7 @@
     'position':(524, 32), 
     'size':(198, -1), 
     'items':[], 
+    'text':u'xrf.data.params', 
     },
 
 {'type':'StaticText', 
@@ -940,28 +941,28 @@
     },
 
 {'type':'ComboBox', 
-    'name':'NodePfx', 
-    'position':(218, 30), 
-    'size':(170, -1), 
+    'name':'Node', 
+    'position':(233, 30), 
+    'size':(155, -1), 
     'items':[], 
     },
 
 {'type':'ComboBox', 
     'name':'Grp', 
     'position':(84, 30), 
-    'size':(128, -1), 
+    'size':(141, -1), 
     'items':[], 
     },
 
 {'type':'StaticText', 
     'name':'nodeLabel', 
-    'position':(284, 13), 
+    'position':(272, 14), 
     'text':u'XRF node', 
     },
 
 {'type':'StaticText', 
     'name':'grpLabel', 
-    'position':(137, 13), 
+    'position':(128, 14), 
     'text':u'XRF group', 
     },
 
