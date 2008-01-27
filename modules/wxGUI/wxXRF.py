@@ -909,9 +909,9 @@ class wxXRF(model.Background, wxTdlUtil):
                 BgrBtmWdth   = float(bgr[3]) 
                 BgrTangent   = float(bgr[4]) 
                 BgrCompress  = int(bgr[5]) 
-                xrf.set_bgr(slope=None,exponent=BgrExp,top_width=BgrTopWdth,
-                            bottom_width=BgrBtmWdth, tangent=BgrTangent,
-                            compress=BgrCompress,det_idx=det_idx)
+                xrf._set_bgr(det_idx=det_idx,slope=None,exponent=BgrExp,
+                             top_width=BgrTopWdth,bottom_width=BgrBtmWdth, 
+                             tangent=BgrTangent,compress=BgrCompress)
 
             # peak parameters
             peak_params = self.components.PkParams.items
@@ -927,11 +927,11 @@ class wxXRF(model.Background, wxTdlUtil):
                 PkFwhmFlag  = int(pk[6])
                 PkAmpFactor = float(pk[7])
                 PkIgnore    = eval(pk[8])
-                pk_idx = xrf.init_peak_en(label=PkLbl,energy=PkEn,det_idx=det_idx)
+                pk_idx = xrf._init_peak(line=PkEn,label=PkLbl,det_idx=det_idx)
 
-                xrf.set_peak(pk_idx=pk_idx,energy=PkEn,ampl=PkAmp,fwhm=PkFWHM,
-                             energy_flag=PkEnFlag,fwhm_flag=PkFwhmFlag,
-                             ampl_factor=PkAmpFactor,ignore=PkIgnore,det_idx=det_idx)
+                xrf._set_peak(pk_idx=pk_idx,det_idx=det_idx,energy=PkEn,ampl=PkAmp,
+                              fwhm=PkFWHM,energy_flag=PkEnFlag,fwhm_flag=PkFwhmFlag,
+                              ampl_factor=PkAmpFactor,ignore=PkIgnore)
 
         # post updated xrf
         self.set_xrf(xrf)

@@ -129,14 +129,6 @@ class XRF:
         lout = self.med.__repr__()
         return lout
 
-    #def __copy__(self):
-    #    new = XRF()
-    #    return new
-
-    #def __deepcopy__(self,visit):
-    #    new = XRF()
-    #    return new
-
     #########################################################################
     def init_data(self,bad_mca_idx=None,total=None,align=None,correct=None,
                   tau=None,init_params=True):
@@ -175,17 +167,15 @@ class XRF:
 
         if self.med == None: return
 
-        # 
+        # update parameters
+        if bad_mca_idx is not None:
+            self.bad_mca_idx = bad_mca_idx
         if total is not None:
             self.total = total
         if align is not None:
             self.align = align
         if correct is not None:
             self.correct = correct
-
-        # update bad list
-        if bad_mca_idx is not None:
-            self.bad_mca_idx = bad_mca_idx
 
         # update deadtime correction factors
         self.med.update_correction(tau=tau)
@@ -220,14 +210,9 @@ class XRF:
         Reset all peak and bgr parameters to defaults. Note xrf lines and background
         parameters are copied to all detectors (if total = False).  See the following
         XRF methods for more details/control over fitting parameters
-            init_peak_line
-            init_peak_line_all
-            init_peak_en
-            init_peak_en_all
+            init_peak
             set_peak
-            set_peak_all
             set_bgr
-            set_bgr_all
             
         Inputs:
 
@@ -277,7 +262,7 @@ class XRF:
             spectrum with COMPRESS=1 (no compression), but only 0.2 seconds
             with COMPRESS=4 (the default).
 
-        see fitBgr.py for more details            
+            see fitBgr.py for more details            
         """
 
         self.fit_params  = []
@@ -302,7 +287,7 @@ class XRF:
                                                       tangent=tangent,
                                                       compress=compress)
             for line in lines:
-                self.init_peak_line(line,det_idx=i)
+                self.init_peak(line,det_idx=i)
 
         return
 
@@ -310,6 +295,8 @@ class XRF:
     def get_params(self):
         """ Returns the fit_params, bgr_params and peak_params""" 
         return (self.fit_params, self.bgr_params, self.peak_params)
+
+    #def set_params(): etc...
 
     #########################################################################
     def get_data(self):
@@ -352,14 +339,11 @@ class XRF:
         # there is no way to return a "correct" calibration
         # so it self.total == True will always return the
         # calibration of the first good mca
-        if self.total or self.align:
-            idx = self.med.get_align_idx(self.bad_mca_idx)
-            return self.med.mcas[idx].calibration
-        else:
-            return self.med.mcas[det_idx].calibration
+        idx = self._get_calibration_idx(det_idx)
+        return self.med.mcas[idx].calibration
 
     #########################################################################
-    def get_calibration_idx(self,det_idx):
+    def _get_calibration_idx(self,det_idx):
         "get an mca's calibration index"
         # note if you did a total without aligning
         # there is no way to return a "correct" calibration
@@ -372,18 +356,45 @@ class XRF:
             return det_idx 
 
     #######################################################################
-    def init_peak_line(self,line, det_idx=0):
+    def init_peak(self,line,label=None,det_idx=[]):
         """
-        Create a new peak_param for the specified detector given an xrf line
+        Create new peak params given an xrf line
+
         Inputs:
-
+        
         line:
-            A string representation of the line e.g. 'Mn ka', 'Fe ka', 'Fe kb'.
-            See xrf_lookup.py for more details.
-
+            Can be either a string representation of the line e.g. 'Mn ka',
+            'Fe ka', 'Fe kb' (see xrf_lookup.py) or an energy (as float).
+            Note if line == None it will clear all the peaks
+        
+        label:
+            String label for the peak.  If label == None it will use a
+            string representation of line
+        
         det_idx:
             The index of the detector to add the peak to.  Should be an integer
-            in the range 0 to ndetectors
+            in the range 0 to ndetectors, or a list of integers.  If this is None
+            or an empty list (default) the peak_param is created for all detectors
+            
+        """
+        if det_idx == None or len(det_idx) == 0:
+            det_idx = range(self.ndet)
+        if type(det_idx) == types.ListType:
+            for det in det_idx:
+                self._init_peak(line,label=label, det_idx=det)
+        else:
+            try:
+                det = int(det_idx)
+                self._init_peak(line,label=label, det_idx=det)
+            except:
+                print "Error setting line for detector: ", det_idx
+        return
+    
+    #######################################################################
+    def _init_peak(self,line,label=None,det_idx=0):
+        """
+        Create a new peak_param for the specified detector given an xrf line
+        and label
         """
         if not det_idx in range(self.ndet): return
 
@@ -392,20 +403,32 @@ class XRF:
             self.peak_params[det_idx] = []
             return
 
+        # get energy from line or
+        # convert line to energy
         if type(line)==types.StringType:
             line = line.strip()
             en = xrf_lookup.lookup_xrf_line(line)
         else:
+            try:
+                en = float(line)
+            except:
+                en = None
+        if en == None:
             return 
 
+        # get label
+        if label == None:
+            label = str(line)
+            label.strip()
+        
         # see if its a duplicate 
-        dup = self.peak_idx(det_idx=det_idx,label=line)
+        dup = self._peak_idx(line, det_idx=det_idx)
         if dup > -1:
             self.peak_params[det_idx].pop(dup)
 
         # create a new McaPeak structure
         tmp = fitPeaks.McaPeak()
-        tmp.label          = line
+        tmp.label          = label
         tmp.initial_energy = en
         tmp.energy         = en
         self.peak_params[det_idx].append(tmp)
@@ -413,80 +436,8 @@ class XRF:
         # return pk_idx of new peak_param
         return (len(self.peak_params[det_idx]) - 1)
 
-    def init_peak_line_all(self,line):
-        """
-        Create a new peak_param for all detectors given an xrf line
-        Inputs:
-
-        line:
-            A string representation of the line e.g. 'Mn ka', 'Fe ka', 'Fe kb'.
-            See xrf_lookup.py for more details.
-
-        """
-        
-        for det_idx in range(self.ndet):
-            self.init_peak_line(line, det_idx=det_idx)
-        return
-
-    #######################################################################
-    def init_peak_en(self,label=None, energy=0.0, det_idx=0):
-        """
-        Create a new peak_param for the specified detector given a label
-        and energy
-        
-        Inputs:
-
-        label:
-            A string representation label for the peak.
-
-        energy:
-            Peak energy in keV
-
-        det_idx:
-            The index of the detector to add the peak to.  Should be an integer
-            in the range 0 to ndetectors
-        """
-        if not det_idx in range(self.ndet): return
-
-        if label == None:
-            label = str(energy)
-        label = label.strip()
-
-        # see if its a duplicate 
-        dup = self.peak_idx(det_idx=det_idx,label=label)
-        if dup > -1:
-            self.peak_params[det_idx].pop(dup)
-
-        # create a new McaPeak structure
-        tmp = fitPeaks.McaPeak()
-        tmp.label          = label
-        tmp.initial_energy = energy
-        tmp.energy         = energy
-        self.peak_params[det_idx].append(tmp)
-
-        # return pk_idx of new peak_param
-        return (len(self.peak_params[det_idx]) - 1)
-
-    def init_peak_en_all(self,label=None, energy=0.0):
-        """
-        Create a new peak_param for all detectors given a label
-        and energy
-        
-        Inputs:
-
-        label:
-            A string representation label for the peak.
-
-        energy:
-            Peak energy in keV
-        """
-
-        for det_idx in range(self.ndet):
-            self.init_peak_en(label=label, energy=energy, det_idx=det_idx)
-        return
-
     #########################################################################
-    def peak_idx(self,label=None,det_idx=0):
+    def _peak_idx(self,label,det_idx=0):
         """ See if a peak label exists and ret idx"""
         if not det_idx in range(self.ndet):
             return -1
@@ -499,16 +450,17 @@ class XRF:
         return -1        
 
     #########################################################################
-    def set_peak(self,pk_idx=0,energy=None,ampl=None,fwhm=None, energy_flag=None,
-                 fwhm_flag=None,ampl_factor=None,ignore=False,det_idx=0):
+    def set_peak(self,label,energy=None,ampl=None,fwhm=None,energy_flag=None,
+                 fwhm_flag=None,ampl_factor=None,ignore=False,det_idx=[]):
         """
-        Set peak parameters for the specified detector and peak
-        
         Inputs:
+        
+        label:
+            String label for the peak. Note if the peak does not already
+            exist it this function will create it.  
 
-        pk_idx:
-            Integer index of the peak (see peak_idx)
-
+        (Note: use None for the below peak paramters to keep current value unchanged)
+        
         energy:
             Peak energy in keV
 
@@ -535,17 +487,55 @@ class XRF:
             -1.0 = Fix amplitude at 0.0
 
         ignore:
-            Flag to ignore peak (True/False)
+            Flag to ignore peak (True/False), default = False
 
         det_idx:
-            The index of the detector to add the peak to.  Should be an integer
-            in the range 0 to ndetectors
-        """
+            The index of the detector to add the peak parameters to.  Should be an integer
+            in the range 0 to ndetectors, or a list of integers.  If this is None
+            or an empty list (default) the parameters are applied to all detectors
 
+        """
+        if det_idx == None or len(det_idx) == 0:
+            det_idx = range(self.ndet)
+
+        if type(det_idx) == types.ListType:
+            for det in det_idx:
+                pk_idx = _peak_idx(label,det_idx=det)
+                if pk_idx < 0:
+                    pk_idx = self._init_peak(line,label=label,det_idx=det)
+                self._set_peak(pk_idx=pk_idx,det_idx=det_idx,energy=energy,ampl=ampl, 
+                               fwhm=fwhm,energy_flag=energy_flag,fwhm_flag=fwhm_flag,
+                               ampl_factor=ampl_factor,ignore=ignore)
+        else:
+            try:
+                det = int(det_idx)
+                pk_idx = _peak_idx(label,det_idx=det)
+                if pk_idx < 0:
+                    pk_idx = self._init_peak(line,label=label,det_idx=det)
+                self._set_peak(pk_idx=pk_idx,det_idx=det_idx,energy=energy,ampl=ampl, 
+                               fwhm=fwhm,energy_flag=energy_flag,fwhm_flag=fwhm_flag,
+                               ampl_factor=ampl_factor,ignore=ignore)
+            except:
+                print "Error setting parameters for detector: ", det_idx
+
+
+    #######################################################################
+    def _set_peak(self,pk_idx=0,det_idx=0,energy=None,ampl=None,fwhm=None,
+                  energy_flag=None,fwhm_flag=None,ampl_factor=None,ignore=False):
+        """
+        Set peak parameters for the specified detector and peak
+        
+        pk_idx:
+            Integer index of the peak (see _peak_idx).  If its a sting, assume
+            its the peak label and try to find the corresponding peak index
+
+        det_idx:
+            Integer index of the detector
+        """
         if not det_idx in range(self.ndet): return
 
         if type(pk_idx) == types.StringType:
-            pk_idx = self.peak_idx(label=pk_idx.strip(),det_idx=det_idx)
+            pk_idx = self._peak_idx(pk_idx.strip(),det_idx=det_idx)
         
         if not pk_idx in range(len(self.peak_params[det_idx])): return
 
@@ -574,21 +564,15 @@ class XRF:
 
         return
 
-    def set_peak_all(self,pk_idx=0,energy=None,ampl=None,fwhm=None, energy_flag=None,
-                     fwhm_flag=None,ampl_factor=None,ignore=False):
-
-        for det_idx in range(self.ndet):
-            set_peak(pk_idx=pk_idx,energy=energy,ampl=ampl,fwhm=fwhm, energy_flag=energy_flag,
-                     fwhm_flag=fwhm_flag,ampl_factor=ampl_factor,ignore=ignore,det_idx=det_idx)
-        return
-
     #########################################################################
-    def set_bgr(self,slope=None,exponent=None,top_width=None, bottom_width=None,
-                tangent=None, compress=None,det_idx=0):
+    def set_bgr(self,slope=None,exponent=None,top_width=None,bottom_width=None,
+                tangent=None,compress=None,det_idx=[]):
         """
         Set background parameters for a detector
         
         Inputs:
+
+        (Note: use None for the below background paramters to keep current value unchanged)
 
         slope:
             Slope for channel to energy calculation
@@ -635,11 +619,34 @@ class XRF:
             spectrum with COMPRESS=1 (no compression), but only 0.2 seconds
             with COMPRESS=4 (the default).
 
+            see fitBgr.py for more details
+
         det_idx:
-            The index of the detector to set parameters for.  Should be an integer
-            in the range 0 to ndetectors
+            The index of the detector to add the peak parameters to.  Should be an integer
+            in the range 0 to ndetectors, or a list of integers.  If this is None
+            or an empty list (default) the parameters are applied to all detectors
   
-        see fitBgr.py for more details
+        """
+        if det_idx == None or len(det_idx) == 0:
+            det_idx = range(self.ndet)
+        if type(det_idx) == types.ListType:
+            for det in det_idx:
+                self._set_bgr(det_idx=det,slope=slope,exponent=exponent,top_width=top_width,
+                              bottom_width=bottom_width, tangent=tangent,compress=compress)
+        else:
+            try:
+                det = int(det_idx)
+                self._set_bgr(det_idx=det,slope=slope,exponent=exponent,top_width=top_width,
+                              bottom_width=bottom_width, tangent=tangent,compress=compress)
+            except:
+                print "Error setting background for detector: ", det_idx
+        return
+
+    #########################################################################
+    def _set_bgr(self,det_idx=0,slope=None,exponent=None,top_width=None, 
+                 bottom_width=None,tangent=None,compress=None,):
+        """
+        Set bgr parameters for a detector
         """
         if not det_idx in range(self.ndet): return
         if slope        is not None: self.bgr_params[det_idx].slope        = slope
@@ -649,15 +656,6 @@ class XRF:
         if tangent      is not None: self.bgr_params[det_idx].tangent      = tangent
         if compress     is not None: self.bgr_params[det_idx].compress     = compress
 
-        return
-
-    def set_bgr_all(self,slope=None,exponent=None,top_width=None, bottom_width=None,
-                    tangent=None, compress=None):
-
-        for det_idx in range(self.ndet):
-            self.set_bgr(slope=slope,exponent=exponent,top_width=top_width,
-                         bottom_width=bottom_width, tangent=tangent,
-                         compress=compress, det_idx=det_idx)
         return
 
     #########################################################################
@@ -742,7 +740,7 @@ class XRF:
         # in case background was not subtracted
         if len(background) == 0:
             background = Num.zeros(len(observed))
-        calib_idx    = self.get_calibration_idx(det_idx)
+        calib_idx    = self._get_calibration_idx(det_idx)
         peaks        = self.peak_params[det_idx]
         fit          = self.fit_params[det_idx]
         #print "peak params for ", det_idx
@@ -817,10 +815,11 @@ class XRF:
     #########################################################################
     def calc_pk(self,det_idx,pk_idx,add_bgr = False):
         "calc and ret single peak"
+# work on this
         if not det_idx in range(self.ndet): return
 
         if type(pk_idx) == types.StringType:
-            pk_idx = self.peak_idx(pk_idx)
+            pk_idx = self._peak_idx(pk_idx)
             
         if not pk_idx in range(len(self.peak_params[det_idx])): return
 
