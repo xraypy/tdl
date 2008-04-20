@@ -17,6 +17,7 @@ import Mca
 import numpy as Num
 import spline
 import copy
+import types
 
 #########################################################################
 #class Med(Mca.Mca):
@@ -48,8 +49,6 @@ class Med:
             mca_name = 'mca:%s' % str(i + 1)
             self.mcas.append(Mca.Mca(name=mca_name))
         self.environment = []
-        # for deadtimes
-        self.tau = None
 
     def __repr__(self):
         lout = "Name = %s\n" % self.name
@@ -319,23 +318,48 @@ class Med:
         rois = self.mcas[source_mca].get_rois(units=units)
         self.set_rois(rois)
 
-
     #########################################################################
     def update_correction(self,tau=None):
-        """ Update mca deadtime correction factors """
-        if tau is not None:
-            if len(tau) != self.n_detectors:
-                print "Error: tau array must be of length %d" % self.n_detectors
+        """ Update mca deadtime correction """
+        if tau == None:
+            for j in range(self.n_detectors):
+                self.mcas[j].update_correction(tau=None)
+        else:
+            self._set_taus(tau=tau)
+        return
+
+    ########################################################################
+    def _set_taus(self,tau=[]):
+        """
+        Update the deadtime correction factors
+        """
+        # empty list or None, turn off taus...
+        if (tau == []) or (tau == None):
+            for j in range(self.n_detectors):
+                self.mcas[j].update_correction(tau = -1.0)
+            return
+        # if one value assign to all dets
+        if type(tau) in (types.FloatType, types.IntType):
+            for j in range(self.n_detectors):
+                self.mcas[j].update_correction(tau = tau)
+            return
+        # if list
+        if type(tau) == types.ListType:
+            # single val assign to all
+            if len(tau) == 1:
+                for j in range(self.n_detectors):
+                    self.mcas[j].update_correction(tau = tau[0])
+                return
+            # otherwise assign to each
+            elif len(tau) == self.n_detectors:
+                for j in range(self.n_detectors):
+                    self.mcas[j].update_correction(tau = tau[j])
                 return
             else:
-                self.tau = tau
+                print "Error: tau array must be of length %d" % self.n_detectors
+                return
 
-        for j in range(self.n_detectors):
-            if self.tau != None:
-                t = self.tau[j]
-            else:
-                t = None
-            self.mcas[j].update_correction(tau=t)
+        print "Failure assigning tau values - Type error"
         return
 
     #########################################################################

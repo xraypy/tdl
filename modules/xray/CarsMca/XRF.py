@@ -29,7 +29,7 @@ Conventions:
 """
 
 ##############################################################################
-def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='CARS'):
+def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=[],fmt='CARS'):
     """
     Read detector files
     >>m = xrf.read("file_name",bad_mca_idx=[],total=True,align=True,tau=None)
@@ -56,8 +56,9 @@ def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='C
             first detector.
 
         tau:
-            None or a list of deadtime factors for each detector (dimesion should
-            be the same as the total number of detectors)
+            List of deadtime factors for each detector.  Dimesion should
+            be the same as the total number of detectors, or empty list for no
+            deatdtime correction
                      ocr = icr * exp(-icr*tau)
                      cor = (icr/ocr)*(rt/lt)
                      max_icr = 1/tau
@@ -78,14 +79,17 @@ def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='C
 
 #####################################################
 class XRF:
-    def __init__(self,med=None,bad_mca_idx=[],total=True,align=True,tau=None):
+    def __init__(self,med=None,bad_mca_idx=[],total=True,align=True,tau=[]):
 
         self.med         = med
+
+        # params, set these in init_data ...        
         self.ndet        = 0
-        self.total       = total
-        self.align       = align
+        self.total       = True
+        self.align       = True
         self.correct     = True
-        self.bad_mca_idx = bad_mca_idx
+        self.bad_mca_idx = []
+        self.tau         = []
         self.emin        = 0.0
         self.emax        = 0.0
 
@@ -101,7 +105,8 @@ class XRF:
         self.peak_params = []
 
         # update the data arrays
-        self.init_data(tau=tau)
+        self.init_data(bad_mca_idx=bad_mca_idx,total=total,align=align,
+                       correct=self.correct,tau=tau,init_params=True)
 
         return
 
@@ -113,7 +118,7 @@ class XRF:
         lout = lout + '  Name = %s\n' % self.med.name
         lout = lout + '  Num detectors = %i\n' % self.med.n_detectors
         lout = lout + '  Bad Detectors = %s\n' % str(self.bad_mca_idx)
-        lout = lout + '  Detector Taus = %s\n' % str(self.med.tau)
+        lout = lout + '  Detector Taus = %s\n' % str(self.tau)
         lout = lout + '  Align = %s\n' % str(self.align)
         lout = lout + '  Total = %s\n' % str(self.total)
         lout = lout + '  Correct = %s\n' % str(self.correct)
@@ -152,13 +157,23 @@ class XRF:
             and stretched to match the energy calibration parameters of the
             first detector.
 
+        correct:
+            Set this keyword to apply deadtime corrections to data
+
         tau:
-            None or a list of deadtime factors for each detector (dimesion should
-            be the same as the total number of detectors)
-                     ocr = icr * exp(-icr*tau)
-                     cor = (icr/ocr)*(rt/lt)
-                     max_icr = 1/tau
-                     max_ocr = max_icr*exp(-1)
+            List of deadtime factors for each detector. Dimesion should
+            be the same as the total number of detectors, or [] for no tau values.
+            If tau is None, previously passed tau is used...  
+              If a detector tau > 0 this will be used in the correction factor calculation 
+              If a detector tau = 0 then we assume ocr = icr in the correction factor calculation, ie only lt correction
+              If a detector tau < 0 (or None):
+                if input_counts > 0 this will be used for icr in the factor calculation
+                if input_counts <= 0 we assume ocr = icr in the correction factor calculation, ie only lt correction
+            Note:
+             ocr = icr * exp(-icr*tau)
+             cor = (icr/ocr)*(rt/lt)
+             max_icr = 1/tau
+             max_ocr = max_icr*exp(-1)
 
         init_parameters:
             Set to True to reset all fitting parameters
@@ -178,7 +193,11 @@ class XRF:
             self.correct = correct
 
         # update deadtime correction factors
-        self.med.update_correction(tau=tau)
+        if tau is not None:
+            self.tau = tau
+            self.med.update_correction(tau=self.tau)
+        else:
+            self.med.update_correction(tau=None)
 
         # recalc rois
         self.med.update_rois(correct=correct)

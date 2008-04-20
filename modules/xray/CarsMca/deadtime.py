@@ -139,7 +139,7 @@ def correction_factor(rt,lt,icr = None,ocr = None):
         icr = true input count rate (TOC_t/lt, where TOC_t = true total counts
               impinging the detector)
         ocr = output count rate (TOC_s/lt, where TOC_s = total processed
-              {slow filter for dxp} counts output by the detecotr)  
+              {slow filter for dxp} counts output by the detector)  
 
         If icr and/or ocr are None then only lt correction is applied
 
@@ -178,11 +178,12 @@ def calc_icr(ocr,tau):
     if ocr == None: return None
     if ocr <= 0: return None
     if tau == None: return None
-    if tau <=0: return None
 
+    # here assume if tau = 0, icr=ocr ie icr/ocr =1
+    if tau <=0: return ocr
     
     # max_icr is icr val at top of deadtime curve
-    # max_icr is the corresponding ocr value
+    # max_ocr is the corresponding ocr value
     # we cannot correct the data if ocr > ocr_max
     max_icr = 1/tau
     max_ocr = max_icr*Num.exp(-1)

@@ -384,7 +384,7 @@ class wxXRF(model.Background, wxTdlUtil):
         self.components.CorrectData.checked = True
         self.components.NumMcas.text = "NumMcas = 0"
         self.components.BadMcas.text = '[]'
-        self.components.McaTaus.text = ''
+        self.components.McaTaus.text = '[]'
         return
 
     def init_DetAndTauItems(self):
@@ -858,13 +858,8 @@ class wxXRF(model.Background, wxTdlUtil):
         bad_mca = self.str_to_list_var(data_par['bad_mcas'],conv=int)
         if bad_mca != xrf.bad_mca_idx: return False
 
-        # note should fix xrf to make this simpler, ie no None's        
         mca_taus = self.str_to_list_var(data_par['mca_taus'],conv=float)
-        if mca_taus != xrf.med.tau:
-            if mca_taus == [] and xrf.med.tau == None:
-                pass
-            else:
-                return False
+        if mca_taus != xrf.tau: return False
 
         return True
 
@@ -889,9 +884,6 @@ class wxXRF(model.Background, wxTdlUtil):
             correct   = eval(data_par['correct'])
             #emin      = float(data_par['emin'])
             #emax      = float(data_par['emax'])
-            if tau == []:
-                #print 'tau is none'
-                tau = None
             xrf.init_data(bad_mca_idx=bad_mca,total=total,align=align,
                           correct=correct,tau=tau,init_params=False)
 
@@ -953,7 +945,7 @@ class wxXRF(model.Background, wxTdlUtil):
             #emin      = str(xrf.emin)
             #emax      = str(xrf.emax)
             self.components.BadMcas.text = str(xrf.bad_mca_idx)
-            self.components.McaTaus.text = str(xrf.med.tau)
+            self.components.McaTaus.text = str(xrf.tau)
 
             # update det select for fitting
             # should this be a seperate function

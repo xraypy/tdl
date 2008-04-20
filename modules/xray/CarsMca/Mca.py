@@ -227,15 +227,28 @@ class McaElapsed:
         .read_time    # Time that the Mca was last read in seconds
         .total_counts # Total counts between the preset start and stop channels
         .input_counts # Actual total input counts (eg given by detector software)
+                      # Note total_counts and input counts ARE NOT time normalized
+                      #
         .tau          # Factor for deadtime/detector saturation calculations, ie
                       #  ocr = icr * exp(-icr*tau)
         .icr_calc     # Calculated input count rate from above expression
         .cor_factor   # Calculated correction factor based on icr,ocr,lt,rt
                       # data_corrected = data * cor_factor
 
+    Note if input_counts are read from the data file then there is no need for tau
+    values (and hence icr_calc is not used) - ie we assume the detector
+    provides the icr value.
+
+    The application of corrections uses the following logic:
+    if tau > 0 this will be used in the correction factor calculation 
+    if tau = 0 then we assume ocr = icr in the correction factor calculation
+    if tau < 0 (or None):
+       if input_counts > 0 this will be used for icr in the factor calculation
+       if input_counts <= 0 we assume ocr = icr in the correction factor calculation
+
     """
     def __init__(self, start_time='', live_time=0., real_time=0., 
-                 read_time=0., total_counts=0., input_counts=0.,tau=None):
+                 read_time=0., total_counts=0., input_counts=0., tau=-1.0):
         self.start_time   = start_time
         self.live_time    = live_time
         self.real_time    = real_time
@@ -245,6 +258,7 @@ class McaElapsed:
         self.tau          = tau
         self.icr_calc     = None
         self.cor_factor   = 1.0
+        self.calc_correction()
 
     def __repr__(self):
         lout = "    Real Time= %f, Live Time= %f, OCR= %6.0f, ICR= %6.0f" % \
@@ -252,29 +266,45 @@ class McaElapsed:
                          self.total_counts / self.live_time,
                          self.input_counts / self.live_time)
         if self.icr_calc != None:
-            lout = lout + ", ICR_Calc= %6.0f, Correction= %5.2f\n" % \
-                             (self.icr_calc, self.cor_factor)
+            lout = lout + ",Tau = %6.0f, ICR_Calc= %6.0f, Correction= %5.2f\n" % \
+                             (self.tau, self.icr_calc, self.cor_factor)
         else:
             lout = lout + ", ICR_Calc= None, Correction= %5.2f\n" % \
                              (self.cor_factor)
-            
         return lout
 
-    def calc_icr(self):
-        ocr = self.total_counts / self.live_time
-        self.icr_calc = deadtime.calc_icr(ocr,self.tau)
-
     def calc_correction(self):
-        if self.input_counts == 0.:
-            self.calc_icr()
-            icr = self.icr_calc
+        """
+        if tau > 0 this will be used in the correction factor calculation 
+        if tau = 0 then we assume ocr = icr in the correction factor calculation, ie only lt correction
+                   (note deadtime.calc_icr handles above two conditions)
+        if tau < 0 (or None):
+           if input_counts > 0 this will be used for icr in the factor calculation
+           if input_counts <= 0 we assume ocr = icr in the correction factor calculation, ie only lt correction
+        """
+        if (self.live_time <=0) or (self.real_time <=0):
+            self.cor_factor  = 1.0
+            return
+        
+        if self.total_counts > 0:
+            ocr = self.total_counts / self.live_time
         else:
+            ocr = None
+        
+        if self.tau >= 0:
+            self.icr_calc = deadtime.calc_icr(ocr,self.tau)
+            icr = self.icr_calc
+        elif self.input_counts > 0:
             icr = self.input_counts / self.live_time
-        ocr = self.total_counts / self.live_time
+        else:
+            icr = ocr = None
         self.cor_factor  = deadtime.correction_factor(self.real_time,
                                                       self.live_time,
                                                       icr = icr,
                                                       ocr = ocr)
+        if self.cor_factor <= 0:
+            print "Error computing data correction factor, setting to 1"
+            self.cor_factor = 1.0
 
 
 ########################################################################
@@ -768,19 +798,23 @@ class Mca:
 
     ########################################################################
     def update_correction(self,tau=None):
-        """ Update the deadtime correction factor """
+        """
+        Update the deadtime correction 
+        if tau == None just recompute,
+        otherwise assign a new tau and recompute
+        """
         if tau != None:
             self.elapsed.tau = tau
-            
         self.elapsed.calc_correction()
-
-        if self.elapsed.cor_factor <= 0:
-            self.elapsed.cor_factor = 1.0
 
     ########################################################################
     def get_data(self,correct=True):
-        """ Returns the data (counts) from the Mca """
-
+        """
+        Returns the data (counts) from the Mca
+        Note if correct == True the corrected data is returned. However,
+        this does not (re)compute the correction factor, therefore, make
+        sure the correction factor is up to date before requesting corrected data...
+        """
         if correct == True:
             d = self.elapsed.cor_factor * self.data
             return map(int,d)
