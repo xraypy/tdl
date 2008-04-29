@@ -29,7 +29,8 @@ Conventions:
 """
 
 ##############################################################################
-def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=[],fmt='CARS'):
+def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,
+                  tau=[],emin=0.0,emax=0.0,fmt='CARS'):
     """
     Read detector files
     >>m = xrf.read("file_name",bad_mca_idx=[],total=True,align=True,tau=None)
@@ -73,13 +74,15 @@ def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,tau=[],fmt='CAR
             med = EmsaFile.read_med(file=file)
     else:
         med = Med.Med()
-    xrf = XRF(med=med,bad_mca_idx=bad_mca_idx,total=total,align=align,tau=tau)
+    xrf = XRF(med=med,bad_mca_idx=bad_mca_idx,total=total,align=align,
+              tau=tau,emin=emin,emax=emax)
     return xrf
 
 
 #####################################################
 class XRF:
-    def __init__(self,med=None,bad_mca_idx=[],total=True,align=True,tau=[]):
+    def __init__(self,med=None,bad_mca_idx=[],total=True,align=True,
+                 tau=[],emin=0.0,emax=0.0):
 
         self.med         = med
 
@@ -106,7 +109,8 @@ class XRF:
 
         # update the data arrays
         self.init_data(bad_mca_idx=bad_mca_idx,total=total,align=align,
-                       correct=self.correct,tau=tau,init_params=True)
+                       correct=self.correct,tau=tau,emin=emin,emax=emax,
+                       init_params=True)
 
         return
 
@@ -136,7 +140,7 @@ class XRF:
 
     #########################################################################
     def init_data(self,bad_mca_idx=None,total=None,align=None,correct=None,
-                  tau=None,init_params=True):
+                  tau=None,emin=None,emax=None,init_params=True):
         """
         Initialize or re-initialize the data.
         Note during re-initialization only passed parameters will modified, ie
@@ -191,6 +195,10 @@ class XRF:
             self.align = align
         if correct is not None:
             self.correct = correct
+        if emin is not None:
+            self.emin = emin
+        if emax is not None:
+            self.emax = emax
 
         # update deadtime correction factors
         if tau is not None:
@@ -334,6 +342,8 @@ class XRF:
         Note use the method init_data to change how the energy is handled
         """
         en = self.ndet*[[]]
+        # if slef.total or self.align are True, this will grab the calibration
+        # of the first good detector
         if self.total:
             calib    = self.get_calibration(0)
             channels = Num.arange(len(self.data[0]))
@@ -352,18 +362,63 @@ class XRF:
         return en
 
     #########################################################################
+    def _get_energy_idx(self):
+        """
+        Returns the indicies (channel numbers) of self.emin and self.emax
+        if self.emin < 0.0: use actual emin
+        if self.emax <= 0.0: use actual emax
+        if self.emin = self.emax: use actual emin and emax
+        """
+        if self.emin == self.emax: return None
+
+        ###
+        def _get_min_max(calib, emin, emax):
+            if emin >= 0.0:
+                mi = calib.energy_to_channel(emin)
+            else:
+                mi = None
+            if emax >= 0.0 and emax > emin:
+                ma = calib.energy_to_channel(emax)
+            else:
+                ma = None
+            if mi < 0: mi = None
+            if ma < 0: ma = None
+            
+            return (mi,ma)
+        ###
+
+        en_range = []
+
+        if self.total or self.align:
+            calib = self.get_calibration(0)
+            min_max = _get_min_max(calib, self.emin, self.emax)
+            en_range = self.ndet*[min_max]
+        else:
+            
+            for i in range(self.ndet):
+                calib = self.get_calibration(i)
+                min_max = _get_min_max(calib, self.emin, self.emax)
+                en_range.append(min_max)
+                
+        return en_range
+    
+    #########################################################################
     def get_calibration(self,det_idx):
         "get an mca's calibration"
         # note if you did a total without aligning
         # there is no way to return a "correct" calibration
-        # so it self.total == True will always return the
+        # so if self.total == True will always return the
         # calibration of the first good mca
         idx = self._get_calibration_idx(det_idx)
         return self.med.mcas[idx].calibration
 
     #########################################################################
     def _get_calibration_idx(self,det_idx):
-        "get an mca's calibration index"
+        """
+        get an mca's calibration index
+        if self.total or self.align is True, the index
+        of the first good detector is returned
+        """
         # note if you did a total without aligning
         # there is no way to return a "correct" calibration
         # so if self.total == True will always return the

@@ -398,11 +398,13 @@ class Med:
         # init all data to zeros
         data = Num.zeros((self.n_detectors, nchans))
 
+        # get (corrected) data from MCA 
         for d in range(self.n_detectors):
             if d not in bad_mca_idx:
                 data[d,:] = self.mcas[d].get_data(correct=correct)
 
-        if align ==True and self.n_detectors > 1:
+        # align if requested.            
+        if align == True and self.n_detectors > 1:
             #ref_energy = self.mcas[0].get_energy()
             first_good = self.get_align_idx(bad_mca_idx)
             ref_energy = self.mcas[first_good].get_energy()
@@ -412,8 +414,12 @@ class Med:
                     temp = spline.spline_interpolate(energy, data[d,:], ref_energy)
                     #data[d,:] = int(temp+.5)
                     data[d,:] = (temp+.5).astype(Num.dtype('i'))
-                    
+
+        # make a total if requested. 
         if total == True and self.n_detectors > 1:
+            # note probably a bad idea to total and not align
+            if align == False:
+                print "Warning, totaling data without aligning"
             data = data.sum(axis=0)
             return [data]
         else:

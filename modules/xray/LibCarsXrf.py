@@ -88,7 +88,8 @@ import ScanData
 title = "CARS XRF Library "
 
 ##############################################################################
-def xrf_read(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='CARS',tdl=None,**kws):
+def xrf_read(file=None,bad_mca_idx=[],total=True,align=True,tau=[],
+             emin=0.0,emax=0.0, fmt='CARS',tdl=None,**kws):
     """
     Read detector files
     >>m = xrf.read("file_name",bad_mca_idx=[],total=True,align=True,tau=None)
@@ -124,7 +125,8 @@ def xrf_read(file=None,bad_mca_idx=[],total=True,align=True,tau=None,fmt='CARS',
                      max_ocr = max_icr*exp(-1)
     """
 
-    xrf = XRF.read_xrf_file(file=file,bad_mca_idx=bad_mca_idx,total=total,align=align,tau=tau,fmt=fmt)
+    xrf = XRF.read_xrf_file(file=file,bad_mca_idx=bad_mca_idx,total=total,align=align,
+                            tau=tau, emin=emin,emax=emax,fmt=fmt)
     return xrf
 
 def xrf_read_cmd(val,file=None,tdl=None,**kws):
