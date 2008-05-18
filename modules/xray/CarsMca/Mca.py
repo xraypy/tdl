@@ -420,7 +420,6 @@ class Mca:
             name: Name of the mca object, eg a file name or detector name
         """
         self.name        = name
-        self.n_detectors = 1
         nchans           = 2048
         self.data        = Num.zeros(nchans)
         self.rois        = []

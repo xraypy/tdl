@@ -26,6 +26,11 @@ Conventions:
 - self.ndet refers to the length of the data array, which is either 1 if just sum, or
   equal to the number of mca's
 
+- Note warning.  get_data and get_energy should return correct range if emin and emax
+  are set.  however, fit_peaks and fit_bgr expect the full data range (ie first data point
+  corresponds to channel number = 0).  Also bgr needs a data array thats easily integer divisible
+  if using the compress flag.  Therefore, do not use emin/emax....
+
 """
 
 ##############################################################################
@@ -64,7 +69,6 @@ def read_xrf_file(file=None,bad_mca_idx=[],total=True,align=True,
                      cor = (icr/ocr)*(rt/lt)
                      max_icr = 1/tau
                      max_ocr = max_icr*exp(-1)
-
     """
 
     if file:
@@ -211,14 +215,11 @@ class XRF:
         self.med.update_rois(correct=correct)
  
         # clear arrays
+        self.predicted = []
         self.data = []
 
-        #get data 
-        self.data = self.med.get_data(bad_mca_idx=self.bad_mca_idx,
-                                      total=self.total,
-                                      align=self.align,
-                                      correct=self.correct)
-
+        self.data = self.get_data()
+        
         self.ndet = len(self.data)
         
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -319,20 +320,36 @@ class XRF:
         return
 
     #########################################################################
-    def get_params(self):
-        """ Returns the fit_params, bgr_params and peak_params""" 
-        return (self.fit_params, self.bgr_params, self.peak_params)
-
-    #def set_params(): etc...
-
-    #########################################################################
     def get_data(self):
         """
         Returns the data array.
-        The data is always a list of dim [ndetectors, nchannels]
+        The data is always an array of dim [ndetectors, nchannels]
         Note use the method init_data to change how the data is processed
         """
-        return self.data
+        data = self.med.get_data(bad_mca_idx=self.bad_mca_idx,
+                                 total=self.total,
+                                 align=self.align,
+                                 correct=self.correct)
+
+        if self.emin == self.emax:
+            return data
+
+        temp = []        
+
+        for i in range(len(data)):
+            en_idx   = self._energy_idx(det_idx=i)
+            if en_idx:
+                (mi,ma) = en_idx
+                temp.append(data[i][mi:ma+1])
+            else:
+                temp.append(data[i])
+        # note problems if range(min,max)
+        # turns out not the same for all det in MED
+        # ie cant create numpy array if indv arrays are different length
+        # data = Num.array(temp)
+        # return data
+
+        return temp
 
     #########################################################################
     def get_energy(self):
@@ -342,27 +359,35 @@ class XRF:
         Note use the method init_data to change how the energy is handled
         """
         en = self.ndet*[[]]
-        # if slef.total or self.align are True, this will grab the calibration
-        # of the first good detector
-        if self.total:
+        
+        # if self.total or self.align are True, this will grab the
+        # calibration of the first good detector
+        if self.total or self.align:
             calib    = self.get_calibration(0)
-            channels = Num.arange(len(self.data[0]))
-            en[0]    = calib.channel_to_energy(channels)
-        elif self.align:
-            calib    = self.get_calibration(0)
-            channels = Num.arange(len(self.data[0]))
-            ref_en   = calib.channel_to_energy(channels)
-            for i in range(self.ndet):
+            en_idx = self._energy_idx(det_idx=0)
+            if en_idx:
+                (mi,ma) = en_idx
+                channels = Num.arange(mi,ma+1)
+            else:
+                channels = Num.arange(len(self.data[0]))
+            en[0] = calib.channel_to_energy(channels)
+            for i in range(1,self.ndet):
                 en[i] = ref_en
         else:
             for i in range(self.ndet):
                 calib    = self.get_calibration(i)
-                channels = Num.arange(len(self.data[i]))
-                en[i]    = calib.channel_to_energy(channels)
+                en_idx   = self._energy_idx(det_idx=i)
+                if en_idx:
+                    (mi,ma) = en_idx
+                    channels = Num.arange(mi,ma+1)
+                else:
+                    channels = Num.arange(len(self.data[i]))
+                en[i] = calib.channel_to_energy(channels)
         return en
 
+
     #########################################################################
-    def _get_energy_idx(self):
+    def _energy_idx(self,det_idx=0):
         """
         Returns the indicies (channel numbers) of self.emin and self.emax
         if self.emin < 0.0: use actual emin
@@ -371,36 +396,17 @@ class XRF:
         """
         if self.emin == self.emax: return None
 
-        ###
-        def _get_min_max(calib, emin, emax):
-            if emin >= 0.0:
-                mi = calib.energy_to_channel(emin)
-            else:
-                mi = None
-            if emax >= 0.0 and emax > emin:
-                ma = calib.energy_to_channel(emax)
-            else:
-                ma = None
-            if mi < 0: mi = None
-            if ma < 0: ma = None
-            
-            return (mi,ma)
-        ###
-
-        en_range = []
-
         if self.total or self.align:
-            calib = self.get_calibration(0)
-            min_max = _get_min_max(calib, self.emin, self.emax)
-            en_range = self.ndet*[min_max]
+            det_idx      = self._get_calibration_idx(0)
+            (mi, ma) = self.med.energy_idx(det_idx, self.emin, self.emax)
         else:
-            
-            for i in range(self.ndet):
-                calib = self.get_calibration(i)
-                min_max = _get_min_max(calib, self.emin, self.emax)
-                en_range.append(min_max)
-                
-        return en_range
+            (mi, ma) = self.med.energy_idx(det_idx, self.emin, self.emax)
+        if mi == ma:
+            en_idx = None
+        else:
+            en_idx = (mi,ma)
+
+        return en_idx
     
     #########################################################################
     def get_calibration(self,det_idx):
@@ -1041,3 +1047,9 @@ class XRF:
             d = int(i)
             med.mcas[d].add_roi(roi)
 
+    #########################################################################
+    def get_params(self):
+        """ Returns the fit_params, bgr_params and peak_params""" 
+        return (self.fit_params, self.bgr_params, self.peak_params)
+
+    #def set_params(): etc...

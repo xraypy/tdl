@@ -449,3 +449,29 @@ class Med:
         for i in range(len(det_idx)):
             energy.append(self.mcas[int(det_idx[i])].get_energy())
         return energy
+
+    #########################################################################
+    def energy_idx(self,det_idx, emin, emax):
+        """
+        get the channel numbers for emin and emax
+        for given detector index
+        """
+        calib    = self.mcas[det_idx].calibration
+        nchans   = len(self.mcas[det_idx].data)
+        if emin >= 0.0:
+            mi = calib.energy_to_channel(emin)
+        else:
+            mi = 0
+        if emax >= 0.0 and emax > emin:
+            ma = calib.energy_to_channel(emax)
+        else:
+            ma = 0
+        if mi < 0: mi = 0
+        if ma < 0: ma = 0
+        if mi >= nchans-1:
+            mi = nchans-2
+        if ma > nchans-1:
+            ma = nchans-1
+        if ma < mi:
+            mi = ma
+        return (mi,ma)

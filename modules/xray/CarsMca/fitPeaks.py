@@ -541,7 +541,7 @@ def fitPeaks(fit, peaks, observed):
 
 #########################################################################
 def mpfit_peaks(parameters, fjac, observed=None, weights=None,
-                     fit=None, peaks=None):
+                fit=None, peaks=None):
     """ Private function """
     [fit, peak] = copy_fit_params(parameters, fit, peaks)
     predicted = predict_gaussian_spectrum(fit, peaks)

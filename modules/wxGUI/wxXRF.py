@@ -374,7 +374,7 @@ class wxXRF(model.Background, wxTdlUtil):
             self.post_message("error building var name")
 
     ###########################################################
-    # Data Parameters
+    # GUI Data Parameters
     ###########################################################
 
     def init_DataParams(self):
@@ -839,6 +839,9 @@ class wxXRF(model.Background, wxTdlUtil):
         "update the xrf data variable given input data"
         self.update_xrf_from_gui()
         self.update_gui_from_xrf()
+        if self.components.AutoUpdateCheck.checked:
+            self.plot_cmd()
+
         return
 
     def compare_data_params(self):
@@ -852,8 +855,8 @@ class wxXRF(model.Background, wxTdlUtil):
         if eval(data_par['total'])   != xrf.total: return False 
         if eval(data_par['align'])   != xrf.align: return False
         if eval(data_par['correct']) != xrf.correct: return False
-        #if data_par['emin']          != xrf.emin: return False
-        #if data_par['emax']          != xrf.emax: return False
+        if data_par['emin']          != xrf.emin: return False
+        if data_par['emax']          != xrf.emax: return False
 
         bad_mca = self.str_to_list_var(data_par['bad_mcas'],conv=int)
         if bad_mca != xrf.bad_mca_idx: return False
@@ -864,7 +867,7 @@ class wxXRF(model.Background, wxTdlUtil):
         return True
 
     def compare_fit_params(self):
-        """ return True is the xrf fit params are the same as
+        """ return True if the xrf fit params are the same as
         the parameters listed in the GUI"""
         return False
 
@@ -882,10 +885,11 @@ class wxXRF(model.Background, wxTdlUtil):
             total     = eval(data_par['total'])
             align     = eval(data_par['align'])
             correct   = eval(data_par['correct'])
-            #emin      = float(data_par['emin'])
-            #emax      = float(data_par['emax'])
+            emin      = float(data_par['emin'])
+            emax      = float(data_par['emax'])
             xrf.init_data(bad_mca_idx=bad_mca,total=total,align=align,
-                          correct=correct,tau=tau,init_params=False)
+                          correct=correct,tau=tau,emin=emin,emax=emax,
+                          init_params=False)
 
         # fit parameters
         if self.compare_fit_params() == False:
@@ -942,8 +946,8 @@ class wxXRF(model.Background, wxTdlUtil):
             self.components.Total.checked = xrf.total
             self.components.Align.checked = xrf.align
             self.components.CorrectData.checked = xrf.correct
-            #emin      = str(xrf.emin)
-            #emax      = str(xrf.emax)
+            self.components.Emin.text = str(xrf.emin)
+            self.components.Emax.text = str(xrf.emax)
             self.components.BadMcas.text = str(xrf.bad_mca_idx)
             self.components.McaTaus.text = str(xrf.tau)
 
