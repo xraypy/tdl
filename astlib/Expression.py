@@ -138,8 +138,14 @@ class Compiler:
 
     # outer nodes: Module, Statement, Expression
     def doModule(self,node,**kw):
-        'Module node, contains doc and node (a statement)' 
+        'Module node, contains doc and node (a statement)'
+        try:
+            if node.doc is not None and len(node.node.nodes)==0:
+                return node.doc
+        except:
+            pass
         return self.doStmt(node.node,**kw)
+
 
     def doStmt(self,node,**kw):
         'Statement node: a set of child nodes'
@@ -184,7 +190,7 @@ class Compiler:
     
     def doMod(self,node,**kw):
         'Modulo nodes: also used for string formatting!'
-        return self.interp(node.left) % self.interp(node.right)
+        return self.interp(node.left) % tuple(self.interp(node.right))
 
     def doLeftShift(self,node,**kw):
         'LeftShift two nodes'
@@ -506,35 +512,35 @@ if __name__ == '__main__':
     s.setVariable('b',Num.arange(15.))
     s.setVariable('s1','A long StrinG')
     s.setFunction('sqrt',Num.sqrt)
-    s.setVariable('format1',' %s = %f ')
+    s.setVariable('format1',' "%s" = %f ')
     s.setVariable('dlist',['abcdefghijklmnop',12,'xyz'])
     s.setVariable('adict',{'key1': 'abcdefghijklmnop','key2':3.1})
     s.setVariable('x',2.2)
     s.setVariable('ix',4)
     s.setVariable('st','a long string here')
 
-    t = ('a', 'a[2]', 'a[:7]', 'a[4:10]', 'b[9:]')
-    t = ('a', 'a[2]',
+    t = ['1.1', '0.2','0.3j','.3e3',
+         '2*3/4',         '[3, 4, 5]',
+         'a','g1.a',
+         'a[2]', 'a[:7]', 'a[4:10]', 'b[9:]',
+         '"a string"',
+         "''' three q  '''",
          '""" three q"""',
          "''' three q  '''",
          "'strform %s ' % 's'",
          "'strform %s ' % ('s')",
-         "' %s = %f ' % ['a',3.3]",
-         " format1  % ['a',3.3]")
-    #" format1  % dlist",         )
-    st = (' (x+1)', 'sqrt((x+1)) ' ,
-         'sqrt((a+1)/4)[3]' , 'sqrt(x)' ,
+         ' (x+1)', 'sqrt((x+1)) ' ,
+         'sqrt((a+1)/4)[3]' , 
          'st[2:8]',
-         'a[2]',
          'adict["key1"][1:4]',
          'dlist[0,1:4]',
-         '[3, 4, 5]',
-         )
-    t = ('b', 'g1.a','sqrt(g1.b)','sqrt(b)','s1', 's1.upper()','(x+1)')
-    # t = ('b', 'x', '(x+1)','2*3/4')
-    # t = ('1.1', '0.2','0.3j','.3e3','.1','1.','a','g1.a')
-    t = ('dlist', 'dlist[0].upper()[4:7]', 'b[3:9]/2.7')
+         'sqrt(g1.b)','sqrt(b)','s1', 's1.upper()',
+         'dlist', 'dlist[0].upper()[4:7]', 'b[3:9]/2.7',
+         "'%s = %f ' % ['a',3.3]",
+         "format1  % ['a',5.412]"]
+
     for i in t:
+        i = i.strip()
         print '======\n"', i , '"  -> ', 
         x = e.compile(i)
         print x
