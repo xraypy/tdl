@@ -123,7 +123,11 @@ class Compiler:
     #  interp :  ast -> result
     #  eval   :  string statement -> result = interp(compile(statement))
     def compile(self,expr,mode='single'):
-        """compile statement/expression to Ast representation"""
+        """compile statement/expression to Ast representation
+        mode = single  to compile a single interactive command
+             = eval    to compile an expression
+             = exec    to compile a module
+        """
         if mode not in ('single','eval','expr'): mode='single'
         return parse(expr,mode)
     
@@ -132,9 +136,10 @@ class Compiler:
         if node is None: return None
         return self.__methods.get(node.__class__,self.NotImplemented)(node,**kw)
 
-    def eval(self,expr):
-        """evaluates a statement/expression strnig"""
-        return self.interp(self.compile(expr,mode='single') )
+    def eval(self,expr,mode='single'):
+        """evaluates a single statement"""
+        
+        return self.interp(self.compile(expr,mode=mode))
 
     # outer nodes: Module, Statement, Expression
     def doModule(self,node,**kw):
@@ -249,9 +254,9 @@ class Compiler:
         val = self.interp(node.expr)
         for op, subnode in node.ops:
             args = [val, self.interp(subnode)]
-            if op is 'in':  args =args.reverse()  # 'x in y' == contains(y,x)
+            if op == 'in':
+                args.reverse()  # 'x in y' == contains(y,x)
             if not BinOps[op](*args): return False
-            val = test
         return True
 
     def doConst(self, node, **kw):
@@ -537,7 +542,9 @@ if __name__ == '__main__':
          'sqrt(g1.b)','sqrt(b)','s1', 's1.upper()',
          'dlist', 'dlist[0].upper()[4:7]', 'b[3:9]/2.7',
          "'%s = %f ' % ['a',3.3]",
-         "format1  % ['a',5.412]"]
+         "format1  % ['a',5.412]",
+         "'xyz' in dlist",
+         ]
 
     for i in t:
         i = i.strip()
