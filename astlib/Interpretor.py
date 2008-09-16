@@ -13,31 +13,49 @@ import types
 import copy
 
 # import default library of cmds and funcs
-import Help
+# import Help
 
 from Expression import Compiler, opcodes
 
 from Symbol import SymbolTable, symTypes, Group, isGroup, isSymbol
 
-import version
+#  import version
 from Num import num_version, ArrayType
 from Util import split_delim, find_unquoted_char, parens_matched
 from Util import split_list, trimstring
 from Util import EvalError, Command2Expr
 import exceptions
 
-class Evaluator:
+class Fifo:
+    def __init__(self):
+        self.front,self.back = ([],[])
+
+    def __len__(self):   return len(self.front)+len(self.back)
+            
+    def append(self, value): self.back.append(value)
+
+    def pop(self):
+        if not self.front:
+            self.front, self.back = self.back, self.front
+            self.front.reverse()
+        return self.front.pop()
+
+
+class Interpretor:
     """ main evaluation class for tdl language.
     parses  / compiles tdl statements and evaluates them:
     """
     EOF      = opcodes._eof
+    reserved_words = ('if','else','elif', 'endif',
+                      'for', 'endfor','while','endwhile',
+                      'try', 'except', 'endtry', 'def', 'enddef')
+                          
     __interrupts = ['pass','continue','break','return']
-    def __init__(self, libs=None):
-
+    def __init__(self, libs=None, interactive=True, debug=False, **kw):
         self.interactive = interactive
         self.input       = sys.stdin
         self.output      = sys.stdout
-
+        self.debug       = debug
         # self.help        = Help.Help(tdl=self,output=self.output)
 
         self.Expression  = Compiler()
@@ -48,7 +66,7 @@ class Evaluator:
 
         self.prompt   = '... '
         self.stack = []
-        self.text  = []
+        self.text  = Fifo()
         self.line_buff = ''
         self.nline = 0
         self.triple_squote = False
@@ -58,24 +76,22 @@ class Evaluator:
         self.retval = None
         self.infile = '<stdin>'
 
-        #self.debug       = debug
-        self.set_debug(debug)
+        self.debug       = debug
+        # self.set_debug(debug)
 
-    def setVariable(self,var,val):
-        return self.symbolTable.setVariable(var,val)
+    def setVariable(self,var,val,**kw):
+        return self.symbolTable.setSymbol(var,val,**kw)
 
     def getVariable(self,var):
         "return reference to a named variable"
-        return self.symbolTable.getVariable(var)
+        return self.symbolTable.getSymbol(var)
 
     def getVariableValue(self,var):
         "return value of a named variable"
-        var = self.symbolTable.getVariable(var)
-        if var is not None:
-            try:
-                return var.value
-            except AttributeError:
-                return None
+        try:
+            return self.symbolTable.getSymbol(var).value
+        except AttributeError:
+            return None
         return None
 
 #     def raise_error(self,msg):
@@ -96,54 +112,54 @@ class Evaluator:
     def clear(self):
         " clear all statements "
         self.stack = []
-        self.text  = []
+        self.text  = Fifo()
         self.nline = 0
-
-
-    def execute(self,t):
-        " evaluate tdl statement or list of tdl statements"
-        if not isinstance(t,list): t = [t]
-        self.load_statements(t)
-        return self.run()
 
     def load_statements(self,t,file='stdin'):
         " load a list of text lines to be parsed & executed"
-        if isinstance(t,(str,unicode)):  t = [t]
-        if not isinstance(t,list):
-            raise TypeError, 'cannot load statements! %s' % (repr(t))
+        if not isinstance(t,list): t = [t]
+
         n = 0
         self.infile = file
         while t:
             n = n+1
             s = t.pop().strip()
-            self.text.append((xs,n,self.infile))
+            self.text.append((s,n,self.infile))
+            
+    def execute(self,t,file='stdin'):
+        " evaluate tdl statement or list of tdl statements"
+        self.load_statements(t,file=file)
+        return self.run()
 
-    def run(self):
+    def run( self):
         " load a chunk of text to be parsed and possibly executed"
         ret = None
-        while True:
-            try:
-                s,nline,srcfile = self.text.pop()
-            except IndexError:
-                break
+        while len(self.text)>0:
+            s,nline,srcfile = self.text.pop()
+
             if s == self.EOF:  return None
 
             if len(s)<=0: continue
             s.strip()
             if s.startswith('#'): continue
             ret = self.eval(s)
-
         return ret
-
 
     def eval(self,s):
         "evaluate a single tdl statement"
         ret = None
-        x = self.compile(s = s)
-        if x is not None:
-            ret = self.interpret(x, text=s)
-            self._status = True
+        token,code = self.compile(s)
+        print 'Int / Eval: compile returned code=', token, code
+        if token is None:
+            print 'EVAL CODE: ', code
+            for stmt in code:
+                ret = self.expr_interp(stmt)
         return ret
+    
+#         if x is not None:
+#             ret = self.interpret(x, text=s)
+#             self._status = True
+#         return ret
 
     def get_input(self):
         return raw_input(self.prompt)
@@ -220,17 +236,99 @@ class Evaluator:
         if len(w)>0: key = w[0].lower()
         return (s,key)
 
-    def compile(self,s = None):
-        " main parsing and compilation of tdl statements"
-        # print "compile <%s>" %  s
-        s,key = self.get_next_statement(s=s)
-        # print " :key <%s>" % key
-        # print " :s  <%s>"  % s
+    def compile(self, expr= None):
+        """main compilation of tdl statements: converts """
+        s,key = self.get_next_statement(s=expr)
+        print " :key <%s> / statement= <%s> " % ( key, s)
 
         if s in ('','#'): return None
         if s.startswith('#'): return None
-        if s == self.EOF: return [self.EOF]
-        ret = []
+        if s == self.EOF: return self.EOF, []
+
+        if key not in self.reserved_words:
+            return None, [self.expr_compile(s)]
+        # these keywords can never legally occur at a top-level compilation
+        # and will always be found while the appropriate (if,while,for,def)
+        # block is being processed
+        if key in ('else','elif','endif','endfor','endwhile','enddef','endtry'):
+            raise EvalError, 'syntax error: %s' % key
+
+        # handle if statements, including if/elif/else/endif blocks
+        elif key == 'if':
+            print 'IF not implemented'
+        elif key == 'try':
+            print 'TRY not implemented'
+        # def, for, and while blocks
+        elif key in ('def', 'for', 'while'):
+            print 'DEF/FOR/WHILE (%s) not implemented' % key
+
+        elif key in ('del','print', 'return'): # keywords that take a list
+            print 'DEL/PRINT/RET (%s) not implemented' % key
+        elif key in ('break', 'continue'):
+            print 'BREAK/CONTINUE (%s) not implemented' % key
+        # regular assignment / eval statement
+        else:
+            # check if command-like interpretation is reasonable
+            # print 'check for command / assignment '
+            print 'REGULAR assignment ', s
+            try:
+                next_char = s[len(key):].strip()[0]
+            except:
+                next_char = None
+            if (key.find('(')==-1  and key.find(',')==-1 and key.find('=')==-1 and
+                next_char != '='):
+                if self.symbolTable.hasSymbol(key):
+                    t = Command2Expr(s,symtable=self.symbolTable)
+                    stack= self.expr_compile(t)
+                    if stack[0] != opcodes.function:
+                        raise EvalError, 'syntax error: weird error with commad '
+                    stack[0] = opcodes.command
+                    return  ['eval', stack, s]
+            # wasn't a command!
+            status,s1,s2 = split_delim(s,delim='=')
+            if status == -1: return None
+            if s2 == '': # Eval
+                return  ['eval', self.expr_compile(s1), s]
+            else: # Assignment
+                stack = self.expr_compile(s1)
+                tok = stack.pop(0)
+                if tok not in (opcodes.variable, opcodes.array):
+                    raise EvalError, 'syntax error: invalid assignment statement'
+                if tok ==  opcodes.variable:  stack.insert(0,0)
+                stack.insert(0,opcodes.symbol)
+                return ['assign', stack,  self.expr_compile(s2), s]
+
+        return ret
+
+
+
+        ################
+        
+    def xxcompile(self, expr= None):
+        """main compilation of tdl statements: converts a
+        statement (or line of code) to executable tdl code.
+
+        this relies heavily on Expression.compile to compile
+        tdl (err, Python) statements to Python's AST format.
+
+        The job here is to look for reserved keywords for control-flow
+        code,  and build up a list of compiled (ie, AST-formatted)
+        statements representing the blocks in the control flow.
+        
+        a tuple is returned of
+             keyword, list of AST statements
+        """
+        print "compiling <%s>" %  expr
+        s,key = self.get_next_statement(s=expr)
+        print " :key <%s>" % key
+        print " :s  <%s>"  % s
+        if s in ('','#'): return None
+        if s.startswith('#'): return None
+        if s == self.EOF: return self.EOF, []
+
+        if key not in self.reserved_words:
+            return None, [self.expr_compile(s)]
+        
 
         # these keywords can never legally occur at a top-level compilation
         # and will always be found while the appropriate (if,while,for,def)
@@ -524,12 +622,17 @@ class Evaluator:
             sym.type   = symTypes.variable
             sym.constant = False
 
-    def interpret(self,s,text=''):
+    def interpret(self,s,code=None,text=''):
         "interpret parsed code from compile"
+        print 'Interpret: token= ', tok
+        print 'Interpret: code ', code
         tok = s[0]
         if text != '': self.Expression.text=text
-        if tok == self.EOF:
-            return None
+
+        # most common case: simple statement (non control-flow code)
+        if tok is None:      return self.expr_interp(s[1])
+
+        if tok == self.EOF:  return None
         try:
             tok=tok.lower()
         except AttributeError:

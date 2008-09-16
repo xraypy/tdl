@@ -17,20 +17,22 @@ AugAssignOps = {'+=': operator.add, '-=': operator.sub,
                   
 
 class opcodes:
-    delim     ="@~OP~"
-    _continue ="%s_continue_%s" %(delim,delim)
-    _pass     ="%s_pass_%s" %(delim,delim)
-    _break    ="%s_break_%s" %(delim,delim)
-    _print    ="%s_print_%s" %(delim,delim)
-    _return   ="%s_return_%s" %(delim,delim)
-    _raise    ="%s_raise_%s" %(delim,delim)
-    _assert   ="%s_assert_%s" %(delim,delim)
-    _eof      ="%s_eof_%s" %(delim,delim)
-    
+    delim1,delim2   = "@;",";@"
+    _continue ="%scontinue%s"%(delim1,delim2)
+    _pass     ="%spass%s"   %(delim1,delim2)
+    _break    ="%sbreak%s"  %(delim1,delim2)
+    _print    ="%sprint%s"  %(delim1,delim2)
+    _return   ="%sreturn%s" %(delim1,delim2)
+    _raise    ="%sraise%s"  %(delim1,delim2)
+    _assert   ="%sassert%s" %(delim1,delim2)
+    _eof      ="%seof%s"    %(delim1,delim2)
+    minlen    = len(delim1+delim2)
 
-def valid_opcode(t): return t.startswith(opcodes.delim) and t.endswith(opcodes.delim)
+def valid_opcode(t):
+    return (t.startswith(opcodes.delim1) and
+            t.endswith(opcodes.delim2) and
+            len(t)>opcodes.minlen)
    
-
 def isGroup(obj):  return isinstance(obj,Symbol.Group)
 def isSymbol(obj): return isinstance(obj,Symbol.Symbol)
 
@@ -134,11 +136,11 @@ class Compiler:
     def interp(self, node,**kw):
         """executes compiled Ast representation for an expression"""
         if node is None: return None
+        # print 'Expr Interp ', node
         return self.__methods.get(node.__class__,self.NotImplemented)(node,**kw)
 
     def eval(self,expr,mode='single'):
         """evaluates a single statement"""
-        
         return self.interp(self.compile(expr,mode=mode))
 
     # outer nodes: Module, Statement, Expression
@@ -255,7 +257,7 @@ class Compiler:
         for op, subnode in node.ops:
             args = [val, self.interp(subnode)]
             if op == 'in':
-                args.reverse()  # 'x in y' == contains(y,x)
+                args.reverse()  # ie, 'x in y' == contains(y,x)
             if not BinOps[op](*args): return False
         return True
 
@@ -299,7 +301,8 @@ class Compiler:
         return fcn(*args,**kws)
 
     # Name resolution
-    def doGetattr(self,node,**kw):
+    def doGetattr(self,node,for_assign=False, **kw):
+        if for_assign and not hasatter(node, 'flags'): node.flags = 'OP_ASSIGN'
         obj = self.interp(node.expr)
         if isGroup(obj):
             sym = obj.get(node.attrname)
@@ -308,8 +311,11 @@ class Compiler:
             sym = getattr(obj,node.attrname)            
         return sym
 
-    def doName(self,node, getvalue=True, **kw):
+    def doName(self,node, getvalue=True,  for_assign=False, **kw):
+
         sym = self.symbolTable.getSymbol(node.name)
+        if sym is None and for_assign: # may be that we have to create a group here
+            sym = self.symbolTable.addGroup(node.name)
         if getvalue and isSymbol(sym):  sym =  sym.value
         return sym
             
@@ -328,8 +334,9 @@ class Compiler:
             lo,hi = self.interp(node.lower),self.interp(node.upper)
             return obj, lo, hi
 
-    def doSubscript(self,node, **kw):
-        # print 'doSubscript ', node.flags
+    def doSubscript(self,node, for_assign=False, **kw):
+        'Subscript node'
+        if for_assign and not hasatter(node, 'flags'): node.flags = 'OP_ASSIGN'        
         if node.flags == 'OP_ASSIGN': 
             obj  = self._get_AssignObject(node.expr)
             # Need to build tuple of
@@ -340,7 +347,6 @@ class Compiler:
                 last_sub = self.interp(node.subs.pop())
                 for s in node.subs: obj = obj[self.interp(s)]
                 return obj, last_sub
-
         else:
             obj = self.interp(node.expr)
             if type(obj) == Num.ArrayType:
@@ -348,8 +354,7 @@ class Compiler:
             else:
                 for s in node.subs: obj = obj[self.interp(s)]
             return obj
-                    
-
+                   
     # Assignment Nodes
     #
     #  Which Ast Modules can be on the LHS, in an assignment:
@@ -359,11 +364,11 @@ class Compiler:
     # 
     #  Lots and Lots of testing needed.
     def doAssAttr(self, node, **kw):
-        'AssAttr node: can also delete attribute name with OP_DELETE !! '        
+        'AssAttr node: ????can also delete attribute name with OP_DELETE ??? '
         obj   = self._get_AssignObject(node.expr)
         if isGroup(obj):
             if not obj.has_key(node.attrname):
-                self.symbolTable._createSymbolInGroup(obj,node.attrname)
+                self.symbolTable.createSymbolInGroup(obj,node.attrname)
             return (obj, node.attrname)
         else:            
             if hasattr(obj,node.attrname):
@@ -400,11 +405,10 @@ class Compiler:
         
     def doAssign(self, node, **kw):
         'Assign node'
-        # print 'This is Assign, ', node.nodes
-        # print '          Expr: ', node.expr
         value = self.interp(node.expr)
         for s in node.nodes:
             cname = s.__class__.__name__
+            # print 'Assign: ', cname
             if cname in ('AssTuple','AssList'):
                 target = self.interp(i)
                 if isinstance(target,(list,tuple)):
@@ -420,7 +424,11 @@ class Compiler:
 
             elif cname == 'AssAttr':
                 obj,attr = self.doAssAttr(s)
-                setattr(obj,attr,value)
+                # print 'Assign/AssAttr:  returned obj, attr, value ' , obj, attr, value
+                if isGroup(obj):
+                    self.symbolTable.createSymbolInGroup(obj,attr,value=value)
+                else:
+                    setattr(obj,attr,value)
 
             elif cname == 'Subscript':
                 obj,subs  = self.doSubscript(s)
@@ -436,19 +444,18 @@ class Compiler:
     def _get_AssignObject(self,node):
         """ return an object for assignment, as on LHS of statements"""
         node_class = node.__class__
-        
+
         fcns = {ast.Name:    self.doName,
                 ast.Getattr: self.doGetattr,
                 ast.Subscript: self.doSubscript}
 
+        # print '_get_AssignObject 1 ', node_class, ' :: ', node_class in fcns.keys()
         if node_class not in fcns.keys():
             raise EvalError, "unidentified object for Assignment %s " % node
-
         try:
-            return self.__methods[node_class](node, getvalue=False)
+            return self.__methods[node_class](node, getvalue=False,for_assign=True)
         except:
             raise EvalError, "unidentified object for Assignment %s " % node
-
 
     def doAugAssign(self, node, **kw):
         'AugAssign node: a fairly simple case??? '
@@ -465,7 +472,6 @@ class Compiler:
         value  = op(curval,change)
 
         if node_class == ast.Name:
-            print 'Simple Name ', anode.name
             obj =self.symbolTable.getSymbol(anode.name,insert='Symbol')
             return self._AssObjVal(obj, value)
         elif node_class in (ast.Subscript, ast.Slice):
@@ -474,7 +480,6 @@ class Compiler:
             obj[subs] = value
                
         elif node_class == node.Getattr:
-            print 'assign attribute... '
             obj = self.doAssAttr(anode)
             self._AssObjVal(obj,value)
         return None
@@ -511,10 +516,12 @@ if __name__ == '__main__':
     s = e.symbolTable
 
     s.setVariable('a',Num.arange(30.))
+    array2d = Num.arange(36) *0.5
+    array2d.shape = (9,4)
     s.addGroup('g1')
     s.setVariable('g1.a',3.2)
     s.setVariable('g1.b',99.0)
-    s.setVariable('b',Num.arange(15.))
+    s.setVariable('b',array2d)
     s.setVariable('s1','A long StrinG')
     s.setFunction('sqrt',Num.sqrt)
     s.setVariable('format1',' "%s" = %f ')

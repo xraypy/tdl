@@ -465,19 +465,20 @@ class SymbolTable(Group):
         return self._lookup(name) is not None
 
  
-    def _createSymbolInGroup(self,group,name,**kw):
+    def createSymbolInGroup(self,group,name,value=None,**kw):
         """create a Symbol object inside of a Group object)"""
-        
         if isGroup(group):
             if not group.has_key(name):
-                group[name] = Symbol(name=name,**kw)
+                group[name] = Symbol(name=name,value=value,**kw)
+            elif value is not None:
+                group[name].value = value
             return group[name]
         elif isinstance(group,(str,unicode)):
-            return self.addSymbol(name = "%s.%s" % (group,name),**kw)
+            return self.addSymbol(name = "%s.%s" % (group,name),value=value,**kw)
             
 
-    def addSymbol(self,name, **kw):
-        " add asymbol, including passing args to created Symbol() "
+    def addSymbol(self,name, value=None,**kw):
+        " add as ymbol, including passing args to created Symbol() "
         parts = splitName(name)
         suffix = parts.pop()
         if len(parts)>0:
@@ -486,9 +487,18 @@ class SymbolTable(Group):
         
         if obj.has_key(suffix):
             print 'Warning: overwriting attribute ', suffix
-        obj[suffix] = Symbol(suffix,**kw)
+        obj[suffix] = Symbol(suffix,value=value,**kw)
         return obj[suffix]
 
+    def delSymbol(self,name):
+        " delete a symbol"
+        parts = splitName(name)
+        suffix = parts.pop()
+        if len(parts)>0:
+            obj = self._lookup(".".join(parts),insert='Group')
+        obj = self._lookup(name)
+        if obj.has_key(suffix): obj.pop(suffix)
+        return None
 
     def setSymbol(self,name,value,**kw):
         # print 'Symbol.setSymbol ', name, value, kw
