@@ -10,6 +10,7 @@ import LibASCIIFile
 import LibPlotter
 import LibPyLab
 import LibSpec
-import LibCarsXrf
+#import LibCarsXrf
+import LibXrf
 import LibScanData
 
