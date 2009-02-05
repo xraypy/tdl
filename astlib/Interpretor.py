@@ -118,7 +118,7 @@ class Interpretor:
     def load_statements(self,t,file='stdin'):
         " load a list of text lines to be parsed & executed"
         if not isinstance(t,list): t = [t]
-
+        # print 'load statement ', t
         n = 0
         self.infile = file
         while t:
@@ -131,17 +131,23 @@ class Interpretor:
         self.load_statements(t,file=file)
         return self.run()
 
-    def run( self):
+    def run(self):
         " load a chunk of text to be parsed and possibly executed"
         ret = None
+        print '---- This is run! ' 
         while len(self.text)>0:
             s,nline,srcfile = self.text.pop()
-
+#             print '   len(text) :=  %i (=%i+%i) ' % (len(self.text),
+#                                                   len(self.text.front),
+#                                                   len(self.text.back) )
+#             print "next line = <<%s>> " % s
+            
             if s == self.EOF:  return None
 
             if len(s)<=0: continue
             s.strip()
             if s.startswith('#'): continue
+            print 'run-> eval <<%s>> ' % s
             ret = self.eval(s)
         return ret
 
@@ -149,14 +155,23 @@ class Interpretor:
         "evaluate a single tdl statement"
         ret = None
         token,code = self.compile(s)
-        print 'Int / Eval: compile returned code=', token, code
+        print 'compiled to ', token, code
         if token is None:
-            print 'EVAL CODE: ', code
             for stmt in code:
                 ret = self.expr_interp(stmt)
+                if ret is not None and isinstance(ret,tuple):
+                    key = ret[0]
+                    if key == opcodes._print:
+                        dest = ret[1] or sys.stdout
+                        for i in ret[3]:   dest.write(i)
+                        if ret[2]: dest.write("\n")
+                    elif key == opcodes._continue:
+                        print '? continue ' , ret
+
+        print 'evaled to ', ret
         return ret
     
-#         if x is not None:
+#        if x is not None:
 #             ret = self.interpret(x, text=s)
 #             self._status = True
 #         return ret
@@ -165,11 +180,15 @@ class Interpretor:
         return raw_input(self.prompt)
 
     def get_next_textline(self):
+
         filename = 'stdin'
+        print 'This is get_next_textline!! ' 
         try:
+
             line,nline,filename  = self.text.pop()
         except IndexError:
             if self.interactive:
+                print 'get more input: ', line, nline, filename
                 line = self.get_input()
                 nline = self.nline
             else:
@@ -182,6 +201,8 @@ class Interpretor:
         if s is None:
             s,nline,fname = self.get_next_textline()
         s.strip()
+
+        # print "GET NEXT STATEMENT ", s
 
         if s.startswith('#'): return ('','')
         # handle the case of triple quotes:
@@ -199,12 +220,14 @@ class Interpretor:
         s = s[:jcom]
 
         n_parens = None
-
+        # print '====Search for Closed Parens ', s
+        # print '====   ', parens_matched(s)
         while n_parens != 0:
             n_parens = parens_matched(s)
             if n_parens < 0:  raise EvalError, 'syntax error: parens not matched: %s' % s
             if n_parens > 0:
                 self.line_buff = s
+                # print 'n_paremn>0?? ', n_parens, s
                 s,nline,fname = self.get_next_textline()
                 if s == self.EOF and not self.interactive:
                     break
@@ -238,8 +261,9 @@ class Interpretor:
 
     def compile(self, expr= None):
         """main compilation of tdl statements: converts """
+        print 'compile -> get next statement ', expr, len(self.text)
         s,key = self.get_next_statement(s=expr)
-        print " :key <%s> / statement= <%s> " % ( key, s)
+        print "compile get_next_st returned :key <%s> / statement= <%s> " % ( key, s)
 
         if s in ('','#'): return None
         if s.startswith('#'): return None
@@ -247,6 +271,11 @@ class Interpretor:
 
         if key not in self.reserved_words:
             return None, [self.expr_compile(s)]
+
+        elif key in ('del','print', 'return','break', 'continue'):
+            # keywords that just get handled as special statements
+            return key, [self.expr_compile(s)]
+
         # these keywords can never legally occur at a top-level compilation
         # and will always be found while the appropriate (if,while,for,def)
         # block is being processed
@@ -262,10 +291,7 @@ class Interpretor:
         elif key in ('def', 'for', 'while'):
             print 'DEF/FOR/WHILE (%s) not implemented' % key
 
-        elif key in ('del','print', 'return'): # keywords that take a list
-            print 'DEL/PRINT/RET (%s) not implemented' % key
-        elif key in ('break', 'continue'):
-            print 'BREAK/CONTINUE (%s) not implemented' % key
+
         # regular assignment / eval statement
         else:
             # check if command-like interpretation is reasonable

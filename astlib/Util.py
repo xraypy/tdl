@@ -166,7 +166,7 @@ def find_unquoted_char(s,char='#'):
     "find character in a string, skipping over quoted text"
     i = 0
     x = s.find(char)
-    if x < 0: return -1
+    if x < 0: return len(s)
 
     while i < len(s):
         t = s[i]
@@ -249,7 +249,7 @@ def split_delim(s,delim='='):
 
         elif t in ('"',"'"):
             if i < len(s)-3 and s[i:i+3] in ("'''",'"""'):  t = s[i:i+3]
-            x = find_matching_quote(s[i:],quote=t)
+            x = find_matching_quote(s[i:],q1=t)
             if x is not None:  i = i + x[2] - 1
             else:
                 j = opens.index(t)
@@ -329,11 +329,18 @@ def parens_matched(s):
     depth = 0
     while i < len(s):
         t = s[i]
+        # print 't = ', t, i, s
         if t in ('"',"'"):
-            if i < len(s)-3 and s[i:i+3] in ("'''",'"""'):  t = s[i:i+3]
-            x = find_matching_quote(s[i:],quote=t)
-            if x is not None: i = i + x[2] - 1
+            # print 'Found a quote: ', t
+            if i < len(s)-3 and s[i:i+3] in ("'''",'"""'):
+                # print 'TripleQuote'
+                t = s[i:i+3]
+            x = find_matching_quote(s[i:],q1=t)
+            # print 'match at ', x, s[i:]
+            if x is not None:
+                i = i + x[2] - 1
             else: # if matching quote not found, string is not complete
+                # print 'No Match'
                 return 1
         elif t in b:
             depth = depth + delims[t]

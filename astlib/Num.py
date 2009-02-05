@@ -27,17 +27,15 @@ def ParseVersion(s):
     return version
     
 def NoNumpy():
-    raise ImportError, 'Need numpy version 1.0 or higher'    
+    raise ImportError, 'Need numpy version 1.1 or higher'    
 
 def NoScipy():
-    print """Warning: scipy version 0.4.8 or higher not found.
-        This means that some modules will not work properly!!"""
     has_scipy = False
 
 try:
     import numpy as Num
     version = ParseVersion(Num.__version__)
-    if version < 100:  NoNumpy()
+    if version < 110:  NoNumpy()
     num_version = 'numpy %s' % Num.__version__
 except:
     NoNumpy()
@@ -46,7 +44,7 @@ try:
     import scipy
     has_scipy = True
     version = ParseVersion(scipy.__version__)
-    if version < 48: NoScipy()
+    if version < 50: NoScipy()
     num_version = '%s with scipy %s ' % (num_version,scipy.__version__)
 except:
     NoScipy()

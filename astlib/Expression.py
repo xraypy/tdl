@@ -1,9 +1,15 @@
 import os, sys
-from compiler import ast, parse
+# astfrom compiler import ast, parse
+import _ast
+import ast
 import operator
 
 import Num
 import Symbol
+
+major,minor = sys.version_info[0], sys.version_info[1]
+if major == 2 and minor < 6:
+    raise EnvironmentError('requires python 2.6 or higher')
 
 BinOps = {"is": operator.is_, "is not": operator.is_not, "in": operator.contains, 
           "==": operator.eq , "!=": operator.ne,
@@ -66,54 +72,54 @@ class Compiler:
     def __init__(self):
         self.symbolTable = Symbol.SymbolTable()
         self.__methods = {
-            ast.Module: self.doModule,
-            ast.Stmt: self.doStmt,
-            ast.Expression: self.doExpression,
-            ast.Discard: self.doDiscard,
-            ast.Add: self.doAdd,
-            ast.Sub: self.doSub,
-            ast.Mul: self.doMul,
-            ast.Div: self.doDiv,
-            ast.FloorDiv: self.doFloorDiv,
-            ast.Power: self.doPower,
-            ast.Mod: self.doMod,
-            ast.LeftShift: self.doLeftShift,
-            ast.RightShift: self.doRightShift,
-            ast.And: self.doAnd,
-            ast.Or: self.doOr,
-            ast.Bitand: self.doBitand,
-            ast.Bitor: self.doBitor,
-            ast.Bitxor: self.doBitxor,
-            ast.Not: self.doNot,
-            ast.Invert: self.doInvert,
-            ast.UnaryAdd: self.doUnaryAdd,
-            ast.UnarySub: self.doUnarySub,
-            ast.Backquote: self.doBackquote,
-            ast.Compare: self.doCompare,
-            ast.Const: self.doConst,
-            ast.List: self.doList,
-            ast.Tuple: self.doTuple,
-            ast.Dict: self.doDict,
-            ast.Keyword: self.doKeyword,
-            ast.Getattr: self.doGetattr,
-            ast.Name: self.doName,
-            ast.Sliceobj: self.doSliceobj,
-            ast.Slice: self.doSlice,
-            ast.Subscript: self.doSubscript,
-            ast.CallFunc: self.doCallFunc,
-            ast.AssAttr: self.doAssAttr,
-            ast.AssList: self.doAssList,
-            ast.AssName: self.doAssName,
-            ast.AssTuple: self.doAssTuple,
-            ast.Assign: self.doAssign,
-            ast.AugAssign: self.doAugAssign,
-            ast.Continue: self.doContinue,
-            ast.Pass: self.doPass,
-            ast.Return: self.doReturn,
-            ast.Break: self.doBreak,
-            ast.Raise: self.doRaise,
-            ast.Print: self.doPrint,
-            ast.Printnl: self.doPrintnl,
+            _ast.Module: self.doModule,
+            # _ast.Stmt: self.doStmt,
+            _ast.Expression: self.doExpression,
+            # _ast.Discard: self.doDiscard,
+            _ast.Add: self.doAdd,
+            _ast.Sub: self.doSub,
+            _ast.Mult: self.doMul,
+            _ast.Div: self.doDiv,
+            _ast.FloorDiv: self.doFloorDiv,
+            _ast.Pow: self.doPower,
+            _ast.Mod: self.doMod,
+            _ast.LShift: self.doLeftShift,
+            _ast.RShift: self.doRightShift,
+            _ast.And: self.doAnd,
+            _ast.Or: self.doOr,
+            _ast.BitAnd: self.doBitand,
+            _ast.BitOr: self.doBitor,
+            _ast.BitXor: self.doBitxor,
+            _ast.Not: self.doNot,
+            _ast.Invert: self.doInvert,
+            _ast.UAdd: self.doUnaryAdd,
+            _ast.USub: self.doUnarySub,
+            # _ast.Backquote: self.doBackquote,
+            _ast.Compare: self.doCompare,
+            # _ast.Const: self.doConst,
+            _ast.List: self.doList,
+            _ast.Tuple: self.doTuple,
+            _ast.Dict: self.doDict,
+            # _ast.Keyword: self.doKeyword,
+            # _ast.Getattr: self.doGetattr,
+            _ast.Name: self.doName,
+            # _ast.Sliceobj: self.doSliceobj,
+            _ast.Slice: self.doSlice,
+            _ast.Subscript: self.doSubscript,
+            _ast.Call: self.doCallFunc,
+            # _ast.AssAttr: self.doAssAttr,
+            # _ast.AssList: self.doAssList,
+            # _ast.AssName: self.doAssName,
+            # _ast.AssTuple: self.doAssTuple,
+            _ast.Assign: self.doAssign,
+            _ast.AugAssign: self.doAugAssign,
+            _ast.Continue: self.doContinue,
+            _ast.Pass: self.doPass,
+            _ast.Return: self.doReturn,
+            _ast.Break: self.doBreak,
+            _ast.Raise: self.doRaise,
+            _ast.Print: self.doPrint,
+            # _ast.Printnl: self.doPrintnl,
 
             }
         
@@ -131,7 +137,7 @@ class Compiler:
              = exec    to compile a module
         """
         if mode not in ('single','eval','expr'): mode='single'
-        return parse(expr,mode)
+        return ast.parse(expr,mode,_ast.PyCF_ONLY_AST)
     
     def interp(self, node,**kw):
         """executes compiled Ast representation for an expression"""
