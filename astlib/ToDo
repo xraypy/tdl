@@ -1,0 +1,20 @@
+ 
+Procedures (def and execution):
+   not fully implemented (currently broken)
+  
+Try/Except/etc:
+   not fully implemented
+
+Raise:
+   not implemented 
+
+Import / ImportFrom:
+   not implemented yet.
+
+Help system:
+   help() function not implemented
+   about() function not implemented
+
+Should separate loading of inital libraries (builtn, numpy, locally defined
+functions) from compiler.py.
+
