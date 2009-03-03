@@ -1,3 +1,4 @@
+from __future__ import print_function
 from util import isValidName, isNumber, strip_comments
 
 def get_DefVar(text):
@@ -17,7 +18,7 @@ def get_DefVar(text):
             icolon = t.find(':')
             if iparen < 0 : iparen = len(t)+1
             if icolon < 0 : icolon = len(t)+1
-            print iequal, iparen, icolon, words[0], isValidName(words[0])
+            # print iequal, iparen, icolon, words[0], isValidName(words[0])
             if (iequal < iparen and iequal < icolon and
                 isValidName(words[0])):
                 return words[0], t[iequal+1:].strip()
@@ -123,9 +124,10 @@ class InputText:
 
         def addText(text, lineno=None):
             self.input_complete = self.__isComplete(text)                    
-            self.input_buff.append((text, self.input_complete,
-                                    fname, self.lineno))
-            self.lineno += 1
+            for t in text.split('\n'):
+                self.input_buff.append((t, self.input_complete,
+                                        fname, self.lineno))
+                self.lineno += 1
 
         addText(text)
         self.prompt = self.ps2
@@ -133,6 +135,7 @@ class InputText:
             while not self.input_complete :
                 addText(self.input())
 
+        # print 'inp is complete ', self.input_complete
         if self.input_complete:
             self.prompt = self.ps1            
             nkeys, nblock = self.convert()
@@ -155,11 +158,17 @@ class InputText:
         Convert input buff (in self.input_buff) to valid python code
         and stores this (text, filename, lineno) into _fifo buffer
         """
+        # print( 'This is convert')
+        
         indent_level = 0
         oneliner  = False
         startkeys = self.block_friends.keys()
 
         self.input_buff.reverse()
+        # print( '=======CONVERT')
+        # print( self.input_buff)
+        # print( '=============')
+        
         while self.input_buff:
             text,complete,fname,lineno = self.input_buff.pop()
             while not complete:
@@ -290,7 +299,6 @@ class InputText:
 
     def __defaultInput(self,prompt=None):
         if prompt is None:  prompt = self.prompt
-        print "  <prompt> ", prompt
         return raw_input(prompt)
 
 if __name__ == '__main__':
@@ -323,10 +331,10 @@ if __name__ == '__main__':
     while inp:
         text,fname,lineno = inp.get()
         text.rstrip()
-        print '====='
-        print '%s' % text
+        print( '=====')
+        print( '%s' % text)
         a = ast.parse(text)  
-        print ast.dump(a,include_attributes=False)
+        print( ast.dump(a,include_attributes=False))
         
     testcode = """
  y = 4

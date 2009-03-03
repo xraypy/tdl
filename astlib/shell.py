@@ -3,6 +3,7 @@
 import numpy
 import compiler
 import inputText
+from util import EvalError
 import cmd
 import os
 import sys
@@ -56,11 +57,12 @@ Using python %s and numpy %s\n"""
 
         # override builtin open function
         # is this a bad idea?????
-        # __builtins__['open'] = Util.file_open(sym=self.tdl)
+        # __builtins__['open'] = util.file_open(sym=self.tdl)
         if scripts is not None:
             for i in scripts:
-                self.default('load("%s")' % i)
-                
+                txt = open(i,'r').read()
+                ret = self.load_run(txt,filename=i,lineno=1)
+                    
     def __del__(self):
         
         if (self.rdline):
@@ -71,7 +73,6 @@ Using python %s and numpy %s\n"""
         pass
 
     def do_shell(self, arg):
-        import os
         os.system(arg)
 
     def _helpshow(self,arg, cmd='help'):
@@ -85,6 +86,26 @@ Using python %s and numpy %s\n"""
     def tdl_execute(self,s_inp):
         self.default(s_inp)
 
+    def load_run(self,text,filename=None,lineno=None):
+        self.input.put(text,filename=filename, lineno=lineno)
+        
+        while len(self.input) >0:
+            block,fname,lineo = self.input.get()
+            print "block  ", block
+            if block is None:
+                self.prompt = self.ps2
+                return None
+            
+            #
+            if True: # try:
+                ret = self.compiler.eval(block)
+            else: #  xcept:
+                print 'error'
+                sys.exit()
+            self.prompt = self.ps1
+            return ret
+        # raise LookupError,'x'
+    
     def default(self,inp):
         s = inp.strip()
         words = s.split()
@@ -95,16 +116,8 @@ Using python %s and numpy %s\n"""
         else:
             self._status = False
             ret,x,detail = None, None, None
-            self.input.put(s)
             try:
-                block,fname,lineo = self.input.get()
-                if block is None:
-                    self.prompt = self.ps2
-                    return
-                ast  = self.compiler.compile(block)
-                ret  = self.compiler.interp(ast)
-                self._status = True
-                self.prompt = self.ps1
+                ret = self.load_run(s)
             except (ValueError,NameError), detail:
                 x = "%s error: %s" % ('syntax',detail)
             except TypeError, detail:
@@ -113,9 +126,9 @@ Using python %s and numpy %s\n"""
                 x = "%s error: %s" % ('mathematical',detail)
             except (LookupError), detail:
                 x = "%s error: %s" % ('lookup',detail)
-            except (EvalError,Util.EvalError), detail:
+            except (EvalError), detail:
                 x = "%s error: %s" % ('evaluation',detail)
-            except (SymbolError,AttributeError,Util.ParseError), detail:
+            except (NameError,AttributeError), detail:
                 x = "%s error: %s" % ('evaluation',detail)
             except:
                 x = "%s error: %s" % ('syntax',detail)

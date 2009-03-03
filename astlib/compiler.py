@@ -1,5 +1,4 @@
 from __future__ import division, print_function
-
 import os
 import sys
 import ast
@@ -162,10 +161,10 @@ class DefinedVariable(object):
             save_groups  = _sys.LocalGroup,_sys.ModuleGroup
             
             _sys.LocalGroup,_sys.ModuleGroup = self._groups
-            retval = self.compiler.interp(self.ast)
+            rval = self.compiler.interp(self.ast)
 
             _sys.LocalGroup,_sys.ModuleGroup = save_groups
-            return retval
+            return rval
         else:
             msg = "Cannot evaluate '%s'"  % (self.expr)
             raise ValueError, msg
@@ -173,24 +172,61 @@ class DefinedVariable(object):
      
 class Procedure(object):
     """tdl procedure:  function """
-    def __init__(self,name, body=None, module=None, args=None,
-                 keywords=None, starargs=None, kwargs=None):
-        self.name = name
-        self.body = body
-        self.module = module
-        self.args = args
-        self.keywords = keywords
-        self.starargs = starargs
-        self.kwargs = kwargs
+    def __init__(self, name, compiler=None,
+                 body=None, args=None, kwargs=None,
+                 vararg=None, varkws=None):
+        self.name     = name
+        self.compiler = compiler
+        self.module   = compiler.symtable._sys.ModuleGroup
+        self.body     = body
+        self.argnames = args
+        self.kwargs   = kwargs
+        self.vararg   = vararg
+        self.varkws   = varkws
+        
+    def __call__(self,*args,**kwargs):
+        stable  = self.compiler.symtable
+        sys     = stable._sys      
+        lgroup  = stable.createGroup()
+        locname = '%s_%s' % (self.name,hex(id(lgroup))[2:])
 
-    def call(self,compiler,args=None,kwargs=None):
-        print("Call Procedure '%s'" % self.name)
+        args = list(args)
+        for argname in self.argnames:
+            setattr(lgroup, argname,args.pop(0))
+        if self.vararg is not None and len(args)>0:
+            setattr(lgroup, self.vararg, args)
+        
+        for k,v in self.kwargs.items():
+            if kwargs.has_key(k):  v = kwargs.pop(k)
+            setattr(lgroup, k, v)
 
+        if self.varkws is not None and len(kwargs)>0:
+            setattr(lgroup, self.varkws, kwargs)
+        
+        setattr(stable,locname,lgroup)
+                
+        grps_save = sys.LocalGroup,sys.ModuleGroup
+        stable._setmain_groups((locname, self.module))
+
+        retval = None
+        self.compiler.retval = None
+        for node in self.body:
+            self.compiler.interp(node)
+            if self.compiler.retval is not None:
+                retval = self.compiler.retval
+                break
+
+        delattr(stable,locname)
+        sys.LocalGroup,sys.ModuleGroup = grps_save
+        stable._setmain_groups(grps_save)
+        self.compiler.retval = None
+        return retval
+    
 class Compiler:
     """ program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
   using python's ast module, and then executes the AST representation
-  using a custom SymbolTable for named objects (variable, functions).
+  using a custom SymbolTable for named object (variable, functions).
   This then gives a restricted version of Python,
     
   The following Python syntax is not supported:
@@ -207,16 +243,17 @@ class Compiler:
         self.delSymbol   = symtable.delSymbol        
         self._interrupt  = None
         self.symtable    = symtable
+        self.retval      = None
 
+        self.setSymbol('_builtin.None',None)
         load = symtable._load_functions
         load(_from_builtins, group=symtable._builtin, parent=__builtin__)        
         load(_from_numpy,  group=symtable._math, parent=numpy)
-
         load(_local_funcs, group=symtable._builtin, compiler=self)
 
     ##
     def NotImplemented(self,node):
-        raise EvalError, "syntax error:  '%s' not supported" % (_ClassName(node))
+        self.onError(EvalError, "'%s' not supported" % (_ClassName(node)))
 
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
@@ -224,25 +261,37 @@ class Compiler:
     #  eval   :  string statement -> result = interp(compile(statement))
     def compile(self,text):
         """compile statement/expression to Ast representation    """
-        return ast.parse(text)
+        try:
+            return ast.parse(text)
+        except:
+            self.onError(SyntaxError, text)
+            
     
     def dump(self, node):  return ast.dump(node)
         
     def interp(self, node):
         """executes compiled Ast representation for an expression"""
-        # it *is* important to keep this, as internal code here may run interp(None)
+        # it **is** important to keep this, as
+        #    internal code here may run interp(None)
         if node is None: return None
+
         methodName = "do%s" % _Class(node).__name__
-        # print(">interp ", methodName, ast.dump(node))
-        if hasattr(self,methodName):
-            return getattr(self,methodName)(node)
-        else:
-            return self.NotImplemented(node)
+        # try:
+        return getattr(self,methodName)(node)
+#         except:
+#             self.onError(EvalError,
+#                          "'%s' not supported" % (_ClassName(node)))
         
     def eval(self,expr):
         """evaluates a single statement"""
         return self.interp(self.compile(expr))
 
+    def onError(self,exception,msg):
+        """ wrapper for raising exceptions from interpreter"""
+        err_type,err_value,err_tback = sys.exc_info()
+        raise exception, msg
+
+    # handlers for ast components
     def doModule(self,node):    # ():('body',) 
         out = None
         for n in node.body: out = self.interp(n)
@@ -256,7 +305,10 @@ class Compiler:
 
     def doExpr(self,node):   return self._NodeValue(node)  # ('value',)
     def doIndex(self,node):  return self._NodeValue(node)  # ('value',)
-    def doReturn(self,node): return self._NodeValue(node)  # ('value',)
+    def doReturn(self,node): # ('value',)
+        self.retval = self._NodeValue(node)
+        return
+    
     def doRepr(self,node):   return repr(self._NodeValue(node))  # ('value',)
 
     def doPass(self,node):    return None  # () 
@@ -270,9 +322,6 @@ class Compiler:
     def doBreak(self,node):     return self.doInterrupt(node)
     def doContinue(self,node):  return self.doInterrupt(node)    
 
-    def onError(self,exception,msg):
-        """ wrapper for raising exceptions from interpreter"""
-        raise exception, msg
 
     def doAssert(self,node):    # ('test', 'msg')
         if not self.interp(node.test):
@@ -310,7 +359,8 @@ class Compiler:
             
         elif _Class(n) == ast.Attribute:
             if _Context(n) == ast.Load:
-                raise EvalError, "Assign -> attribute %s???" % ast.dump(n)
+                self.onError(EvalError,
+                             "canot Assign attribute %s???" % n.attr)
             setattr(self.interp(n.value),n.attr,val)
 
         elif _Class(n) == ast.Subscript:
@@ -327,7 +377,7 @@ class Compiler:
                 for el,v in zip(n.elts,val):
                     self._NodeAssign(el,v)
             else:
-                raise ValueError, 'too many values to unpack'
+                self.onError(ValueError, 'too many values to unpack')
 
     def doAttribute(self,node):    # ('value', 'attr', 'ctx')
         ctx = _Context(node)
@@ -337,11 +387,14 @@ class Compiler:
             if hasattr(sym,node.attr):
                 return getattr(sym,node.attr)
             else:
-                raise EvalError, "'%s' does not have an '%s' attribute" % (node.value,node.attr)
+                msg = "'%s' does not have an '%s' attribute" 
+                self.onError(EvalError, msg % (node.value,node.attr))
+
         elif ctx == ast.Del:
             return delattr(sym,attr)
         elif ctx == ast.Store:
-            raise EvalError, "attribute for storage: shouldn't be here!!"
+            self.onError(EvalError,
+                         "attribute for storage: shouldn't be here!!")
 
     def doAssign(self,node):    # ('targets', 'value')
         val = self._NodeValue(node)
@@ -374,7 +427,8 @@ class Compiler:
             elif isinstance(node.slice,ast.ExtSlice):
                 return val[(slice)]
         elif ctx == ast.Store:
-            raise EvalError, "subscript for storage: shouldn't be here!!"
+            self.onError(EvalError,
+                         "subscript for storage: shouldn't be here!!")
 
     def doDelete(self,node):    # ('targets',)
         ctx = _Context(node)
@@ -404,18 +458,18 @@ class Compiler:
         return out
 
     def doPrint(self,node):    # ('dest', 'values', 'nl') 
-        """ note: implements Python2 style print statement, not print function
-        probably need to have 'tdl2py' step look for and translate print -> print_
-        to become a function call
+        """ note: implements Python2 style print statement, not
+        print() function.  Probably, the 'tdl2py' translation
+        should look for and translate print -> print_() to become
+        a customized function call.
         """
         l = [self.interp(n) for n in  node.values]
         dest = self.interp(node.dest) or sys.stdout
         end = ''
         if node.nl: end = '\n'
         print(*l,file=dest,end=end)
-
         
-    def doIf(self,node):    # ('test', 'body', 'orelse') 
+    def doIf(self,node):    # ('test', 'body', 'orelse')
         block = node.orelse
         if self.interp(node.test): block = node.body
         for n in block: self.interp(n)
@@ -451,7 +505,7 @@ class Compiler:
     def doCall(self,node):    # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         if not callable(func):
-            raise EvalError, "'%s' is not not callable" % (func)
+            self.onError(EvalError, "'%s' is not not callable" % (func))
 
         args = [self.interp(a) for a in node.args]
         if node.starargs is not None:
@@ -460,7 +514,8 @@ class Compiler:
         keywords = {}
         for k in node.keywords:
             if not isinstance(k,ast.keyword):
-                raise EvalError, "keyword error in function call '%s'" % (func)
+                self.onError(EvalError,
+                             "keyword error in function call '%s'" % (func))
             keywords[k.arg] = self.interp(k.value)
         if node.kwargs is not None:  keywords.update(self.interp(node.kwargs))
 
@@ -478,7 +533,29 @@ class Compiler:
                     if add:
                         out.append(self.interp(node.elt))
         return out
-                    
+
+    def doFunctionDef(self,node):    # ('name', 'args', 'body', 'decorator_list') 
+        if node.decorator_list != []:
+            print("Warning: decorated procedures not supported!")
+        args   = []
+        kwargs = {}
+        while node.args.defaults:
+            defval = self.interp(node.args.defaults.pop())
+            key    = self.interp(node.args.args.pop())
+            kwargs[key] = defval
+            
+        for n in node.args.args: args.append(n.id)
+     
+        proc = Procedure(node.name, compiler=self,
+                         body  =node.body,
+                         args  =args,
+                         kwargs=kwargs,
+                         vararg=node.args.vararg,
+                         varkws=node.args.kwarg)
+
+        self.setSymbol(node.name,value=proc)
+        
+
     ## 
     # not yet implemented:
     ## 
@@ -513,13 +590,6 @@ class Compiler:
         # print(ast.dump(node.elt))
         for n in node.generators:
             print(n)             
-
-    def doFunctionDef(self,node):    # ('name', 'args', 'body', 'decorator_list') 
-        print("Def Func", node.name, node.args, node.body, node.decorator_list)
-        print(ast.dump(node.args))
-        # get module group
-        # args have Param() ctx
-        return self.NotImplemented(node)
 
     def doRaise(self,node):    # ('type', 'inst', 'tback') 
         return self.NotImplemented(node)

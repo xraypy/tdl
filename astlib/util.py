@@ -73,7 +73,8 @@ reserved_words = ('and','as','assert','break','continue','def','del',
                   'elif','else','except','finally', 'for', 'from',
                   'if', 'import', 'in', 'is','not', 'or','pass',
                   'print', 'raise', 'return','try', 'while', 'group',
-                  'end','endwhile','endif','endfor','endtry','enddef')
+                  'end','endwhile','endif','endfor','endtry','enddef',
+                  'True','False','None')
 py_words = ('class', 'yield','with','lambda','exec')
 
 name_match = re.compile(r"[a-z_][a-z0-9_]*(.[a-z_][a-z0-9_]*)*$").match

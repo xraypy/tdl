@@ -1,6 +1,6 @@
  
 Procedures (def and execution):
-   not fully implemented (currently broken)
+   works in certain cases, needs more testing.
   
 Try/Except/etc:
    not fully implemented
@@ -14,6 +14,14 @@ Import / ImportFrom:
 Help system:
    help() function not implemented
    about() function not implemented
+
+
+Shell Program:
+   load of tdl code from a file is not working correctly.
+
+Testing: 
+   started some unit testing
+
 
 Should separate loading of inital libraries (builtn, numpy, locally defined
 functions) from compiler.py.
