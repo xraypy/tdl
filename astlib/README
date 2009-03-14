@@ -1,7 +1,7 @@
-  This reimplements TDL using python2.6 ast module
+==== This implements TDL using python2.6 and the ast module ====
 
-Though incomplete (see ToDo), it is MUCH cleaner, robust, and
-easier to deal with than the old TDL codebase.
+Though incomplete (see ToDo), this implementation is MUCH cleaner, 
+robust, and easier to deal with than the old TDL codebase.
 
 The symbol table is also much simpler.
 
