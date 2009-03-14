@@ -30,13 +30,10 @@ class Group(object):
         "return sorted list of names of members that are sub groups"
         return sorted([k for k,v in self.__dict__.items() if isGroup(v)])
 
-# the dis module is NOT actually used here, but is chosen
-# as a python module that will NEVER be useful in tdl, as
-# in symbolTable._lookup()
-import dis
+# this is chosen to create a value that will NEVER be useful symbol name
+# in tdl.  symbolTable._lookup() can use it to hold an invalid name
 
 class symbolTable(Group):
-    invalid_name = dis
     top_group    = '_main'
     core_groups = ('_main','_sys','_builtin','_math')
 
@@ -51,7 +48,12 @@ class symbolTable(Group):
                          'searchGroups':None,
                          'createdGroup':False}
         self.__init_libs(libs=libs)
+        class invalidName:
+            name=None
         
+        self.__invalid_name = invalidName()
+    
+
     def _set_internal(self,key,val):
         self.__inter[key] = val
         
@@ -210,7 +212,7 @@ class symbolTable(Group):
         parts = name.split('.')
         parts.reverse()
         top   = parts.pop()
-        out   = self.invalid_name
+        out   = self.__invalid_name
         
         if top == self.top_group :
             out = self
@@ -234,8 +236,7 @@ class symbolTable(Group):
                         if n>MAX_GROUP_LEVEL:
                             raise LookupError, "cannot locate symbol(2) '%s'" % name
                     break
-
-        if out is self.invalid_name:
+        if out is self.__invalid_name:
             raise LookupError, "cannot locate symbol(1) '%s'" % name
         nam.reverse()
         while parts:

@@ -267,28 +267,30 @@ class Compiler:
             self.onError(SyntaxError, text)
             
     
-    def dump(self, node):  return ast.dump(node)
+    def dump(self, node,**kw):  return ast.dump(node,**kw)
         
     def interp(self, node):
         """executes compiled Ast representation for an expression"""
         # it **is** important to keep this, as
-        #    internal code here may run interp(None)
+        # internal code here may run interp(None)
+        # and expect a None in return.
         if node is None: return None
-
+        
         methodName = "do%s" % _Class(node).__name__
-        # try:
         return getattr(self,methodName)(node)
-#         except:
-#             self.onError(EvalError,
-#                          "'%s' not supported" % (_ClassName(node)))
+
         
     def eval(self,expr):
         """evaluates a single statement"""
         return self.interp(self.compile(expr))
 
-    def onError(self,exception,msg):
+    def onError(self,exception,msg,tback=None):
         """ wrapper for raising exceptions from interpreter"""
         err_type,err_value,err_tback = sys.exc_info()
+        print(" onError:  exc_info  =  ", sys.exc_info())
+        print(" onError:  exception =  ", exception)
+        print(" onError:  message   =  ", msg)
+        
         raise exception, msg
 
     # handlers for ast components
@@ -560,10 +562,12 @@ class Compiler:
     # not yet implemented:
     ## 
     def doExceptHandler(self,node): # ('type', 'name', 'body')
-        pass
+        print("except handler")
+        return None
     
     def doTryExcept(self,node):    # ('body', 'handlers', 'orelse') 
         print("Incomplete Try Except")
+        print( self.dump(node))
         for n in node.body:
             try:
                 self.interp(n)
@@ -571,28 +575,31 @@ class Compiler:
                 e_type,e_value,e_tback = sys.exc_info()
                 handled = False
                 for h in node.handlers:
-                    h_type = self.interp(h.type)
-                    print('TRY h_type : ', h_type)
-                    if h_type is None or isinstance(e_type(),h_type):
+                    handler_type = self.interp(h.type)
+                    if handler_type is None or isinstance(e_type(),handler_type):
                         handled=True
                         self._NodeAssign(h.name,e_value)
                         for b in h.body: self.interp(b)
                         break
                 if not handled:
-                    print("NOT HANDLED", dir(e_tback), e_tback.tb_lineno, e_tback.tb_lasti)
-                    raise e_type, e_value # print("%s: %s" % (e_type.__name__, e_value))
-
+                    # print("unhandled exception: ", dir(e_tback), e_tback.tb_lineno, e_tback.tb_lasti)
+                    self.onError(e_type, e_value,e_tback) # print("%s: %s" % (e_type.__name__, e_value))
+                    
     def doTryFinally(self,node):    # ('body', 'finalbody') 
         return self.NotImplemented(node)
         
     def doGeneratorExp(self,node):    # ('elt', 'generators') 
         print('Incomplete GeneratorExp ')
-        # print(ast.dump(node.elt))
+        print(ast.dump(node.elt),include_attributes=True)
         for n in node.generators:
             print(n)             
 
     def doRaise(self,node):    # ('type', 'inst', 'tback') 
-        return self.NotImplemented(node)
+        print(" Hello from Raise!" )
+        print(self.dump(node,include_attributes=True))
+        self.onError(self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
+
+
     def doImport(self,node):    # ('names',) 
         return self.NotImplemented(node)
     def doImportFrom(self,node):    # ('module', 'names', 'level') 
