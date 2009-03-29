@@ -1,0 +1,59 @@
+##################################################
+# Default site startup file for pds.
+# Add paths, imports and other data that should be
+# defined for the site
+# Individual users can place a .pds file in thier home
+# directories for additional startup options
+##################################################
+##################################################
+
+##################################################
+## make sure help is defined
+##################################################
+if 'help' not in __builtins__.keys():
+   from pydoc import help as __help__
+   __builtins__['help']=__help__
+
+##################################################
+## Imports
+##################################################
+
+## ScanData module
+import scandata
+
+## Read column files
+from utils.file.read_fmt import read_col_data as read_dat
+
+##################################################
+## Editor
+##################################################
+#__editor__ = 'edit '
+__editor__ = 'notepad '
+def __edit__(fname):
+    #import os
+    #s = __editor__ + fname
+    #os.system(s)
+    # use this, spawn editor in new process
+    from subprocess import Popen
+    pid = Popen([__editor__, fname]).pid
+    
+addcmd 'edit', '__edit__'
+
+##################################################
+## Variables
+##################################################
+import os
+if os.getenv("HOME"):
+    home = os.getenv("HOME")
+elif os.getenv("HOMEPATH"):
+    home = os.getenv("HOMEPATH")
+
+#if os.getenv("work"):
+#    sys_vars['__pds__.work'] = os.getenv("work")
+#elif os.getenv("WORK"):
+#    sys_vars['__pds__.work'] = os.getenv("WORK")
+#else:
+#    sys_vars['__pds__.work'] = os.getcwd()
+#    sys_vars['__pds__.file_path'] = sys_vars['__pds__.work']
+#
+##################################################
