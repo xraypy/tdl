@@ -196,6 +196,7 @@ class Shell(_NumShell):
         startup.append("__builtins__.update({'cd':__pds__._cd})")
         startup.append("__builtins__.update({'pwd':__pds__._cwd})")
         startup.append("__builtins__.update({'mod_import':__pds__.mod_import})")
+        startup.append("__builtins__.update({'path':__pds__._path})")
 
         # functions we want to use with command syntax
         self.do_addcmd('ls',"__pds__.ls")
@@ -742,20 +743,28 @@ def main(arg):
     # Import and set default paths:
     #   pds path is the path of the pds directory
     #   lib_path is the parent directory of pds
+    #   mods_path is either lib_path/modules or lib_path
     # Additional paths should be set in the startup files
     #################################################################
     tmp = globals()
     __path__  = os.path.abspath(tmp['__file__'])
     pds_path  = os.path.dirname(__path__)
     lib_path  = os.path.split(pds_path)[0]
+    mods_path = os.path.join(lib_path,"modules")
+    if not os.path.exists(mods_path):
+        mods_path = lib_path
 
     # Set Python Path
     if verbose:
         print ' == pds paths:'
         print '    pds_path   = %s  ' % pds_path
         print '    lib_path   = %s  ' % lib_path
-    util.set_path(lib_path,recurse=True,verbose=verbose)
+        if os.path.exists(mods_path):
+            print '    mods_path  = %s  ' % mods_path
     util.set_path('.',recurse=False,verbose=verbose)
+    util.set_path(pds_path,recurse=False,verbose=verbose)
+    util.set_path(lib_path,recurse=False,verbose=verbose)
+    util.set_path(mods_path,recurse=True,verbose=verbose)
 
     ##############################################################
     # startup  files:
@@ -805,7 +814,7 @@ def main(arg):
         wxShell.debug     = debug
         wxShell.files     = files
         wxShell.args      = args
-        rsrc_path         = os.path.join(lib_path,'wxgui')
+        rsrc_path         = os.path.join(mods_path,'wxgui')
         wxShell.rsrc_path = rsrc_path
         rsrc = os.path.join(rsrc_path,'wxShell.rsrc.py')
         gui  = wxShell.model.Application(wxShell.wxShell, aFileName=rsrc)
