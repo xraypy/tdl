@@ -7,7 +7,7 @@ import sys
 args = sys.argv[1:]
 ast = False
 if len(args) > 0:
-    print args[0].lower()
+    #print args[0].lower()
     if args[0].lower() == 'ast':
         print 'ast'
         ast = True
