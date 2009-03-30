@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+##############################################################
+"""
+Startup tdl
+"""
+import sys
+args = sys.argv[1:]
+ast = False
+if len(args) > 0:
+    print args[0].lower()
+    if args[0].lower() == 'ast':
+        print 'ast'
+        ast = True
+        args.pop(0)
+
+if ast:
+    from astlib.shell import shell
+    shell(debug=True, scripts = args).cmdloop()
+else:
+    from pds.shell import main
+    main(args)
