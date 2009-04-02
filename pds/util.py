@@ -694,7 +694,7 @@ def sub_dirs(pth,alp_only=True):
                 if alp_only:
                     tmp = p.split(os.sep)
                     for t in tmp:
-                        if not t[0].isalpha():
+                        if len(t)>0 and not t[0].isalpha():
                             skip = True
                             break
                 if not skip:
