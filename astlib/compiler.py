@@ -7,7 +7,22 @@ import __builtin__
 import numpy
 import copy
 
-from util import EvalError
+class TDLError(Exception):
+    def __init__(self,error,descr = None,node = None):
+        self.error = error
+        self.descr = descr
+    def __repr__(self):
+        return "%s: %s" % (self.error, self.descr)
+    __str__ = __repr__
+
+def onError(exception,msg,tback=None):
+    """ wrapper for raising exceptions from interpreter"""
+    err_type,err_value,err_tback = sys.exc_info()
+    print(" onError:  exc_info  =  ", sys.exc_info())
+    print(" onError:  exception =  ", exception)
+    print(" onError:  message   =  ", msg)
+    
+    raise exception, msg
 
 __version__ = '0.9.0'
 
@@ -106,15 +121,16 @@ def group(compiler=None,**kw):
     except:
         return None
 
-def showgroup(gname,compiler=None,**kw):
-    if isinstance(compiler,Compiler.Compiler):
+def showgroup(gname,compiler=None):
+    if compiler is not None:
         compiler.symtable.show_group(gname)
 
-def definevar(name,expr,compiler=None,**kw):
+def definevar(name,expr,compiler=None):
     # print("===DEFVAR ", name, expr, compiler)
-    if isinstance(compiler,Compiler.Compiler):
-        compiler.symtable.setSymbol(name,
-                                    DefinedVariable(expr=expr,compiler=compiler))
+    if compiler is not None:
+        defvar = DefinedVariable(expr=expr,compiler=compiler)
+        compiler.symtable.setSymbol(name,defvar)
+
 
 def _copy(obj,**kw):
     if kw.has_key('compiler'):
@@ -185,7 +201,7 @@ class Procedure(object):
         self.varkws   = varkws
         
     def __call__(self,*args,**kwargs):
-        stable  = self.compiler.symtable
+        stable  = self.compiler.symmtable
         sys     = stable._sys      
         lgroup  = stable.createGroup()
         locname = '%s_%s' % (self.name,hex(id(lgroup))[2:])
@@ -206,8 +222,8 @@ class Procedure(object):
         setattr(stable,locname,lgroup)
                 
         grps_save = sys.LocalGroup,sys.ModuleGroup
-        stable._setmain_groups((locname, self.module))
-
+        stable._set_local_mod((locname, self.module))
+        
         retval = None
         self.compiler.retval = None
         for node in self.body:
@@ -218,7 +234,7 @@ class Procedure(object):
 
         delattr(stable,locname)
         sys.LocalGroup,sys.ModuleGroup = grps_save
-        stable._setmain_groups(grps_save)
+        stable._set_local_mod(grps_save)
         self.compiler.retval = None
         return retval
     
@@ -226,7 +242,7 @@ class Compiler:
     """ program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
   using python's ast module, and then executes the AST representation
-  using a custom SymbolTable for named object (variable, functions).
+  using a custom SymboplTable for named object (variable, functions).
   This then gives a restricted version of Python,
     
   The following Python syntax is not supported:
@@ -253,7 +269,7 @@ class Compiler:
 
     ##
     def NotImplemented(self,node):
-        self.onError(EvalError, "'%s' not supported" % (_ClassName(node)))
+        onError(TDLError, "'%s' not supported" % (_ClassName(node)))
 
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
@@ -264,7 +280,7 @@ class Compiler:
         try:
             return ast.parse(text)
         except:
-            self.onError(SyntaxError, text)
+            onError(SyntaxError, text)
             
     
     def dump(self, node,**kw):  return ast.dump(node,**kw)
@@ -275,23 +291,15 @@ class Compiler:
         # internal code here may run interp(None)
         # and expect a None in return.
         if node is None: return None
-        
+        if isinstance(node,(str,unicode)):  node = self.compile(node)
+
         methodName = "do%s" % _Class(node).__name__
         return getattr(self,methodName)(node)
 
-        
     def eval(self,expr):
         """evaluates a single statement"""
         return self.interp(self.compile(expr))
 
-    def onError(self,exception,msg,tback=None):
-        """ wrapper for raising exceptions from interpreter"""
-        err_type,err_value,err_tback = sys.exc_info()
-        print(" onError:  exc_info  =  ", sys.exc_info())
-        print(" onError:  exception =  ", exception)
-        print(" onError:  message   =  ", msg)
-        
-        raise exception, msg
 
     # handlers for ast components
     def doModule(self,node):    # ():('body',) 
@@ -327,7 +335,7 @@ class Compiler:
 
     def doAssert(self,node):    # ('test', 'msg')
         if not self.interp(node.test):
-            self.onError(AssertionError, self.interp(node.msg()))
+            onError(AssertionError, self.interp(node.msg()))
         return True
 
     def doList(self,node):    # ('elts', 'ctx') 
@@ -340,7 +348,9 @@ class Compiler:
         return dict([(self.interp(k),self.interp(v)) for k,v in zip(node.keys,node.values)] )
 
     def doNum(self,node):  return node.n  # ('n',) 
-    def doStr(self,node):  return node.s  # ('s',) 
+    def doStr(self,node):  return node.s  # ('s',)
+
+    
 
     def doName(self,node):    # ('id', 'ctx')
         """ Name node """
@@ -361,8 +371,8 @@ class Compiler:
             
         elif _Class(n) == ast.Attribute:
             if _Context(n) == ast.Load:
-                self.onError(EvalError,
-                             "canot Assign attribute %s???" % n.attr)
+                onError(TDLError,
+                        "canot Assign attribute %s???" % n.attr)
             setattr(self.interp(n.value),n.attr,val)
 
         elif _Class(n) == ast.Subscript:
@@ -379,7 +389,7 @@ class Compiler:
                 for el,v in zip(n.elts,val):
                     self._NodeAssign(el,v)
             else:
-                self.onError(ValueError, 'too many values to unpack')
+                onError(ValueError, 'too many values to unpack')
 
     def doAttribute(self,node):    # ('value', 'attr', 'ctx')
         ctx = _Context(node)
@@ -390,13 +400,13 @@ class Compiler:
                 return getattr(sym,node.attr)
             else:
                 msg = "'%s' does not have an '%s' attribute" 
-                self.onError(EvalError, msg % (node.value,node.attr))
+                onError(TDLError, msg % (node.value,node.attr))
 
         elif ctx == ast.Del:
             return delattr(sym,attr)
         elif ctx == ast.Store:
-            self.onError(EvalError,
-                         "attribute for storage: shouldn't be here!!")
+            onError(TDLError,
+                    "attribute for storage: shouldn't be here!!")
 
     def doAssign(self,node):    # ('targets', 'value')
         val = self._NodeValue(node)
@@ -429,8 +439,8 @@ class Compiler:
             elif isinstance(node.slice,ast.ExtSlice):
                 return val[(slice)]
         elif ctx == ast.Store:
-            self.onError(EvalError,
-                         "subscript for storage: shouldn't be here!!")
+            onError(TDLError,
+                    "subscript for storage: shouldn't be here!!")
 
     def doDelete(self,node):    # ('targets',)
         ctx = _Context(node)
@@ -507,7 +517,7 @@ class Compiler:
     def doCall(self,node):    # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         if not callable(func):
-            self.onError(EvalError, "'%s' is not not callable" % (func))
+            onError(TDLError, "'%s' is not not callable" % (func))
 
         args = [self.interp(a) for a in node.args]
         if node.starargs is not None:
@@ -516,8 +526,8 @@ class Compiler:
         keywords = {}
         for k in node.keywords:
             if not isinstance(k,ast.keyword):
-                self.onError(EvalError,
-                             "keyword error in function call '%s'" % (func))
+                onError(TDLError,
+                        "keyword error in function call '%s'" % (func))
             keywords[k.arg] = self.interp(k.value)
         if node.kwargs is not None:  keywords.update(self.interp(node.kwargs))
 
@@ -583,7 +593,7 @@ class Compiler:
                         break
                 if not handled:
                     # print("unhandled exception: ", dir(e_tback), e_tback.tb_lineno, e_tback.tb_lasti)
-                    self.onError(e_type, e_value,e_tback) # print("%s: %s" % (e_type.__name__, e_value))
+                    onError(e_type, e_value,e_tback) # print("%s: %s" % (e_type.__name__, e_value))
                     
     def doTryFinally(self,node):    # ('body', 'finalbody') 
         return self.NotImplemented(node)
@@ -597,12 +607,22 @@ class Compiler:
     def doRaise(self,node):    # ('type', 'inst', 'tback') 
         print(" Hello from Raise!" )
         print(self.dump(node,include_attributes=True))
-        self.onError(self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
-
+        onError(self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
 
     def doImport(self,node):    # ('names',) 
-        return self.NotImplemented(node)
+        for n in node.names:
+            print(self.dump(n))
+            name,asname = n.name, n.asname
+            self.symtable.import_module(name,asname=asname)
+        # return self.NotImplemented(node)
+        
     def doImportFrom(self,node):    # ('module', 'names', 'level') 
-        return self.NotImplemented(node)
+        print(":: ", node.module, node.level)
+        self.symtable.import_module(node.module)
+        for n in node.names:
+            print("Dump: ", self.dump(n))
+            name,asname = n.name, n.asname
+            # self.symtable.import_module(name,asname=asname)
+
 
     #
