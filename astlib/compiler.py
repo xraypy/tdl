@@ -605,16 +605,15 @@ class Compiler:
 
     def doImport(self,node):    # ('names',) 
         for n in node.names:
-            print(self.dump(n))
             name,asname = n.name, n.asname
             self.symtable.import_module(name,asname=asname)
-        # return self.NotImplemented(node)
         
     def doImportFrom(self,node):    # ('module', 'names', 'level') 
-        print(":: ", node.module, node.level)
-        self.symtable.import_module(node.module)
+        fromlist, asname = [], []
         for n in node.names:
-            print("Dump: ", self.dump(n))
-            name,asname = n.name, n.asname
-            # self.symtable.import_module(name,asname=asname)
-    #
+            fromlist.append(n.name)
+            asname.append(n.asname)
+        self.symtable.import_module(node.module,
+                                    asname=asname,
+                                    fromlist=fromlist)
+

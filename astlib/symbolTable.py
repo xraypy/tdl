@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import sys
+import types
 import compiler
 import inputText
 from util import closure, randomName
@@ -23,6 +24,7 @@ class Group(object):
         return '<Group: %i items, id=%s>' % (len(self),hex(id(self)))
 
     def __setattr__(self,attr,val):
+        
         """set group attributes."""
         self.__dict__[attr] = val
 
@@ -59,7 +61,7 @@ class symbolTable(Group):
         self._sys.searchGroups = []
         self._sys.localGroup   = self
         self._sys.moduleGroup  = self
-        self._sys.pymodules    = sys.modules
+        # self._sys.pymodules    = sys.modules
 
         self._sys.path         = ['.']
 
@@ -68,8 +70,12 @@ class symbolTable(Group):
             self._sys.modules[gname] = getattr(self, gname)
         
         self._fix_searchGroups()
-        self.compiler = compiler.Compiler(self)
-        
+        self.__compiler = compiler.Compiler(self)
+    
+
+    def eval(self,block):
+        return self.__compiler.eval(block)
+
     def __init_libs(self,libs=None):
         pass
         
@@ -77,13 +83,13 @@ class symbolTable(Group):
        msg =  "import %s"  % name
        if asname is not None: msg =  "%s as %s" % (msg,asname)
        
-       self.__writer("%s\n"% msg)
+       # self.__writer("IMPORT_MODULE %s\n"% msg)
        # step 1  import the module to a global location
-       #   either _sys.pymodules for python modules
+       #   either sys.modules for python modules
        #   or  _sys.modules for tdl modules
        # reload takes effect here in the normal python way:
        #   if
-       if reload or (name not in self._sys.pymodules and
+       if reload or (name not in sys.modules and
                      name not in self._sys.modules):
                       
            # first look for "name.tdl"
@@ -93,8 +99,7 @@ class symbolTable(Group):
                if tdlname in os.listdir(dirname):
                    isTDLmod = True
                    modname = os.path.abspath(os.path.join(dirname,tdlname))
-                   print( 'ready to import %s' % modname)
-                   #
+
                    # save current module group
                    #  create new group, set as moduleGroup and localGroup
                    saveGroups = self._sys.localGroup,self._sys.moduleGroup
@@ -111,7 +116,7 @@ class symbolTable(Group):
                    try:
                        while inptext:
                            block,fname,lineno = inptext.get()
-                           self.compiler.eval(block)
+                           self.eval(block)
                    except:
                        print("error importing '%s'" % modname)                        
                         
@@ -120,24 +125,38 @@ class symbolTable(Group):
 
            # or, if not a tdl module, load as a regular python module
            if not isTDLmod:
-               print('pyimport %s' % name)
                __import__(name)
-               thismod = self._sys.pymodules[name]
-       elif name in self._sys.modules:
-           thismod = self._sys.modules[name]
-       elif name in self._sys.pymodules:
-           thismod = self._sys.pymodules[name]               
+               thismod = sys.modules[name]
+               print(" Py import ", name, thismod)
+               
+       else: # previously loaded module, just do lookup
+           if name in self._sys.modules:
+               thismod = self._sys.modules[name]
+           elif name in sys.modules:
+               thismod = sys.modules[name]               
                
        # now we install thismodule into the current moduleGroup
-       if asname is None: asname = name
 
        # import full module
        if fromlist is None:
-           setattr(self._sys.moduleGroup, asname, thismod)
+           if asname is None: asname = name
+           parts = asname.split('.')
+           asname = parts.pop()
+           top = self._sys.moduleGroup
+           while len(parts)>0:
+               subname = parts.pop(0)
+               subgrp  = Group()
+               setattr(top, subname, subgrp)
+               top = subgrp
+                   
+       
+           setattr(top, asname, thismod)
+
        # import-from construct
        else:
-           for sym in fromlist:
-               setattr(self._sys.moduleGroup, sym, getattr(thismod,sym))
+           for sym,alias in zip(fromlist,asname):
+               if alias is None: alias = sym
+               setattr(self._sys.moduleGroup, alias, getattr(thismod,sym))
            
     def _load_functions(self,funclist=None,group=None,parent=None,**kw):
         if group is None or funclist is None: return
@@ -254,7 +273,7 @@ class symbolTable(Group):
         searchGroups = [cache['localGroup'], cache['moduleGroup']]
         searchGroups.extend( cache['searchGroups'] )
         if self not in searchGroups: searchGroups.append(self)
-        
+
         parts = name.split('.')
         if len(parts) == 1:
             for g in searchGroups:
@@ -303,17 +322,16 @@ class symbolTable(Group):
             raise LookupError, "symbol '%s' found, but not a group" % (gname)
 
     def show_group(self,gname):
-        # print('Show group ', gname, type(gname))
         if isGroup(gname): 
             grp = gname
             title = 'Group'
+        elif isinstance(gname,types.ModuleType):
+            grp = gname
+            title = gname.__name__
         else:
             grp = self._lookup(gname,create=False)
             title = gname
-
-        if not isGroup(grp):
-            raise LookupError, "symbol '%s' found, but not a group" % (gname)
-
+            
         if title.startswith(self.top_group): title = title[6:]
 
         if grp == self: title = 'SymbolTable _main'

@@ -2,7 +2,6 @@
 #
 import numpy
 import symbolTable
-import compiler
 import inputText
 from util import EvalError
 import cmd
@@ -11,6 +10,8 @@ import sys
 import types
 import getopt
 import traceback
+
+version = '0.9'
 
 class shell(cmd.Cmd):
     banner = """Tiny Data Language %s  M. Newville, T. Trainor (2009)
@@ -48,10 +49,10 @@ Using python %s and numpy %s\n"""
         self.stdout = sys.stdout
 
         pyversion = '%i.%i.%i' % sys.version_info[:3]
-        print self.banner % (compiler.__version__, pyversion,numpy.__version__)
+        print self.banner % (version, pyversion,numpy.__version__)
         
         self.symtable = symbolTable.symbolTable()
-        self.compiler = self.symtable.compiler
+        self.eval     = self.symtable.eval
         self.input    = inputText.InputText(prompt=self.ps1,interactive=False)
 
         self.prompt    = self.ps1
@@ -93,17 +94,16 @@ Using python %s and numpy %s\n"""
         
         while len(self.input) >0:
             block,fname,lineo = self.input.get()
-            print "block  ", block
             if block is None:
                 self.prompt = self.ps2
                 return None
             
             #
-            if True: # try:
-                ret = self.compiler.eval(block)
-            else: #  except:
-                print 'error'
-                sys.exit()
+            # try:
+            ret = self.eval(block)
+            #            except:
+            #    print 'error'
+            #    sys.exit()
             self.prompt = self.ps1
             return ret
         # raise LookupError,'x'
