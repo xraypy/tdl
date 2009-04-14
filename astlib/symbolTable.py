@@ -1,5 +1,8 @@
 from __future__ import print_function
+import os
 import sys
+import compiler
+import inputText
 from util import closure, randomName
 
 MAX_GROUP_LEVEL = 16
@@ -10,18 +13,14 @@ class Group(object):
     """container for variables, subgroups, and modules:
     a lightweight object, with 
     """
-    def __init__(self,_name=None,_file=None,_status=None):
-        self.__name = _name
-        self.__file = _file
-        self.__status = _status
+    def __init__(self):
+        pass
         
-    def __len__(self):  return len(dir(self))
+    def __len__(self):
+        return len(dir(self))
 
     def __repr__(self):
-        stats = "%i items, id=%s" % (len(self),hex(id(self)))
-        front = "Group"
-        if self.__name is not None: front = "Group '%s'" % self.__name
-        return "<%s: %s>" % (front,stats)
+        return '<Group: %i items, id=%s>' % (len(self),hex(id(self)))
 
     def __setattr__(self,attr,val):
         """set group attributes."""
@@ -35,16 +34,6 @@ class Group(object):
         "return sorted list of names of members that are sub groups"
         return sorted([k for k,v in self.__dict__.items() if isGroup(v)])
 
-    def _name(self):
-        return self.__name
-
-    def _file(self):
-        return self.__file
-
-    def _status(self):
-        return self.__status
-
-
 class invalidName:
     # used to create a value that will NEVER be a useful symbol.
     # symbolTable._lookup() uses this to check for invalid names
@@ -52,51 +41,104 @@ class invalidName:
 
 class symbolTable(Group):
     top_group   = '_main'
-    core_groups = ('_main','_sys','_builtin','_math')
-    mod_group   = '_modules'
+    core_groups = ('_sys','_builtin','_math')
     __invalid_name = invalidName()
 
     def __init__(self,tdl=None,writer=None,libs=None):
-        Group.__init__(self,_name=self.top_group)
+        Group.__init__(self)
 
         self.__writer = writer  or sys.stdout.write
-        self.__cache  = {'localGroup':None, 'moduleGroup':None,'searchGroups':None}
+        self.__cache  = {'localGroup':None, 'moduleGroup':None,
+                         'searchNames':None, 'searchGroups': None}
 
         setattr(self,self.top_group, self)
-        setattr(self,self.mod_group, Group(_name=self.mod_group))
-        for g in self.core_groups:
-            if not hasattr(self,g):
-                setattr(self,g,  Group(_name=g))
+        for gname in self.core_groups:
+            setattr(self, gname, Group())
+            
+        self._sys.searchNames  = []
+        self._sys.searchGroups = []
+        self._sys.localGroup   = self
+        self._sys.moduleGroup  = self
+        self._sys.pymodules    = sys.modules
 
         self._sys.path         = ['.']
 
-        self._sys.searchGroups = list(self.core_groups)
-        self._sys.search       = getattr(self,self.mod_group)
-
-        self._sys.LocalGroup   = self
-        self._sys.ModuleGroup  = self
-        self._sys.pymodules    = sys.modules
-        self._sys.modules      = {}
+        self._sys.modules      = {'_main':self}
+        for gname in self.core_groups:
+            self._sys.modules[gname] = getattr(self, gname)
         
-        for i in dir(self):
-            print("%s = %s" % (i, repr(getattr(self,i))))
         self._fix_searchGroups()
-    
+        self.compiler = compiler.Compiler(self)
+        
     def __init_libs(self,libs=None):
         pass
         
-    def import_module(self,name, asname = None, fromlist = None):
+    def import_module(self,name, asname=None, fromlist=None, reload=False):
        msg =  "import %s"  % name
-       if asname is not None: msg =  "%s as %s" % (ms,asname)
+       if asname is not None: msg =  "%s as %s" % (msg,asname)
        
        self.__writer("%s\n"% msg)
-       # first look for "name.tdl"
-       isTDLmodule = False
+       # step 1  import the module to a global location
+       #   either _sys.pymodules for python modules
+       #   or  _sys.modules for tdl modules
+       # reload takes effect here in the normal python way:
+       #   if
+       if reload or (name not in self._sys.pymodules and
+                     name not in self._sys.modules):
+                      
+           # first look for "name.tdl"
+           isTDLmod = False
+           tdlname = "%s.tdl" % name
+           for dirname in self._sys.path:
+               if tdlname in os.listdir(dirname):
+                   isTDLmod = True
+                   modname = os.path.abspath(os.path.join(dirname,tdlname))
+                   print( 'ready to import %s' % modname)
+                   #
+                   # save current module group
+                   #  create new group, set as moduleGroup and localGroup
+                   saveGroups = self._sys.localGroup,self._sys.moduleGroup
+                   thismod = Group()
+                   self._sys.modules[name]= thismod
+                   self._set_local_mod((thismod,thismod))
+                   try:
+                       text = open(modname).read()
+                       inptext = inputText.InputText()
+                       inptext.put(text,filename=modname)
+                   except:
+                       print("cannot import '%s'" % modname)
+                       
+                   try:
+                       while inptext:
+                           block,fname,lineno = inptext.get()
+                           self.compiler.eval(block)
+                   except:
+                       print("error importing '%s'" % modname)                        
+                        
+                   thismod = self._sys.modules[name]               
+                   self._set_local_mod(saveGroups)
 
-       if not isTDLmodule:
-           __import__(name)
+           # or, if not a tdl module, load as a regular python module
+           if not isTDLmod:
+               print('pyimport %s' % name)
+               __import__(name)
+               thismod = self._sys.pymodules[name]
+       elif name in self._sys.modules:
+           thismod = self._sys.modules[name]
+       elif name in self._sys.pymodules:
+           thismod = self._sys.pymodules[name]               
+               
+       # now we install thismodule into the current moduleGroup
+       if asname is None: asname = name
 
-
+       # import full module
+       if fromlist is None:
+           setattr(self._sys.moduleGroup, asname, thismod)
+       # import-from construct
+       else:
+           for sym in fromlist:
+               setattr(self._sys.moduleGroup, sym, getattr(thismod,sym))
+           
     def _load_functions(self,funclist=None,group=None,parent=None,**kw):
         if group is None or funclist is None: return
         if isinstance(funclist,(list,tuple)) and \
@@ -108,7 +150,7 @@ class symbolTable(Group):
                 setattr(group,name, closure(func=fcn,**kw))
     
     def _set_local_mod(self,groups):
-        self._sys.LocalGroup, self._sys.ModuleGroup  = groups
+        self._sys.localGroup, self._sys.moduleGroup  = groups
         self._fix_searchGroups()
         
     def _fix_searchGroups(self):
@@ -122,7 +164,7 @@ class symbolTable(Group):
         The variable self.__cache['searchGroups'] holds the list of 
         actual group objects resolved from this name.
 
-        _sys.LocalGroup,_sys.ModuleGroup come first in the search list,
+        _sys.localGroup,_sys.moduleGroup come first in the search list,
         followed by any search path associated with that module (from
         imports for that module)
         """
@@ -131,31 +173,43 @@ class symbolTable(Group):
         sys = self._sys
         cache = self.__cache
 
-        if not (sys.LocalGroup   == cache['localGroup'] and
-                sys.ModuleGroup  == cache['moduleGroup'] and
-                sys.searchGroups == cache['searchGroups']):
+        if (sys.localGroup   != cache['localGroup'] or
+            sys.moduleGroup  != cache['moduleGroup'] or
+            sys.searchGroups != cache['searchNames']):
 
-            if sys.ModuleGroup is None: sys.ModuleGroup = self.top_group
-            if sys.LocalGroup is None: sys.LocalGroup = self.ModuleGroup
+            # print(" fix searchGroups ")
 
-            cache['localGroup']  = sys.LocalGroup 
-            cache['moduleGroup'] = sys.ModuleGroup
+            
+            if sys.moduleGroup is None: sys.moduleGroup = self.top_group
+            if sys.localGroup is None: sys.localGroup = self.moduleGroup
 
-            cache['searchGroups'] = [sys.LocalGroup]
-            if sys.ModuleGroup != sys.LocalGroup: cache['searchGroups'].append(sys.ModuleGroup)
+            cache['localGroup']  = sys.localGroup 
+            cache['moduleGroup'] = sys.moduleGroup
 
-            for group in self._modules._subgroups():
-                if group not in cache['searchGroups']:
-                    cache['searchGroups'].append(group)
-
+            if cache['searchNames'] is None: cache['searchNames'] = []
             for gname in self.core_groups:
-                group = getattr(self,gname)
-                if group not in cache['searchGroups']:
-                    cache['searchGroups'].append(group)
+                if gname not in cache['searchNames']:
+                    cache['searchNames'].append(gname)
 
-            sys.searchGroups = cache['searchGroups']
-        
-        # print("end of fix: ", cache)
+            sys.searchGroups = cache['searchNames']
+            #
+            sgroups = []
+            smod_keys = list(self._sys.modules.keys())
+            smod_vals = list(self._sys.modules.values())
+            for gname in cache['searchNames']:
+                grp = None
+                if gname in smod_keys:
+                    grp = self._sys.modules[gname]
+                else:
+                    for sgrp in smod_vals:
+                        if hasattr(sgrp,gname):
+                            grp =getattr(grp,gname)
+                if grp is not None and grp not in sgroups:
+                    sgroups.append(grp)
+                        
+            cache['searchGroups'] = sgroups
+
+            # print("end of fix: ", cache)
         return cache
 
     def _get_localgroup(self):   return self._fix_searchGroups()['localGroup']
@@ -194,21 +248,28 @@ class symbolTable(Group):
         
     def _lookup(self,name=None,create=False):
         """looks up symbol in search path
-        returns (absolute_symbol_name,object) for symbol"""
-        # print(" ... lookup name = %s " % name)
+        returns symbol given symbol name, creating symbol if needed (and create=True)"""
 
-        self._fix_searchGroups()
-        if name == self.top_group: return (self.top_group,self)
-
+        cache = self._fix_searchGroups()
+        searchGroups = [cache['localGroup'], cache['moduleGroup']]
+        searchGroups.extend( cache['searchGroups'] )
+        if self not in searchGroups: searchGroups.append(self)
+        
         parts = name.split('.')
+        if len(parts) == 1:
+            for g in searchGroups:
+                if hasattr(g,name):
+                    return getattr(g,name)
+
+        # more complex case: not immediately found in Local or Module Group
+
         parts.reverse()
         top   = parts.pop()
         out   = self.__invalid_name
         if top == self.top_group:
             out = self
         else:
-            grouplist = self.__cache['searchGroups']
-            for grp in grouplist:
+            for grp in searchGroups:
                 if hasattr(grp,top):
                     out = getattr(grp,top)
 
@@ -245,7 +306,7 @@ class symbolTable(Group):
         # print('Show group ', gname, type(gname))
         if isGroup(gname): 
             grp = gname
-            title = grp._name() or 'Group'
+            title = 'Group'
         else:
             grp = self._lookup(gname,create=False)
             title = gname
@@ -258,7 +319,7 @@ class symbolTable(Group):
         if grp == self: title = 'SymbolTable _main'
 
         mem = dir(grp)
-        o = ['== %s : %i symbols ==' % (title,len(mem))]
+        o = ['== %s: %i symbols ==' % (title,len(mem))]
         for i in mem:
             if not (i.startswith('_Group__') or
                     i.startswith('_symbolTable__')):
@@ -291,7 +352,7 @@ class symbolTable(Group):
                 if not isGroup(grp):
                     raise ValueError, "cannot create subgroup of non-group '%s'" % grp
             else:
-                setattr(grp,n,Group(_name=n)) ##  ,status='normal'))
+                setattr(grp,n,Group())
 
         setattr(grp,child,value)
         return getattr(grp,child)        

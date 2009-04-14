@@ -2,7 +2,6 @@ from __future__ import division, print_function
 import os
 import sys
 import ast
-from   symbolTable import symbolTable
 import __builtin__
 import numpy
 import copy
@@ -148,7 +147,7 @@ _local_funcs = {'group':group,
 class DefinedVariable(object):
     """defined variable: re-evaluate on access
 
-    Note that the LocalGroup/ModuleGroup are cached
+    Note that the localGroup/moduleGroup are cached
     at compile time, and restored for evaluation.
     """
     def __init__(self, expr=None, compiler=None):
@@ -162,7 +161,7 @@ class DefinedVariable(object):
         if self.compiler is not None and self.expr is not None:
             self.ast = self.compiler.compile(self.expr)
             _sys = self.compiler.symtable._sys
-            self._groups = (_sys.LocalGroup,_sys.ModuleGroup)
+            self._groups = (_sys.localGroup,_sys.moduleGroup)
 
     def evaluate(self):
         if self.ast is None: self.compile()
@@ -173,13 +172,13 @@ class DefinedVariable(object):
             
         if hasattr(self.compiler,'interp'):
             _sys = self.compiler.symtable._sys
-            # save current LocalGroup/ModuleGroup 
-            save_groups  = _sys.LocalGroup,_sys.ModuleGroup
+            # save current localGroup/moduleGroup 
+            save_groups  = _sys.localGroup,_sys.moduleGroup
             
-            _sys.LocalGroup,_sys.ModuleGroup = self._groups
+            _sys.localGroup,_sys.moduleGroup = self._groups
             rval = self.compiler.interp(self.ast)
 
-            _sys.LocalGroup,_sys.ModuleGroup = save_groups
+            _sys.localGroup,_sys.moduleGroup = save_groups
             return rval
         else:
             msg = "Cannot evaluate '%s'"  % (self.expr)
@@ -193,7 +192,7 @@ class Procedure(object):
                  vararg=None, varkws=None):
         self.name     = name
         self.compiler = compiler
-        self.module   = compiler.symtable._sys.ModuleGroup
+        self.modgroup = compiler.symtable._sys.moduleGroup
         self.body     = body
         self.argnames = args
         self.kwargs   = kwargs
@@ -201,10 +200,9 @@ class Procedure(object):
         self.varkws   = varkws
         
     def __call__(self,*args,**kwargs):
-        stable  = self.compiler.symmtable
+        stable  = self.compiler.symtable
         sys     = stable._sys      
         lgroup  = stable.createGroup()
-        locname = '%s_%s' % (self.name,hex(id(lgroup))[2:])
 
         args = list(args)
         for argname in self.argnames:
@@ -219,10 +217,8 @@ class Procedure(object):
         if self.varkws is not None and len(kwargs)>0:
             setattr(lgroup, self.varkws, kwargs)
         
-        setattr(stable,locname,lgroup)
-                
-        grps_save = sys.LocalGroup,sys.ModuleGroup
-        stable._set_local_mod((locname, self.module))
+        grps_save = sys.localGroup,sys.moduleGroup
+        stable._set_local_mod((lgroup, self.modgroup))
         
         retval = None
         self.compiler.retval = None
@@ -232,10 +228,10 @@ class Procedure(object):
                 retval = self.compiler.retval
                 break
 
-        delattr(stable,locname)
-        sys.LocalGroup,sys.ModuleGroup = grps_save
+        sys.localGroup,sys.moduleGroup = grps_save
         stable._set_local_mod(grps_save)
         self.compiler.retval = None
+        del lgroup
         return retval
     
 class Compiler:
@@ -251,14 +247,12 @@ class Compiler:
   In addition, Function is greatly altered so as to allow 
     
     """
-    def __init__(self,symtable=None,input=None, output=None,libs=None):
-        # if symtable is None:
-        symtable = symbolTable()
+    def __init__(self,symtable,input=None, output=None,libs=None):
+        self.symtable    = symtable
         self.setSymbol   = symtable.setSymbol
         self.getSymbol   = symtable.getSymbol
         self.delSymbol   = symtable.delSymbol        
         self._interrupt  = None
-        self.symtable    = symtable
         self.retval      = None
 
         self.setSymbol('_builtin.None',None)
@@ -623,6 +617,4 @@ class Compiler:
             print("Dump: ", self.dump(n))
             name,asname = n.name, n.asname
             # self.symtable.import_module(name,asname=asname)
-
-
     #
