@@ -24,7 +24,6 @@ By itself, this gives several benefits:
       and control-flow code, and the resulting compiler.py is very
       much simpler than the earlier version.
  
-
 In addition, the symbol table is simplified so that a symbolTable
 contains python objects and Groups (simple containers for other
 objects and Groups). Namespaces are built simply usin attributes
@@ -34,7 +33,6 @@ and symbols just python objects.
 Special TDL-specific objects (defined variable, procedures) are
 just constructed as classes, and so no special Symbol class is
 needed.
-
 
 
 === Syntax differences between TDL and Python ====
