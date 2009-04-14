@@ -1,6 +1,7 @@
 #!/usr/bin/python2.6
 #
 import numpy
+import symbolTable
 import compiler
 import inputText
 from util import EvalError
@@ -49,7 +50,8 @@ Using python %s and numpy %s\n"""
         pyversion = '%i.%i.%i' % sys.version_info[:3]
         print self.banner % (compiler.__version__, pyversion,numpy.__version__)
         
-        self.compiler = compiler.Compiler()
+        self.symtable = symbolTable.symbolTable()
+        self.compiler = self.symtable.compiler
         self.input    = inputText.InputText(prompt=self.ps1,interactive=False)
 
         self.prompt    = self.ps1
@@ -99,7 +101,7 @@ Using python %s and numpy %s\n"""
             #
             if True: # try:
                 ret = self.compiler.eval(block)
-            else: #  xcept:
+            else: #  except:
                 print 'error'
                 sys.exit()
             self.prompt = self.ps1
