@@ -154,6 +154,7 @@ class symbolTable(Group):
 
        # import-from construct
        else:
+           if asname is None:  asname = [None]*len(fromlist)
            for sym,alias in zip(fromlist,asname):
                if alias is None: alias = sym
                setattr(self._sys.moduleGroup, alias, getattr(thismod,sym))
