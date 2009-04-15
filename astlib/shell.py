@@ -1,22 +1,22 @@
 #!/usr/bin/python2.6
 #
-import numpy
-import compiler
 
-import inputText
-from util import EvalError
 import cmd
 import os
 import sys
 import types
 import getopt
 import traceback
+import numpy
 
+import compiler
+import inputText
+from util import EvalError
 
 class shell(cmd.Cmd):
     banner = """Tiny Data Language %s  M. Newville, T. Trainor (2009)
-Using python %s and numpy %s\n"""
-    intro  = "   Type 'help' to get started\n"
+    with python %s and numpy %s"""
+    intro  = "  === Type 'help' to get started ==="
     ps1    = "tdl> "
     ps2    = "...> "
     max_save_lines = 5000
@@ -51,8 +51,7 @@ Using python %s and numpy %s\n"""
         pyversion = '%i.%i.%i' % sys.version_info[:3]
         print self.banner % (compiler.__version__, pyversion, numpy.__version__)
         
-        self.compiler = compiler.Compiler()
-        self.eval     = self.compiler.eval
+        self.compiler = compiler.Compiler(load_builtins=True)
         self.input    = inputText.InputText(prompt=self.ps1,interactive=False)
 
         self.prompt    = self.ps1
@@ -85,7 +84,7 @@ Using python %s and numpy %s\n"""
                 self.prompt = self.ps2
                 return None
             
-            ret = self.eval(block)
+            ret = self.compiler.eval(block)
             self.prompt = self.ps1
             return ret
     
@@ -129,22 +128,5 @@ Using python %s and numpy %s\n"""
                 except:
                     print "Error printing ret value"
 
-
 if (__name__ == '__main__'):
-    opts, args = getopt.getopt(sys.argv[1:], "hq", ["help", "quiet"])
-
-    for k,v in opts:
-        if k in ("-h", "--help"):   show_usage()
-        if k in ("-q", "--quiet"):  quiet = v
-        if k in ("-d", "--debug"):  debug = v
-
-    t = shell(debug=debug)
-    print args, opts
-    if len(args)>0:
-        for s in args:
-            if s.endswith('.py'): s = s[:-3]
-            elif s.endswith('.tdl'): s = s[:-4]
-            ret = t.default("import %s" % s)
-        ret
-    else:
-        t.cmdloop()
+    t = shell(debug=True).cmdloop()

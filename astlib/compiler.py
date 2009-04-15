@@ -2,11 +2,9 @@ from __future__ import division, print_function
 import os
 import sys
 import ast
-import __builtin__
-import numpy
-import copy
 import inputText
 import symbolTable
+import builtins
 
 class TDLError(Exception):
     def __init__(self,error,descr = None,node = None):
@@ -63,89 +61,9 @@ _operators = {ast.Is:     lambda a,b: a is b,
 def _Class(node):     return node.__class__
 def _ClassName(node): return node.__class__.__name__
 def _Context(node):   return node.ctx.__class__
-def _Op(node):        return _operators[_Class(node)]
+def _Op(node):        return _operators[node.__class__]
 
-
-# inherit these from python's __builtin__
-_from_builtins= ('ArithmeticError', 'AssertionError', 'AttributeError',
-                 'BaseException', 'BufferError', 'BytesWarning',
-                 'DeprecationWarning', 'EOFError', 'EnvironmentError',
-                 'Exception', 'False', 'FloatingPointError',
-                 'GeneratorExit', 'IOError', 'ImportError', 'ImportWarning',
-                 'IndentationError', 'IndexError', 'KeyError',
-                 'KeyboardInterrupt', 'LookupError', 'MemoryError',
-                 'NameError', 'None', 'NotImplemented',
-                 'NotImplementedError', 'OSError', 'OverflowError',
-                 'ReferenceError', 'RuntimeError', 'RuntimeWarning',
-                 'StandardError', 'StopIteration', 'SyntaxError',
-                 'SyntaxWarning', 'SystemError', 'SystemExit', 'True',
-                 'TypeError', 'UnboundLocalError', 'UnicodeDecodeError',
-                 'UnicodeEncodeError', 'UnicodeError',
-                 'UnicodeTranslateError', 'UnicodeWarning', 'ValueError',
-                 'Warning', 'ZeroDivisionError', 'abs', 'all', 'any',
-                 'apply', 'basestring', 'bin', 'bool', 'buffer',
-                 'bytearray', 'bytes', 'callable', 'chr', 'cmp', 'coerce',
-                 'complex', 'delattr', 'dict', 'dir', 'divmod', 'enumerate',
-                 'file', 'filter', 'float', 'format', 'frozenset',
-                 'getattr', 'hasattr', 'hash', 'hex', 'id', 'int',
-                 'isinstance', 'len', 'list', 'map', 'max', 'min', 
-                 'oct', 'open', 'ord', 'pow', 'property', 'range',
-                 'raw_input', 'reduce', 'repr', 'reversed', 'round', 'set',
-                 'setattr', 'slice', 'sorted', 'str', 'sum', 'tuple',
-                 'type', 'unichr', 'unicode', 'zip')
-
-# inherit these from numpy
-_from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
-               'sqrt','arange', 'arccos', 'arccosh', 'arcsin', 'arcsinh',
-               'arctan', 'arctan2', 'arctanh', 'argmax', 'argmin',
-               'argsort', 'array', 'cosh', 'fabs', 'floor', 'floor_divide',
-               'fmod', 'tanh', 'sign', 'sinh', 'identity', 'take',
-               'choose', 'add', 'allclose', 'alltrue', 'around', 'asarray',
-               'average', 'bitwise_and', 'bitwise_or', 'bitwise_xor',
-               'ceil', 'clip', 'compress', 'concatenate', 'conjugate',
-               'convolve', 'cumproduct', 'cumsum', 'diagonal', 'divide',
-               'dot', 'equal', 'greater', 'greater_equal', 'hypot',
-               'indices', 'invert', 'left_shift', 'less', 'less_equal',
-               'logical_and', 'logical_not', 'logical_or', 'logical_xor',
-               'maximum', 'minimum', 'multiply', 'negative', 'nonzero',
-               'not_equal', 'ones', 'power', 'product', 'put', 'putmask',
-               'rank', 'ravel', 'remainder', 'repeat', 'reshape', 'resize',
-               'right_shift', 'searchsorted', 'shape', 'size', 'sometrue',
-               'sort', 'subtract', 'sum', 'swapaxes', 'trace', 'transpose',
-               'true_divide', 'vdot', 'where', 'zeros')
-
-def group(compiler=None,**kw):
-    try:
-        g = compiler.symtable.createGroup()
-        for k,v in kw.items():  setattr(g,k,v)
-        return g
-    except:
-        return None
-
-def showgroup(gname,compiler=None):
-    if compiler is not None:
-        compiler.symtable.show_group(gname)
-
-def definevar(name,expr,compiler=None):
-    # print("===DEFVAR ", name, expr, compiler)
-    if compiler is not None:
-        defvar = DefinedVariable(expr=expr,compiler=compiler)
-        compiler.symtable.setSymbol(name,defvar)
-
-
-def _copy(obj,**kw):
-    if kw.has_key('compiler'):
-        compiler = kw.pop('compiler')
-    return copy.deepcopy(obj)
-
-        
-_local_funcs = {'group':group,
-                'showgroup':showgroup,
-                'definevar':definevar,
-                'copy': _copy,
-                }
-        
-####
+##
 class DefinedVariable(object):
     """defined variable: re-evaluate on access
 
@@ -249,8 +167,10 @@ class Compiler:
   In addition, Function is greatly altered so as to allow 
     
     """
-    def __init__(self,symtable=None,input=None, output=None,libs=None):
-        if symtable is None: symtable = symbolTable.symbolTable()
+    def __init__(self,symtable=None,input=None, output=None,
+                 load_builtins=True):
+        if symtable is None:
+            symtable = symbolTable.symbolTable()
         self.symtable    = symtable
         self.setSymbol   = symtable.setSymbol
         self.getSymbol   = symtable.getSymbol
@@ -258,12 +178,8 @@ class Compiler:
         self._interrupt  = None
         self.retval      = None
 
-        self.setSymbol('_builtin.None',None)
-        load = symtable._load_functions
-        load(_from_builtins, group=symtable._builtin, parent=__builtin__)        
-        load(_from_numpy,  group=symtable._math, parent=numpy)
-        load(_local_funcs, group=symtable._builtin, compiler=self)
-
+        if load_builtins:
+            builtins.load_all(self)
     ##
     def NotImplemented(self,node):
         onError(TDLError, "'%s' not supported" % (_ClassName(node)))
@@ -278,34 +194,24 @@ class Compiler:
             return ast.parse(text)
         except:
             onError(SyntaxError, text)
-            
-    
-    def dump(self, node,**kw):  return ast.dump(node,**kw)
         
     def interp(self, node):
         """executes compiled Ast representation for an expression"""
-        # it **is** important to keep this, as
-        # internal code here may run interp(None)
-        # and expect a None in return.
+
+        # Note: keep the 'node is None' test: internal code here may run
+        #    interp(None) and expect a None in return.
         if node is None: return None
         if isinstance(node,(str,unicode)):  node = self.compile(node)
 
-        methodName = "do%s" % _Class(node).__name__
-        return getattr(self,methodName)(node)
+        return getattr(self,"do%s" % _ClassName(node))(node)
 
     def eval(self,expr):
         """evaluates a single statement"""
         return self.interp(self.compile(expr))
-
+                
+    def dump(self, node,**kw):  return ast.dump(node,**kw)
 
     # handlers for ast components
-    def doModule(self,node):    # ():('body',) 
-        out = None
-        for n in node.body: out = self.interp(n)
-        return out
-
-    def doExpression(self,node): return self.doModule(node) # ():('body',) 
-
     def _NodeValue(self,node):
         'common case'
         return self.interp(node.value)
@@ -318,6 +224,13 @@ class Compiler:
     
     def doRepr(self,node):   return repr(self._NodeValue(node))  # ('value',)
 
+    def doModule(self,node):    # ():('body',) 
+        out = None
+        for n in node.body: out = self.interp(n)
+        return out
+
+    def doExpression(self,node): return self.doModule(node) # ():('body',) 
+
     def doPass(self,node):    return None  # () 
     def doEllipsis(self,node): return Ellipsis # ??? 
 
@@ -328,7 +241,6 @@ class Compiler:
 
     def doBreak(self,node):     return self.doInterrupt(node)
     def doContinue(self,node):  return self.doInterrupt(node)    
-
 
     def doAssert(self,node):    # ('test', 'msg')
         if not self.interp(node.test):
@@ -346,8 +258,6 @@ class Compiler:
 
     def doNum(self,node):  return node.n  # ('n',) 
     def doStr(self,node):  return node.s  # ('s',)
-
-    
 
     def doName(self,node):    # ('id', 'ctx')
         """ Name node """
@@ -562,7 +472,6 @@ class Compiler:
                          vararg=node.args.vararg,
                          varkws=node.args.kwarg)
         self.setSymbol(node.name,value=proc)
-        
 
     def doImport(self,node):    # ('names',) 
         for n in node.names:

@@ -36,3 +36,12 @@ Other issues:
  - use PyReadline (from ipython) for windows
  - use h5py
 
+
+Functions to add to builtins:
+   ls, dir, cd, pwd, listdir
+   more
+   string functions (strfind, strsplit, etc...)
+   read_ascii
+   time:  timestamp, sleep, date
+
+add hdf5 things

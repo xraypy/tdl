@@ -5,7 +5,6 @@ import os
 import sys
 import types
 
-from util import closure
 # from config import tdlpath
 tdlpath_envvar = 'TDLPATH'
 
@@ -47,7 +46,7 @@ class symbolTable(Group):
     core_groups = ('_sys','_builtin','_math')
     __invalid_name = invalidName()
 
-    def __init__(self,tdl=None,writer=None,libs=None):
+    def __init__(self,tdl=None,writer=None):
         Group.__init__(self)
 
         self.__writer = writer  or sys.stdout.write
@@ -73,16 +72,6 @@ class symbolTable(Group):
         for gname in self.core_groups:
             self._sys.modules[gname] = getattr(self, gname)
         self._fix_searchGroups()
-
-    def _load_functions(self,funclist=None,group=None,parent=None,**kw):
-        if group is None or funclist is None: return
-        if isinstance(funclist,(list,tuple)) and \
-           parent is not None:
-            for name in funclist:
-                setattr(group,name,getattr(parent,name))
-        elif isinstance(funclist,dict):
-            for name,fcn in funclist.items():
-                setattr(group,name, closure(func=fcn,**kw))
     
     def _set_local_mod(self,groups):
         self._sys.localGroup, self._sys.moduleGroup  = groups
