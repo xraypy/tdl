@@ -3,9 +3,6 @@
 """
 
 import re
-from random import sample
-def randomName(n=8):
-    return ''.join(sample('abcdefghijklmnopqrstuvwxyz0123456789',n))
 
 
 

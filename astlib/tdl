@@ -1,6 +1,27 @@
-#!/usr/bin/python 
+#!/usr/bin/python2.6
 
 import sys
-from shell import shell
-shell(debug=True, scripts = sys.argv[1:]).cmdloop()
+import getopt
+import shell
+
+debug=True
+opts, args = getopt.getopt(sys.argv[1:], "hq", ["help", "quiet"])
+
+for k,v in opts:
+    if k in ("-h", "--help"):   show_usage()
+    if k in ("-q", "--quiet"):  quiet = v
+    if k in ("-d", "--debug"):  debug = v
+
+t = shell.shell(debug=debug)
+
+if len(args)>0:
+    for s in args:
+        if s.endswith('.py'):
+            s = s[:-3]
+        elif s.endswith('.tdl'):
+            s = s[:-4]
+        ret = t.default("import %s" % s)
+    ret
+else:
+    t.cmdloop()
 

@@ -33,4 +33,6 @@ Other issues:
    compiler.py and into its own file.
 
 
+ - use PyReadline (from ipython) for windows
+ - use h5py
 

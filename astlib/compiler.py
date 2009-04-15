@@ -5,6 +5,8 @@ import ast
 import __builtin__
 import numpy
 import copy
+import inputText
+import symbolTable
 
 class TDLError(Exception):
     def __init__(self,error,descr = None,node = None):
@@ -247,7 +249,8 @@ class Compiler:
   In addition, Function is greatly altered so as to allow 
     
     """
-    def __init__(self,symtable,input=None, output=None,libs=None):
+    def __init__(self,symtable=None,input=None, output=None,libs=None):
+        if symtable is None: symtable = symbolTable.symbolTable()
         self.symtable    = symtable
         self.setSymbol   = symtable.setSymbol
         self.getSymbol   = symtable.getSymbol
@@ -508,6 +511,19 @@ class Compiler:
             for n in node.orelse: self.interp(n)
         self._interrupt = None
 
+    def doListComp(self,node):    # ('elt', 'generators') 
+        out = []
+        for n in node.generators:
+            if _Class(n) == ast.comprehension:
+                for val in self.interp(n.iter):
+                    self._NodeAssign(n.target,val)
+                    add = True
+                    for cond in n.ifs:
+                        add = add and self.interp(cond)
+                    if add:
+                        out.append(self.interp(node.elt))
+        return out
+
     def doCall(self,node):    # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         if not callable(func):
@@ -527,19 +543,6 @@ class Compiler:
 
         return func(*args,**keywords)
     
-    def doListComp(self,node):    # ('elt', 'generators') 
-        out = []
-        for n in node.generators:
-            if _Class(n) == ast.comprehension:
-                for val in self.interp(n.iter):
-                    self._NodeAssign(n.target,val)
-                    add = True
-                    for cond in n.ifs:
-                        add = add and self.interp(cond)
-                    if add:
-                        out.append(self.interp(node.elt))
-        return out
-
     def doFunctionDef(self,node):    # ('name', 'args', 'body', 'decorator_list') 
         if node.decorator_list != []:
             print("Warning: decorated procedures not supported!")
@@ -558,9 +561,19 @@ class Compiler:
                          kwargs=kwargs,
                          vararg=node.args.vararg,
                          varkws=node.args.kwarg)
-
         self.setSymbol(node.name,value=proc)
         
+
+    def doImport(self,node):    # ('names',) 
+        for n in node.names:
+            self.import_module(n.name,asname=n.asname)
+        
+    def doImportFrom(self,node):    # ('module', 'names', 'level') 
+        fromlist, asname = [], []
+        for n in node.names:
+            fromlist.append(n.name)
+            asname.append(n.asname)
+        self.import_module(node.module,asname=asname,fromlist=fromlist)
 
     ## 
     # not yet implemented:
@@ -603,17 +616,85 @@ class Compiler:
         print(self.dump(node,include_attributes=True))
         onError(self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
 
-    def doImport(self,node):    # ('names',) 
-        for n in node.names:
-            name,asname = n.name, n.asname
-            self.symtable.import_module(name,asname=asname)
-        
-    def doImportFrom(self,node):    # ('module', 'names', 'level') 
-        fromlist, asname = [], []
-        for n in node.names:
-            fromlist.append(n.name)
-            asname.append(n.asname)
-        self.symtable.import_module(node.module,
-                                    asname=asname,
-                                    fromlist=fromlist)
 
+
+    def import_module(self, name, asname=None, fromlist=None, reload=False):
+        """imports a module (tdl or python) into a tdl symbol table.
+        """
+        symtable = self.symtable
+        _sys     = symtable._sys
+        msg =  "import %s"  % name
+        if asname is not None: msg =  "%s as %s" % (msg,asname)
+        
+
+        # step 1  import the module to a global location
+        #   either sys.modules for python modules
+        #   or  _sys.modules for tdl modules
+        # reload takes effect here in the normal python way:
+        #   if
+        if reload or (name not in sys.modules and
+                      name not in _sys.modules):
+            
+            # first look for "name.tdl"
+            isTDL = False
+            tdlname = "%s.tdl" % name
+            for dirname in _sys.path:
+                if tdlname in os.listdir(dirname):
+                    isTDL = True
+                    modname = os.path.abspath(os.path.join(dirname,tdlname))
+
+                    # save current module group
+                    #  create new group, set as moduleGroup and localGroup
+                    saveGroups = _sys.localGroup,_sys.moduleGroup
+                    thismod = symbolTable.Group()
+                    _sys.modules[name]= thismod
+                    symtable._set_local_mod((thismod,thismod))
+                    if True: # try:
+                        text = open(modname).read()
+                        inptext = inputText.InputText()
+                        inptext.put(text,filename=modname)
+                    else: # except:
+                        print("cannot import '%s'" % modname)
+                       
+                    try:
+                        while inptext:
+                            block,fname,lineno = inptext.get()
+                            self.eval(block)
+                    except:
+                        print("error importing '%s'" % modname)                        
+                        
+                    thismod = _sys.modules[name]               
+                    symtable._set_local_mod(saveGroups)
+
+            # or, if not a tdl module, load as a regular python module
+            if not isTDL:
+                __import__(name)
+                thismod = sys.modules[name]
+               
+        else: # previously loaded module, just do lookup
+            if name in _sys.modules:
+                thismod = _sys.modules[name]
+            elif name in sys.modules:
+                thismod = sys.modules[name]               
+               
+        # now we install thismodule into the current moduleGroup
+        # import full module
+        if fromlist is None:
+            if asname is None: asname = name
+            parts = asname.split('.')
+            asname = parts.pop()
+            top = _sys.moduleGroup
+            while len(parts)>0:
+                subname = parts.pop(0)
+                subgrp  = Group()
+                setattr(top, subname, subgrp)
+                top = subgrp
+                
+            setattr(top, asname, thismod)
+        # import-from construct
+        else:
+            if asname is None:  asname = [None]*len(fromlist)
+            for sym,alias in zip(fromlist,asname):
+                if alias is None: alias = sym
+                setattr(_sys.moduleGroup, alias, getattr(thismod,sym))
+        # end

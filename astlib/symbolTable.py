@@ -1,12 +1,13 @@
+#!/usr/bin/python2.6
+
 from __future__ import print_function
 import os
 import sys
 import types
-import compiler
-import inputText
-from util import closure, randomName
 
-MAX_GROUP_LEVEL = 16
+from util import closure
+# from config import tdlpath
+tdlpath_envvar = 'TDLPATH'
 
 def isGroup(g): return isinstance(g,Group)
 
@@ -64,101 +65,15 @@ class symbolTable(Group):
         # self._sys.pymodules    = sys.modules
 
         self._sys.path         = ['.']
-
+        tdlpath = os.environ.get(tdlpath_envvar,None)
+        if tdlpath is not None:
+            self._sys.path.extend(tdl.path.split(':'))
+            
         self._sys.modules      = {'_main':self}
         for gname in self.core_groups:
             self._sys.modules[gname] = getattr(self, gname)
-        
         self._fix_searchGroups()
-        self.__compiler = compiler.Compiler(self)
-    
 
-    def eval(self,block):
-        return self.__compiler.eval(block)
-
-    def __init_libs(self,libs=None):
-        pass
-        
-    def import_module(self,name, asname=None, fromlist=None, reload=False):
-       msg =  "import %s"  % name
-       if asname is not None: msg =  "%s as %s" % (msg,asname)
-       
-       # self.__writer("IMPORT_MODULE %s\n"% msg)
-       # step 1  import the module to a global location
-       #   either sys.modules for python modules
-       #   or  _sys.modules for tdl modules
-       # reload takes effect here in the normal python way:
-       #   if
-       if reload or (name not in sys.modules and
-                     name not in self._sys.modules):
-                      
-           # first look for "name.tdl"
-           isTDLmod = False
-           tdlname = "%s.tdl" % name
-           for dirname in self._sys.path:
-               if tdlname in os.listdir(dirname):
-                   isTDLmod = True
-                   modname = os.path.abspath(os.path.join(dirname,tdlname))
-
-                   # save current module group
-                   #  create new group, set as moduleGroup and localGroup
-                   saveGroups = self._sys.localGroup,self._sys.moduleGroup
-                   thismod = Group()
-                   self._sys.modules[name]= thismod
-                   self._set_local_mod((thismod,thismod))
-                   try:
-                       text = open(modname).read()
-                       inptext = inputText.InputText()
-                       inptext.put(text,filename=modname)
-                   except:
-                       print("cannot import '%s'" % modname)
-                       
-                   try:
-                       while inptext:
-                           block,fname,lineno = inptext.get()
-                           self.eval(block)
-                   except:
-                       print("error importing '%s'" % modname)                        
-                        
-                   thismod = self._sys.modules[name]               
-                   self._set_local_mod(saveGroups)
-
-           # or, if not a tdl module, load as a regular python module
-           if not isTDLmod:
-               __import__(name)
-               thismod = sys.modules[name]
-               print(" Py import ", name, thismod)
-               
-       else: # previously loaded module, just do lookup
-           if name in self._sys.modules:
-               thismod = self._sys.modules[name]
-           elif name in sys.modules:
-               thismod = sys.modules[name]               
-               
-       # now we install thismodule into the current moduleGroup
-
-       # import full module
-       if fromlist is None:
-           if asname is None: asname = name
-           parts = asname.split('.')
-           asname = parts.pop()
-           top = self._sys.moduleGroup
-           while len(parts)>0:
-               subname = parts.pop(0)
-               subgrp  = Group()
-               setattr(top, subname, subgrp)
-               top = subgrp
-                   
-       
-           setattr(top, asname, thismod)
-
-       # import-from construct
-       else:
-           if asname is None:  asname = [None]*len(fromlist)
-           for sym,alias in zip(fromlist,asname):
-               if alias is None: alias = sym
-               setattr(self._sys.moduleGroup, alias, getattr(thismod,sym))
-           
     def _load_functions(self,funclist=None,group=None,parent=None,**kw):
         if group is None or funclist is None: return
         if isinstance(funclist,(list,tuple)) and \
