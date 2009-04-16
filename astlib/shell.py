@@ -16,7 +16,7 @@ from util import EvalError
 class shell(cmd.Cmd):
     banner = """Tiny Data Language %s  M. Newville, T. Trainor (2009)
     with python %s and numpy %s"""
-    intro  = "  === Type 'help' to get started ==="
+    intro  = "  //=== Type 'help' to get started ==="
     ps1    = "tdl> "
     ps2    = "...> "
     max_save_lines = 5000
@@ -52,7 +52,7 @@ class shell(cmd.Cmd):
         print self.banner % (compiler.__version__, pyversion, numpy.__version__)
         
         self.compiler = compiler.Compiler(load_builtins=True)
-        self.input    = inputText.InputText(prompt=self.ps1,interactive=False)
+        self.input    = inputText.InputText(prompt=self.ps1)
 
         self.prompt    = self.ps1
         self._status   = True
@@ -76,52 +76,48 @@ class shell(cmd.Cmd):
         if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
         self.default("%s('%s')"% (cmd,arg))
         
-    def load_run(self,text,filename=None,lineno=None):
-        self.input.put(text,filename=filename, lineno=lineno)
-        while len(self.input) >0:
-            block,fname,lineo = self.input.get()
-            if block is None:
-                self.prompt = self.ps2
-                return None
-            
-            ret = self.compiler.eval(block)
-            self.prompt = self.ps1
-            return ret
-    
-    def default(self,inp):
-        s = inp.strip()
-        words = s.split()
-        if s in ('quit','exit','EOF'):
+    def default(self,text):
+        text = text.strip()
+        if text in ('quit','exit','EOF'):
             return 1
-        elif s.startswith('!'):
-            os.system(s)
+        elif text.startswith('!'):
+            os.system(text[1:] )
         else:
             self._status = False
             ret,x,detail = None, None, None
             try:
-                ret = self.load_run(s)
+                self.input.put(text)
+                while len(self.input) >0:
+                    block,fname,lineno = self.input.get()
+                    ret = self.compiler.eval(block)
+
             except (ValueError,NameError), detail:
-                x = "%s error: %s" % ('syntax',detail)
+                x = "Shell %s error: %s" % ('syntax',detail)
             except TypeError, detail:
-                x = "%s error: %s" % ('syntax/type',detail)
+                x = "Shell %s error: %s" % ('syntax/type',detail)
             except (ArithmeticError), detail:
-                x = "%s error: %s" % ('mathematical',detail)
+                x = "Shell %s error: %s" % ('mathematical',detail)
             except (LookupError), detail:
-                x = "%s error: %s" % ('lookup',detail)
+                x = "Shell %s error: %s" % ('lookup',detail)
             except (EvalError), detail:
-                x = "%s error: %s" % ('evaluation',detail)
+                x = "Shell %s error: %s" % ('evaluation',detail)
             except (NameError,AttributeError), detail:
-                x = "%s error: %s" % ('evaluation',detail)
+                x = "Shell %s error: %s" % ('evaluation',detail)
             except:
-                x = "%s error: %s" % ('syntax',detail)
+                x = "Shell %s error: %s" % ('syntax',detail)
 
             if not self._status and x is not None:
                 if detail is None: detail = s
                 print x
+                print 'FNAME ', fname, lineno
+                print sys.exc_info()
+                ast = self.compiler.compile(block)
+                print self.compiler.dump(ast,annotate_fields=True,
+                                         include_attributes=True)
                 if self.debug or x == 'unknown error':
-                    print '='*60
-                    traceback.print_exc()
-                    print '='*60
+                    print '=*'*40
+                    # traceback.print_exc()
+                    print '=*'*40
             elif ret is not None:
                 try:
                     print ret

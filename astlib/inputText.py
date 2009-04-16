@@ -97,7 +97,9 @@ class InputText:
 
     empty_frame = (None,None,-1)
     
-    def __init__(self,prompt=None,interactive=True, input=None, filename=None):
+    def __init__(self,prompt=None,
+                 interactive=True, input=None,
+                 filename=None):
         self.prompt = prompt or self.ps1
         self.input = None
         self.interactive = interactive

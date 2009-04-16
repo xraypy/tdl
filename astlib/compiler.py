@@ -230,9 +230,7 @@ class Compiler:
     def dump(self, node,**kw):  return ast.dump(node,**kw)
 
     # handlers for ast components
-    def _NodeValue(self,node):
-        'common case'
-        return self.interp(node.value)
+    def _NodeValue(self,node):  return self.interp(node.value)
 
     def doExpr(self,node):   return self._NodeValue(node)  # ('value',)
     def doIndex(self,node):  return self._NodeValue(node)  # ('value',)
@@ -271,8 +269,10 @@ class Compiler:
     def doTuple(self,node):    # ('elts', 'ctx') 
         return tuple(self.doList(node))
     
-    def doDict(self,node):    # ('keys', 'values') 
-        return dict([(self.interp(k),self.interp(v)) for k,v in zip(node.keys,node.values)] )
+    def doDict(self,node):    # ('keys', 'values')
+        nodevals = zip(node.keys,node.values)
+        interp = self.interp
+        return dict([(interp(k),interp(v)) for k,v in nodevals])
 
     def doNum(self,node):  return node.n  # ('n',) 
     def doStr(self,node):  return node.s  # ('s',)
@@ -280,11 +280,13 @@ class Compiler:
     def doName(self,node):    # ('id', 'ctx')
         """ Name node """
         ctx = _Context(node)
-        method = self.getSymbol
-        if ctx == ast.Del: method = self.delSymbol
-        if ctx == ast.Param: method = str  # for Function Def
-        val = method(node.id)
-        if isinstance(val,DefinedVariable): val = val.evaluate()
+        if ctx == ast.Del:
+            val = self.delSymbol(node.id)
+        elif ctx == ast.Param:  # for Function Def
+            val = str(node.id)
+        else:
+            val = self.getSymbol(node.id)
+            if isinstance(val,DefinedVariable): val = val.evaluate()
         return val
 
     def _NodeAssign(self,n,val):
@@ -322,7 +324,9 @@ class Compiler:
         if ctx == ast.Load:
             sym = self._NodeValue(node)
             if hasattr(sym,node.attr):
-                return getattr(sym,node.attr)
+                val = getattr(sym,node.attr)
+                if isinstance(val,DefinedVariable): val = val.evaluate()
+                return val
             else:
                 msg = "'%s' does not have an '%s' attribute" 
                 onError(TDLError, msg % (node.value,node.attr))
@@ -546,13 +550,24 @@ class Compiler:
 
 
     def import_module(self, name, asname=None, fromlist=None, reload=False):
-        """imports a module (tdl or python) into a tdl symbol table.
+        """
+        import a module (tdl or python), installing it into the symbol table.
+        required arg:
+            name       name of module to import
+                          'foo' in 'import foo'
+        options:
+            fromlist   list of symbols to import with 'from-import'
+                          ['x','y'] in 'from foo import x, y'
+            asname     alias for imported name(s)
+                          'bar' in 'import foo as bar'
+                       or
+                          ['s','t'] in 'from foo import x as s, y as t'
+
+        this method covers a lot of cases (tdl or python, import
+        or from-import, use of asname) and so is fairly long.
         """
         symtable = self.symtable
         _sys     = symtable._sys
-        msg =  "import %s"  % name
-        if asname is not None: msg =  "%s as %s" % (msg,asname)
-        
 
         # step 1  import the module to a global location
         #   either sys.modules for python modules
@@ -576,20 +591,24 @@ class Compiler:
                     thismod = symbolTable.Group()
                     _sys.modules[name]= thismod
                     symtable._set_local_mod((thismod,thismod))
-                    if True: # try:
-                        text = open(modname).read()
-                        inptext = inputText.InputText()
-                        inptext.put(text,filename=modname)
-                    else: # except:
-                        print("cannot import '%s'" % modname)
+
+                    text = open(modname).read()
+                    inptext = inputText.InputText()
+                    inptext.put(text,filename=modname)
                        
-                    try:
-                        while inptext:
-                            block,fname,lineno = inptext.get()
+                    while inptext:
+                        block,fname,lineno = inptext.get()
+                        try:
                             self.eval(block)
-                    except:
-                        print("error importing '%s'" % modname)                        
-                        
+                        except:
+                            print('Exception on import ', modname)
+                            print('FNAME ', fname, lineno)
+                            print( sys.exc_info())
+                            ast = self.compiler.compile(block)
+                            print( self.compiler.dump(ast,annotate_fields=True,
+                                                      include_attributes=True))
+                            
+                       
                     thismod = _sys.modules[name]               
                     symtable._set_local_mod(saveGroups)
 
@@ -624,4 +643,4 @@ class Compiler:
             for sym,alias in zip(fromlist,asname):
                 if alias is None: alias = sym
                 setattr(_sys.moduleGroup, alias, getattr(thismod,sym))
-        # end
+    # end
