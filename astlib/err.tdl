@@ -1,8 +1,9 @@
 x = 12.0
 y = 1
-print 'err.tdl ', x, y
+print 'inside  err.tdl ', x, y
 if x > 2:
     print 'XX ', x/(y-1)
 endif
 
+y = 999.0
 print 'done.'

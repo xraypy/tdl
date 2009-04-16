@@ -16,7 +16,7 @@ from util import EvalError
 class shell(cmd.Cmd):
     banner = """Tiny Data Language %s  M. Newville, T. Trainor (2009)
     with python %s and numpy %s"""
-    intro  = "  //=== Type 'help' to get started ==="
+    intro  = "  === Type 'help' to get started ==="
     ps1    = "tdl> "
     ps2    = "...> "
     max_save_lines = 5000
@@ -85,44 +85,16 @@ class shell(cmd.Cmd):
         else:
             self._status = False
             ret,x,detail = None, None, None
+
             try:
-                self.input.put(text)
+                self.input.put(text,lineno=0)
                 while len(self.input) >0:
                     block,fname,lineno = self.input.get()
-                    ret = self.compiler.eval(block)
+                    ret = self.compiler.eval(block,fname=fname,lineno=lineno)
+                if ret is not None:    print ret
 
-            except (ValueError,NameError), detail:
-                x = "Shell %s error: %s" % ('syntax',detail)
-            except TypeError, detail:
-                x = "Shell %s error: %s" % ('syntax/type',detail)
-            except (ArithmeticError), detail:
-                x = "Shell %s error: %s" % ('mathematical',detail)
-            except (LookupError), detail:
-                x = "Shell %s error: %s" % ('lookup',detail)
-            except (EvalError), detail:
-                x = "Shell %s error: %s" % ('evaluation',detail)
-            except (NameError,AttributeError), detail:
-                x = "Shell %s error: %s" % ('evaluation',detail)
             except:
-                x = "Shell %s error: %s" % ('syntax',detail)
-
-            if not self._status and x is not None:
-                if detail is None: detail = s
-                print x
-                print 'FNAME ', fname, lineno
-                print sys.exc_info()
-                ast = self.compiler.compile(block)
-                print self.compiler.dump(ast,annotate_fields=True,
-                                         include_attributes=True)
-                if self.debug or x == 'unknown error':
-                    print '=*'*40
-                    # traceback.print_exc()
-                    print '=*'*40
-            elif ret is not None:
-                try:
-                    print ret
-                except:
-                    print "Error printing ret value"
+                pass
 
 if (__name__ == '__main__'):
     t = shell(debug=True).cmdloop()

@@ -17,14 +17,14 @@ class TDLError(Exception):
         return "%s: %s" % (self.error, self.descr)
     __str__ = __repr__
 
-def onError(exception,msg,tback=None):
-    """ wrapper for raising exceptions from interpreter"""
-    err_type,err_value,err_tback = sys.exc_info()
-    print(" onError:  exc_info  =  ", sys.exc_info())
-    print(" onError:  exception =  ", exception)
-    print(" onError:  message   =  ", msg)
-    
-    # raise exception, msg
+class TDLStopError(Exception):
+    def __init__(self,error,descr = None,node = None):
+        self.error = error
+        self.descr = descr
+    def __repr__(self):
+        return "%s: %s" % (self.error, self.descr)
+    __str__ = __repr__
+
 
 __version__ = '0.9.0'
 
@@ -161,6 +161,15 @@ class Procedure(object):
         del lgroup
         return retval
     
+class ExceptionStorage:
+    def __init__(self):
+        self.raised = False
+        self.node   = None
+        self.msg    = []
+        self.lineno = None
+        self.col_offset = 0
+
+        
 class Compiler:
     """ program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
@@ -174,15 +183,18 @@ class Compiler:
   In addition, Function is greatly altered so as to allow 
     
     """
-    def __init__(self,symtable=None,input=None, output=None,
+    def __init__(self,symtable=None,input=None, writer=None,
                  load_builtins=True):
+        self.__writer = writer or sys.stdout.write
         if symtable is None:
-            symtable = symbolTable.symbolTable()
+            symtable = symbolTable.symbolTable(writer=self.__writer)
         self.symtable    = symtable
         self.setSymbol   = symtable.setSymbol
         self.getSymbol   = symtable.getSymbol
         self.delSymbol   = symtable.delSymbol        
         self._interrupt  = None
+        self._exception_raised = False        
+        self.error_msg   = []
         self.retval      = None
 
         imports = ((builtins._from_builtin, __builtin__,'_builtin'),
@@ -201,7 +213,7 @@ class Compiler:
 
     ##
     def NotImplemented(self,node):
-        onError(TDLError, "'%s' not supported" % (_ClassName(node)))
+        self.onError(TDLError, node, msg="'%s' not supported" % (_ClassName(node)))
 
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
@@ -212,7 +224,8 @@ class Compiler:
         try:
             return ast.parse(text)
         except:
-            onError(SyntaxError, text)
+            self.onError(SyntaxError, node)
+            raise
         
     def interp(self, node):
         """executes compiled Ast representation for an expression"""
@@ -221,12 +234,78 @@ class Compiler:
         #    interp(None) and expect a None in return.
         if node is None: return None
         if isinstance(node,(str,unicode)):  node = self.compile(node)
-        return getattr(self,"do%s" % _ClassName(node))(node)
+        try:
+            return getattr(self,"do%s" % _ClassName(node))(node)
+        except:
+            self.onError(TDLError, node)
+            raise
 
-    def eval(self,expr):
+            
+    def eval(self,expr,fname=None,lineno=None):
         """evaluates a single statement"""
-        return self.interp(self.compile(expr))
-                
+        self.fname = fname
+        self.lineno = lineno
+        self.error = ExceptionStorage()
+
+        try:
+            node = self.compile(expr)
+        except:
+            self.onError(TDLError, None)
+            self.show_error(expr=expr)
+        try:
+            node = self.compile(expr)
+            return self.interp(node)
+        except:
+            self.onError(TDLError, node)
+            self.show_error(expr=expr)
+
+    def show_error(self,expr=None):
+        if expr is not None:
+            elines = expr.split('\n')
+            nlines = len(elines)
+            if nlines > 1 and nlines > self.error.lineno:
+                expr = elines[self.error.lineno-1]
+        self.error.msg.append("%s" % expr)
+        if self.error.col_offset >0:
+            self.error.msg.append('%s^' % (' '*self.error.col_offset))
+        while self.error.msg:
+            self.__writer('%s\n' % self.error.msg.pop(0))
+        self.error.col_offset = 0
+        self.error.lineno = None
+        self.error.raised = True
+
+
+    def onError(self,exception,node,msg=None,with_tback=None):
+        """ wrapper for raising exceptions from interpreter"""
+        err_type,err_value,err_tback = sys.exc_info()
+        
+        # print("onError ",  node, msg) # self.dump(node,include_attributes=True))
+        if self.error_msg is None: self.error_msg = []
+        
+        if self.error.node is None and node is not None:
+            self.error.node = node
+            # print('Errant node: ', self.dump(node))
+            if isinstance(node, ast.Module):
+                self.error.node = node.body[0]
+            self.error.type = err_value.__class__.__name__
+            self.error.msg.append("%s: %s" % (err_value.__class__.__name__, ' '.join(err_value.args)))
+
+            if hasattr(node,'lineno'):     self.error.lineno = node.lineno
+            if hasattr(node,'col_offset'): self.error.col_offset = node.col_offset
+            
+            if self.error.lineno is not None:
+                self.lineno = self.lineno+self.error.lineno
+
+            extra = ''
+            if self.error.col_offset is not None:
+                extra = ', column %i' % self.error.col_offset
+            self.error.msg.append("%s, line %i%s" % (self.fname, self.lineno, extra))
+
+            # print("Set error node to " ,self.error.node, self.error.lineno)
+
+        if msg is not None:   self.error.msg.append(msg)
+
+    
     def dump(self, node,**kw):  return ast.dump(node,**kw)
 
     # handlers for ast components
@@ -260,7 +339,7 @@ class Compiler:
 
     def doAssert(self,node):    # ('test', 'msg')
         if not self.interp(node.test):
-            onError(AssertionError, self.interp(node.msg()))
+            self.onError(Assertiself.onError, node, msg=self.interp(node.msg()))
         return True
 
     def doList(self,node):    # ('elts', 'ctx') 
@@ -298,8 +377,8 @@ class Compiler:
             
         elif _Class(n) == ast.Attribute:
             if _Context(n) == ast.Load:
-                onError(TDLError,
-                        "canot Assign attribute %s???" % n.attr)
+                self.onError(TDLError, n,
+                        msg=  "canot Assign attribute %s???" % n.attr)
             setattr(self.interp(n.value),n.attr,val)
 
         elif _Class(n) == ast.Subscript:
@@ -316,7 +395,7 @@ class Compiler:
                 for el,v in zip(n.elts,val):
                     self._NodeAssign(el,v)
             else:
-                onError(ValueError, 'too many values to unpack')
+                self.onError(ValueError, node, msg='too many values to unpack')
 
     def doAttribute(self,node):    # ('value', 'attr', 'ctx')
         ctx = _Context(node)
@@ -329,13 +408,13 @@ class Compiler:
                 return val
             else:
                 msg = "'%s' does not have an '%s' attribute" 
-                onError(TDLError, msg % (node.value,node.attr))
+                self.onError(TDLError, node, msg= msg % (node.value,node.attr))
 
         elif ctx == ast.Del:
             return delattr(sym,attr)
         elif ctx == ast.Store:
-            onError(TDLError,
-                    "attribute for storage: shouldn't be here!!")
+            self.onError(TDLError,node,
+                    msg = "attribute for storage: shouldn't be here!!")
 
     def doAssign(self,node):    # ('targets', 'value')
         val = self._NodeValue(node)
@@ -368,8 +447,8 @@ class Compiler:
             elif isinstance(node.slice,ast.ExtSlice):
                 return val[(slice)]
         elif ctx == ast.Store:
-            onError(TDLError,
-                    "subscript for storage: shouldn't be here!!")
+            self.onError(TDLError, node,
+                    msg="subscript for storage: shouldn't be here!!")
 
     def doDelete(self,node):    # ('targets',)
         ctx = _Context(node)
@@ -459,7 +538,7 @@ class Compiler:
     def doCall(self,node):    # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         if not callable(func):
-            onError(TDLError, "'%s' is not not callable" % (func))
+            self.onError(TDLError, node, msg="'%s' is not not callable" % (func))
 
         args = [self.interp(a) for a in node.args]
         if node.starargs is not None:
@@ -468,8 +547,8 @@ class Compiler:
         keywords = {}
         for k in node.keywords:
             if not isinstance(k,ast.keyword):
-                onError(TDLError,
-                        "keyword error in function call '%s'" % (func))
+                self.onError(TDLError, node,
+                        msg="keyword error in function call '%s'" % (func))
             keywords[k.arg] = self.interp(k.value)
         if node.kwargs is not None:  keywords.update(self.interp(node.kwargs))
 
@@ -531,7 +610,7 @@ class Compiler:
                         break
                 if not handled:
                     # print("unhandled exception: ", dir(e_tback), e_tback.tb_lineno, e_tback.tb_lasti)
-                    onError(e_type, e_value,e_tback) # print("%s: %s" % (e_type.__name__, e_value))
+                    self.onError(e_type, n, msg=e_value) # print("%s: %s" % (e_type.__name__, e_value))
                     
     def doTryFinally(self,node):    # ('body', 'finalbody') 
         return self.NotImplemented(node)
@@ -543,9 +622,9 @@ class Compiler:
             print(n)             
 
     def doRaise(self,node):    # ('type', 'inst', 'tback') 
-        print(" Hello from Raise!" )
         print(self.dump(node,include_attributes=True))
-        onError(self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
+        self.onError(TDLError, node)
+        #, self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
 
 
 
@@ -598,19 +677,22 @@ class Compiler:
                        
                     while inptext:
                         block,fname,lineno = inptext.get()
-                        try:
-                            self.eval(block)
-                        except:
-                            print('Exception on import ', modname)
-                            print('FNAME ', fname, lineno)
-                            print( sys.exc_info())
-                            ast = self.compiler.compile(block)
-                            print( self.compiler.dump(ast,annotate_fields=True,
-                                                      include_attributes=True))
-                            
-                       
+                        self.eval(block,fname=fname,lineno=lineno)
+
+                        while self.error.msg:
+                            self.__writer('%s\n' % self.error.msg.pop(0))
+
+
+                        if self.error.raised:
+                            print("..break", len(inptext))
+                            break
+                        
                     thismod = _sys.modules[name]               
                     symtable._set_local_mod(saveGroups)
+            if self.error_raised:
+                print("import returning")
+                return
+                        
 
             # or, if not a tdl module, load as a regular python module
             if not isTDL:

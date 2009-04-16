@@ -198,7 +198,7 @@ class symbolTable(Group):
                     out = getattr(grp,top)
 
         if out is self.__invalid_name:
-            raise LookupError, "cannot locate symbol(1) '%s'" % name
+            raise LookupError, "cannot locate symbol '%s'" % name
 
         while parts:
             p = parts.pop()
