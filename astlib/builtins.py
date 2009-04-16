@@ -63,13 +63,6 @@ def showgroup(gname,compiler=None):
     if compiler is not None:
         compiler.symtable.show_group(gname)
 
-def definevar(name,expr,compiler=None):
-    # print("===DEFVAR ", name, expr, compiler)
-    if compiler is not None:
-        defvar = DefinedVariable(expr=expr,compiler=compiler)
-        compiler.symtable.setSymbol(name,defvar)
-
-
 def _copy(obj,**kw):
     if kw.has_key('compiler'):
         compiler = kw.pop('compiler')
@@ -78,23 +71,6 @@ def _copy(obj,**kw):
         
 _local_funcs = {'group':group,
                 'showgroup':showgroup,
-                'definevar':definevar,
                 'copy': _copy,
                 }
-        
-def load_all(compiler):
-    symtable      = compiler.symtable
-    import_module = compiler.import_module
-
-    imports = ((_from_builtin, __builtin__,'_builtin'),
-               (_from_numpy,   numpy, '_math'))
-               
-    for symlist, pymod, tdlmod in imports:
-
-        group = getattr(symtable,tdlmod)
-        for sym in symlist:
-            setattr(group,sym,getattr(pymod,sym))
-
-    group = getattr(symtable,'_builtin')
-    for fname,fcn in _local_funcs.items():
-        setattr(group, fname, closure(func=fcn))
+       

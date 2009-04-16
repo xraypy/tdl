@@ -91,7 +91,7 @@ class InputText:
                      'while': ('else') }
 
     parens = {'{':'}','(':')','[':']'}
-    fcn_defvar= "_builtin._definevar_"
+    fcn_defvar= "_builtin.definevar"
     fcn_print = "_builtin._print_"
     nonkey    = 'NONKEY'
 

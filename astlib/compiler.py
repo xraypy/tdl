@@ -5,6 +5,9 @@ import ast
 import inputText
 import symbolTable
 import builtins
+import numpy
+import __builtin__
+from util import closure
 
 class TDLError(Exception):
     def __init__(self,error,descr = None,node = None):
@@ -21,7 +24,7 @@ def onError(exception,msg,tback=None):
     print(" onError:  exception =  ", exception)
     print(" onError:  message   =  ", msg)
     
-    raise exception, msg
+    # raise exception, msg
 
 __version__ = '0.9.0'
 
@@ -104,6 +107,10 @@ class DefinedVariable(object):
             msg = "Cannot evaluate '%s'"  % (self.expr)
             raise ValueError, msg
 
+def definevar(name,expr,compiler=None):
+    if compiler is not None:
+        defvar = DefinedVariable(expr=expr,compiler=compiler)
+        compiler.symtable.setSymbol(name,defvar)
      
 class Procedure(object):
     """tdl procedure:  function """
@@ -178,8 +185,20 @@ class Compiler:
         self._interrupt  = None
         self.retval      = None
 
-        if load_builtins:
-            builtins.load_all(self)
+        imports = ((builtins._from_builtin, __builtin__,'_builtin'),
+                   (builtins._from_numpy,   numpy, '_math'))
+        
+        for symlist, pymod, tdlmod in imports:
+            group = getattr(symtable,tdlmod)
+            for sym in symlist:
+                setattr(group, sym, getattr(pymod, sym))
+
+        group = getattr(symtable, '_builtin')
+        for fname,fcn in builtins._local_funcs.items():
+            setattr(group, fname, closure(func=fcn,compiler=self))
+        setattr(group, 'definevar', closure(func=definevar,compiler=self))
+        
+
     ##
     def NotImplemented(self,node):
         onError(TDLError, "'%s' not supported" % (_ClassName(node)))
@@ -202,7 +221,6 @@ class Compiler:
         #    interp(None) and expect a None in return.
         if node is None: return None
         if isinstance(node,(str,unicode)):  node = self.compile(node)
-
         return getattr(self,"do%s" % _ClassName(node))(node)
 
     def eval(self,expr):
