@@ -91,7 +91,8 @@ class shell(cmd.Cmd):
                 while len(self.input) >0:
                     block,fname,lineno = self.input.get()
                     ret = self.compiler.eval(block,fname=fname,lineno=lineno)
-                if ret is not None:    print ret
+                if ret is not None:
+                    print 'shell RET ', ret
 
             except:
                 pass

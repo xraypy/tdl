@@ -1,10 +1,15 @@
 Essentially every part of the system needs more testing.
 
-Unimplemented (or severely broken) features:
-
-  - exceptions: raise and try/except/finally, etc.
+Unimplemented /very broken features:
 
   - builtin help system.  Not implemented.
+
+  - exceptions: raise and try/except/finally, etc.
+      run time exceptions are sort of working.
+      syntax errors (compile-time) needs work
+      error propagation needs lots of work.
+
+
 
 Some pieces that are working (at least partially) but need much more testing:
  
@@ -23,7 +28,7 @@ Shell Program:
    import of tdl code from a file seems to be working
 
 Testing: 
-   started some unit testing
+   started some unit testing, should do much more, with nose
 
 -- 
 Other issues:

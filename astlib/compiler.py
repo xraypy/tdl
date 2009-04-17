@@ -251,15 +251,20 @@ class Compiler:
             node = self.compile(expr)
         except:
             self.onError(TDLError, None)
+            # print(" compile error")
             self.show_error(expr=expr)
         try:
             node = self.compile(expr)
             return self.interp(node)
         except:
             self.onError(TDLError, node)
+            # print("xx1", self.dump(node,include_attributes=True))
             self.show_error(expr=expr)
+            self.error = ExceptionStorage()
+            
 
     def show_error(self,expr=None):
+        # print("show_error ",expr)
         if expr is not None:
             elines = expr.split('\n')
             nlines = len(elines)
@@ -300,11 +305,10 @@ class Compiler:
             if self.error.col_offset is not None:
                 extra = ', column %i' % self.error.col_offset
             self.error.msg.append("%s, line %i%s" % (self.fname, self.lineno, extra))
-
             # print("Set error node to " ,self.error.node, self.error.lineno)
 
         if msg is not None:   self.error.msg.append(msg)
-
+        # print("onError done")
     
     def dump(self, node,**kw):  return ast.dump(node,**kw)
 
@@ -689,10 +693,8 @@ class Compiler:
                         
                     thismod = _sys.modules[name]               
                     symtable._set_local_mod(saveGroups)
-            if self.error_raised:
-                print("import returning")
+            if self.error.raised:
                 return
-                        
 
             # or, if not a tdl module, load as a regular python module
             if not isTDL:
