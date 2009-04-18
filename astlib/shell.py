@@ -92,10 +92,9 @@ class shell(cmd.Cmd):
                     block,fname,lineno = self.input.get()
                     ret = self.compiler.eval(block,fname=fname,lineno=lineno)
                 if ret is not None:
-                    print 'shell RET ', ret
-
+                    print ret
             except:
-                pass
+                print "Exception in shell!!"
 
 if (__name__ == '__main__'):
     t = shell(debug=True).cmdloop()

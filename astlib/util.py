@@ -4,8 +4,6 @@
 
 import re
 
-
-
 class EvalError(Exception):
     def __init__(self,error,descr = None,node = None):
         self.error = error

@@ -235,11 +235,13 @@ class Compiler:
         if node is None: return None
         if isinstance(node,(str,unicode)):  node = self.compile(node)
         try:
-            return getattr(self,"do%s" % _ClassName(node))(node)
+            ret = getattr(self,"do%s" % _ClassName(node))(node)
         except:
             self.onError(TDLError, node)
             raise
-
+        # print("interp returns ", ret, type(ret))
+        if isinstance(ret,enumerate):  ret = list(ret)
+        return ret
             
     def eval(self,expr,fname=None,lineno=None):
         """evaluates a single statement"""
@@ -253,8 +255,8 @@ class Compiler:
             self.onError(TDLError, None)
             # print(" compile error")
             self.show_error(expr=expr)
+
         try:
-            node = self.compile(expr)
             return self.interp(node)
         except:
             self.onError(TDLError, node)

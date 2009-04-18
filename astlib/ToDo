@@ -5,9 +5,9 @@ Unimplemented /very broken features:
   - builtin help system.  Not implemented.
 
   - exceptions: raise and try/except/finally, etc.
-      run time exceptions are sort of working.
+      run time exceptions are sort of working, in that a message is displayed.
       syntax errors (compile-time) needs work
-      error propagation needs lots of work.
+      error propagation is not working properly, and needs designing.
 
 
 
@@ -25,10 +25,11 @@ The conventions / documentation for "system settings" (what's the path for
 
 
 Shell Program:
-   import of tdl code from a file seems to be working
+   import of tdl code from a file seems to be working fine.  Errors are not
+   handled that gracefully.
 
 Testing: 
-   started some unit testing, should do much more, with nose
+   started some unit testing, should do much more, probably with nose packaage
 
 -- 
 Other issues:

@@ -68,9 +68,59 @@ def _copy(obj,**kw):
         compiler = kw.pop('compiler')
     return copy.deepcopy(obj)
 
-        
+
+def _ls(dir= '.',**kws):
+    " return list of files in the current directory "
+    from glob import glob
+    dir.strip()
+    if len(dir)==0: arg = '.'
+    if os.path.isdir(dir):
+        ret = os.listdir(dir)
+    else:
+        ret = glob(dir)
+    if sys.platform == 'win32':
+        for i,r in enumerate(ret):
+            ret[i] = ret[i].replace('\\','/')
+    return ret
+
+def _ls_cmdout(x,ncol=None,**kws):
+    " output for ls "
+    return show_list(x,ncol=ncol)
+
+def _cwd(x=None):
+    "return current working directory"
+    ret = os.getcwd()
+    if sys.platform == 'win32':
+        ret = ret.replace('\\','/')
+    return ret
+
+def _cd(name):
+    "change directorty"
+    name = name.strip()
+    if name:
+        os.chdir(name)
+
+    ret = os.getcwd()
+    if sys.platform == 'win32':
+        ret = ret.replace('\\','/')
+    return ret
+
+def _more(name,pagelength=24):
+    "list file contents"
+    try:
+        f = open(name)
+        l = f.readlines()
+
+    except IOError:
+        print "cannot open file: %s." % name
+        return
+    finally:
+        f.close()
+    # show_more(l,filename=name,pagesize=pagesize)
+    
 _local_funcs = {'group':group,
                 'showgroup':showgroup,
                 'copy': _copy,
+                'ls': _ls,
                 }
        
