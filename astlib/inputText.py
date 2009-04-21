@@ -167,9 +167,6 @@ class InputText:
         startkeys = self.block_friends.keys()
 
         self.input_buff.reverse()
-        # print( '=======CONVERT')
-        # print( self.input_buff)
-        # print( '=============')
         
         while self.input_buff:
             text,complete,fname,lineno = self.input_buff.pop()
@@ -230,9 +227,11 @@ class InputText:
                                         '&end','&end%s'%self.current)
                         
             # handle 'command format', including 'print'
+            ### Note: should just test callable(thiskey)!!
             elif (thiskey not in self.friends and
                   not thiskey.startswith('#') and
                   len(thiskey)>0 and len(word2)>0 ):
+                print( "Test for COMMAND!!", thiskey, text, word2)
                 if thiskey == 'print':
                     pass
                 #                     text = text[6:].strip().rstrip()
@@ -242,9 +241,11 @@ class InputText:
                 #                     thiskey = self.nonkey
                 elif ((not text.endswith(')')) and
                       isValidName(thiskey) and
-                      (isValidName(word2) or isNumber(word2))):
+                      (isValidName(word2) or isNumber(word2)
+                       or isinstance(word2,(str,unicode)))):
                     text = '%s(%s)'% (thiskey,text[len(thiskey):].strip())
-
+                    print( "LOOKS LIKE A COMMAND!!", text)
+                    
             indent_level = len(self.keys)
             if (not oneliner and len(thiskey)>0 and
                 (thiskey == self.current or thiskey in self.friends)):

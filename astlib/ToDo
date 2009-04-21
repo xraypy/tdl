@@ -23,6 +23,9 @@ Some pieces that are working (at least partially) but need much more testing:
 The conventions / documentation for "system settings" (what's the path for
    loading modules, etc) is not well thought out.
 
+Commands:
+   Functions-as-Commands:  test word1 as callable!!! 
+
 
 Shell Program:
    import of tdl code from a file seems to be working fine.  Errors are not
