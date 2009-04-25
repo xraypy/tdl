@@ -2,27 +2,27 @@
 #
 
 import cmd
-import os
+from os import path, environ, system, getcwd
 import sys
 import types
 import getopt
 import traceback
 import numpy
-
 import compiler
 import inputText
 from util import EvalError
 
 class shell(cmd.Cmd):
-    banner = """Tiny Data Language %s  M. Newville, T. Trainor (2009)
-    with python %s and numpy %s"""
+    banner = """  Tiny Data Language %s  M. Newville, T. Trainor (2009)
+    using python %s and numpy %s"""
     intro  = "  === Type 'help' to get started ==="
     ps1    = "tdl> "
     ps2    = "...> "
     max_save_lines = 5000
-    def __init__(self, completekey='tab', scripts=None,libs=None, debug=False,
+    def __init__(self, completekey='tab', scripts=None, debug=False,
                  stdin=None, stdout=None, intro=None, GUI='TkAgg'):
-        self.debug = debug
+
+        self.debug  = debug
         try:
             import readline
             self.rdline = readline
@@ -31,7 +31,7 @@ class shell(cmd.Cmd):
 
         cmd.Cmd.__init__(self,completekey='tab')
 
-        self.historyfile = os.path.join(os.environ.get('HOME',os.getcwd()),'.tdl_history')
+        self.historyfile = path.join(environ.get('HOME',getcwd()),'.tdl_history')
         if self.rdline is not None:
             try:
                 self.rdline.read_history_file(self.historyfile)
@@ -47,16 +47,12 @@ class shell(cmd.Cmd):
 
         self.stdin = sys.stdin
         self.stdout = sys.stdout
-
         pyversion = '%i.%i.%i' % sys.version_info[:3]
         print self.banner % (compiler.__version__, pyversion, numpy.__version__)
         
         self.compiler = compiler.Compiler(load_builtins=True)
         self.input    = inputText.InputText(prompt=self.ps1)
-
-        self.prompt    = self.ps1
-        self._status   = True
-
+        self.prompt   = self.ps1
                     
     def __del__(self):
         if (self.rdline):
@@ -64,7 +60,7 @@ class shell(cmd.Cmd):
             self.rdline.write_history_file(self.historyfile)
 
     def emptyline(self):     pass
-    def do_shell(self, arg):   os.system(arg)
+    def do_shell(self, arg):   system(arg)
 
     def do_help(self,arg):   self._helpshow(arg, cmd='help')
     def do_show(self,arg):   self._helpshow(arg, cmd='show')
@@ -81,11 +77,9 @@ class shell(cmd.Cmd):
         if text in ('quit','exit','EOF'):
             return 1
         elif text.startswith('!'):
-            os.system(text[1:] )
+            self.do_shell(text[1:] )
         else:
-            self._status = False
-            ret,x,detail = None, None, None
-
+            ret = None
             try:
                 self.input.put(text,lineno=0)
                 while len(self.input) >0:
@@ -94,7 +88,7 @@ class shell(cmd.Cmd):
                 if ret is not None:
                     print ret
             except:
-                print "Exception in shell!!"
+                raise
 
-if (__name__ == '__main__'):
+if __name__ == '__main__':
     t = shell(debug=True).cmdloop()

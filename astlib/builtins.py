@@ -1,8 +1,11 @@
 import __builtin__
 import copy
+import os
+import sys
 import numpy
 from util import closure
-
+from glob import glob
+    
 # inherit these from python's __builtin__
 _from_builtin= ('ArithmeticError', 'AssertionError', 'AttributeError',
                 'BaseException', 'BufferError', 'BytesWarning',
@@ -69,9 +72,34 @@ def _copy(obj,**kw):
     return copy.deepcopy(obj)
 
 
+def show_more(text,filename=None,writer=None,pagelength=30,prefix=''):
+    """show lines of text in the style of more """
+    txt = text[:]
+    if isinstance(txt,str): txt = txt.split('\n')
+    if len(txt) <1: return
+    prompt = '== hit return for more, q to quit'
+    ps = "%s (%%.2f%%%%) == " % prompt
+    if filename: ps = "%s (%%.2f%%%%  of %s) == " % (prompt,filename)
+
+    if writer is None:  writer = sys.stdout
+
+    i = 0
+    for i in range(len(txt)):
+        if txt[i].endswith('\n'):
+            writer.write("%s%s" % (prefix,txt[i]))
+        else:
+            writer.write("%s%s\n" % (prefix,txt[i]))
+        i = i + 1
+        if i % pagelength == 0:
+            try:
+                x = raw_input(ps %  (100.*i/len(txt)))
+                if x in ('q','Q'): return
+            except KeyboardInterrupt:
+                writer.write("\n")
+                return
+
 def _ls(dir= '.',**kws):
     " return list of files in the current directory "
-    from glob import glob
     dir.strip()
     if len(dir)==0: arg = '.'
     if os.path.isdir(dir):
@@ -87,14 +115,14 @@ def _ls_cmdout(x,ncol=None,**kws):
     " output for ls "
     return show_list(x,ncol=ncol)
 
-def _cwd(x=None):
+def _cwd(x=None,**kws):
     "return current working directory"
     ret = os.getcwd()
     if sys.platform == 'win32':
         ret = ret.replace('\\','/')
     return ret
 
-def _cd(name):
+def _cd(name,**kwds):
     "change directorty"
     name = name.strip()
     if name:
@@ -105,7 +133,7 @@ def _cd(name):
         ret = ret.replace('\\','/')
     return ret
 
-def _more(name,pagelength=24):
+def _more(name,pagelength=24,**kws):
     "list file contents"
     try:
         f = open(name)
@@ -116,11 +144,13 @@ def _more(name,pagelength=24):
         return
     finally:
         f.close()
-    # show_more(l,filename=name,pagesize=pagesize)
+    show_more(l,filename=name,pagelength=pagelength)
     
 _local_funcs = {'group':group,
                 'showgroup':showgroup,
                 'copy': _copy,
+                'more': _more,
                 'ls': _ls,
+                'cd': _cd,
                 }
        

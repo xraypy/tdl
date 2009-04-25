@@ -175,12 +175,15 @@ class Compiler:
   This module compiles expressions and statements to AST representation,
   using python's ast module, and then executes the AST representation
   using a custom SymboplTable for named object (variable, functions).
-  This then gives a restricted version of Python,
+  This then gives a restricted version of Python, with slightly modified
+  namespace rules.  The program syntax here is expected to be valid Python,
+  but that may have been translated as with the inputText module.
+
     
   The following Python syntax is not supported:
-      Generators, Yield, Decorators, Class, Exec, Lambda, Global
+      Exec, Lambda, Class, Global, Generators, Yield, Decorators
         
-  In addition, Function is greatly altered so as to allow 
+  In addition, Function is greatly altered so as to allow a TDL procedure.
     
     """
     def __init__(self,symtable=None,input=None, writer=None,
@@ -489,11 +492,11 @@ class Compiler:
         should look for and translate print -> print_() to become
         a customized function call.
         """
-        l = [self.interp(n) for n in  node.values]
         dest = self.interp(node.dest) or sys.stdout
         end = ''
         if node.nl: end = '\n'
-        print(*l,file=dest,end=end)
+        print([self.interp(n) for n in node.values],
+              file=dest, end=end)
         
     def doIf(self,node):    # ('test', 'body', 'orelse')
         block = node.orelse
@@ -503,7 +506,7 @@ class Compiler:
     def doIfExp(self,node):    # ('test', 'body', 'orelse') 
         expr = node.orelse
         if self.interp(node.test): expr = node.body
-        return self.interp(exr)
+        return self.interp(expr)
 
     def doWhile(self,node):    # ('test', 'body', 'orelse')
         while self.interp(node.test):
@@ -580,6 +583,7 @@ class Compiler:
                          varkws=node.args.kwarg)
         self.setSymbol(node.name,value=proc)
 
+    # imports
     def doImport(self,node):    # ('names',) 
         for n in node.names:
             self.import_module(n.name,asname=n.asname)
@@ -590,48 +594,6 @@ class Compiler:
             fromlist.append(n.name)
             asname.append(n.asname)
         self.import_module(node.module,asname=asname,fromlist=fromlist)
-
-    ## 
-    # not yet implemented:
-    ## 
-    def doExceptHandler(self,node): # ('type', 'name', 'body')
-        print("except handler")
-        return None
-    
-    def doTryExcept(self,node):    # ('body', 'handlers', 'orelse') 
-        print("Incomplete Try Except")
-        print( self.dump(node))
-        for n in node.body:
-            try:
-                self.interp(n)
-            except:
-                e_type,e_value,e_tback = sys.exc_info()
-                handled = False
-                for h in node.handlers:
-                    handler_type = self.interp(h.type)
-                    if handler_type is None or isinstance(e_type(),handler_type):
-                        handled=True
-                        self._NodeAssign(h.name,e_value)
-                        for b in h.body: self.interp(b)
-                        break
-                if not handled:
-                    # print("unhandled exception: ", dir(e_tback), e_tback.tb_lineno, e_tback.tb_lasti)
-                    self.onError(e_type, n, msg=e_value) # print("%s: %s" % (e_type.__name__, e_value))
-                    
-    def doTryFinally(self,node):    # ('body', 'finalbody') 
-        return self.NotImplemented(node)
-        
-    def doGeneratorExp(self,node):    # ('elt', 'generators') 
-        print('Incomplete GeneratorExp ')
-        print(ast.dump(node.elt),include_attributes=True)
-        for n in node.generators:
-            print(n)             
-
-    def doRaise(self,node):    # ('type', 'inst', 'tback') 
-        print(self.dump(node,include_attributes=True))
-        self.onError(TDLError, node)
-        #, self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
-
 
 
     def import_module(self, name, asname=None, fromlist=None, reload=False):
@@ -729,4 +691,45 @@ class Compiler:
             for sym,alias in zip(fromlist,asname):
                 if alias is None: alias = sym
                 setattr(_sys.moduleGroup, alias, getattr(thismod,sym))
-    # end
+    # end of import_module
+
+    # not yet implemented:
+    def doExceptHandler(self,node): # ('type', 'name', 'body')
+        print("except handler")
+        return None
+    
+    def doTryExcept(self,node):    # ('body', 'handlers', 'orelse') 
+        print("Incomplete Try Except")
+        print( self.dump(node))
+        for n in node.body:
+            try:
+                self.interp(n)
+            except:
+                e_type,e_value,e_tback = sys.exc_info()
+                handled = False
+                for h in node.handlers:
+                    handler_type = self.interp(h.type)
+                    if handler_type is None or isinstance(e_type(),handler_type):
+                        handled=True
+                        self._NodeAssign(h.name,e_value)
+                        for b in h.body: self.interp(b)
+                        break
+                if not handled:
+                    # print("unhandled exception: ", dir(e_tback), e_tback.tb_lineno, e_tback.tb_lasti)
+                    self.onError(e_type, n, msg=e_value) # print("%s: %s" % (e_type.__name__, e_value))
+                    
+    def doTryFinally(self,node):    # ('body', 'finalbody') 
+        return self.NotImplemented(node)
+        
+    def doGeneratorExp(self,node):    # ('elt', 'generators') 
+        print('Incomplete GeneratorExp ')
+        print(ast.dump(node.elt),include_attributes=True)
+        for n in node.generators:
+            print(n)             
+
+    def doRaise(self,node):    # ('type', 'inst', 'tback') 
+        print(self.dump(node,include_attributes=True))
+        self.onError(TDLError, node)
+        #, self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
+
+

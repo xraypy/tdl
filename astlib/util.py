@@ -37,6 +37,10 @@ class closure:
         self.func  = func
         self.kw    = kw
         
+    def __repr__(self):
+        return "<function %s>" % (self.func.__name__)
+    __str__ = __repr__
+
     def __call__(self,  *args, **kw):
         if self.func is None: return None
         kwds = {}

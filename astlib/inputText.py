@@ -160,7 +160,6 @@ class InputText:
         Convert input buff (in self.input_buff) to valid python code
         and stores this (text, filename, lineno) into _fifo buffer
         """
-        # print( 'This is convert')
         
         indent_level = 0
         oneliner  = False
@@ -186,6 +185,7 @@ class InputText:
 
             thiskey, word2 = (txt.split() + ['',''])[0:2]
             prefix,oneliner = '',False
+
             if thiskey.endswith(':'): thiskey = thiskey[:-1]
 
             if thiskey in startkeys:
@@ -225,27 +225,11 @@ class InputText:
                         self.friends = self.block_friends[self.current]
                         self.endkeys = ('end',  'end%s'%self.current,
                                         '&end','&end%s'%self.current)
-                        
-            # handle 'command format', including 'print'
-            ### Note: should just test callable(thiskey)!!
-            elif (thiskey not in self.friends and
-                  not thiskey.startswith('#') and
-                  len(thiskey)>0 and len(word2)>0 ):
-                print( "Test for COMMAND!!", thiskey, text, word2)
-                if thiskey == 'print':
-                    pass
-                #                     text = text[6:].strip().rstrip()
-                #                     if (text.startswith('(') and text.endswith(')')):
-                #                         text = text[1:-1]
-                #                     text = '%s(%s)'% (self.fcn_print,text)
-                #                     thiskey = self.nonkey
-                elif ((not text.endswith(')')) and
-                      isValidName(thiskey) and
-                      (isValidName(word2) or isNumber(word2)
-                       or isinstance(word2,(str,unicode)))):
-                    text = '%s(%s)'% (thiskey,text[len(thiskey):].strip())
-                    print( "LOOKS LIKE A COMMAND!!", text)
-                    
+                
+            elif not text.endswith(')') and self.__isCommand(thiskey,word2):
+                # handle 'command format', including 'print'
+                text = '%s(%s)'% (thiskey,text[len(thiskey):].strip())
+
             indent_level = len(self.keys)
             if (not oneliner and len(thiskey)>0 and
                 (thiskey == self.current or thiskey in self.friends)):
@@ -261,7 +245,24 @@ class InputText:
                 self._fifo[1].append((outtext,fname,1+lineno-len(self.block)))
                 self.block=[]
         return len(self.keys), len(self.block)
-    
+
+    def __isCommand(self,key,word2):
+        """ decide if a keyword, and second one might be of the form
+          'command arg'
+        which will get translated to
+          'command(arg,....)'
+        to allow 'command syntax' 
+        """
+        if (key in self.friends or
+            key.startswith('#') or
+            len(key)<1 or len(word2)<1):
+            return False
+
+        if (isValidName(key) and
+            (isValidName(word2) or isNumber(word2))):
+            return True
+        return False
+            
     def __isComplete(self,text):
         """returns whether input text is a complete:
         that is: does not contains unclosed parens or quotes
