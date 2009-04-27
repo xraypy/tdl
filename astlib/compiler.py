@@ -80,6 +80,9 @@ class DefinedVariable(object):
         self._groups = None,None
         self.compile()
 
+    def __repr__(self):
+        return "<DefinedVariable: '%s'>" % (self.expr)
+        
     def compile(self):
         if self.compiler is not None and self.expr is not None:
             self.ast = self.compiler.compile(self.expr)
@@ -107,14 +110,9 @@ class DefinedVariable(object):
             msg = "Cannot evaluate '%s'"  % (self.expr)
             raise ValueError, msg
 
-def definevar(name,expr,compiler=None):
-    if compiler is not None:
-        defvar = DefinedVariable(expr=expr,compiler=compiler)
-        compiler.symtable.setSymbol(name,defvar)
-     
 class Procedure(object):
     """tdl procedure:  function """
-    def __init__(self, name, compiler=None,
+    def __init__(self, name, compiler=None, doc=None,
                  body=None, args=None, kwargs=None,
                  vararg=None, varkws=None):
         self.name     = name
@@ -125,7 +123,14 @@ class Procedure(object):
         self.kwargs   = kwargs
         self.vararg   = vararg
         self.varkws   = varkws
-        
+        self.__doc__  = doc
+
+    def __repr__(self):
+        if self.__doc__ is None:        
+            return "<Procedure %s()>" % (self.name)
+        else:
+            return "<Procedure: %s() %s>" % (self.name,self.__doc__)        
+
     def __call__(self,*args,**kwargs):
         stable  = self.compiler.symtable
         sys     = stable._sys      
@@ -140,8 +145,8 @@ class Procedure(object):
         for k,v in self.kwargs.items():
             if kwargs.has_key(k):  v = kwargs.pop(k)
             setattr(lgroup, k, v)
-
-        if self.varkws is not None and len(kwargs)>0:
+            
+        if self.varkws is not None:
             setattr(lgroup, self.varkws, kwargs)
         
         grps_save = sys.localGroup,sys.moduleGroup
@@ -186,19 +191,19 @@ class Compiler:
   In addition, Function is greatly altered so as to allow a TDL procedure.
     
     """
-    def __init__(self,symtable=None,input=None, writer=None,
-                 load_builtins=True):
+    def __init__(self,symtable=None,input=None, writer=None):
+
         self.__writer = writer or sys.stdout.write
         if symtable is None:
             symtable = symbolTable.symbolTable(writer=self.__writer)
-        self.symtable    = symtable
-        self.setSymbol   = symtable.setSymbol
-        self.getSymbol   = symtable.getSymbol
-        self.delSymbol   = symtable.delSymbol        
-        self._interrupt  = None
+        self.symtable   = symtable
+        self.setSymbol  = symtable.setSymbol
+        self.getSymbol  = symtable.getSymbol
+        self.delSymbol  = symtable.delSymbol        
+        self._interrupt = None
         self._exception_raised = False        
-        self.error_msg   = []
-        self.retval      = None
+        self.error_msg  = []
+        self.retval     = None
 
         imports = ((builtins._from_builtin, __builtin__,'_builtin'),
                    (builtins._from_numpy,   numpy, '_math'))
@@ -211,10 +216,15 @@ class Compiler:
         group = getattr(symtable, '_builtin')
         for fname,fcn in builtins._local_funcs.items():
             setattr(group, fname, closure(func=fcn,compiler=self))
-        setattr(group, 'definevar', closure(func=definevar,compiler=self))
+        setattr(group, 'definevar', closure(func=self.__definevar))
         
-
-    ##
+    def __definevar(self,name,expr):
+        """define a defined variable (re-evaluate on access)"""
+        defvar = DefinedVariable(expr=expr,compiler=self)
+        self.setSymbol(name,defvar)
+        
+    #        
+    #
     def NotImplemented(self,node):
         self.onError(TDLError, node, msg="'%s' not supported" % (_ClassName(node)))
 
@@ -318,15 +328,13 @@ class Compiler:
     def dump(self, node,**kw):  return ast.dump(node,**kw)
 
     # handlers for ast components
-    def _NodeValue(self,node):  return self.interp(node.value)
-
-    def doExpr(self,node):   return self._NodeValue(node)  # ('value',)
-    def doIndex(self,node):  return self._NodeValue(node)  # ('value',)
+    def doExpr(self,node):   return self.interp(node.value)  # ('value',)
+    def doIndex(self,node):  return self.interp(node.value)  # ('value',)
     def doReturn(self,node): # ('value',)
-        self.retval = self._NodeValue(node)
+        self.retval = self.interp(node.value)
         return
     
-    def doRepr(self,node):   return repr(self._NodeValue(node))  # ('value',)
+    def doRepr(self,node):   return repr(self.interp(node.value))  # ('value',)
 
     def doModule(self,node):    # ():('body',) 
         out = None
@@ -410,7 +418,7 @@ class Compiler:
         ctx = _Context(node)
         # print("doAttribute",node.value,node.attr,ctx)
         if ctx == ast.Load:
-            sym = self._NodeValue(node)
+            sym = self.interp(node.value)
             if hasattr(sym,node.attr):
                 val = getattr(sym,node.attr)
                 if isinstance(val,DefinedVariable): val = val.evaluate()
@@ -426,7 +434,7 @@ class Compiler:
                     msg = "attribute for storage: shouldn't be here!!")
 
     def doAssign(self,node):    # ('targets', 'value')
-        val = self._NodeValue(node)
+        val = self.interp(node.value)
         for n in node.targets:  self._NodeAssign(n,val)
         return # return val
 
@@ -495,7 +503,7 @@ class Compiler:
         dest = self.interp(node.dest) or sys.stdout
         end = ''
         if node.nl: end = '\n'
-        print([self.interp(n) for n in node.values],
+        print(*[self.interp(n) for n in node.values],
               file=dest, end=end)
         
     def doIf(self,node):    # ('test', 'body', 'orelse')
@@ -575,12 +583,19 @@ class Compiler:
             
         for n in node.args.args: args.append(n.id)
      
-        proc = Procedure(node.name, compiler=self,
-                         body  =node.body,
-                         args  =args,
-                         kwargs=kwargs,
-                         vararg=node.args.vararg,
-                         varkws=node.args.kwarg)
+        print(" do FuncDef ",  node.body[0])
+
+        doc = None
+        if isinstance(node.body[0],ast.Expr):
+            docnode = node.body.pop(0)
+            doc = self.interp(docnode.value)
+
+        proc = Procedure(node.name, compiler=self,doc=doc,
+                         body = node.body,
+                         args = args,
+                         kwargs = kwargs,
+                         vararg = node.args.vararg,
+                         varkws = node.args.kwarg)
         self.setSymbol(node.name,value=proc)
 
     # imports

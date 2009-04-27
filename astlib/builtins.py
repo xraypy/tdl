@@ -54,7 +54,11 @@ _from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
                'sort', 'subtract', 'sum', 'swapaxes', 'trace', 'transpose',
                'true_divide', 'vdot', 'where', 'zeros','linspace')
 
+##
+## More builtin commands, to set up the tdl language:
+##
 def group(compiler=None,**kw):
+    """create a group"""
     try:
         g = compiler.symtable.createGroup()
         for k,v in kw.items():  setattr(g,k,v)
@@ -62,13 +66,12 @@ def group(compiler=None,**kw):
     except:
         return None
 
-def showgroup(gname,compiler=None):
+def showgroup(gname=None,compiler=None):
     if compiler is not None:
+        if gname is None: gname = '_main'
         compiler.symtable.show_group(gname)
 
 def _copy(obj,**kw):
-    if kw.has_key('compiler'):
-        compiler = kw.pop('compiler')
     return copy.deepcopy(obj)
 
 

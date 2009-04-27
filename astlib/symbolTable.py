@@ -226,7 +226,8 @@ class symbolTable(Group):
         else:
             raise LookupError, "symbol '%s' found, but not a group" % (gname)
 
-    def show_group(self,gname):
+    def show_group(self,gname=None):
+        if gname is None: gname = '_main'
         if isGroup(gname): 
             grp = gname
             title = 'Group'

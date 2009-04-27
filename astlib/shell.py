@@ -12,9 +12,20 @@ import compiler
 import inputText
 from util import EvalError
 
+try:
+    import scipy
+    scipy_version = scipy.__version__
+except:
+    scipy_version = '(not available)'
+    
+
+banner = """  Tiny Data Language %s  M. Newville, T. Trainor (2009)
+  using python %s, numpy %s, and scipy %s""" % (compiler.__version__,
+                                                '%i.%i.%i' % sys.version_info[:3],
+                                                numpy.__version__,
+                                                scipy_version)
+
 class shell(cmd.Cmd):
-    banner = """  Tiny Data Language %s  M. Newville, T. Trainor (2009)
-    using python %s and numpy %s"""
     intro  = "  === Type 'help' to get started ==="
     ps1    = "tdl> "
     ps2    = "...> "
@@ -22,6 +33,9 @@ class shell(cmd.Cmd):
     def __init__(self, completekey='tab', scripts=None, debug=False,
                  stdin=None, stdout=None, intro=None, GUI='TkAgg'):
 
+
+        print banner
+        
         self.debug  = debug
         try:
             import readline
@@ -47,13 +61,13 @@ class shell(cmd.Cmd):
 
         self.stdin = sys.stdin
         self.stdout = sys.stdout
-        pyversion = '%i.%i.%i' % sys.version_info[:3]
-        print self.banner % (compiler.__version__, pyversion, numpy.__version__)
+
         
-        self.compiler = compiler.Compiler(load_builtins=True)
+        self.compiler = compiler.Compiler()
         self.input    = inputText.InputText(prompt=self.ps1)
         self.prompt   = self.ps1
-                    
+
+        
     def __del__(self):
         if (self.rdline):
             self.rdline.set_history_length(1000)
