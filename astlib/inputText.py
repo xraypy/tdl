@@ -1,5 +1,5 @@
 from __future__ import print_function
-from util import isValidName, isNumber, strip_comments
+from util import isValidName, isNumber, isLiteralStr, strip_comments
 
 def get_DefVar(text):
     """
@@ -253,15 +253,17 @@ class InputText:
           'command(arg,....)'
         to allow 'command syntax' 
         """
+        # print(" __isCommand = ", key, word2)
         if (key in self.friends or
             key.startswith('#') or
             len(key)<1 or len(word2)<1):
             return False
 
-        if (isValidName(key) and
-            (isValidName(word2) or isNumber(word2))):
-            return True
-        return False
+        return (isValidName(key) and
+                (isValidName(word2) or
+                 isNumber(word2) or
+                 isLiteralStr(word2))
+                )
             
     def __isComplete(self,text):
         """returns whether input text is a complete:

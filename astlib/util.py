@@ -90,3 +90,7 @@ def isNumber(x):
         return True
     except:
         return False
+
+def isLiteralStr(x):
+    return ( (x.startswith("'") and x.endswith("'")) or
+             (x.startswith('"') and x.endswith('"')) )

@@ -166,9 +166,17 @@ class Procedure(object):
         del lgroup
         return retval
     
-class ExceptionStorage:
+class TdlExceptionStorage:
     def __init__(self):
         self.raised = False
+        self.node   = None
+        self.msg    = []
+        self.lineno = None
+        self.col_offset = 0
+        self.exceptions = []
+
+class TdlExceptionHolder:
+    def __init__(self):
         self.node   = None
         self.msg    = []
         self.lineno = None
@@ -201,7 +209,6 @@ class Compiler:
         self.getSymbol  = symtable.getSymbol
         self.delSymbol  = symtable.delSymbol        
         self._interrupt = None
-        self._exception_raised = False        
         self.error_msg  = []
         self.retval     = None
 
@@ -260,22 +267,24 @@ class Compiler:
         """evaluates a single statement"""
         self.fname = fname
         self.lineno = lineno
-        self.error = ExceptionStorage()
+        self.error = TdlExceptionStorage()
+
 
         try:
             node = self.compile(expr)
         except:
             self.onError(TDLError, None)
-            # print(" compile error")
+            print(" compile error")
             self.show_error(expr=expr)
-
+            return
+        
         try:
             return self.interp(node)
         except:
             self.onError(TDLError, node)
             # print("xx1", self.dump(node,include_attributes=True))
             self.show_error(expr=expr)
-            self.error = ExceptionStorage()
+            self.error = TdlExceptionStorage()
             
 
     def show_error(self,expr=None):
@@ -304,7 +313,6 @@ class Compiler:
         
         if self.error.node is None and node is not None:
             self.error.node = node
-            # print('Errant node: ', self.dump(node))
             if isinstance(node, ast.Module):
                 self.error.node = node.body[0]
             self.error.type = err_value.__class__.__name__
@@ -664,7 +672,6 @@ class Compiler:
 
                         while self.error.msg:
                             self.__writer('%s\n' % self.error.msg.pop(0))
-
 
                         if self.error.raised:
                             print("..break", len(inptext))
