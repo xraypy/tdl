@@ -17,16 +17,8 @@ class TDLError(Exception):
         return "%s: %s" % (self.error, self.descr)
     __str__ = __repr__
 
-class TDLStopError(Exception):
-    def __init__(self,error,descr = None,node = None):
-        self.error = error
-        self.descr = descr
-    def __repr__(self):
-        return "%s: %s" % (self.error, self.descr)
-    __str__ = __repr__
 
-
-__version__ = '0.9.0'
+__version__ = '0.9.1'
 
 major,minor = sys.version_info[0], sys.version_info[1]
 if major == 2 and minor < 6:
@@ -60,11 +52,6 @@ _operators = {ast.Is:     lambda a,b: a is b,
               ast.Not:    lambda a: not a,
               ast.UAdd:   lambda a: +a,
               ast.USub:   lambda a: -a }
-
-def _Class(node):     return node.__class__
-def _ClassName(node): return node.__class__.__name__
-def _Context(node):   return node.ctx.__class__
-def _Op(node):        return _operators[node.__class__]
 
 ##
 class DefinedVariable(object):
@@ -233,7 +220,8 @@ class Compiler:
     #        
     #
     def NotImplemented(self,node):
-        self.onError(TDLError, node, msg="'%s' not supported" % (_ClassName(node)))
+        cname = node.__class__.__name__
+        self.onError(TDLError, node, msg="'%s' not supported" % (cname))
 
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
@@ -255,7 +243,8 @@ class Compiler:
         if node is None: return None
         if isinstance(node,(str,unicode)):  node = self.compile(node)
         try:
-            ret = getattr(self,"do%s" % _ClassName(node))(node)
+            method = "do%s" % node.__class__.__name__
+            ret = getattr(self,method)(node)
         except:
             self.onError(TDLError, node)
             raise
@@ -269,7 +258,6 @@ class Compiler:
         self.lineno = lineno
         self.error = TdlExceptionStorage()
 
-
         try:
             node = self.compile(expr)
         except:
@@ -278,6 +266,7 @@ class Compiler:
             self.show_error(expr=expr)
             return
         
+        # print("eval : ", ast.dump(node))
         try:
             return self.interp(node)
         except:
@@ -286,7 +275,6 @@ class Compiler:
             self.show_error(expr=expr)
             self.error = TdlExceptionStorage()
             
-
     def show_error(self,expr=None):
         # print("show_error ",expr)
         if expr is not None:
@@ -352,7 +340,7 @@ class Compiler:
     def doExpression(self,node): return self.doModule(node) # ():('body',) 
 
     def doPass(self,node):    return None  # () 
-    def doEllipsis(self,node): return Ellipsis # ??? 
+    def doEllipsis(self,node): return Ellipsis
 
     # for break and continue: set the instance variable _interrupt
     def doInterrupt(self,node):    # ()
@@ -383,7 +371,7 @@ class Compiler:
 
     def doName(self,node):    # ('id', 'ctx')
         """ Name node """
-        ctx = _Context(node)
+        ctx = node.ctx.__class__
         if ctx == ast.Del:
             val = self.delSymbol(node.id)
         elif ctx == ast.Param:  # for Function Def
@@ -397,16 +385,16 @@ class Compiler:
         """here we assign a value (not the node.value object) to a node
         this is used by doAssign, but also by for, list comprehension, etc.
         """
-        if _Class(n) == ast.Name:
+        if n.__class__ == ast.Name:
             sym = self.setSymbol(n.id,value=val)
             
-        elif _Class(n) == ast.Attribute:
-            if _Context(n) == ast.Load:
+        elif n.__class__ == ast.Attribute:
+            if n.ctx.__class__  == ast.Load:
                 self.onError(TDLError, n,
                         msg=  "canot Assign attribute %s???" % n.attr)
             setattr(self.interp(n.value),n.attr,val)
 
-        elif _Class(n) == ast.Subscript:
+        elif n.__class__ == ast.Subscript:
             sym    = self.interp(n.value)
             slice  = self.interp(n.slice)
             if isinstance(n.slice,ast.Index):
@@ -415,7 +403,7 @@ class Compiler:
                 sym.__setslice__(slice.start,slice.stop,val)
             elif isinstance(n.slice,ast.ExtSlice):
                 sym[(slice)] = val
-        elif _Class(n) in (ast.Tuple,ast.List):
+        elif n.__class__ in (ast.Tuple,ast.List):
             if len(val) == len(n.elts):
                 for el,v in zip(n.elts,val):
                     self._NodeAssign(el,v)
@@ -423,7 +411,7 @@ class Compiler:
                 self.onError(ValueError, node, msg='too many values to unpack')
 
     def doAttribute(self,node):    # ('value', 'attr', 'ctx')
-        ctx = _Context(node)
+        ctx = node.ctx.__class__
         # print("doAttribute",node.value,node.attr,ctx)
         if ctx == ast.Load:
             sym = self.interp(node.value)
@@ -463,41 +451,52 @@ class Compiler:
     def doSubscript(self,node):    # ('value', 'slice', 'ctx') 
         # print("doSubscript: ", ast.dump(node))
         val    = self.interp(node.value)
-        slice  = self.interp(node.slice)
-        ctx = _Context(node)
-        # print("doSubscript: ", val, slice, ctx)
+        nslice = self.interp(node.slice)
+        ctx = node.ctx.__class__
         if ctx == ast.Load:
-            if isinstance(node.slice,(ast.Index,ast.Slice)):
-                return val.__getitem__(slice)
+            if isinstance(node.slice,(ast.Index,ast.Slice,ast.Ellipsis)):
+                return val.__getitem__(nslice)
             elif isinstance(node.slice,ast.ExtSlice):
-                return val[(slice)]
+                return val[(nslice)]
+            
         elif ctx == ast.Store:
             self.onError(TDLError, node,
                     msg="subscript for storage: shouldn't be here!!")
 
     def doDelete(self,node):    # ('targets',)
-        ctx = _Context(node)
+        ctx = node.ctx.__class__
         assert ctx == ast.Del, 'wrong Context for delete???'
         for n in node.targets: self.interp(n)
 
     def doUnaryOp(self,node):    # ('op', 'operand') 
-        return _Op(node.op)(self.interp(node.operand))
-
+        op = _operators[node.op.__class__]
+        return op(self.interp(node.operand))
+    
     def doBinOp(self,node):    # ('left', 'op', 'right')
-        return _Op(node.op)(self.interp(node.left), self.interp(node.right))
+        op = _operators[node.op.__class__]        
+        return op(self.interp(node.left), self.interp(node.right))
 
     def doBoolOp(self,node):    # ('op', 'values')
         val = self.interp(node.values.pop(0))
-        for n in node.values:
-            val =  _Op(node.op)(val,self.interp(n))
+        op = _operators[node.op.__class__]
+        isAnd = True
+        if ast.Or == node.op.__class__: isAnd = False
+        if (isAnd and val) or (not isAnd and not val):
+            for n in node.values:
+                val =  op(val,self.interp(n))
+                if isAnd:
+                    if (not val):  break
+                else:
+                    if val: break
         return val
     
     def doCompare(self,node):    # ('left', 'ops', 'comparators')
         lval = self.interp(node.left)
         out  = True
         for op,rnode in zip(node.ops,node.comparators):
+            comp = _operators[op.__class__]            
             rval = self.interp(rnode)
-            out  = out and  _Op(op)(lval,rval)
+            out  = out and  comp(lval,rval)
             lval = rval
             if not out: break
         return out
@@ -550,7 +549,7 @@ class Compiler:
     def doListComp(self,node):    # ('elt', 'generators') 
         out = []
         for n in node.generators:
-            if _Class(n) == ast.comprehension:
+            if n.__class__ == ast.comprehension:
                 for val in self.interp(n.iter):
                     self._NodeAssign(n.target,val)
                     add = True
