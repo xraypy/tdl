@@ -166,27 +166,29 @@ class TdlExceptionHolder:
 
     def get_error(self):
         node = self.node
+        # print( "get error for node: ")
+        # print( ast.dump(node, include_attributes=True))
+        
         lineno,col_offset=0,0
         if self.node is not None:
-            lineno = self.node.lineno
+            lineno = node.lineno
             col_offset = self.node.col_offset
 
         exc,exc_msg,tb= self.exc_info
-        lineno += self.lineno
+        self.lineno += lineno 
         msg = []
         if self.fname is not None:
             msg.append("  File '%s', line %i" % (self.fname,self.lineno))
             
         msg.append("%s: %s" % (exc.__name__, exc_msg))
-
         if self.expr is not None:
             elines = self.expr.split('\n')
             nlines = len(elines)
-            if nlines > 1 and nlines > self.lineno:
-                expr = elines[self.lineno-1]
-
-        if self.expr is not None:
-            msg.append("  %s" % self.expr) 
+            if nlines > 0 and lineno > 1: ## nlines > self.lineno:
+                msg.append("  %s" % elines[lineno-1])
+            else:
+                msg.append("  %s" % self.expr)
+                
         if col_offset >0:
             msg.append("  %s^" % (' '*col_offset))
         return msg
@@ -256,6 +258,7 @@ class Compiler:
                                  expr=self.expr,
                                  fname=self.fname,
                                  lineno=self.lineno)
+        self._interrupt = ast.Break()
         self.error.append(err)
         
     def compile(self,text):
@@ -520,7 +523,7 @@ class Compiler:
             self._interrupt = None
             for n in node.body:
                 v = self.interp(n)
-                if self._interrupt  is not None:  break
+                if self._interrupt is not None:  break
             if isinstance(self._interrupt,ast.Break): break
         else:
             for n in node.orelse: self.interp(n)
@@ -642,7 +645,7 @@ class Compiler:
                     text = open(modname).read()
                     inptext = inputText.InputText()
                     inptext.put(text,filename=modname)
-                    print(" ... module import for %s... %i lines" % (modname,len(inptext)))
+                    # print(" ... module import for %s... %i lines" % (modname,len(inptext)))
                     while inptext:
                         block,fname,lineno = inptext.get()
                         self.eval(block,fname=fname,lineno=lineno)
