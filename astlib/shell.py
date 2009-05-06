@@ -8,7 +8,8 @@ import types
 import getopt
 import traceback
 import numpy
-import compiler
+import tdlcompiler
+
 import inputText
 from util import EvalError
 
@@ -20,7 +21,7 @@ except:
     
 
 banner = """  Tiny Data Language %s  M. Newville, T. Trainor (2009)
-  using python %s, numpy %s, and scipy %s""" % (compiler.__version__,
+  using python %s, numpy %s, and scipy %s""" % (tdlcompiler.__version__,
                                                 '%i.%i.%i' % sys.version_info[:3],
                                                 numpy.__version__,
                                                 scipy_version)
@@ -63,9 +64,9 @@ class shell(cmd.Cmd):
         self.stdout = sys.stdout
 
         
-        self.compiler = compiler.Compiler()
-        self.input    = inputText.InputText(prompt=self.ps1)
-        self.prompt   = self.ps1
+        self.tdl    = tdlcompiler.Compiler()
+        self.input  = inputText.InputText(prompt=self.ps1)
+        self.prompt = self.ps1
 
         
     def __del__(self):
@@ -94,15 +95,16 @@ class shell(cmd.Cmd):
             self.do_shell(text[1:] )
         else:
             ret = None
-            try:
-                self.input.put(text,lineno=0)
-                while len(self.input) >0:
-                    block,fname,lineno = self.input.get()
-                    ret = self.compiler.eval(block,fname=fname,lineno=lineno)
-                if ret is not None:
-                    print ret
-            except:
-                raise
+            self.input.put(text,lineno=0)
+            while len(self.input) >0:
+                block,fname,lineno = self.input.get()
+                ret = self.tdl.eval(block,fname=fname,lineno=lineno)
+                if self.tdl.error:
+                    # for i in self.tdl.error[0]:
+                    i  = self.tdl.error[0]                        
+                    print "\n".join(i.get_error())
+                        
+                if ret is not None: print ret
 
 if __name__ == '__main__':
     t = shell(debug=True).cmdloop()

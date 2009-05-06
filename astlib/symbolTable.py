@@ -311,8 +311,6 @@ class symbolTable(Group):
             
 if __name__ == '__main__':
     s = symbolTable()
-    from compiler import Compiler, DefinedVariable
-    compiler = Compiler(symtable=s)
 
     s.group1 = Group()
     s.group2 = Group()
@@ -330,9 +328,3 @@ if __name__ == '__main__':
     s.list_groups()
 
     print('group1 members , subgroups: ', dir(s.group1), s.group1._subgroups())
-# 
-#     s.setSymbol('x',2.2)
-#     s.setSymbol('ydef',DefinedVariable(expr='x*2.3',compiler=compiler))
-#     print( compiler.eval('ydef'))
-#     s.setSymbol('x',9)
-#     print( compiler.eval('ydef'))

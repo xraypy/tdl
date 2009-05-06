@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import os
 import sys
 import ast
+import traceback
 import inputText
 import symbolTable
 import builtins
@@ -60,9 +61,9 @@ class DefinedVariable(object):
     Note that the localGroup/moduleGroup are cached
     at compile time, and restored for evaluation.
     """
-    def __init__(self, expr=None, compiler=None):
+    def __init__(self, expr=None, tdl=None):
         self.expr = expr
-        self.compiler = compiler
+        self.tdl = tdl
         self.ast = None
         self._groups = None,None
         self.compile()
@@ -71,9 +72,9 @@ class DefinedVariable(object):
         return "<DefinedVariable: '%s'>" % (self.expr)
         
     def compile(self):
-        if self.compiler is not None and self.expr is not None:
-            self.ast = self.compiler.compile(self.expr)
-            _sys = self.compiler.symtable._sys
+        if self.tdl is not None and self.expr is not None:
+            self.ast = self.tdl.compile(self.expr)
+            _sys = self.tdl.symtable._sys
             self._groups = (_sys.localGroup,_sys.moduleGroup)
 
     def evaluate(self):
@@ -81,15 +82,15 @@ class DefinedVariable(object):
 
         if self.ast is None:
             msg = "Cannot compile '%s'"  % (self.expr)
-            raise Warning, msg            
+            raise Warning(msg)
             
-        if hasattr(self.compiler,'interp'):
-            _sys = self.compiler.symtable._sys
+        if hasattr(self.tdl,'interp'):
+            _sys = self.tdl.symtable._sys
             # save current localGroup/moduleGroup 
             save_groups  = _sys.localGroup,_sys.moduleGroup
             
             _sys.localGroup,_sys.moduleGroup = self._groups
-            rval = self.compiler.interp(self.ast)
+            rval = self.tdl.interp(self.ast)
 
             _sys.localGroup,_sys.moduleGroup = save_groups
             return rval
@@ -99,12 +100,12 @@ class DefinedVariable(object):
 
 class Procedure(object):
     """tdl procedure:  function """
-    def __init__(self, name, compiler=None, doc=None,
+    def __init__(self, name, tdl=None, doc=None,
                  body=None, args=None, kwargs=None,
                  vararg=None, varkws=None):
         self.name     = name
-        self.compiler = compiler
-        self.modgroup = compiler.symtable._sys.moduleGroup
+        self.tdl = tdl
+        self.modgroup = tdl.symtable._sys.moduleGroup
         self.body     = body
         self.argnames = args
         self.kwargs   = kwargs
@@ -119,7 +120,7 @@ class Procedure(object):
             return "<Procedure: %s() %s>" % (self.name,self.__doc__)        
 
     def __call__(self,*args,**kwargs):
-        stable  = self.compiler.symtable
+        stable  = self.tdl.symtable
         sys     = stable._sys      
         lgroup  = stable.createGroup()
 
@@ -140,36 +141,56 @@ class Procedure(object):
         stable._set_local_mod((lgroup, self.modgroup))
         
         retval = None
-        self.compiler.retval = None
+        self.tdl.retval = None
         for node in self.body:
-            self.compiler.interp(node)
-            if self.compiler.retval is not None:
-                retval = self.compiler.retval
+            self.tdl.interp(node)
+            if self.tdl.retval is not None:
+                retval = self.tdl.retval
                 break
 
         sys.localGroup,sys.moduleGroup = grps_save
         stable._set_local_mod(grps_save)
-        self.compiler.retval = None
+        self.tdl.retval = None
         del lgroup
         return retval
     
-class TdlExceptionStorage:
-    def __init__(self):
-        self.raised = False
-        self.node   = None
-        self.msg    = []
-        self.lineno = None
-        self.col_offset = 0
-        self.exceptions = []
-
 class TdlExceptionHolder:
-    def __init__(self):
-        self.node   = None
-        self.msg    = []
-        self.lineno = None
-        self.col_offset = 0
+    def __init__(self,node,msg='',fname='<StdIn>',
+                 expr=None, lineno=0):
+        self.node  = node
+        self.fname = fname
+        self.expr  = expr
+        self.msg   = msg         
+        self.lineno = lineno
+        self.exc_info = sys.exc_info()
 
-        
+    def get_error(self):
+        node = self.node
+        lineno,col_offset=0,0
+        if self.node is not None:
+            lineno = self.node.lineno
+            col_offset = self.node.col_offset
+
+        exc,exc_msg,tb= self.exc_info
+        lineno += self.lineno
+        msg = []
+        if self.fname is not None:
+            msg.append("  File '%s', line %i" % (self.fname,self.lineno))
+            
+        msg.append("%s: %s" % (exc.__name__, exc_msg))
+
+        if self.expr is not None:
+            elines = self.expr.split('\n')
+            nlines = len(elines)
+            if nlines > 1 and nlines > self.lineno:
+                expr = elines[self.lineno-1]
+
+        if self.expr is not None:
+            msg.append("  %s" % self.expr) 
+        if col_offset >0:
+            msg.append("  %s^" % (' '*col_offset))
+        return msg
+
 class Compiler:
     """ program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
@@ -189,6 +210,7 @@ class Compiler:
     def __init__(self,symtable=None,input=None, writer=None):
 
         self.__writer = writer or sys.stdout.write
+
         if symtable is None:
             symtable = symbolTable.symbolTable(writer=self.__writer)
         self.symtable   = symtable
@@ -196,7 +218,8 @@ class Compiler:
         self.getSymbol  = symtable.getSymbol
         self.delSymbol  = symtable.delSymbol        
         self._interrupt = None
-        self.error_msg  = []
+        self.error      = []
+        self.expr       = None
         self.retval     = None
 
         imports = ((builtins._from_builtin, __builtin__,'_builtin'),
@@ -209,31 +232,39 @@ class Compiler:
 
         group = getattr(symtable, '_builtin')
         for fname,fcn in builtins._local_funcs.items():
-            setattr(group, fname, closure(func=fcn,compiler=self))
+            setattr(group, fname, closure(func=fcn,tdl=self))
         setattr(group, 'definevar', closure(func=self.__definevar))
         
     def __definevar(self,name,expr):
         """define a defined variable (re-evaluate on access)"""
-        defvar = DefinedVariable(expr=expr,compiler=self)
+        defvar = DefinedVariable(expr=expr,tdl=self)
         self.setSymbol(name,defvar)
-        
-    #        
-    #
+
     def NotImplemented(self,node):
         cname = node.__class__.__name__
-        self.onError(TDLError, node, msg="'%s' not supported" % (cname))
+        TDLError("'%s' not supported" % (cname))
 
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
     #  interp :  ast -> result
     #  eval   :  string statement -> result = interp(compile(statement))
+                      
+    def addException(self,node,msg=None):
+        if self.error is None: self.error = []
+        # print(" add except ", node, msg)
+        err = TdlExceptionHolder(node, msg=msg,
+                                 expr=self.expr,
+                                 fname=self.fname,
+                                 lineno=self.lineno)
+        self.error.append(err)
+        
     def compile(self,text):
         """compile statement/expression to Ast representation    """
+        self.expr  = text
         try:
             return ast.parse(text)
         except:
-            self.onError(SyntaxError, node)
-            raise
+            self.addException(None,msg='Syntax Error')
         
     def interp(self, node):
         """executes compiled Ast representation for an expression"""
@@ -242,85 +273,37 @@ class Compiler:
         #    interp(None) and expect a None in return.
         if node is None: return None
         if isinstance(node,(str,unicode)):  node = self.compile(node)
+        
+        method = "do%s" % node.__class__.__name__
+        ret = None
+        # print(" interp: ", method,node)
         try:
-            method = "do%s" % node.__class__.__name__
-            ret = getattr(self,method)(node)
+            fcn = getattr(self,method)
         except:
-            self.onError(TDLError, node)
-            raise
-        # print("interp returns ", ret, type(ret))
+            # print("Could not find method ", method)
+            self.addException(node,msg='InterpA Error')
+            return ret
+        
+        try:
+            ret = fcn(node)
+        except:
+            # print("error executing ", fcn, node)
+            self.addException(node,msg='InterpB Error')
+            
         if isinstance(ret,enumerate):  ret = list(ret)
         return ret
             
     def eval(self,expr,fname=None,lineno=None):
         """evaluates a single statement"""
-        self.fname = fname
+        self.fname = fname        
         self.lineno = lineno
-        self.error = TdlExceptionStorage()
-
-        try:
-            node = self.compile(expr)
-        except:
-            self.onError(TDLError, None)
-            print(" compile error")
-            self.show_error(expr=expr)
-            return
-        
-        # print("eval : ", ast.dump(node))
-        try:
+        self.error = []
+        node = self.compile(expr)
+        # print(" eval: ", self.error)
+        # print("     : ", ast.dump(node))
+        if not self.error:
             return self.interp(node)
-        except:
-            self.onError(TDLError, node)
-            # print("xx1", self.dump(node,include_attributes=True))
-            self.show_error(expr=expr)
-            self.error = TdlExceptionStorage()
-            
-    def show_error(self,expr=None):
-        # print("show_error ",expr)
-        if expr is not None:
-            elines = expr.split('\n')
-            nlines = len(elines)
-            if nlines > 1 and nlines > self.error.lineno:
-                expr = elines[self.error.lineno-1]
-        self.error.msg.append("%s" % expr)
-        if self.error.col_offset >0:
-            self.error.msg.append('%s^' % (' '*self.error.col_offset))
-        while self.error.msg:
-            self.__writer('%s\n' % self.error.msg.pop(0))
-        self.error.col_offset = 0
-        self.error.lineno = None
-        self.error.raised = True
-
-
-    def onError(self,exception,node,msg=None,with_tback=None):
-        """ wrapper for raising exceptions from interpreter"""
-        err_type,err_value,err_tback = sys.exc_info()
         
-        # print("onError ",  node, msg) # self.dump(node,include_attributes=True))
-        if self.error_msg is None: self.error_msg = []
-        
-        if self.error.node is None and node is not None:
-            self.error.node = node
-            if isinstance(node, ast.Module):
-                self.error.node = node.body[0]
-            self.error.type = err_value.__class__.__name__
-            self.error.msg.append("%s: %s" % (err_value.__class__.__name__, ' '.join(err_value.args)))
-
-            if hasattr(node,'lineno'):     self.error.lineno = node.lineno
-            if hasattr(node,'col_offset'): self.error.col_offset = node.col_offset
-            
-            if self.error.lineno is not None:
-                self.lineno = self.lineno+self.error.lineno
-
-            extra = ''
-            if self.error.col_offset is not None:
-                extra = ', column %i' % self.error.col_offset
-            self.error.msg.append("%s, line %i%s" % (self.fname, self.lineno, extra))
-            # print("Set error node to " ,self.error.node, self.error.lineno)
-
-        if msg is not None:   self.error.msg.append(msg)
-        # print("onError done")
-    
     def dump(self, node,**kw):  return ast.dump(node,**kw)
 
     # handlers for ast components
@@ -352,7 +335,7 @@ class Compiler:
 
     def doAssert(self,node):    # ('test', 'msg')
         if not self.interp(node.test):
-            self.onError(Assertiself.onError, node, msg=self.interp(node.msg()))
+            raise AssertError( self.interp(node.msg()) )
         return True
 
     def doList(self,node):    # ('elts', 'ctx') 
@@ -390,8 +373,7 @@ class Compiler:
             
         elif n.__class__ == ast.Attribute:
             if n.ctx.__class__  == ast.Load:
-                self.onError(TDLError, n,
-                        msg=  "canot Assign attribute %s???" % n.attr)
+                raise TDLError("canot Assign attribute %s???" % n.attr)
             setattr(self.interp(n.value),n.attr,val)
 
         elif n.__class__ == ast.Subscript:
@@ -408,7 +390,7 @@ class Compiler:
                 for el,v in zip(n.elts,val):
                     self._NodeAssign(el,v)
             else:
-                self.onError(ValueError, node, msg='too many values to unpack')
+                raise ValueError('too many values to unpack')
 
     def doAttribute(self,node):    # ('value', 'attr', 'ctx')
         ctx = node.ctx.__class__
@@ -421,13 +403,12 @@ class Compiler:
                 return val
             else:
                 msg = "'%s' does not have an '%s' attribute" 
-                self.onError(TDLError, node, msg= msg % (node.value,node.attr))
+                raise TDLError( msg % (node.value,node.attr))
 
         elif ctx == ast.Del:
             return delattr(sym,attr)
         elif ctx == ast.Store:
-            self.onError(TDLError,node,
-                    msg = "attribute for storage: shouldn't be here!!")
+            raise TDLError("attribute for storage: shouldn't be here!!")
 
     def doAssign(self,node):    # ('targets', 'value')
         val = self.interp(node.value)
@@ -460,8 +441,7 @@ class Compiler:
                 return val[(nslice)]
             
         elif ctx == ast.Store:
-            self.onError(TDLError, node,
-                    msg="subscript for storage: shouldn't be here!!")
+            raise TDLError("subscript for storage: shouldn't be here!!")
 
     def doDelete(self,node):    # ('targets',)
         ctx = node.ctx.__class__
@@ -562,7 +542,7 @@ class Compiler:
     def doCall(self,node):    # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         if not callable(func):
-            self.onError(TDLError, node, msg="'%s' is not not callable" % (func))
+            raise TDLError("'%s' is not not callable" % (func))
 
         args = [self.interp(a) for a in node.args]
         if node.starargs is not None:
@@ -571,11 +551,9 @@ class Compiler:
         keywords = {}
         for k in node.keywords:
             if not isinstance(k,ast.keyword):
-                self.onError(TDLError, node,
-                        msg="keyword error in function call '%s'" % (func))
+                raise TDLError("keyword error in function call '%s'" % (func))
             keywords[k.arg] = self.interp(k.value)
         if node.kwargs is not None:  keywords.update(self.interp(node.kwargs))
-
         return func(*args,**keywords)
     
     def doFunctionDef(self,node):    # ('name', 'args', 'body', 'decorator_list') 
@@ -590,14 +568,14 @@ class Compiler:
             
         for n in node.args.args: args.append(n.id)
      
-        print(" do FuncDef ",  node.body[0])
+        # print(" do FuncDef ",  node.body[0])
 
         doc = None
         if isinstance(node.body[0],ast.Expr):
             docnode = node.body.pop(0)
             doc = self.interp(docnode.value)
 
-        proc = Procedure(node.name, compiler=self,doc=doc,
+        proc = Procedure(node.name, tdl=self,doc=doc,
                          body = node.body,
                          args = args,
                          kwargs = kwargs,
@@ -664,21 +642,16 @@ class Compiler:
                     text = open(modname).read()
                     inptext = inputText.InputText()
                     inptext.put(text,filename=modname)
-                       
+                    print(" ... module import for %s... %i lines" % (modname,len(inptext)))
                     while inptext:
                         block,fname,lineno = inptext.get()
                         self.eval(block,fname=fname,lineno=lineno)
-
-                        while self.error.msg:
-                            self.__writer('%s\n' % self.error.msg.pop(0))
-
-                        if self.error.raised:
-                            print("..break", len(inptext))
+                        if self.error:
                             break
                         
                     thismod = _sys.modules[name]               
                     symtable._set_local_mod(saveGroups)
-            if self.error.raised:
+            if self.error:
                 return
 
             # or, if not a tdl module, load as a regular python module
@@ -716,12 +689,12 @@ class Compiler:
 
     # not yet implemented:
     def doExceptHandler(self,node): # ('type', 'name', 'body')
-        print("except handler")
+        # print("except handler")
         return None
     
     def doTryExcept(self,node):    # ('body', 'handlers', 'orelse') 
         print("Incomplete Try Except")
-        print( self.dump(node))
+        # print( self.dump(node))
         for n in node.body:
             try:
                 self.interp(n)
@@ -736,8 +709,7 @@ class Compiler:
                         for b in h.body: self.interp(b)
                         break
                 if not handled:
-                    # print("unhandled exception: ", dir(e_tback), e_tback.tb_lineno, e_tback.tb_lasti)
-                    self.onError(e_type, n, msg=e_value) # print("%s: %s" % (e_type.__name__, e_value))
+                    raise 
                     
     def doTryFinally(self,node):    # ('body', 'finalbody') 
         return self.NotImplemented(node)
@@ -745,12 +717,10 @@ class Compiler:
     def doGeneratorExp(self,node):    # ('elt', 'generators') 
         print('Incomplete GeneratorExp ')
         print(ast.dump(node.elt),include_attributes=True)
-        for n in node.generators:
-            print(n)             
+#         for n in node.generators:
+#             print(n)             
 
     def doRaise(self,node):    # ('type', 'inst', 'tback') 
-        print(self.dump(node,include_attributes=True))
-        self.onError(TDLError, node)
+        # print(self.dump(node,include_attributes=True))
+        raise TDLError()
         #, self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
-
-
