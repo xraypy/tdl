@@ -14,8 +14,6 @@ class Group(object):
     """container for variables, subgroups, and modules:
     a lightweight object, with 
     """
-    def __init__(self):
-        pass
         
     def __len__(self):
         return len(dir(self))
@@ -24,7 +22,6 @@ class Group(object):
         return '<Group: %i items, id=%s>' % (len(self),hex(id(self)))
 
     def __setattr__(self,attr,val):
-        
         """set group attributes."""
         self.__dict__[attr] = val
 
@@ -46,12 +43,10 @@ class symbolTable(Group):
     core_groups = ('_sys','_builtin','_math')
     __invalid_name = invalidName()
 
-    def __init__(self,tdl=None,writer=None):
+    def __init__(self,tdl=None):
         Group.__init__(self)
 
-        self.__writer = writer  or sys.stdout.write
-        self.__cache  = {'localGroup':None, 'moduleGroup':None,
-                         'searchNames':None, 'searchGroups': None}
+        # self.__writer = writer  or sys.stdout.write
 
         setattr(self,self.top_group, self)
         for gname in self.core_groups:
@@ -61,7 +56,8 @@ class symbolTable(Group):
         self._sys.searchGroups = []
         self._sys.localGroup   = self
         self._sys.moduleGroup  = self
-        # self._sys.pymodules    = sys.modules
+        self._sys.groupCache  = {'localGroup':None, 'moduleGroup':None,
+                                 'searchNames':None, 'searchGroups': None}
 
         self._sys.path         = ['.']
         tdlpath = os.environ.get(tdlpath_envvar,None)
@@ -85,7 +81,7 @@ class symbolTable(Group):
         dynamically.  The names need to be absolute (relative to
         _main).
 
-        The variable self.__cache['searchGroups'] holds the list of 
+        The variable self._sys.groupCache['searchGroups'] holds the list of 
         actual group objects resolved from this name.
 
         _sys.localGroup,_sys.moduleGroup come first in the search list,
@@ -95,7 +91,7 @@ class symbolTable(Group):
         ##
         # check (and cache) whether searchGroups needs to be changed.
         sys = self._sys
-        cache = self.__cache
+        cache = self._sys.groupCache
 
         if (sys.localGroup   != cache['localGroup'] or
             sys.moduleGroup  != cache['moduleGroup'] or
@@ -160,8 +156,8 @@ class symbolTable(Group):
             msg = '\n'.join(o)
         else:
             msg = '%s is not a Subgroup' % group
-        self.__writer("%s\n" % msg)
-
+        return "%s\n" % msg  ### self.__writer("%s\n" % msg)
+    
     def has_symbol(self,s,group=None):
         "return whether there is a toplevel symbol with the give name"
         return hasattr(self,s)
@@ -249,7 +245,7 @@ class symbolTable(Group):
                     i.startswith('_symbolTable__')):
                 o.append('  %s: %s' % (i,repr(getattr(grp,i))))
         msg = '\n'.join(o)
-        self.__writer("%s\n" % msg)
+        return "%s\n" % msg  ### self.__writer("%s\n" % msg)
 
 
     def placeGroup(gname,group=None,parent=None):
@@ -302,9 +298,9 @@ class symbolTable(Group):
     def delGroup(self,name):
         sym=self._lookup(gname,create=False)
         if not isGroup(sym): 
-            raise LookupError, "symbol '%s' found, but not a group" % (name)
+            raise LookupError( "symbol '%s' found, but not a group" % (name))
         if sym._Group__status == 'nodelete':
-            self.__writer("cannot delete group '%s'\n" % name)
+            raise LookupError( "cannot delete group '%s'\n" % name)
         else:
             parent,child = self._parentOf(name)
             if child is not None:  delattr(parent,child)

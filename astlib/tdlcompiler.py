@@ -177,10 +177,10 @@ class TdlExceptionHolder:
         exc,exc_msg,tb= self.exc_info
         self.lineno += lineno 
         msg = []
-        if self.fname is not None:
-            msg.append("  File '%s', line %i" % (self.fname,self.lineno))
-            
         msg.append("%s: %s" % (exc.__name__, exc_msg))
+        if self.fname is not None:
+            msg.append("File '%s', line %i" % (self.fname,self.lineno))
+            
         if self.expr is not None:
             elines = self.expr.split('\n')
             nlines = len(elines)
@@ -191,6 +191,13 @@ class TdlExceptionHolder:
                 
         if col_offset >0:
             msg.append("  %s^" % (' '*col_offset))
+        if node is None:
+            this_tb = traceback.extract_tb(tb)
+            this_tb.pop(0)
+            for fname,lineno,mod,txt in this_tb:
+                msg.append("File '%s', line %i %s" % (fname,lineno,mod))
+                msg.append("  %s" % (txt))                
+                
         return msg
 
 class Compiler:
@@ -214,7 +221,7 @@ class Compiler:
         self.__writer = writer or sys.stdout.write
 
         if symtable is None:
-            symtable = symbolTable.symbolTable(writer=self.__writer)
+            symtable = symbolTable.symbolTable()
         self.symtable   = symtable
         self.setSymbol  = symtable.setSymbol
         self.getSymbol  = symtable.getSymbol
@@ -645,7 +652,7 @@ class Compiler:
                     text = open(modname).read()
                     inptext = inputText.InputText()
                     inptext.put(text,filename=modname)
-                    # print(" ... module import for %s... %i lines" % (modname,len(inptext)))
+
                     while inptext:
                         block,fname,lineno = inptext.get()
                         self.eval(block,fname=fname,lineno=lineno)
@@ -655,12 +662,19 @@ class Compiler:
                     thismod = _sys.modules[name]               
                     symtable._set_local_mod(saveGroups)
             if self.error:
+                _sys.modules.pop(name)
+                thismod = None
                 return
 
             # or, if not a tdl module, load as a regular python module
             if not isTDL:
-                __import__(name)
-                thismod = sys.modules[name]
+                try:
+                    __import__(name)
+                    thismod = sys.modules[name]
+                except:
+                    # print(" import error ", name, sys.exc_info())
+                    self.addException(None)
+                    return
                
         else: # previously loaded module, just do lookup
             if name in _sys.modules:
