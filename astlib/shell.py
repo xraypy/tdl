@@ -100,9 +100,9 @@ class shell(cmd.Cmd):
                 block,fname,lineno = self.input.get()
                 ret = self.tdl.eval(block,fname=fname,lineno=lineno)
                 if self.tdl.error:
-                    for i in self.tdl.error:
-                        # i  = self.tdl.error[0]                        
-                        print "\n".join(i.get_error())
+                    # for i in self.tdl.error:
+                    i  = self.tdl.error[0]                        
+                    print "\n".join(i.get_error())
                         
                 if ret is not None: print ret
 

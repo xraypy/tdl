@@ -57,7 +57,7 @@ _from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
 ##
 ## More builtin commands, to set up the tdl language:
 ##
-def group(tdl=None,**kw):
+def _group(tdl=None,**kw):
     """create a group"""
     try:
         g = tdl.symtable.createGroup()
@@ -66,13 +66,30 @@ def group(tdl=None,**kw):
     except:
         return None
 
-def showgroup(gname=None,tdl=None):
+def _showgroup(gname=None,tdl=None):
     if tdl is not None:
         if gname is None: gname = '_main'
         tdl.symtable.show_group(gname)
 
 def _copy(obj,**kw):
     return copy.deepcopy(obj)
+
+def _reload(mod,tdl=None,**kw):
+    """reload a module, either tdl or python"""
+    if tdl is None: return None
+    modname = None
+    if mod in tdl.symtable._sys.modules.values():
+        for k,v in tdl.symtable._sys.modules.items():
+            if v == mod: modname = k
+    elif mod in sys.modules.values():
+        for k,v in sys.modules.items():
+            if v == mod: modname = k
+    elif (mod in tdl.symtable._sys.modules.keys() or
+          mod in sys.modules.keys()):          
+        modname = mod
+    
+    if modname is not None:
+        return tdl.import_module(modname,reload=True)
 
 
 def show_more(text,filename=None,writer=None,pagelength=30,prefix=''):
@@ -149,8 +166,9 @@ def _more(name,pagelength=24,**kws):
         f.close()
     show_more(l,filename=name,pagelength=pagelength)
     
-_local_funcs = {'group':group,
-                'showgroup':showgroup,
+_local_funcs = {'group':_group,
+                'showgroup':_showgroup,
+                'reload':_reload,
                 'copy': _copy,
                 'more': _more,
                 'ls': _ls,
