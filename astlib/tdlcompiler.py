@@ -286,19 +286,16 @@ class Compiler:
         
         method = "do%s" % node.__class__.__name__
         ret = None
-        # print(" interp: ", method,node)
         try:
             fcn = getattr(self,method)
         except:
-            # print("Could not find method ", method)
-            self.addException(node,msg='InterpA Error')
+            self.addException(node)
             return ret
         
         try:
             ret = fcn(node)
         except:
-            # print("error executing ", fcn, node)
-            self.addException(node,msg='InterpB Error')
+            self.addException(node)
             
         if isinstance(ret,enumerate):  ret = list(ret)
         return ret
@@ -500,8 +497,9 @@ class Compiler:
         dest = self.interp(node.dest) or sys.stdout
         end = ''
         if node.nl: end = '\n'
-        print(*[self.interp(n) for n in node.values],
-              file=dest, end=end)
+        out = [self.interp(n) for n in node.values]
+        if out and len(self.error)==0:
+            print(*out, file=dest, end=end)
         
     def doIf(self,node):    # ('test', 'body', 'orelse')
         block = node.orelse
@@ -710,23 +708,18 @@ class Compiler:
         return None
     
     def doTryExcept(self,node):    # ('body', 'handlers', 'orelse') 
-        print("Incomplete Try Except")
-        # print( self.dump(node))
         for n in node.body:
-            try:
-                self.interp(n)
-            except:
+            self.interp(n)
+            if self.error:
                 e_type,e_value,e_tback = sys.exc_info()
-                handled = False
                 for h in node.handlers:
                     handler_type = self.interp(h.type)
                     if handler_type is None or isinstance(e_type(),handler_type):
-                        handled=True
+                        self.error = []
                         self._NodeAssign(h.name,e_value)
                         for b in h.body: self.interp(b)
                         break
-                if not handled:
-                    raise 
+
                     
     def doTryFinally(self,node):    # ('body', 'finalbody') 
         return self.NotImplemented(node)
