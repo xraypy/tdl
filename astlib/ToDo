@@ -1,35 +1,34 @@
 Essentially every part of the system needs more testing.
 
-Unimplemented /very broken features:
+- builtin help system.  Not implemented.
 
-  - builtin help system.  Not implemented.
+- exceptions: raise and try/except/finally, etc.
+  run time exceptions seem to be working.  Areas that need work:
+    . are syntax errors caught correctly?
+    . error propagation (ie, full traceback) appears to be a 
+      little different for errors in python mods v. tdl mods, 
+      in that python mods include an error from the failing 
+      point in tdlcompiler....
+    . errors inside tdl procedures?
 
-  - exceptions: raise and try/except/finally, etc.
-      run time exceptions are sort of working, in that a message is displayed.
-      syntax errors (compile-time) needs work
-      error propagation is not working properly, and needs designing.
-
-
-
-Some pieces that are working (at least partially) but need much more testing:
  
-   - procedures (definition and execution): seems to be working....
+- may want a '.tdl_config' file (or some equivalent) to set global runtime
+  params.  This should be in the compiler init method..
+
+
+- procedures (definition and execution): seems to be working, needs debugging.
    - Import / ImportFrom: this is working (for me), with both import and
       from-import both support importing either tdl modules OR python modules.
 
-  - SymbolTable: seems to be working....
+- SymbolTable: seems to be working....
 
+- UNIT TESTING!! 
 
-The conventions / documentation for "system settings" (what's the path for
-   loading modules, etc) is not well thought out.
+- conventions / documentation for "system settings" (what's the path for
+  loading modules, etc) could be better... config dictionary??
 
-Commands:
-   Functions-as-Commands:  test word1 as callable!!! 
+- Functions as Commands:  appears OK, not currently test word1 as callable!
 
-
-Shell Program:
-   import of tdl code from a file seems to be working fine.  Errors are not
-   handled that gracefully.
 
 Testing: 
    started some unit testing, should do much more, probably with nose packaage
