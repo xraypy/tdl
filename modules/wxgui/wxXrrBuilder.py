@@ -14,6 +14,7 @@ import wx
 import os
 import types
 import copy
+import time
 import numpy as Num
 
 from   wxUtil import wxUtil

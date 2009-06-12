@@ -4,7 +4,7 @@
     {'type':'Background',
           'name':'wxXRF_bgTemplate',
           'title':u'Spec Data',
-          'size':(582, 733),
+          'size':(579, 739),
           'statusBar':1,
           'style':['resizeable'],
 
@@ -35,6 +35,19 @@
          ]
      },
          'components': [
+
+{'type':'StaticText', 
+    'name':'colormap', 
+    'position':(455, 574), 
+    'text':'colormap', 
+    },
+
+{'type':'Choice', 
+    'name':'ColorMap', 
+    'position':(433, 589), 
+    'size':(105, -1), 
+    'items':[], 
+    },
 
 {'type':'StaticBox', 
     'name':'StaticBox5', 
@@ -479,13 +492,13 @@
 
 {'type':'CheckBox', 
     'name':'MedYlog', 
-    'position':(438, 552), 
+    'position':(439, 551), 
     'label':'Ylog', 
     },
 
 {'type':'CheckBox', 
     'name':'MedHold', 
-    'position':(492, 552), 
+    'position':(494, 552), 
     'size':(43, -1), 
     'label':'Hold', 
     },
@@ -511,7 +524,7 @@
 
 {'type':'Button', 
     'name':'PlotImg', 
-    'position':(340, 586), 
+    'position':(340, 588), 
     'size':(76, -1), 
     'label':'Plot Image', 
     },

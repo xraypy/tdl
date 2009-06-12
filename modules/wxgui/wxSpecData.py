@@ -17,6 +17,7 @@ import types
 import copy
 import time
 import numpy as Num
+import pylab
 
 from   wxUtil import wxUtil
 import scandata
@@ -190,6 +191,10 @@ class wxSpecData(model.Background, wxUtil):
     def init_GUI(self):
         if self.startup:
             self.startup = False
+            cmap = copy.copy(pylab.cm.cmapnames)
+            cmap.insert(0,'')
+            self.components.ColorMap.items = cmap 
+            self.components.ColorMap.stringSelection = ''
         check = self.CheckReader()
         if check == False:
             return
@@ -427,7 +432,7 @@ class wxSpecData(model.Background, wxUtil):
         # Plot X
         tmp = self.components.XPlot.stringSelection
         self.components.XPlot.items = x + scalers
-        if (len(tmp)>0) and (tmp in x) and (default==False):
+        if (len(tmp)>0) and (tmp in x or tmp in scalers) and (default==False):
             self.components.XPlot.stringSelection = tmp
         else:
             self.components.XPlot.stringSelection = data.primary_axis[0]
@@ -638,6 +643,15 @@ class wxSpecData(model.Background, wxUtil):
         var_name = self.components.ScanVar.text
         self._plot_img(var_name)
 
+    def on_ScanPnt_keyDown(self,event):
+        keyCode = event.keyCode
+        if keyCode == wx.WXK_RETURN:
+            var_name = self.components.ScanVar.text
+            self._plot_img(var_name)
+        else:
+            event.skip()
+        return
+
     ######################################################
     def AutoPlot(self,var_name=None):
         if var_name == None:
@@ -702,7 +716,11 @@ class wxSpecData(model.Background, wxUtil):
         pylab.figure(3)
         pylab.clf()
         pnt = int(self.components.ScanPnt.stringSelection)
-        s = "scandata.image_plot(%s.image[%s])" % (var_name,str(pnt))
+        s = "scandata.image_plot(%s.image[%s]" % (var_name,str(pnt))
+        if self.components.ColorMap.stringSelection.strip()!='':
+            cmap = self.components.ColorMap.stringSelection.strip()
+            s = "%s,cmap='%s'" % (s,cmap)
+        s = "%s)" % s
         #print s
         self.exec_line(s)
         

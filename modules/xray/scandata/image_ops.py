@@ -75,9 +75,23 @@ def read_file(tiff_file):
     #return arr.transpose()
     return arr
 
-def image_plot(img,fig=None,verbose=False,figtitle=''):
+def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,):
     """
     show image
+    
+    * arguments:
+       img              # the image array to be displayed
+       fig = None       # Figure to plot to
+       figtitle = ''    # Title
+       cmap = None      # Colormap.  None uses default
+                        # you can pass a string name if its in pylab.cm.colormaps
+                        # or you can pass explicitly the colormap
+       verbose = False  # Print some fig statistics
+
+    * examples:
+       >>>image_plot(im,fig=1,figtitle='Image',cmap='hot')
+       >>>image_plot(im,fig=1,figtitle='Image',cmap=pylab.cm.Spectral)
+       
     """
     if verbose:
         print '###################'
@@ -88,9 +102,17 @@ def image_plot(img,fig=None,verbose=False,figtitle=''):
     if fig != None:
         pylab.figure(fig)
         pylab.clf()
-    pylab.imshow(img)
+
     # pylab.imshow(img, cmap = pylab.cm.hot)
+    if cmap != None:
+        if type(cmap) == types.StringType:
+            if cmap in pylab.cm.cmapnames:
+                cmap = getattr(pylab.cm,cmap)
+            else:
+                cmap = None
+    pylab.imshow(img,cmap=cmap)
     pylab.colorbar(orientation='horizontal')
+
     if figtitle:
         pylab.title(figtitle, fontsize = 12)
 
@@ -325,8 +347,8 @@ Current image     = %s
 Current image roi = %s
 1.  Display image
 2.  Set roi from image zoom (Figure 1)
-3.  Plot row/column sums (Figure 1)
-4.  Select roi from sum plots (Figure 1)
+3.  Plot row/column sums (Figure 2)
+4.  Select roi from sum plots (Figure 3)
 5.  Apply current roi to all images
 6.  Set num bgr points: %s
 7.  Integrate current image

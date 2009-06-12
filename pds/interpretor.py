@@ -442,7 +442,7 @@ class Interpretor:
             self.console = code.InteractiveConsole(self.symbol_table.data)
             
     ####################################################
-    def execute(self,arg):
+    def execute(self,arg,**kws):
         """
         return 1 f command is completed
         return 2 if need more input
@@ -456,10 +456,10 @@ class Interpretor:
         else:
             return eval.do_exec(arg,self.symbol_table.data)
 
-    def execute_file(self,fname):
+    def execute_file(self,fname,**kws):
         return eval.do_execfile(fname,self.symbol_table.data)
         
-    def evaluate(self,arg):
+    def evaluate(self,arg,**kws):
         return eval.do_eval(arg,self.symbol_table.data)
 
     ####################################################

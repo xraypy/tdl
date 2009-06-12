@@ -104,22 +104,22 @@ class _NumShell:
         """
         help_1 = "*** Calculator: 'q' = exit, 'h' for help, 'u' = use examples"
         help_2 = """*** Calculator Commands
-        \r'q' = exit
-        \r'h' = help
-        \r'u' = useage examples
+        \r'c' = clear buffer
         \r'd' = debug (default off)
         \r'f' = convert results to float (default off)
-        \r'c' = clear buffer
-        \r'b' = show buffer
+        \r'h' = help
         \r'p' = pop last entry from buffer
-        \r's' = swap last two entries in buffer
+        \r'q' = exit
+        \r's' = show buffer
+        \r'u' = useage examples
+        \r'w' = swap last two entries in buffer
         """
         use = """
         \r*** Useage
         \r In the below examples the result of a computation is
         \r appended to the buffer.  Use:
-        \r   'b' to inspect the buffer,
-        \r   's' to swap the top 2 buffer values,
+        \r   's' to inspect the buffer,
+        \r   'w' to swap the top 2 buffer values,
         \r   'p' to pop (remove) the top buffer value
         \r Note, be cautious of integer arithmetic.  Even if the
         \r float flag is turned on ('f'), only the result
@@ -249,10 +249,10 @@ class _NumShell:
                     print "Do float = ", do_float
                 elif line in ('c','clear'):
                     ex('__calc__.buff = []')
-                elif line in ('b','buff'):
+                elif line in ('s','show'):
                     buff = self.interp.get_data('__calc__.buff')
                     for v in buff: print v
-                elif line in ('s','swap'):
+                elif line in ('w','swap'):
                     if buff_len() > 1:
                         ex('__calc__.a = __calc__.buff.pop()')
                         ex('__calc__.b = __calc__.buff.pop()')
