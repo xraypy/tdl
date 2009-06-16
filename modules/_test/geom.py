@@ -35,7 +35,6 @@ def intersect(A,B,E,F):
     elif B[1]-A[1]!=0 and B[2]-A[2]!=0:
         q0 = 1
         q1 = 2
-        
     ef = ((E[q0]-A[q0])/(B[q0]-A[q0]) - (E[q1]-A[q1])/(B[q1]-A[q1])) / ((F[q1]-E[q1])/(B[q1]-A[q1]) - (F[q0]-E[q0])/(B[q0]-A[q0]))
     ab = (-A[q0]+E[q0]+ ef*(F[q0]-E[q0]))/(B[q0]-A[q0])
     if ef > 0 and ef < 1 and ab > 0 and ab < 1:

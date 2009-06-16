@@ -348,7 +348,7 @@ Current image roi = %s
 1.  Display image
 2.  Set roi from image zoom (Figure 1)
 3.  Plot row/column sums (Figure 2)
-4.  Select roi from sum plots (Figure 3)
+4.  Select roi from sum plots (Figure 2)
 5.  Apply current roi to all images
 6.  Set num bgr points: %s
 7.  Integrate current image
