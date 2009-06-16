@@ -423,6 +423,7 @@ class Compiler:
         return # return val
 
     def doAugAssign(self,node):    # ('target', 'op', 'value')
+        # print( "AugASSIGN ", node.target, node.value)
         return self.doAssign(ast.Assign(targets= [node.target],
                                         value  = ast.BinOp(left = node.target,
                                                            op   = node.op,
@@ -441,14 +442,13 @@ class Compiler:
         val    = self.interp(node.value)
         nslice = self.interp(node.slice)
         ctx = node.ctx.__class__
-        if ctx == ast.Load:
+        if ctx in ( ast.Load, ast.Store):
             if isinstance(node.slice,(ast.Index,ast.Slice,ast.Ellipsis)):
                 return val.__getitem__(nslice)
             elif isinstance(node.slice,ast.ExtSlice):
                 return val[(nslice)]
-            
-        elif ctx == ast.Store:
-            raise TDLError("subscript for storage: shouldn't be here!!")
+        else:
+            raise TDLError("subscript with unknown context")
 
     def doDelete(self,node):    # ('targets',)
         ctx = node.ctx.__class__
