@@ -349,12 +349,12 @@ def _import_pylab(backend="TkAgg",verbose=True):
     if backend == "TkAgg":
         # below is kluge for compiled version, ie the way we are 
         # running py2exe -> basically forces WX as backend.
-        if check == "WXAgg":
-            pass
-        else:
-            import Tkinter
-            PLOT_ROOT = Tkinter.Tk()
-            PLOT_ROOT.iconify()
+        #if check == "WXAgg":
+        #    pass
+        #else:
+        import Tkinter
+        PLOT_ROOT = Tkinter.Tk()
+        PLOT_ROOT.iconify()
     elif backend == "WXAgg":
         import wx
         PLOT_ROOT = None
