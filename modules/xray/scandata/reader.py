@@ -68,6 +68,17 @@ class Reader:
      * images 
      * other (ie ssrl files, old spec and super etc..)
 
+    Arguments for initialization:
+     * spec = spec files. string or list of strings
+     * spec_path = string path for spec file locations
+     * escan_path = string path for escan file locations
+     * med_path = string path for escan file locations
+     * image_path = string path for escan file locations
+
+    Examples:
+     >>r = scandata.Reader(spec='spec_file.spc')
+     >>s1 = r.spec_scan(1,img=True)
+
     """
     ########################################################################
     def __init__(self,spec=None,spec_path=None,escan_path=None,
@@ -131,14 +142,19 @@ class Reader:
             sfile = self._spec(file=s)
             sfile.read()
 
-    def list_spec_files(self):
+    def list_spec(self, show=True):
         """
-        return a list of spec file names
+        return a list of spec file scans
         """
-        list = []
+        sc_list = []
         for s in self.spec_files:
-            list.append(s.fname)
-        return list
+            sc_list.extend(s.list_scans())
+        if show:
+            for line in sc_list:
+                print '* ' + line
+            return
+        else:
+            return sc_list
     
     ########################################################################
     def spec_scan(self,scan,file=None,med=None,xrf=None,img=None):
@@ -380,7 +396,7 @@ class Reader:
             #print "%s, start=%i, end = %i, nfmt = %i" % (fname,start,end,nfmt)
             image = image_ops.read_files(fname,start=start,end=end,nfmt=nfmt)
         else:
-            image = image_ops.read(fname)
+            image = image_ops.read_file(fname)
 
         return image
 

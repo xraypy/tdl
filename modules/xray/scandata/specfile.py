@@ -209,5 +209,13 @@ class SpecFile:
         # all done
         return sc_dict
 
-###########################
-
+    def list_scans(self):
+        self.read()
+        sc_list = [] 
+        for s in self._summary:
+            line = "%s:%4.4i  (%s)\n   %s" % (self.fname,
+                                              s['index'],
+                                              s['date'],
+                                              s['cmd'])
+            sc_list.append(line)
+        return sc_list

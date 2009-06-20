@@ -289,7 +289,7 @@ class Shell(_NumShell):
                     arg = s[idx:].strip()
                 else:
                     arg = ''
-                if self.debug: print '**cmd: %s, %s' % (cmd,arg)
+                if self.debug: print '**cmd: %s  %s' % (cmd,arg)
             else:
                 cmd = None
             
