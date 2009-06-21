@@ -11,21 +11,14 @@ Modifications:
 
 """
 #######################################################################
-"""
-Todo
-
-
-"""
-#######################################################################
 
 import types
 import copy
 import numpy as Num
-import Image
 import pylab
 
-from  mathutil import LinReg
-from  plotter import cursor
+from   plotter import cursor
+import image_data
 
 ########################################################################
 def image_menu(data):
@@ -93,7 +86,7 @@ Current image roi = %s
             pass
         elif ret == 1:
             figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-            image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
         elif ret == 2:
             pylab.figure(1)
             (x1,x2,y1,y2) = pylab.axis()
@@ -101,13 +94,13 @@ Current image roi = %s
             data.image_rois[scan_pnt] = roi
         elif ret == 3:
             roi = data.image_rois[scan_pnt]
-            image = clip_image(data.image[scan_pnt],roi)
-            sum_plot(image,nbgr=nbgr,fig=2)
+            image = image_data.clip_image(data.image[scan_pnt],roi)
+            image_data.sum_plot(image,nbgr=nbgr,fig=2)
         elif ret == 4:
             #roi = data.image_rois[scan_pnt]
-            #image = clip_image(data.image[scan_pnt],roi)
+            #image = image_data.clip_image(data.image[scan_pnt],roi)
             image = data.image[scan_pnt]
-            sum_plot(image,nbgr=-1,fig=2)
+            image_data.sum_plot(image,nbgr=-1,fig=2)
             #c = pylab.cursor(fig=2)
             c = cursor(fig=2)
             (c1,y) = c.get_click(msg="Select left col sum")
@@ -163,17 +156,17 @@ Current image roi = %s
             if pnt < 0: pnt = 0
             scan_pnt = pnt
             figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-            image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
         elif ret == 10:
             if scan_pnt + 1 < npts: 
                 scan_pnt = scan_pnt + 1
                 figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-                image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+                image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
         elif ret == 11:
             if scan_pnt - 1 > -1: 
                 scan_pnt = scan_pnt - 1
                 figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-                image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+                image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
         elif ret ==12:
             if data.image_peaks['I_c']== None:
                 print "Remove not possible before first integration"

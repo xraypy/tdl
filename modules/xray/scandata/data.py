@@ -21,7 +21,7 @@ import os, copy
 import numpy as Num
 
 from   specfile import SpecFile
-import image_ops
+import image_data
 import xrf_ops
 
 ########################################################################
@@ -336,9 +336,9 @@ class ScanData:
         if idx < 0 or idx > len(self.image): return None
         #
         figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
-        img_ana = image_ops.ImageAna(self.image[idx],roi=roi,
-                                     nbgr=nbgr,plot=plot,
-                                     fig=fig,figtitle=figtitle)
+        img_ana = image_data.ImageAna(self.image[idx],roi=roi,
+                                      nbgr=nbgr,plot=plot,
+                                      fig=fig,figtitle=figtitle)
         # results into image_peaks dictionary
         self.image_peaks['I_c'][idx]    = img_ana.I_c
         self.image_peaks['Ierr_c'][idx] = img_ana.Ierr_c

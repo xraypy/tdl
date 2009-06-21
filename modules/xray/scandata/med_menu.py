@@ -11,8 +11,8 @@ Modifications:
 
 import types
 import numpy as Num
-import deadtime
-
+import pylab
+import med_data
 
 ########################################################################
 def med_inspect(data):
@@ -36,7 +36,6 @@ Options:
 11. Break
 ###################
 """
-    import pylab
     prompt = 'Select option (1)>'
     scan_pnt = 0
     max_pnt = len(data.med)
@@ -96,7 +95,7 @@ Options:
         elif ret == 8:
             hold = not hold
         elif ret == 9:
-            med_plot(data,scan_pnt=scan_pnt,hold=hold,ylog=ylog)
+            med_data.med_plot(data,scan_pnt=scan_pnt,hold=hold,ylog=ylog)
         elif ret == 10:
             data.med2xrf()
         elif ret == 11:
