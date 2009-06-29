@@ -272,7 +272,7 @@ class ScanData:
             self.xrf_peaks[l] = p
 
     ################################################################
-    def integrate_image(self,idx=[],roi=[],nbgr=4,plot=True,fig=None):
+    def integrate_image(self,idx=[],roi=[],bgr_params={},plot=True,fig=None):
         """
         integrate images
         roi  = [x1,y1,x2,y2]
@@ -301,11 +301,9 @@ class ScanData:
         
         # do integrations
         for j in idx:
-            #self._integrate_image(idx=j,roi=self.image_rois[j],
-            #                      nbgr=nbgr,plot=plot,fig=fig)
             if self.image_peaks['I_c'][j] != -1:
                 self._integrate_image(idx=j,roi=self.image_rois[j],
-                                      nbgr=nbgr,plot=plot,fig=fig)
+                                      bgr_params=bgr_params,plot=plot,fig=fig)
     
     def _init_image(self):
         npts = len(self.image)
@@ -320,7 +318,10 @@ class ScanData:
             self.image_rois = []
             for j in range(npts):
                 self.image_rois.append([])
-        
+
+        # note we need an image integration flag.  based on the
+        # flag we can then define which of these integrals are defined.
+        # e.g. 0 = all, 1 = row sum only etc......
         self.image_peaks  = {}
         self.image_peaks['I_c']    = Num.zeros(npts,dtype=float)
         self.image_peaks['Ierr_c'] = Num.zeros(npts,dtype=float)
@@ -329,16 +330,24 @@ class ScanData:
         self.image_peaks['Ierr_r'] = Num.zeros(npts,dtype=float)
         self.image_peaks['Ibgr_r'] = Num.zeros(npts,dtype=float)
         
-    def _integrate_image(self,idx=0,roi=[],nbgr=10,plot=True,fig=None):
+    def _integrate_image(self,idx=0,roi=[],bgr_params={},plot=True,fig=None):
         """
         integrate an image
         """
         if idx < 0 or idx > len(self.image): return None
         #
         figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
+        nbgr = bgr_params.get('nbgr')
+        cwidth = bgr_params.get('cwidth')
+        rwidth = bgr_params.get('rwidth')
+        if  nbgr == None: nbgr=0
+        if  cwidth == None: cwidth=0
+        if  rwidth == None: rwidth=0
+
         img_ana = image_data.ImageAna(self.image[idx],roi=roi,
-                                      nbgr=nbgr,plot=plot,
-                                      fig=fig,figtitle=figtitle)
+                                      nbgr=nbgr,cwidth=cwidth,rwidth=rwidth,
+                                      plot=plot,fig=fig,figtitle=figtitle)
+
         # results into image_peaks dictionary
         self.image_peaks['I_c'][idx]    = img_ana.I_c
         self.image_peaks['Ierr_c'][idx] = img_ana.Ierr_c

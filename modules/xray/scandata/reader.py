@@ -23,7 +23,7 @@ import numpy as Num
 
 from   specfile import SpecFile
 from   data import ScanData
-import image_ops
+import image_data
 import xrf_ops
 
 ########################################################################
@@ -394,9 +394,10 @@ class Reader:
                     print "No files found"
                     return None
             #print "%s, start=%i, end = %i, nfmt = %i" % (fname,start,end,nfmt)
-            image = image_ops.read_files(fname,start=start,end=end,nfmt=nfmt)
+            image = image_data.read_files(fname,start=start,end=end,nfmt=nfmt)
+            image = image_data.read_files(fname,start=start,end=end,nfmt=nfmt)
         else:
-            image = image_ops.read_file(fname)
+            image = image_data.read_file(fname)
 
         return image
 
