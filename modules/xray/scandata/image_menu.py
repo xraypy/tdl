@@ -158,13 +158,13 @@ def image_menu(data):
             pylab.clf()
             #
             pylab.plot(data['L'],data['I'],'b',label='image sum')
-            pylab.errorbar(data['L'],data['I'],data['Ierr'],fmt='o')
+            pylab.errorbar(data['L'],data['I'],data['Ierr'],fmt='bo')
             #
             pylab.plot(data['L'],data['I_c'],'r',label='col sum')
-            pylab.errorbar(data['L'],data['I_c'],data['Ierr_c'],fmt='o')
+            pylab.errorbar(data['L'],data['I_c'],data['Ierr_c'],fmt='ro')
             #
             pylab.plot(data['L'],data['I_r'],'g',label='row sum')
-            pylab.errorbar(data['L'],data['I_r'],data['Ierr_r'],fmt='o')
+            pylab.errorbar(data['L'],data['I_r'],data['Ierr_r'],fmt='go')
             #
             pylab.semilogy()
             pylab.legend()
