@@ -32,15 +32,14 @@ Current image roi = %s
 3.  Plot row/column sums (Figure 2)
 4.  Select roi from sum plots (Figure 2)
 5.  Apply current roi to all images
-6.  Set num bgr points: %s
-7.  Set nonlinear background
-8.  Integrate current image
-9.  Integrate all images
-10. Select scan point
-11. Select next point 
-12. Select previous point 
-13. Remove current data point
-14. Done
+6.  Set background parameters
+7.  Integrate current image
+8.  Integrate all images
+9.  Select scan point
+10. Select next point 
+11. Select previous point 
+12. Remove current data point
+13. Done
 ###################
 """
 
@@ -53,7 +52,6 @@ def image_menu(data):
     npts     = len(data.image)
     scan_pnt = 0
     roi      = []
-    #nbgr     = 4
     bgr_params = {'nbgr':4,
                   'cwidth':0,
                   'rwidth':0}
@@ -68,15 +66,14 @@ def image_menu(data):
             data.image_rois.append([])
 
     # loop
-    while ret != 14:
+    while ret != 13:
         ###
         try:
             roi = data.image_rois[scan_pnt]
         except:
             print "** error getting roi **"
             roi = []
-        op = OPTIONS % (str(npts),str(scan_pnt),str(roi),
-                        str(bgr_params['nbgr']))
+        op = OPTIONS % (str(npts),str(scan_pnt),str(roi))
         print op
         rret = raw_input(prompt)
         if not rret:
@@ -122,13 +119,12 @@ def image_menu(data):
                 for j in range(npts):
                     data.image_rois.append(copy.copy(roi))
         elif ret == 6:
-            p2 = "Num bgr points (%s)>" % str(bgr_params['nbgr'])
+            p2 = "Num bgr points for linear background (0 for no bgr) (%s)>" % str(bgr_params['nbgr'])
             print p2
             n = raw_input('>>')
             if len(n) > 0:
                 try: bgr_params['nbgr'] = int(n)
                 except: pass
-        elif ret == 7:
             p2 = "Enter peak width in column direction, cwidth (%s)>" % bgr_params['cwidth']
             print p2
             tmp = raw_input('>>')
@@ -142,14 +138,13 @@ def image_menu(data):
             print "bgr params:", bgr_params
             #
             img = image_data.clip_image(data.image[scan_pnt],roi=roi)
-            image_data.image_bgr(img,
-                                 cwidth=bgr_params['cwidth'],
+            image_data.image_bgr(img,cwidth=bgr_params['cwidth'],
                                  rwidth=bgr_params['rwidth'],
                                  plot=True)
-        elif ret == 8:
+        elif ret == 7:
             data.integrate_image(idx=[scan_pnt],bgr_params=bgr_params,
                                  plot=True,fig=3)
-        elif ret == 9:
+        elif ret == 8:
             p2 = "Plot all images (False)>"
             print p2
             yn = raw_input('>>')
@@ -157,19 +152,25 @@ def image_menu(data):
                 yn = False
             else:
                 yn = eval(yn)
-            data.integrate_image(bgr_par=bgr_params,plot=yn)
+            data.integrate_image(bgr_params=bgr_params,plot=yn)
             #
             pylab.figure(5, figsize = [5,4])
             pylab.clf()
-            pylab.plot(data['L'],data['I_c'],'b',label='col sum')
+            #
+            pylab.plot(data['L'],data['I'],'b',label='image sum')
+            pylab.errorbar(data['L'],data['I'],data['Ierr'],fmt='o')
+            #
+            pylab.plot(data['L'],data['I_c'],'r',label='col sum')
             pylab.errorbar(data['L'],data['I_c'],data['Ierr_c'],fmt='o')
+            #
             pylab.plot(data['L'],data['I_r'],'g',label='row sum')
             pylab.errorbar(data['L'],data['I_r'],data['Ierr_r'],fmt='o')
+            #
             pylab.semilogy()
             pylab.legend()
             pylab.xlabel('L')
             pylab.ylabel('Integrated Intensity')
-        elif ret == 10:
+        elif ret == 9:
             p2 = "Enter scan point, max = %i (%i)>" % (npts-1,scan_pnt)
             print p2
             pnt = raw_input('>>')
@@ -182,17 +183,17 @@ def image_menu(data):
             scan_pnt = pnt
             figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
             image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
-        elif ret == 11:
+        elif ret == 10:
             if scan_pnt + 1 < npts: 
                 scan_pnt = scan_pnt + 1
                 figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
                 image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
-        elif ret == 12:
+        elif ret == 11:
             if scan_pnt - 1 > -1: 
                 scan_pnt = scan_pnt - 1
                 figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
                 image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
-        elif ret ==13:
+        elif ret ==12:
             if data.image_peaks['I_c']== None:
                 print "Remove not possible before first integration"
                 pass
@@ -208,7 +209,7 @@ def image_menu(data):
                 else:
                     print "Datapoint not removed" 
                     pass
-        elif ret == 14:                
+        elif ret == 13:                
             print "All done"
         else:
             print "** Invalid option '%s' **" % ret

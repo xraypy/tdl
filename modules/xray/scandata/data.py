@@ -10,7 +10,6 @@ Modifications:
 #######################################################################
 """
 Todo
-- lots 
 
 """
 ########################################################################
@@ -43,6 +42,7 @@ class ScanData:
     images = []                  -> array has dims = dims or is [] for No images
     state = {}                   -> dictionary of additional state information
     """
+    ################################################################
     def __init__(self,name='',dims=[],scalers={},positioners={},
                  primary_axis=[],primary_det=None,state={},
                  med=[],xrf=[],xrf_lines=None,image=[],image_rois=[]):
@@ -62,6 +62,8 @@ class ScanData:
         self.image        = image
         self.image_rois   = image_rois
         self.image_peaks  = {}
+        #
+        self.bad_points   = []
 
     ########################################################################
     """
@@ -179,6 +181,7 @@ class ScanData:
             label = self.primary_det[0]
         return self.scalers.get(label)
         
+    ################################################################
     def get_positioner(self,label=None):
         """
         return positioner
@@ -202,6 +205,7 @@ class ScanData:
                 ocr[j][k] = float(tot)/float(lt)
         return Num.transpose(ocr)
 
+    ################################################################
     def med_update_tau(self,tau):
         """
         update med tau factors
@@ -220,6 +224,8 @@ class ScanData:
                               det_idx=det_idx,emin=emin,emax=emax)
         if xrf: self.xrf = xrf
 
+    ################################################################
+    ################################################################
     def get_xrf(self,pnt=0):
         """
         get xrf
@@ -231,6 +237,7 @@ class ScanData:
             return None
         return self.xrf[pnt]
 
+    ################################################################
     def init_xrf_lines(self,lines=None):
         """
         init xrf lines
@@ -242,6 +249,7 @@ class ScanData:
         for x in self.xrf:
             x.init_lines(lines)
 
+    ################################################################
     def xrf_calc(self):
         """
         calc xrf
@@ -250,6 +258,7 @@ class ScanData:
             x.calc()
         self.update_xrf_peaks()
 
+    ################################################################
     def xrf_fit(self,xrf_params={},use_prev_fit=False,fit_init=-1,
                 guess=False,verbose=True):
         """
@@ -259,6 +268,7 @@ class ScanData:
                     fit_init=fit_init,guess=guess,verbose=verbose)
         self.update_xrf_peaks()
 
+    ################################################################
     def update_xrf_peaks(self,):
         """
         update xrf peaks
@@ -271,6 +281,7 @@ class ScanData:
             p = xrf_ops.peak_areas(self.xrf,l)
             self.xrf_peaks[l] = p
 
+    ################################################################
     ################################################################
     def integrate_image(self,idx=[],roi=[],bgr_params={},plot=True,fig=None):
         """
@@ -305,6 +316,7 @@ class ScanData:
                 self._integrate_image(idx=j,roi=self.image_rois[j],
                                       bgr_params=bgr_params,plot=plot,fig=fig)
     
+    ################################################################
     def _init_image(self):
         npts = len(self.image)
         if npts == 0:
@@ -319,17 +331,21 @@ class ScanData:
             for j in range(npts):
                 self.image_rois.append([])
 
-        # note we need an image integration flag.  based on the
-        # flag we can then define which of these integrals are defined.
-        # e.g. 0 = all, 1 = row sum only etc......
+        # should we init all these or set based on an integrate flag?
         self.image_peaks  = {}
+        self.image_peaks['I']      = Num.zeros(npts,dtype=float)
+        self.image_peaks['Ierr']   = Num.zeros(npts,dtype=float)
+        self.image_peaks['Ibgr']   = Num.zeros(npts,dtype=float)
+        #
         self.image_peaks['I_c']    = Num.zeros(npts,dtype=float)
         self.image_peaks['Ierr_c'] = Num.zeros(npts,dtype=float)
         self.image_peaks['Ibgr_c'] = Num.zeros(npts,dtype=float)
+        #
         self.image_peaks['I_r']    = Num.zeros(npts,dtype=float)
         self.image_peaks['Ierr_r'] = Num.zeros(npts,dtype=float)
         self.image_peaks['Ibgr_r'] = Num.zeros(npts,dtype=float)
         
+    ################################################################
     def _integrate_image(self,idx=0,roi=[],bgr_params={},plot=True,fig=None):
         """
         integrate an image
@@ -337,10 +353,10 @@ class ScanData:
         if idx < 0 or idx > len(self.image): return None
         #
         figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
-        nbgr = bgr_params.get('nbgr')
+        nbgr   = bgr_params.get('nbgr')
         cwidth = bgr_params.get('cwidth')
         rwidth = bgr_params.get('rwidth')
-        if  nbgr == None: nbgr=0
+        if  nbgr   == None: nbgr=0
         if  cwidth == None: cwidth=0
         if  rwidth == None: rwidth=0
 
@@ -349,9 +365,14 @@ class ScanData:
                                       plot=plot,fig=fig,figtitle=figtitle)
 
         # results into image_peaks dictionary
+        self.image_peaks['I'][idx]      = img_ana.I
+        self.image_peaks['Ierr'][idx]   = img_ana.Ierr
+        self.image_peaks['Ibgr'][idx]   = img_ana.Ibgr
+        #
         self.image_peaks['I_c'][idx]    = img_ana.I_c
         self.image_peaks['Ierr_c'][idx] = img_ana.Ierr_c
         self.image_peaks['Ibgr_c'][idx] = img_ana.Ibgr_c
+        #
         self.image_peaks['I_r'][idx]    = img_ana.I_r
         self.image_peaks['Ierr_r'][idx] = img_ana.Ierr_r
         self.image_peaks['Ibgr_r'][idx] = img_ana.Ibgr_r

@@ -16,9 +16,7 @@ Modifications:
 #######################################################################
 """
 Todo
- - Need to improve show image / options
- - Improve plotting in integrate
- - Need non-linear backgrounds in integrate?
+ - Improve image background determination
 
 """
 #######################################################################
@@ -190,6 +188,28 @@ def line_sum(image,sumflag='c',nbgr=5):
     return (data, data_idx, bgr)
 
 ############################################################################
+def line_sum_integral(image,sumflag='c',nbgr=3):
+    """
+    calc the integral after image is summed down 'c'olumns
+    or across 'r'ows.  This uses a linear background
+    """
+    # get line sum
+    (data, data_idx, bgr) = line_sum(image,sumflag=sumflag,nbgr=nbgr)
+
+    ### integrate
+    #Itot = data.sum()
+    #Ibgr = bgr.sum()
+    Itot = 0.0
+    Ibgr = 0.0
+    Itot = Num.trapz(data)
+    Ibgr = Num.trapz(bgr)
+    I    = Itot - Ibgr
+    ### compute errors
+    #Ierr = (data.sum() + bgr.sum())**(0.5)
+    Ierr = (Itot + Ibgr)**(0.5)
+    return(I,Ierr,Ibgr)
+
+############################################################################
 def image_bgr(image,cwidth=100,rwidth=100,plot=False):
     """
     calculate a background for the image.
@@ -217,26 +237,37 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
     bgr_arr_r = Num.zeros(image.shape)
     bgr_arr_c = Num.zeros(image.shape)
 
-    # try fit to rows
-    b = xrf_bgr.Background(bottom_width=rwidth,compress=1)
-    for j in range(image.shape[0]):
-        b.calc(image[j])
-        bgr_arr_r[j,:] = copy.copy(b.bgr)
+    # fit to rows
+    if rwidth > 0:
+        b = xrf_bgr.Background(bottom_width=rwidth,compress=1)
+        for j in range(image.shape[0]):
+            b.calc(image[j])
+            bgr_arr_r[j,:] = copy.copy(b.bgr)
 
-    # try fit to cols
-    #b = xrf_bgr.Background(bottom_width=cwidth,compress=1)
-    b.bottom_width = cwidth
-    for j in range(image.shape[1]):
-        b.calc(image[:,j])
-        bgr_arr_c[:,j] = copy.copy(b.bgr)
+    # fit to cols
+    if cwidth > 0:
+        b = xrf_bgr.Background(bottom_width=cwidth,compress=1)
+        for j in range(image.shape[1]):
+            b.calc(image[:,j])
+            bgr_arr_c[:,j] = copy.copy(b.bgr)
 
-    # combine the two bgrs by average
-    #bgr = (bgr_arr_r + bgr_arr_c)/2.
-    # combine by taking the minimum of the two at each point
+    # combine the two bgrs 
+    """
+    # combine by taking the minimum of the
+    # two at each point ??
     bgr = bgr_arr_r
     idx = Num.where(bgr > bgr_arr_c)
     bgr[idx] = bgr_arr_c[idx]
-    
+    """
+    if (rwidth > 0) and (cwidth > 0):
+        bgr = (bgr_arr_r + bgr_arr_c)/2.
+    elif rwidth > 0:
+        bgr = bgr_arr_r
+    elif cwidth > 0:
+        bgr = bgr_arr_c
+    else:
+        bgr = Num.zeros(image.shape)
+
     #show
     if plot:
         pylab.figure(1)
@@ -323,72 +354,49 @@ class ImageAna:
         self.bgr_cwidth = cwidth
         self.bgr_rwidth = rwidth
         #
-        self.integrate_sums()
+        self.integrate()
         # plot
-        if plot == True:
-            self.plot(fig=fig)
+        if plot == True: self.plot(fig=fig)
             
     ############################################################################
-    def integrate_sums(self):
+    def integrate(self):
         """
-        Convert image to line plots and integrate.
+        Integrate Image.
 
         Note approx error by assuming data and bgr errors are:
            sig_i = sqrt(I_i)
         Therefore:
           (sig_Itot)**2 = Sum(I_i)
-          (sig_Itot)**2 = Sum(Ibgr_i)
-          Ierr = sqrt((sig_Itot)**2 + (sig_Itot)**2)
+          (sig_Ibgr)**2 = Sum(Ibgr_i)
+          Ierr = sqrt((sig_Itot)**2 + (sig_Ibgr)**2)
         """
-        def _integrate_line(data, data_idx, bgr):
-            ### integrate
-            #Itot = data.sum()
-            #Ibgr = bgr.sum()
-            Itot = 0.0
-            Ibgr = 0.0
-            Itot = Num.trapz(data)
-            Ibgr = Num.trapz(bgr)
-            I    = Itot - Ibgr
-            ### compute errors
-            #Ierr = (data.sum() + bgr.sum())**(0.5)
-            Ierr = (Itot + Ibgr)**(0.5)
-            return(I,Ierr,Ibgr)
 
         # clip image
         image = clip_image(self.image,self.roi)
-        nbgr = self.nbgr
 
         # subtract background
         if (self.bgr_cwidth > 0) or (self.bgr_rwidth > 0):
             bgr = image_bgr(image,cwidth=self.bgr_cwidth,
                             rwidth=self.bgr_rwidth)
             image = image - bgr
-            #calc an error here for bgr => integral of bgr
-            #then calc I as the image sum
-            #self.I = Num.sum(Num.trapz(image))
-            #self.Ibgr = Num.sum(Num.trapz(bgr))
-            #self.Ierr = (self.I + self.Ibgr)**0.5
-            #             sum of squares of I and Ibgr
-            #ie doesnt make sense to
-            # do row / column sums with lin bgr since we should have
-            # removed all the bgr in this step.
+            self.I = Num.sum(Num.trapz(image))
+            self.Ibgr = Num.sum(Num.trapz(bgr))
+            self.Ierr = (self.I + self.Ibgr)**0.5
 
-        # Should we only do below integrations if dont do above?
-        # Or we need a flag for setting how we do the integration
+        # the below integrations should only be done
+        # if we have a flag set to do so??
         
         # integrate col sum
-        (data, data_idx, bgr) = line_sum(image,sumflag='c',nbgr=nbgr)
-        (I,Ierr,Ibgr) = _integrate_line(data, data_idx, bgr)
-        self.I_c    = I
-        self.Ierr_c = Ierr
-        self.Ibgr_c = Ibgr
+        (I,Ierr,Ibgr) = line_sum_integral(image,sumflag='c',nbgr=self.nbgr)
+        self.I_c      = I
+        self.Ierr_c   = Ierr
+        self.Ibgr_c   = Ibgr
         
         # integrate row sum
-        (data, data_idx, bgr) = line_sum(image,sumflag='r',nbgr=nbgr)
-        (I,Ierr,Ibgr) = _integrate_line(data, data_idx, bgr)
-        self.I_r    = I
-        self.Ierr_r = Ierr
-        self.Ibgr_r = Ibgr
+        (I,Ierr,Ibgr) = line_sum_integral(image,sumflag='r',nbgr=self.nbgr)
+        self.I_r      = I
+        self.Ierr_r   = Ierr
+        self.Ibgr_r   = Ibgr
 
     ############################################################################
     def plot(self,fig=None):
@@ -404,6 +412,7 @@ class ImageAna:
             pylab.figure(fig,figsize=[12,8])
         title_c = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
         title_r = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
+        title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
         #
         nbgr = self.nbgr
         
@@ -411,10 +420,11 @@ class ImageAna:
         image = clip_image(self.image,self.roi)
 
         # subtract background
-        if (self.bgr_cwidth > 0) and (self.bgr_rwidth > 0):
+        if (self.bgr_cwidth > 0) or (self.bgr_rwidth > 0):
             bgr = image_bgr(image,cwidth=self.bgr_cwidth,
                             rwidth=self.bgr_rwidth)
             image = image - bgr
+            title_roi = title_roi + '\n(background subtracted)'
 
         # full image with roi box
         (c1,r1,c2,r2) = self.roi
@@ -442,6 +452,7 @@ class ImageAna:
 
         # plot zoom on image 
         pylab.subplot(223)
+        pylab.title(title_roi,fontsize = 12)
         pylab.imshow(image, cmap=colormap, aspect='auto')
 
         # plot row sum
