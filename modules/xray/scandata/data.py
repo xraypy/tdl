@@ -63,6 +63,7 @@ class ScanData:
         self.xrf_peaks    = {}
         self.image        = image
         self.image_rois   = image_rois
+        self.image_bgrpar = []
         self.image_peaks  = {}
         #
         self.bad_points   = []
@@ -285,7 +286,7 @@ class ScanData:
 
     ################################################################
     ################################################################
-    def integrate_image(self,idx=[],roi=[],bgr_params={},plot=True,fig=None):
+    def integrate_image(self,idx=[],roi=[],bgr_params=[],plot=True,fig=None):
         """
         integrate images
         roi  = [x1,y1,x2,y2]
@@ -293,7 +294,7 @@ class ScanData:
         # make sure arrays exist:
         init = False
         if len(self.image_peaks) > 0:
-            if len(self.image_peaks['I_c']) != len(self.image):
+            if len(self.image_peaks['I']) != len(self.image):
                 init = True
         else:
             init = True
@@ -312,26 +313,54 @@ class ScanData:
             for j in idx:
                 self.image_rois[j] = roi[j]
         
+        # update bgr
+        if type(bgr_params) == types.DictType:
+            for j in idx:
+                self.image_bgrpar[j] = bgr_params
+        elif len(bgr_params) == len(idx):
+            for j in idx:
+                self.image_bgrpar[j] = bgr_params[j]
+
         # do integrations
         for j in idx:
-            if self.image_peaks['I_c'][j] != -1:
-                self._integrate_image(idx=j,roi=self.image_rois[j],
-                                      bgr_params=bgr_params,plot=plot,fig=fig)
+            if j not in self.bad_points:
+                self._integrate_image(idx=j,plot=plot,fig=fig)
+            else:
+                self.image_peaks['I'][j]      = 0.
+                self.image_peaks['Ierr'][j]   = 0.
+                self.image_peaks['Ibgr'][j]   = 0.
+                #
+                self.image_peaks['I_c'][j]    = 0.
+                self.image_peaks['Ierr_c'][j] = 0.
+                self.image_peaks['Ibgr_c'][j] = 0.
+                #
+                self.image_peaks['I_r'][j]    = 0.
+                self.image_peaks['Ierr_r'][j] = 0.
+                self.image_peaks['Ibgr_r'][j] = 0.
     
     ################################################################
     def _init_image(self):
         npts = len(self.image)
         if npts == 0:
             self.image_rois = []
+            self.image_bgrpar = []
             self.image_peaks = {}
 
         if self.image_rois == None:
             self.image_rois = []
-            
         if len(self.image_rois) != npts:
             self.image_rois = []
             for j in range(npts):
                 self.image_rois.append([])
+        
+        if self.image_bgrpar == None:
+            self.image_bgrpar = []
+        if len(self.image_bgrpar) != npts:
+            self.image_bgrpar = []
+            for j in range(npts):
+                self.image_bgrpar.append({'nbgr':3,
+                                          'cwidth':0,
+                                          'rwidth':0})
 
         # should we init all these or set based on an integrate flag?
         self.image_peaks  = {}
@@ -348,16 +377,18 @@ class ScanData:
         self.image_peaks['Ibgr_r'] = Num.zeros(npts,dtype=float)
         
     ################################################################
-    def _integrate_image(self,idx=0,roi=[],bgr_params={},plot=True,fig=None):
+    def _integrate_image(self,idx=0,plot=True,fig=None):
         """
         integrate an image
         """
         if idx < 0 or idx > len(self.image): return None
         #
         figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
-        nbgr   = bgr_params.get('nbgr')
-        cwidth = bgr_params.get('cwidth')
-        rwidth = bgr_params.get('rwidth')
+        roi        = self.image_rois[idx]
+        bgr_params = self.image_bgrpar[idx]
+        nbgr       = bgr_params.get('nbgr')
+        cwidth     = bgr_params.get('cwidth')
+        rwidth     = bgr_params.get('rwidth')
         if  nbgr   == None: nbgr=0
         if  cwidth == None: cwidth=0
         if  rwidth == None: rwidth=0

@@ -164,7 +164,7 @@ def clip_image(image,roi=[],cp=False):
         return image[r1:r2, c1:c2]
 
 ############################################################################
-def line_sum(image,sumflag='c',nbgr=5):
+def line_sum(image,sumflag='c',nbgr=3):
     """
     sum down 'c'olumns or across 'r'ows
     this returns the summed data and linear background

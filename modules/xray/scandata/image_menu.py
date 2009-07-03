@@ -31,14 +31,14 @@ Current image roi = %s
 2.  Set roi from image zoom (Figure 1)
 3.  Plot row/column sums (Figure 2)
 4.  Select roi from sum plots (Figure 2)
-5.  Apply current roi to all images
-6.  Set background parameters
+5.  Set background parameters
+6.  Apply current roi and background params to all images
 7.  Integrate current image
 8.  Integrate all images
 9.  Select scan point
 10. Select next point 
 11. Select previous point 
-12. Remove current data point
+12. Flag as bad point
 13. Done
 ###################
 """
@@ -52,27 +52,16 @@ def image_menu(data):
     npts     = len(data.image)
     scan_pnt = 0
     roi      = []
-    bgr_params = {'nbgr':4,
-                  'cwidth':0,
-                  'rwidth':0}
     ret = 0
-    
-    # check rois.
-    if data.image_rois == None:
-        data.image_rois = []
-    if len(data.image_rois) != npts:
-        data.image_rois = []
-        for j in range(npts):
-            data.image_rois.append([])
+
+    # check init
+    if len(data.image_peaks) != npts:
+        data._init_image()
 
     # loop
     while ret != 13:
         ###
-        try:
-            roi = data.image_rois[scan_pnt]
-        except:
-            print "** error getting roi **"
-            roi = []
+        roi  = data.image_rois[scan_pnt]
         op = OPTIONS % (str(npts),str(scan_pnt),str(roi))
         print op
         rret = raw_input(prompt)
@@ -110,21 +99,18 @@ def image_menu(data):
             roi = [int(c1),int(r1),int(c2),int(r2)]
             data.image_rois[scan_pnt] = roi
         elif ret == 5:
-            roi = data.image_rois[scan_pnt]
-            if len(roi) == 4:
-                data.image_rois = []
-                for j in range(npts):
-                    data.image_rois.append(copy.copy(roi))
-        elif ret == 6:
+            # should make this a seperate menu function
+            # the text could then go into a 'h'elp menu
+            bgr_params = data.image_bgrpar[scan_pnt]
+
             print "Note that linear backgrounds are applied to row"
             print "and column sum integrals. These sums apply to the"
             print "non-background substracted image roi"
             p2 = "Num bgr points for linear background (0 for no bgr) (%s)>" % str(bgr_params['nbgr'])
             print p2
-            n = raw_input('>>')
-            if len(n) > 0:
-                try: bgr_params['nbgr'] = int(n)
-                except: pass
+            tmp = raw_input('>>')
+            if len(tmp.strip()) > 0:
+                data.image_bgrpar[scan_pnt]['nbgr'] = int(tmp)
                 
             print "The below widths are used for determining the image"
             print "roi background.  If both are zero no background is "
@@ -136,22 +122,34 @@ def image_menu(data):
             print p2
             tmp = raw_input('>>')
             if len(tmp.strip()) > 0:
-                bgr_params['cwidth'] = int(tmp)
+                data.image_bgrpar[scan_pnt]['cwidth'] = int(tmp)
             p2 = "Enter peak width in row direction, rwidth (%s)>" % bgr_params['rwidth']
             print p2
             tmp = raw_input('>>')
             if len(tmp.strip()) > 0:
-                bgr_params['rwidth'] = int(tmp)
-            print "bgr params:", bgr_params
-
+                data.image_bgrpar[scan_pnt]['rwidth'] = int(tmp)
+            print "bgr params:", data.image_bgrpar[scan_pnt]
+            
             #plot bgr
-            if (bgr_params['rwidth'] > 0) or (bgr_params['cwidth'] > 0):
-                img = image_data.clip_image(data.image[scan_pnt],roi=roi)
-                image_data.image_bgr(img,cwidth=bgr_params['cwidth'],
-                                     rwidth=bgr_params['rwidth'],
+            if  (data.image_bgrpar[scan_pnt]['rwidth'] > 0) or (data.image_bgrpar[scan_pnt]['cwidth'] > 0):
+                img = image_data.clip_image(data.image[scan_pnt],
+                                            roi=data.image_rois[scan_pnt])
+                image_data.image_bgr(img,
+                                     cwidth=data.image_bgrpar[scan_pnt]['cwidth'],
+                                     rwidth=data.image_bgrpar[scan_pnt]['rwidth'],
                                      plot=True)
+        elif ret == 6:
+            roi = data.image_rois[scan_pnt]
+            data.image_rois = []
+            for j in range(npts):
+                data.image_rois.append(copy.copy(roi))
+            
+            bgr_par = data.image_bgrpar[scan_pnt]
+            data.image_bgrpar = []
+            for j in range(npts):
+                data.image_bgrpar.append(copy.copy(bgr_par))
         elif ret == 7:
-            data.integrate_image(idx=[scan_pnt],bgr_params=bgr_params,
+            data.integrate_image(idx=[scan_pnt],
                                  plot=True,fig=3)
         elif ret == 8:
             p2 = "Plot all images (False)>"
@@ -161,7 +159,7 @@ def image_menu(data):
                 yn = False
             else:
                 yn = eval(yn)
-            data.integrate_image(bgr_params=bgr_params,plot=yn)
+            data.integrate_image(plot=yn)
             #
             pylab.figure(5, figsize = [5,4])
             pylab.clf()
@@ -203,21 +201,12 @@ def image_menu(data):
                 figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
                 image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
         elif ret ==12:
-            if data.image_peaks['I_c']== None:
-                print "Remove not possible before first integration"
-                pass
+            if int(scan_pnt) in data.bad_points:
+                data.bad_points.remove(scan_pnt)
+                print "Data point removed from bad list"
             else:
-                p2 = "Are you sure you want to remove this Datapoint? (y/n)"
-                print p2
-                pnt = raw_input('>>')
-                if pnt.lower() == 'y' or pnt.lower() =='yes':
-                    data.image_peaks['I_c'][scan_pnt] = -1.
-                    data.image_peaks['I_r'][scan_pnt] = -1.
-                    data.image_peaks['Ierr_c'][scan_pnt] = 0.
-                    data.image_peaks['Ierr_r'][scan_pnt] = 0.
-                else:
-                    print "Datapoint not removed" 
-                    pass
+                data.bad_points.append(int(scan_pnt))
+                print "Data point added to bad list"
         elif ret == 13:                
             print "All done"
         else:
