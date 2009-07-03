@@ -10,7 +10,9 @@ Modifications:
 #######################################################################
 """
 Todo
-
+- include a flag to control image integration?
+- set individual image background parameters for each scan point
+- use the bad_points list in image_integrate
 """
 ########################################################################
 

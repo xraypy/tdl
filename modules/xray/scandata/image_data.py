@@ -17,7 +17,9 @@ Modifications:
 """
 Todo
  - Improve image background determination
-
+ - In ImageAna.plot should we plot row and column sums
+   after bgr subtraction?
+   
 """
 #######################################################################
 """
@@ -167,7 +169,6 @@ def line_sum(image,sumflag='c',nbgr=5):
     sum down 'c'olumns or across 'r'ows
     this returns the summed data and linear background
     """
-    #
     if sumflag == 'c':
         data = image.sum(axis=0)
     elif sumflag == 'r':
@@ -228,10 +229,6 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
 
     initially try using the xrf bgr algorithm
     if this works then we can optimize for images
-
-    Note should change this to do either row or column sum
-    only if the cwidth/rwidth are > 0.  If both are > 0
-    then we should take the average.  
 
     """
     bgr_arr_r = Num.zeros(image.shape)
@@ -300,7 +297,9 @@ def _bgr(y,width):
 
     # loop through each point
     #for j in range(npts):
-    #    idx_left = Num.max(0, j- 
+    #    idx_left = Num.max()
+    # pick up here, make simple fast version
+    # of background removal algo
 
 
 ################################################################################
@@ -374,17 +373,25 @@ class ImageAna:
         # clip image
         image = clip_image(self.image,self.roi)
 
-        # subtract background
+        # integrate the roi
+        self.I = Num.sum(Num.trapz(image))
+
+        # subtract image background
         if (self.bgr_cwidth > 0) or (self.bgr_rwidth > 0):
             bgr = image_bgr(image,cwidth=self.bgr_cwidth,
                             rwidth=self.bgr_rwidth)
-            image = image - bgr
-            self.I = Num.sum(Num.trapz(image))
+            #image = image - bgr
+            #self.I = Num.sum(Num.trapz(image))
             self.Ibgr = Num.sum(Num.trapz(bgr))
-            self.Ierr = (self.I + self.Ibgr)**0.5
+            self.I    = self.I - self.Ibgr
+
+        # error
+        self.Ierr = (self.I + self.Ibgr)**0.5
 
         # the below integrations should only be done
         # if we have a flag set to do so??
+        # note these are done on the non background
+        # subtracted image
         
         # integrate col sum
         (I,Ierr,Ibgr) = line_sum_integral(image,sumflag='c',nbgr=self.nbgr)
@@ -410,8 +417,8 @@ class ImageAna:
             pylab.figure(fig,figsize=[12,8])
         else:
             pylab.figure(fig,figsize=[12,8])
-        title_c = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
-        title_r = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
+        title_c = 'I_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
+        title_r = 'I_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
         title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
         #
         nbgr = self.nbgr
@@ -419,12 +426,14 @@ class ImageAna:
         # clipped image
         image = clip_image(self.image,self.roi)
 
-        # subtract background
+        # background
         if (self.bgr_cwidth > 0) or (self.bgr_rwidth > 0):
-            bgr = image_bgr(image,cwidth=self.bgr_cwidth,
-                            rwidth=self.bgr_rwidth)
-            image = image - bgr
+            ibgr = image_bgr(image,cwidth=self.bgr_cwidth,
+                             rwidth=self.bgr_rwidth)
+            #image = image - bgr
             title_roi = title_roi + '\n(background subtracted)'
+        else:
+            ibgr = None
 
         # full image with roi box
         (c1,r1,c2,r2) = self.roi
@@ -439,10 +448,13 @@ class ImageAna:
         pylab.title(title_c, fontsize = 12)
         (data, data_idx, bgr) = line_sum(image,sumflag='c',nbgr=nbgr)
         pylab.plot(data_idx, data, 'r')
-        #pylab.plot(data_idx, bgr, 'b')
-        pylab.fill_between(data_idx,bgr,data,where= data>=bgr,facecolor='green')
-        pylab.fill_between(data_idx,0,bgr,facecolor='blue')
+        pylab.plot(data_idx, bgr, 'b')
         pylab.axis([0, data_idx.max(), 0, data.max()*1.05])
+        #pylab.fill_between(data_idx,bgr,data,where= data>=bgr,facecolor='green')
+        #pylab.fill_between(data_idx,0,bgr,facecolor='blue')
+        if ibgr != None:
+            (data, data_idx, bgr) = line_sum(image-ibgr,sumflag='c',nbgr=0)
+            pylab.plot(data_idx, data, 'k-.')
 
         # plot full image with ROI
         pylab.subplot(222)
@@ -453,8 +465,11 @@ class ImageAna:
         # plot zoom on image 
         pylab.subplot(223)
         pylab.title(title_roi,fontsize = 12)
-        pylab.imshow(image, cmap=colormap, aspect='auto')
-
+        if ibgr != None:
+            pylab.imshow(image - ibgr, cmap=colormap, aspect='auto')
+        else:
+            pylab.imshow(image, cmap=colormap, aspect='auto')
+            
         # plot row sum
         pylab.subplot(224)
         pylab.title(title_r, fontsize = 12)
@@ -464,6 +479,9 @@ class ImageAna:
         #pylab.fill_between(data, data_idx,bgr, where=bgr <= data, facecolor = 'green')
         pylab.axis([0,data.max()*1.05, data_idx.max(), 0])
         pylab.xticks(rotation=-45)
+        if ibgr != None:
+            (data, data_idx, bgr) = line_sum(image-ibgr,sumflag='r',nbgr=0)
+            pylab.plot(data, data_idx, 'k-.')
 
 ################################################################################
 ################################################################################

@@ -100,11 +100,8 @@ def image_menu(data):
             image = image_data.clip_image(data.image[scan_pnt],roi)
             image_data.sum_plot(image,nbgr=bgr_params['nbgr'],fig=2)
         elif ret == 4:
-            #roi = data.image_rois[scan_pnt]
-            #image = image_data.clip_image(data.image[scan_pnt],roi)
             image = data.image[scan_pnt]
-            image_data.sum_plot(image,nbgr=-1,fig=2)
-            #c = pylab.cursor(fig=2)
+            image_data.sum_plot(image,nbgr=0,fig=2)
             c = cursor(fig=2)
             (c1,y) = c.get_click(msg="Select left col sum")
             (c2,y) = c.get_click(msg="Select right col sum")
@@ -119,12 +116,22 @@ def image_menu(data):
                 for j in range(npts):
                     data.image_rois.append(copy.copy(roi))
         elif ret == 6:
+            print "Note that linear backgrounds are applied to row"
+            print "and column sum integrals. These sums apply to the"
+            print "non-background substracted image roi"
             p2 = "Num bgr points for linear background (0 for no bgr) (%s)>" % str(bgr_params['nbgr'])
             print p2
             n = raw_input('>>')
             if len(n) > 0:
                 try: bgr_params['nbgr'] = int(n)
                 except: pass
+                
+            print "The below widths are used for determining the image"
+            print "roi background.  If both are zero no background is "
+            print "applied.  If only one is non-zero the background is"
+            print "only calculated in the given direction (row or column)"
+            print "If both are non-zero the background is taken as the"
+            print "average of the background determined for each direction"
             p2 = "Enter peak width in column direction, cwidth (%s)>" % bgr_params['cwidth']
             print p2
             tmp = raw_input('>>')
@@ -136,11 +143,13 @@ def image_menu(data):
             if len(tmp.strip()) > 0:
                 bgr_params['rwidth'] = int(tmp)
             print "bgr params:", bgr_params
-            #
-            img = image_data.clip_image(data.image[scan_pnt],roi=roi)
-            image_data.image_bgr(img,cwidth=bgr_params['cwidth'],
-                                 rwidth=bgr_params['rwidth'],
-                                 plot=True)
+
+            #plot bgr
+            if (bgr_params['rwidth'] > 0) or (bgr_params['cwidth'] > 0):
+                img = image_data.clip_image(data.image[scan_pnt],roi=roi)
+                image_data.image_bgr(img,cwidth=bgr_params['cwidth'],
+                                     rwidth=bgr_params['rwidth'],
+                                     plot=True)
         elif ret == 7:
             data.integrate_image(idx=[scan_pnt],bgr_params=bgr_params,
                                  plot=True,fig=3)
@@ -214,18 +223,6 @@ def image_menu(data):
         else:
             print "** Invalid option '%s' **" % ret
             pass
-
-        # integrate all and plot
-        """
-        data.integrate_image(nbgr=nbgr,plot=False)
-        pylab.figure(5, figsize = [5,4])
-        pylab.clf()
-        pylab.plot(data['L'],data['I_c'],'b',label='col sum')
-        pylab.errorbar(data['L'],data['I_c'],data['Ierr_c'],fmt='o')
-        pylab.plot(data['L'],data['I_r'],'g',label='row sum')
-        pylab.errorbar(data['L'],data['I_r'],data['Ierr_r'],fmt='o')
-        pylab.semilogy()
-        """
 
 ################################################################################
 
