@@ -15,7 +15,7 @@ import types
 import time
 import numpy as Num
 
-from   util import PrintExceptErr
+from   pds.util import PrintExceptErr
 
 ################################################################################
 def newplotter(*arg,**kw):
