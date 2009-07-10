@@ -39,7 +39,8 @@ Current image roi = %s
 10. Select next point 
 11. Select previous point 
 12. Flag as bad point
-13. Done
+13. Set max image intensity value
+14. Done
 ###################
 """
 
@@ -59,7 +60,7 @@ def image_menu(data):
         data._init_image()
 
     # loop
-    while ret != 13:
+    while ret != 14:
         ###
         roi  = data.image_rois[scan_pnt]
         op = OPTIONS % (str(npts),str(scan_pnt),str(roi))
@@ -207,7 +208,16 @@ def image_menu(data):
             else:
                 data.bad_points.append(int(scan_pnt))
                 print "Data point added to bad list"
-        elif ret == 13:                
+        elif ret == 13:
+            print "Enter maximum intensity value to apply to image"
+            Im_max = raw_input('>>')
+            if len(Im_max.strip()) == 0:
+                Im_max = None
+            else:
+                Im_max = int(Im_max)
+            figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
+            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle, Im_max = Im_max)
+        elif ret == 14:                
             print "All done"
         else:
             print "** Invalid option '%s' **" % ret

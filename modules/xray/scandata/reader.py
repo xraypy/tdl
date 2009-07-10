@@ -225,6 +225,8 @@ class Reader:
             if self.image_path == None:
                 spec_pfx = spec.fname.rsplit('.',1)[0]
                 path = os.path.join(spec.path,'images',spec_pfx)
+                fmt_scan_num2 = 'S'+fmt_scan_num
+                path = os.path.join(path,fmt_scan_num2)
                 #path = os.path.join(path,fmt_scan_num)
                 tmp_xxx = "S%s" % fmt_scan_num
                 path = os.path.join(path,tmp_xxx)

@@ -74,7 +74,7 @@ def read_file(tiff_file):
     return arr
 
 ############################################################################
-def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,):
+def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False, Im_max = None):
     """
     show image
     
@@ -109,7 +109,7 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,):
                 cmap = getattr(pylab.cm,cmap)
             else:
                 cmap = None
-    pylab.imshow(img,cmap=cmap)
+    pylab.imshow(img,cmap=cmap, vmax = Im_max)
     pylab.colorbar(orientation='horizontal')
 
     if figtitle:

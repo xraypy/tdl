@@ -68,8 +68,8 @@ class CtrData:
             self.Ierr = Num.append(self.Ierr,scan.image_peaks[self.Ierr_lbl])
             #
             corr = self.calc_correction(scan)
-            F    = (corr*scan.image_peaks[self.I_lbl]/scan.scalers['io'])**0.5
-            Ferr = (corr*scan.image_peaks[self.Ierr_lbl]/scan.scalers['io'])**0.5
+            F    = (corr*scan.image_peaks[self.I_lbl])**0.5
+            Ferr = (corr*scan.image_peaks[self.Ierr_lbl])**0.5
             #
             self.corr = Num.append(self.corr,corr)
             self.F    = Num.append(self.F,F)
@@ -91,7 +91,7 @@ class CtrData:
                  Num.sin(Num.radians(scan.scalers['nu']))**2
             Ci = Num.cos(Num.radians(scan.scalers['del'])) * \
                  Num.sin(Num.radians(scan.scalers['Beta']))
-        return Ci/Cp
+        return Ci/(Cp*scan.scalers['io'])
 
     ##########################################################################
     def plot(self):
