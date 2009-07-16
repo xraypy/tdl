@@ -66,8 +66,8 @@ class CtrData:
             self.I0   = Num.append(self.I0,scan.scalers['io'])
             self.I    = Num.append(self.I,scan.image_peaks[self.I_lbl])
             self.Ierr = Num.append(self.Ierr,scan.image_peaks[self.Ierr_lbl])
-            # the correction Factor is multiplied by 1000 to rescale to Counts
-            corr = self.calc_correction(scan)*1000 
+            # the correction Factor is multiplied by 17000 to rescale to Counts/sec
+            corr = self.calc_correction(scan)*17000 
             F    = (corr*scan.image_peaks[self.I_lbl])**0.5
             Ferr = (corr*scan.image_peaks[self.Ierr_lbl])**0.5
             #
