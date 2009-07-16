@@ -74,7 +74,7 @@ def read_file(tiff_file):
     return arr
 
 ############################################################################
-def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False, Im_max = None):
+def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,Im_max = None):
     """
     show image
     
@@ -455,6 +455,8 @@ class ImageAna:
         if ibgr != None:
             (data, data_idx, bgr) = line_sum(image-ibgr,sumflag='c',nbgr=0)
             pylab.plot(data_idx, data, 'k-.')
+            (data, data_idx, bgr) = line_sum(ibgr,sumflag='c',nbgr=0)
+            pylab.plot(data_idx, data, 'g-.')
 
         # plot full image with ROI
         pylab.subplot(222)
@@ -482,6 +484,8 @@ class ImageAna:
         if ibgr != None:
             (data, data_idx, bgr) = line_sum(image-ibgr,sumflag='r',nbgr=0)
             pylab.plot(data, data_idx, 'k-.')
+            (data, data_idx, bgr) = line_sum(ibgr,sumflag='r',nbgr=0)
+            pylab.plot(data, data_idx, 'g-.')
 
 ################################################################################
 ################################################################################
