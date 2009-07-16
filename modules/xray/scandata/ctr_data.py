@@ -111,7 +111,8 @@ class CtrData:
         f.write('#H            K            L            F           F_err \n')
         for i in range(len(self.L)):
             if self.I[i] > 0:
-                line = "%i    %i    %6.3f    %6.6g    %6.6g\n" % (self.H[i],
+                line = "%i    %i    %i    %6.3f    %6.6g    %6.6g\n" % (i,
+                                                                  self.H[i],
                                                                   self.K[i],
                                                                   self.L[i],
                                                                   self.F[i],
