@@ -108,7 +108,7 @@ class CtrData:
     def write_HKL(self,fname = 'ctr.hkl'):
         #write data file for row data
         f = open(fname, 'w')
-        f.write('#H            K            L            F           F_err \n')
+        f.write('#idx        H            K            L            F           F_err \n')
         for i in range(len(self.L)):
             if self.I[i] > 0:
                 line = "%i    %i    %i    %6.3f    %6.6g    %6.6g\n" % (i,
