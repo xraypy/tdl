@@ -44,7 +44,7 @@ def spec_scan(spec,sc_num):
     paxis = d['labels'][0]
     pdet  = d['labels'][-1]
 
-    state = {'G':d['G'],'Q':d['Q'], 'ATTEN':d['ATTEN']}
+    state = {'G':d['G'],'Q':d['Q'], 'ATTEN':d['ATTEN'], 'ENERGY':d['ENERGY']}
 
     sd = ScanData(name=name,dims=[dims],scalers = scalers,
                   positioners=positioners,primary_axis=[paxis],

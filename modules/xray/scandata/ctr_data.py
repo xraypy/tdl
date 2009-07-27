@@ -6,7 +6,6 @@ Functions for extracting ctr data from ScanData objects
 
 Modifications:
 --------------
-
 """
 ##############################################################################
 """
@@ -14,8 +13,6 @@ Todo
 - Test!
 - sorting and specify HK for plots
 - averaging/merging and merge statistics
-- active area corrections
-- UB calcs
 - corrections for rocking scans
 """
 #############################################################################
@@ -23,20 +20,22 @@ Todo
 import types
 import pylab
 import numpy as Num
+from active_area import active_area
 
 ##############################################################################
-def append_ctr(scans,ctr=None,I_lbl='I_c',Ierr_lbl='Ierr_c'):
+def append_ctr(scans,ctr=None,I_lbl='I_c',Ierr_lbl='Ierr_c',AAparams=[]):
     if ctr == None:
-        return CtrData(scans=scans,I_lbl=I_lbl,Ierr_lbl=Ierr_lbl)
+        return CtrData(scans=scans,I_lbl=I_lbl,Ierr_lbl=Ierr_lbl,AAparams=AAparams)
     else:
         return ctr.append_data(scans)
 
 ##############################################################################
 class CtrData:
-    def __init__(self,scans=[],I_lbl='I_c',Ierr_lbl='Ierr_c'):
+    def __init__(self,scans=[],I_lbl='I_c',Ierr_lbl='Ierr_c',AAparams=[]):
         #
         self.I_lbl    = I_lbl
         self.Ierr_lbl = Ierr_lbl
+        self.AAparams = AAparams
         #
         self.H    = Num.array([],float)
         self.K    = Num.array([],float)
@@ -91,7 +90,24 @@ class CtrData:
                  Num.sin(Num.radians(scan.scalers['nu']))**2
             Ci = Num.cos(Num.radians(scan.scalers['del'])) * \
                  Num.sin(Num.radians(scan.scalers['Beta']))
-        return Ci/(Cp*scan.scalers['io'])
+
+        if self.AAparams != [] and len(self.AAparams) == 7:
+            d1 = self.AAparams[0]
+            d2 = self.AAparams[1]
+            phi_d1 = self.AAparams[2]
+            phi_d2 = self.AAparams[3]
+            Bwidth = self.AAparams[4]
+            Bheight = self.AAparams[5]
+            Debug = self.AAparams[6]
+
+            footprint, spilloff = active_area(scan,d1,d2,phi_d1,phi_d2,Bwidth,Bheight,Debug)
+        else:
+            footprint = Num.ones((scan.dims[0]))
+            spilloff  = Num.ones((scan.dims[0]))
+
+        corr = Ci/(Cp*scan.scalers['io']*spilloff*footprint)
+        
+        return corr
 
     ##########################################################################
     def plot(self):

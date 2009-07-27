@@ -97,7 +97,10 @@ def append_data(data1,data2,sort=True):
         data3.xrf_peaks.update({key:tmp})
     
     # append images...
-    data3.image = Num.append(data1.image, data2.image)
+    data3.image = data1.image
+    for i in range(data2.dims[0]):
+        data3.image.append(data2.image[i])
+
     data3.image_rois = data1.image_rois
     for key in data1.image_peaks.keys():
         s1 = Num.array(data1.image_peaks[key])

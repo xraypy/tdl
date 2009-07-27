@@ -85,6 +85,8 @@ class SpecFile:
                 ncols = int(i[3:])
             elif (i[0:3] == '#AT'):
                 atten = i[6:]
+            elif (i[0:3] == '#EN'):
+                energy = i[8:]
             elif (i[0:3] == '#L '):
                 lab = i[3:]
                 self._summary.append({'index':index,
@@ -99,8 +101,9 @@ class SpecFile:
                                      'ncols':ncols,
                                      'labels':lab,
                                      'atten':atten,
+                                     'energy':energy,
                                      'lineno':lineno})
-                (cmnd,date,xtime,Gvals,q,Pvals,atten,lab) = (None,None,None,None,None,None,None,None)
+                (cmnd,date,xtime,Gvals,q,Pvals,atten,energy,lab) = (None,None,None,None,None,None,None,None,None)
                 (index, ncols, n_sline) = (0,0,0)
 
         self.min_scan = self._summary[0]['index']
@@ -166,6 +169,7 @@ class SpecFile:
                    'Q':[],
                    'P':{},
                    'ATTEN':[],
+                   'ENERGY':[],
                    'labels':[],
                    'ncol':0,
                    'nrow':0,
@@ -181,6 +185,7 @@ class SpecFile:
         sc_dict['G']    = map(float,s['G'].split())
         sc_dict['Q']    = map(float,s['Q'].split())
         sc_dict['ATTEN'] = map(int,s['atten'].split())
+        sc_dict['ENERGY'] = map(float,s['energy'].split())
         # get the motor positions
         p_dict = {}
         m_names = s['mot_names'].split()
