@@ -747,3 +747,69 @@ class FileOpen:
             raise IOError, "Could not open file '%s'" % (fname)
 
 ##########################################################################
+
+##########################################################################
+#  Menu/Get Line Utilities
+##########################################################################
+
+##########################################################################
+def gtline(pterm='>>',p0=None,p1=None,p2=None,options=None,
+           valid=None,default=None,rettype=None,retry=True):
+    """
+    Fancy get line function
+
+    Arguments:
+    * p  = prompt terminator
+    * p0 = line to print prior to actual print
+    * p1 = prompt
+    * p2 = prompt on retry
+    * options = string of options to print at start
+    * valid = list of valid entries
+    * default = default ret value
+    * rettype = typing function, ie function to force ret type
+    * retry = retry on failure?  
+    
+    """
+    if options != None:
+        print options
+    if p0 != None:
+        print p0
+    if p1 != None:
+        prompt = str(p1)
+    else:
+        prompt = ''
+    ret = _gtline(prompt,default,pterm,rettype,valid)
+    if (ret == None) and (retry == True):
+        if p2 != None:
+            prompt = str(p2)
+        else:
+            prompt = ''
+        while 1:
+            ret = _gtline(prompt,default,pterm,rettype,valid)
+            if ret != None:
+                break
+    return (ret)
+
+def _gtline(prompt='',default=None,pterm='>>',rettype=None,valid=None):
+    if default != None:
+        prompt = "%s (%s)%s" % (prompt,str(default),str(pterm))
+    else:
+        prompt = "%s%s" % (prompt,str(pterm))
+    ret = raw_input(prompt)
+    ret = ret.strip()
+    if len(ret) > 0:
+        if rettype != None:
+            try:
+                ret = rettype(ret)
+            except:
+                ret = None
+    elif default != None:
+        ret = default
+    else:
+        ret = None
+    if valid != None:
+        if ret not in valid:
+            ret = None
+    return (ret) 
+
+##########################################################################
