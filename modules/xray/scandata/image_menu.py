@@ -175,7 +175,7 @@ def image_menu(data):
             pylab.errorbar(data['L'],data['I_r'],data['Ierr_r'],fmt='go')
             #
             pylab.semilogy()
-            pylab.legend()
+            pylab.legend(loc = 9)
             pylab.xlabel('L')
             pylab.ylabel('Integrated Intensity')
         elif ret == 9:

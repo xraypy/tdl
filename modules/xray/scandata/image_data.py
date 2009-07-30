@@ -267,7 +267,7 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
 
     #show
     if plot:
-        pylab.figure(1)
+        pylab.figure(3)
         pylab.clf()
         pylab.subplot(3,1,1)
         pylab.imshow(image)

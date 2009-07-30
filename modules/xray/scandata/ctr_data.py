@@ -20,7 +20,7 @@ Todo
 import types
 import pylab
 import numpy as Num
-from active_area import active_area
+from xtal.active_area import active_area
 
 ##############################################################################
 def append_ctr(scans,ctr=None,I_lbl='I_c',Ierr_lbl='Ierr_c',AAparams=[]):
