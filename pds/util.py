@@ -749,12 +749,12 @@ class FileOpen:
 ##########################################################################
 
 ##########################################################################
-#  Menu/Get Line Utilities
+#  Get Line / Menu Utilities
 ##########################################################################
 
 ##########################################################################
-def gtline(pterm='>>',p0=None,p1=None,p2=None,options=None,
-           valid=None,default=None,rettype=None,retry=True):
+def gtline(pterm='>>',p0=None,p1=None,p2=None,valid=None,
+           default=None,rettype=None,retry=True):
     """
     Fancy get line function
 
@@ -763,15 +763,12 @@ def gtline(pterm='>>',p0=None,p1=None,p2=None,options=None,
     * p0 = line to print prior to actual print
     * p1 = prompt
     * p2 = prompt on retry
-    * options = string of options to print at start
     * valid = list of valid entries
     * default = default ret value
     * rettype = typing function, ie function to force ret type
     * retry = retry on failure?  
     
     """
-    if options != None:
-        print options
     if p0 != None:
         print p0
     if p1 != None:
@@ -813,3 +810,129 @@ def _gtline(prompt='',default=None,pterm='>>',rettype=None,valid=None):
     return (ret) 
 
 ##########################################################################
+class Menu:
+    def __init__(self,items=[],descr=[],dohelp=True):
+        self.dohelp = dohelp
+        if (len(descr) != 0) and (len(descr) != len(items)):
+            print "Error length mis-match between items and descriptions"
+            raise exceptions.IndexError
+        else:
+            self._init(items,descr)
+
+    def _init(self,items,descr):
+        # add help
+        if self.dohelp:
+            if 'help' not in items:
+                items.append('help')
+                if len(descr) > 0:
+                    descr.append('Show menu options')
+
+        # add items and descr
+        self.items  = []
+        self.descr  = []
+        for j in range(len(items)):
+            item = items[j].lower
+            if item in self.items:
+                print "Error '%s' is a repeated menu item" % item
+                raise exceptions.IndexError
+            else:
+                self.items.append(items[j])
+                if len(descr) > 0:
+                    self.descr.append(descr[j])
+        # sort
+        self.items = Num.array(self.items)
+        idx        = Num.argsort(self.items)
+        self.items = list(self.items[idx][:])
+        if len(descr) > 0:
+            self.descr = Num.array(self.descr)
+            self.descr = list(self.descr[idx][:])
+        nitems = len(self.items)
+
+        # calc unique array 
+        # loop through chars of each item
+        # and determine when it becomes unique relative to all others
+        self.unique  = []
+        maxchar = 1
+        for j in range(nitems):
+            unique = 1
+            nchar = len(self.items[j])
+            if nchar > maxchar: maxchar = nchar
+            for k in range(nchar):
+                for l in range(nitems):
+                    if l != j:
+                        item = self.items[j][0:k]
+                        test = self.items[l]
+                        if test.find(item) > -1:
+                            unique = k+1
+            self.unique.append(unique)
+
+        # calc options string
+        options = ''
+        fmt = "%%s%%-%is: %%s\n" % maxchar
+        for j in range(nitems):
+            if len(self.descr) > 0:
+                descr = self.descr[j]
+            else:
+                descr = ''
+            idx  = self.unique[j]
+            item = self.items[j][0:idx].upper() + self.items[j][idx:]
+            options = fmt % (options, item, descr)
+        self.options = options
+
+    def match(self,cmd):
+        cmd0 = cmd
+        cmd = cmd.strip().lower()
+        nmatch = -1
+        cmdnum = -1
+        nitems = len(self.items)
+        cmdlen = len(cmd)
+        for j in range(nitems):
+            if (cmdlen >= self.unique[j]):
+                if self.items[j].find(cmd,0,cmdlen) == 0:
+                    nmatch = nmatch + 1
+                    cmdnum = j
+        if nmatch == -1:
+            print "Command '%s' not found" % cmd0
+            return None
+        elif nmatch > 0:
+            print "Warning: '%s' is an ambiguous command" % cmd0
+            return None
+        else:
+            if self.dohelp == True:
+                if self.items[cmdnum] == 'help':
+                    print self.options
+                    return None
+            return self.items[cmdnum]
+
+    def prompt(self):
+        if self.options != None: print self.options
+        #
+        def _input(p='>>'):
+            cmd = raw_input(p)
+            cmd = cmd.strip()
+            if len(cmd) == 0:
+                return None
+            else:
+                return cmd
+        #
+        cmd = _input('>>')
+        if cmd != None:
+            cmd = self.match(cmd)
+        while cmd == None:
+            cmd = _input('>>')
+            if cmd != None:
+                cmd = self.match(cmd)
+        return cmd
+    
+##########################################################################
+##########################################################################
+if __name__ == "__main__":
+    items = ['save','quit','run', 'zzz','ran','runner','n']
+    descr = ['save stuff',
+             'all done',
+             'do a thing',
+             'zzzzzzz',
+             'do the other thing',
+             'x','y']
+    m = Menu(items=items,descr=descr)
+    print m.prompt()
