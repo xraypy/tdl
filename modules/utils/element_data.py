@@ -13,7 +13,7 @@ Modifications:
 import types
 
 #################################################################################
-nels = 100   # Number of elements in table
+nels = 100   # number of elements in table
 
 atomic_symbols = [None,
    'H',  'He', 'Li', 'Be', 'B',  'C',  'N',  'O',  'F',  'Ne', 'Na', 'Mg', 'Al',

@@ -19,7 +19,7 @@ Todo
 
 import types
 import pylab
-import numpy as Num
+import numpy as num
 from xtal.active_area import active_area
 
 ##############################################################################
@@ -37,15 +37,15 @@ class CtrData:
         self.Ierr_lbl = Ierr_lbl
         self.AAparams = AAparams
         #
-        self.H    = Num.array([],float)
-        self.K    = Num.array([],float)
-        self.L    = Num.array([],float)
-        self.I0   = Num.array([],float)
-        self.I    = Num.array([],float)
-        self.Ierr = Num.array([],float)
-        self.corr = Num.array([],float)
-        self.F    = Num.array([],float)
-        self.Ferr = Num.array([],float)
+        self.H    = num.array([],float)
+        self.K    = num.array([],float)
+        self.L    = num.array([],float)
+        self.I0   = num.array([],float)
+        self.I    = num.array([],float)
+        self.Ierr = num.array([],float)
+        self.corr = num.array([],float)
+        self.F    = num.array([],float)
+        self.Ferr = num.array([],float)
         #
         self.append_data(scans)
 
@@ -59,20 +59,20 @@ class CtrData:
 
         for scan in scans:
             #fill dictionary with data from all scans
-            self.H    = Num.append(self.H,scan.scalers['H'])
-            self.K    = Num.append(self.K,scan.scalers['K'])
-            self.L    = Num.append(self.L,scan.scalers['L'])
-            self.I0   = Num.append(self.I0,scan.scalers['io'])
-            self.I    = Num.append(self.I,scan.image_peaks[self.I_lbl])
-            self.Ierr = Num.append(self.Ierr,scan.image_peaks[self.Ierr_lbl])
+            self.H    = num.append(self.H,scan.scalers['H'])
+            self.K    = num.append(self.K,scan.scalers['K'])
+            self.L    = num.append(self.L,scan.scalers['L'])
+            self.I0   = num.append(self.I0,scan.scalers['io'])
+            self.I    = num.append(self.I,scan.image_peaks[self.I_lbl])
+            self.Ierr = num.append(self.Ierr,scan.image_peaks[self.Ierr_lbl])
             # the correction Factor is multiplied by 17000 to rescale to Counts/sec
             corr = self.calc_correction(scan)*17000 
             F    = (corr*scan.image_peaks[self.I_lbl])**0.5
             Ferr = (corr*scan.image_peaks[self.Ierr_lbl])**0.5
             #
-            self.corr = Num.append(self.corr,corr)
-            self.F    = Num.append(self.F,F)
-            self.Ferr = Num.append(self.Ferr,Ferr)
+            self.corr = num.append(self.corr,corr)
+            self.F    = num.append(self.F,F)
+            self.Ferr = num.append(self.Ferr,Ferr)
 
     ##########################################################################
     def calc_correction(self,scan):
@@ -80,16 +80,16 @@ class CtrData:
         correction factors for pilatus
         """
         #calculate correction factors for specular rods
-        if (Num.abs(scan.scalers['H'][0]) < 0.01 and \
-            Num.abs(scan.scalers['K'][0]) < 0.01) :
-            Cp = 1 - Num.sin(Num.radians(scan.scalers['nu']))**2
-            Ci = Num.sin(Num.radians(scan.scalers['nu']/2))
+        if (num.abs(scan.scalers['H'][0]) < 0.01 and \
+            num.abs(scan.scalers['K'][0]) < 0.01) :
+            Cp = 1 - num.sin(num.radians(scan.scalers['nu']))**2
+            Ci = num.sin(num.radians(scan.scalers['nu']/2))
         #or calculate correction factors for off-specular rods
         else:
-            Cp = 1 - Num.cos(Num.radians(scan.scalers['del']))**2 * \
-                 Num.sin(Num.radians(scan.scalers['nu']))**2
-            Ci = Num.cos(Num.radians(scan.scalers['del'])) * \
-                 Num.sin(Num.radians(scan.scalers['Beta']))
+            Cp = 1 - num.cos(num.radians(scan.scalers['del']))**2 * \
+                 num.sin(num.radians(scan.scalers['nu']))**2
+            Ci = num.cos(num.radians(scan.scalers['del'])) * \
+                 num.sin(num.radians(scan.scalers['Beta']))
 
         if self.AAparams != [] and len(self.AAparams) == 7:
             d1 = self.AAparams[0]
@@ -102,8 +102,8 @@ class CtrData:
 
             footprint, spilloff = active_area(scan,d1,d2,phi_d1,phi_d2,Bwidth,Bheight,Debug)
         else:
-            footprint = Num.ones((scan.dims[0]))
-            spilloff  = Num.ones((scan.dims[0]))
+            footprint = num.ones((scan.dims[0]))
+            spilloff  = num.ones((scan.dims[0]))
 
         corr = Ci/(Cp*scan.scalers['io']*spilloff*footprint)
         

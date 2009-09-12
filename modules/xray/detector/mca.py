@@ -10,7 +10,7 @@ Modifications:
 """
 ########################################################################
 
-import numpy as Num
+import numpy as num
 import math
 import types
 
@@ -66,7 +66,7 @@ class Mca:
         energy = offset + slope*channel + quad*channel**2
 
     If channels are not explicitly given, we'll assume:
-       channels = Num.arange(NCHAN,dtype=int)
+       channels = num.arange(NCHAN,dtype=int)
     with NCHAN = 2048
     """
     ###############################################################################
@@ -155,16 +155,16 @@ class Mca:
             channels: Array of channel numbers
         """
         if data:
-            self.data = Num.asarray(data,dtype=Num.int)
+            self.data = num.asarray(data,dtype=num.int)
         elif self.data==[]:
-            self.data = Num.zeros(self.nchans,dtype=Num.int)
+            self.data = num.zeros(self.nchans,dtype=num.int)
             
         # Note if channels == None, assume the same 
         # length as data and channel[0] = 0
         if channels:
-            self.channels = Num.asarray(channels,dtype=Num.int)
+            self.channels = num.asarray(channels,dtype=num.int)
         else:
-            self.channels = Num.arange(len(self.data),dtype=Num.int)
+            self.channels = num.arange(len(self.data),dtype=num.int)
         
         # Check
         self.nchans = len(self.data)
@@ -231,7 +231,7 @@ class Mca:
         if correct == True:
             d = self.cor_factor * self.data
             # note adding .5 rounds the data
-            d = (d+0.5).astype(Num.int)
+            d = (d+0.5).astype(num.int)
             return d
         else:
             return self.data

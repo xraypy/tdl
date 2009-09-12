@@ -13,7 +13,7 @@ Modifications:
 import sys
 import types
 import time
-import numpy as Num
+import numpy as num
 
 from   pds.util import PrintExceptErr
 
@@ -37,34 +37,34 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1.,yscale=1.,
     """
     import pylab
 
-    x = Num.array(x)
+    x = num.array(x)
     if len(x) == 0:
         print "No data"
         return
     
     if y == None:
         y = x
-        x = Num.arange(len(y))
+        x = num.arange(len(y))
     else:
-        y = Num.array(y)
+        y = num.array(y)
         if len(y) == 0:
             print "No data"
             return
 
     # calc x and y
     if xcen == True:
-        ave_x = (Num.min(x) + Num.max(x))/2.
+        ave_x = (num.min(x) + num.max(x))/2.
     else:
         ave_x = 0.
     if ycen == True:
-        ave_y = (Num.min(y) + Num.max(y))/2.
+        ave_y = (num.min(y) + num.max(y))/2.
     else:
         ave_y = 0.
         
     if xnorm == True:
-        xscale = xscale/Num.max(x-ave_x)
+        xscale = xscale/num.max(x-ave_x)
     if ynorm == True:
-        yscale = yscale/Num.max(y-ave_y)
+        yscale = yscale/num.max(y-ave_y)
     try:
         x_plot = (x-ave_x)*xscale + xoff
         y_plot = (y-ave_y)*yscale + yoff

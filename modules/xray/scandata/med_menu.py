@@ -10,7 +10,7 @@ Modifications:
 #######################################################################
 
 import types
-import numpy as Num
+import numpy as num
 import pylab
 import med_data
 

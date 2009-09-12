@@ -232,7 +232,7 @@
     'position':(582, 326), 
     'size':(241, -1), 
     'items':[], 
-    'text':'Num.arange(0.01,1.01,0.01)', 
+    'text':'num.arange(0.01,1.01,0.01)', 
     },
 
 {'type':'ComboBox', 

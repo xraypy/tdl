@@ -12,7 +12,7 @@ command can find _ref.dll (which also needs to find the gsl dll's)
 #######################################################################
 
 import ctypes as C
-import numpy as Num
+import numpy as num
 import os
 
 #######################################################################
@@ -23,7 +23,7 @@ libspath = os.path.join(libspath,'libs')
 libspath = os.path.abspath(libspath)
 
 # import the dll 
-_ref_dll = Num.ctypeslib.load_library('_ref',libspath)
+_ref_dll = num.ctypeslib.load_library('_ref',libspath)
 
 #######################################################################
 _ref_dll._Reflectivity.restype = C.c_int
@@ -82,18 +82,18 @@ class _Reflectivity:
         #
         self._init_params()
         #
-        self.d           = Num.zeros(self.nlayer, dtype=Num.double)
-        self.rho         = Num.zeros(self.nlayer, dtype=Num.double)
-        self.sigma       = Num.zeros(self.nlayer-1, dtype=Num.double)
-        self.comp        = Num.zeros((self.nelem, self.nlayer), dtype=Num.double )
+        self.d           = num.zeros(self.nlayer, dtype=num.double)
+        self.rho         = num.zeros(self.nlayer, dtype=num.double)
+        self.sigma       = num.zeros(self.nlayer-1, dtype=num.double)
+        self.comp        = num.zeros((self.nelem, self.nlayer), dtype=num.double )
         #
-        self.elem_z      = Num.zeros(self.nelem, dtype=Num.double)
-        self.fp          = Num.zeros(self.nelem, dtype=Num.double)
-        self.fpp         = Num.zeros(self.nelem, dtype=Num.double)
-        self.amu         = Num.zeros(self.nelem, dtype=Num.double)
-        self.mu_at       = Num.zeros(self.nelem, dtype=Num.double)
+        self.elem_z      = num.zeros(self.nelem, dtype=num.double)
+        self.fp          = num.zeros(self.nelem, dtype=num.double)
+        self.fpp         = num.zeros(self.nelem, dtype=num.double)
+        self.amu         = num.zeros(self.nelem, dtype=num.double)
+        self.mu_at       = num.zeros(self.nelem, dtype=num.double)
         #
-        self.theta       = Num.zeros(self.nthet, dtype=Num.double)
+        self.theta       = num.zeros(self.nthet, dtype=num.double)
 
     ###################################################################
     def _init_params(self,):
@@ -119,7 +119,7 @@ class _Reflectivity:
         # calc_params[13] = reflectivity scale factor
         #
         """
-        self.calc_params = Num.zeros(14, dtype=Num.double)
+        self.calc_params = num.zeros(14, dtype=num.double)
         self.calc_params[0] = 10000.  # energy (eV)
         self.calc_params[1] = 0.01    # wconv (deg)
         self.calc_params[2] = 50.0    # sample len (mm)
@@ -144,22 +144,22 @@ class _Reflectivity:
         sized, but can be inited to zeros...
         """
         #
-        self.R           = Num.zeros(self.nthet, dtype=Num.double)
-        self.Y           = Num.zeros(self.nthet, dtype=Num.double)
+        self.R           = num.zeros(self.nthet, dtype=num.double)
+        self.Y           = num.zeros(self.nthet, dtype=num.double)
         #
-        self.delta       = Num.zeros(self.nlayer, dtype=Num.double)
-        self.beta        = Num.zeros(self.nlayer, dtype=Num.double)
-        self.amu_t       = Num.zeros(self.nlayer, dtype=Num.double)
-        self.mu_t        = Num.zeros(self.nlayer, dtype=Num.double)
+        self.delta       = num.zeros(self.nlayer, dtype=num.double)
+        self.beta        = num.zeros(self.nlayer, dtype=num.double)
+        self.amu_t       = num.zeros(self.nlayer, dtype=num.double)
+        self.mu_t        = num.zeros(self.nlayer, dtype=num.double)
         #
-        self.Re_X        = Num.zeros(self.nlayer, dtype=Num.double)
-        self.Im_X        = Num.zeros(self.nlayer, dtype=Num.double)
-        self.Re_Ai       = Num.zeros(self.nlayer, dtype=Num.double)
-        self.Im_Ai       = Num.zeros(self.nlayer, dtype=Num.double)
-        self.Re_Ar       = Num.zeros(self.nlayer, dtype=Num.double)
-        self.Im_Ar       = Num.zeros(self.nlayer, dtype=Num.double)
-        self.Re_g        = Num.zeros(self.nlayer, dtype=Num.double)
-        self.Im_g        = Num.zeros(self.nlayer, dtype=Num.double)
+        self.Re_X        = num.zeros(self.nlayer, dtype=num.double)
+        self.Im_X        = num.zeros(self.nlayer, dtype=num.double)
+        self.Re_Ai       = num.zeros(self.nlayer, dtype=num.double)
+        self.Im_Ai       = num.zeros(self.nlayer, dtype=num.double)
+        self.Re_Ar       = num.zeros(self.nlayer, dtype=num.double)
+        self.Im_Ar       = num.zeros(self.nlayer, dtype=num.double)
+        self.Re_g        = num.zeros(self.nlayer, dtype=num.double)
+        self.Im_g        = num.zeros(self.nlayer, dtype=num.double)
 
     ###################################################################
     def _arr_ptrs(self):
@@ -290,8 +290,8 @@ class _Reflectivity:
 #######################################################################
 #######################################################################
 def lib_test():
-    x = Num.array([[1.1,2.1,3.1],[4.1,5.1,6.1]])
-    y = Num.array([-1.,-20.,-30.])
+    x = num.array([[1.1,2.1,3.1],[4.1,5.1,6.1]])
+    y = num.array([-1.,-20.,-30.])
     dptr = C.POINTER(C.c_double)
     xptr = (dptr*len(x))(*[row.ctypes.data_as(dptr) for row in x])
     yptr = y.ctypes.data_as(dptr)

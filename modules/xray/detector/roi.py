@@ -12,7 +12,7 @@ Modifications:
 """
 ########################################################################
 
-import numpy as Num
+import numpy as num
 
 import mca_calib as calib
 
@@ -71,7 +71,7 @@ class Roi:
         """
         Calc the total and net.
         Arguments:
-            data: Num Array or list of data.
+            data: num array or list of data.
         """
         # Computed values....
         self.total  = 0

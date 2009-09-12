@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     s = "def t():\n   return 100\nxx = t()"
     do_exec(s,vars=v)
-    s = "import numpy as Num"
+    s = "import numpy as num"
     do_exec(s,vars=v)
     print v, "\n----\n"
     

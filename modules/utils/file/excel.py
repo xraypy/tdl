@@ -9,7 +9,7 @@ Modifications:
 """
 #################################################################################
 
-import numpy as Num
+import numpy as num
 import types
 import os
 
@@ -53,7 +53,7 @@ def excel_data(fname,rows,cols,sheet=1, ret_fmt=None,close=True):
         return ret_data
     elif ret_fmt == 'f':
         try:
-            data = Num.array(data,dtype=float)
+            data = num.array(data,dtype=float)
             return data
         except:
             print 'doing float loop'
@@ -66,10 +66,10 @@ def excel_data(fname,rows,cols,sheet=1, ret_fmt=None,close=True):
                     except:
                         rdata.append(0.0)
                 ret_data.append(rdata)
-            return Num.array(ret_data,dtype=float)
+            return num.array(ret_data,dtype=float)
     elif ret_fmt == 's':
         #try:
-        #    data = Num.array(data,dtype=str)
+        #    data = num.array(data,dtype=str)
         #    return data
         #except:
         #print 'doing string loop'
@@ -82,7 +82,7 @@ def excel_data(fname,rows,cols,sheet=1, ret_fmt=None,close=True):
                 except:
                     rdata.append('')
             ret_data.append(rdata)
-        #return Num.array(ret_data,dtype=str)
+        #return num.array(ret_data,dtype=str)
         return ret_data
 
     return None

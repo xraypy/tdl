@@ -38,7 +38,7 @@ Note in older versions of PIL:
 
 import types
 import copy
-import numpy as Num
+import numpy as num
 import Image
 import pylab
 
@@ -67,8 +67,8 @@ def read_file(tiff_file):
         im  = Image.open(tiff_file)
     except:
         print "Error reading file: %s" % tiff_file
-        return Num.array([[0]])
-    arr = Num.fromstring(im.tostring(), dtype='int32')
+        return num.array([[0]])
+    arr = num.fromstring(im.tostring(), dtype='int32')
     arr.shape = im.size[1],im.size[0]
     #return arr.transpose()
     return arr
@@ -174,16 +174,16 @@ def line_sum(image,sumflag='c',nbgr=3):
     elif sumflag == 'r':
         data = image.sum(axis=1)
     npts     = len(data)
-    data_idx = Num.arange(npts,dtype=float)
+    data_idx = num.arange(npts,dtype=float)
     #data_err  = data**(0.5)
 
     ### compute linear background
-    bgr = Num.zeros(npts)
+    bgr = num.zeros(npts)
     if nbgr > 0:
-        xbgr = Num.arange(0,nbgr,1,dtype=float)
-        xbgr = Num.append(xbgr,Num.arange(npts-nbgr,npts,1))
-        ybgr = Num.array(data[0:nbgr],dtype=float)
-        ybgr = Num.append(ybgr,data[npts-nbgr:])
+        xbgr = num.arange(0,nbgr,1,dtype=float)
+        xbgr = num.append(xbgr,num.arange(npts-nbgr,npts,1))
+        ybgr = num.array(data[0:nbgr],dtype=float)
+        ybgr = num.append(ybgr,data[npts-nbgr:])
         lr   = LinReg(xbgr,ybgr,plot=False)
         bgr  = lr.calc_y(data_idx)
     return (data, data_idx, bgr)
@@ -202,8 +202,8 @@ def line_sum_integral(image,sumflag='c',nbgr=3):
     #Ibgr = bgr.sum()
     Itot = 0.0
     Ibgr = 0.0
-    Itot = Num.trapz(data)
-    Ibgr = Num.trapz(bgr)
+    Itot = num.trapz(data)
+    Ibgr = num.trapz(bgr)
     I    = Itot - Ibgr
     ### compute errors
     #Ierr = (data.sum() + bgr.sum())**(0.5)
@@ -231,8 +231,8 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
     if this works then we can optimize for images
 
     """
-    bgr_arr_r = Num.zeros(image.shape)
-    bgr_arr_c = Num.zeros(image.shape)
+    bgr_arr_r = num.zeros(image.shape)
+    bgr_arr_c = num.zeros(image.shape)
 
     # fit to rows
     if rwidth > 0:
@@ -253,7 +253,7 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
     # combine by taking the minimum of the
     # two at each point ??
     bgr = bgr_arr_r
-    idx = Num.where(bgr > bgr_arr_c)
+    idx = num.where(bgr > bgr_arr_c)
     bgr[idx] = bgr_arr_c[idx]
     """
     if (rwidth > 0) and (cwidth > 0):
@@ -263,7 +263,7 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
     elif cwidth > 0:
         bgr = bgr_arr_c
     else:
-        bgr = Num.zeros(image.shape)
+        bgr = num.zeros(image.shape)
 
     #show
     if plot:
@@ -293,11 +293,11 @@ def _bgr(y,width):
     npts = len(y)
     width_s = width**2
     n       = int(2*width)
-    scratch = Num.zeros(n+1)
+    scratch = num.zeros(n+1)
 
     # loop through each point
     #for j in range(npts):
-    #    idx_left = Num.max()
+    #    idx_left = num.max()
     # pick up here, make simple fast version
     # of background removal algo
 
@@ -374,15 +374,15 @@ class ImageAna:
         image = clip_image(self.image,self.roi)
 
         # integrate the roi
-        self.I = Num.sum(Num.trapz(image))
+        self.I = num.sum(num.trapz(image))
 
         # subtract image background
         if (self.bgr_cwidth > 0) or (self.bgr_rwidth > 0):
             bgr = image_bgr(image,cwidth=self.bgr_cwidth,
                             rwidth=self.bgr_rwidth)
             #image = image - bgr
-            #self.I = Num.sum(Num.trapz(image))
-            self.Ibgr = Num.sum(Num.trapz(bgr))
+            #self.I = num.sum(num.trapz(image))
+            self.Ibgr = num.sum(num.trapz(bgr))
             self.I    = self.I - self.Ibgr
 
         # error

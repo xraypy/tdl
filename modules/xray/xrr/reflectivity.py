@@ -134,7 +134,7 @@ Modifications:
 """
 ###############################################################################
 
-import numpy as Num
+import numpy as num
 import exceptions
 
 from Ifeffit import Ifeffit
@@ -143,7 +143,7 @@ from utils import element_data as elements
 
 ###############################################################################
 
-DTYPE = Num.dtype('double')
+DTYPE = num.dtype('double')
 
 DEFAULT_PARAMS = {'energy':10000.,'wconv':0.01,
                   'slen':50.,'bvert':0.05,'bhorz':10.0,
@@ -161,7 +161,7 @@ class RefModel(_reflectivity._Reflectivity):
     def __init__(self,d=[],rho=[],sigma=[],comp=[],elem_z=[],theta=[],params={}):
         """
         Valid kw args:
-        d, rho, sigma, comp, elem_z, theta --> all Num arrays, dtype = double
+        d, rho, sigma, comp, elem_z, theta --> all num arrays, dtype = double
         params --> dictionary
         """
         self.iff = Ifeffit(screen_echo = 0)
@@ -188,7 +188,7 @@ class RefModel(_reflectivity._Reflectivity):
                    elem_z=None, theta=None):
         """
         Initialize/modify model data and arrays.
-        Note that arrays should be passed in as Numpy arrays, and will
+        Note that arrays should be passed in as numpy arrays, and will
         be assigned by reference!! See _reflectivity._init_model for
         array creation
         """
@@ -304,9 +304,9 @@ class RefModel(_reflectivity._Reflectivity):
         get fp,fpp from ifeffit for index of refraction calcs
         """
         if len(self.fp) != self.nelem:
-            self.fp    = Num.zeros(self.nelem, dtype=Num.double)
-            self.fpp   = Num.zeros(self.nelem, dtype=Num.double)
-            self.amu   = Num.zeros(self.nelem, dtype=Num.double)
+            self.fp    = num.zeros(self.nelem, dtype=num.double)
+            self.fpp   = num.zeros(self.nelem, dtype=num.double)
+            self.amu   = num.zeros(self.nelem, dtype=num.double)
             self._init_ptr  = True
 
         energy = self.calc_params[0]
@@ -334,14 +334,14 @@ class RefModel(_reflectivity._Reflectivity):
         to computing total (ie this is photoeffect only)
         """
         if len(self.mu_at) != self.nelem:
-            self.mu_at = Num.zeros(self.nelem, dtype=Num.double)
+            self.mu_at = num.zeros(self.nelem, dtype=num.double)
             self._init_ptr  = True
         
         #below is 2*Na*r_e*hc (in cm^2*eV*mole/atom)
         con = 4.20792637233e07
         fy_energy = self.calc_params[7]
         if fy_energy == 0.0:
-            self.mu_at = Num.zeros(self.nelem, dtype=Num.double)
+            self.mu_at = num.zeros(self.nelem, dtype=num.double)
         else:
             for j in range(self.nelem):
                 en = [fy_energy, fy_energy + 1.]
@@ -437,21 +437,21 @@ def test():
     # The top layer should be a low density layer
     # that approximates air
     # The thicknesses are in angstroms
-    d = Num.array([50000.0, 100.0, 10.0, 1000.0],dtype=Num.double)
+    d = num.array([50000.0, 100.0, 10.0, 1000.0],dtype=num.double)
 
     # the corresponding densities of the layers
     # these are g/cm^3
-    rho = Num.array([3.0, 4.0, 1.7, 0.0002],dtype=Num.double)
+    rho = num.array([3.0, 4.0, 1.7, 0.0002],dtype=num.double)
 
     # Debye-Waller type interface roughness parameters: r = r*exp(-(q*sigma)^2)
     # The first value is the 1/0 interface roughness
     # ie the interface between the first layer and the base layer
     # there are nlayer - 1 total interfaces.  
-    sigma = Num.array([10, 10, 10],dtype=Num.double)
+    sigma = num.array([10, 10, 10],dtype=num.double)
 
     #this is the list of all elements that make up the multilayer composition
     #         N, O, Al, Si, Fe
-    elem_z = Num.array([7, 8, 13, 14, 26],dtype=Num.double)
+    elem_z = num.array([7, 8, 13, 14, 26],dtype=num.double)
 
     # Composition is a matrix giving the mole fraction or stiochiometric
     # coefficients of each of the above elements in each layer.
@@ -467,10 +467,10 @@ def test():
              [0.0,   0.999, 0.07, 0.0],  # Al
              [1.0,   0.0,   0.4,  0.0],  # Si
              [0.00001,   0.001, 0.1,  0.0]]  # Fe
-    comp = Num.array(comp,dtype = Num.double)
+    comp = num.array(comp,dtype = num.double)
     
     # theta is the arrays of angles for the calculation
-    theta = Num.arange(0.01, 1.0, 0.01, dtype=Num.double)
+    theta = num.arange(0.01, 1.0, 0.01, dtype=num.double)
 
     # calc_params holds a bunch of parameter stuff
     # calc_params[0] = energy (eV)
@@ -515,7 +515,7 @@ def test():
     # hist of Fe dist
     #print comp
     pylab.subplot(3,1,3)
-    idx = Num.arange(len(comp[4]))
+    idx = num.arange(len(comp[4]))
     pylab.bar(idx,comp[4])
 
     return ref    

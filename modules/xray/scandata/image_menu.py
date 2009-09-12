@@ -14,7 +14,7 @@ Modifications:
 
 import types
 import copy
-import numpy as Num
+import numpy as num
 import pylab
 
 from   plotter import cursor

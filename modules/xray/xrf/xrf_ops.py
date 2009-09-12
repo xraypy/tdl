@@ -21,7 +21,7 @@ import sys
 import types
 import string
 import copy
-import numpy as Num
+import numpy as num
 
 from  detector import medfile_cars
 from  detector import medfile_emsa
@@ -229,7 +229,7 @@ def peak_areas(xrf,line):
             if string.lower(pk.label) == string.lower(line):
                 results.append(pk.area)
                 break
-    return Num.array(results)
+    return num.array(results)
 
 #################################################################################
 def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
@@ -250,9 +250,9 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
     en  = xrf.get_energy() + tiny
     da  = xrf.get_data() + tiny
     fit = copy.copy(xrf.predicted)
-    fit = Num.array(fit) + tiny
+    fit = num.array(fit) + tiny
     bgr = copy.copy(xrf.bgr.bgr)
-    bgr = Num.array(bgr)  + tiny  
+    bgr = num.array(bgr)  + tiny  
 
     if d == 'Data':
         pylab.plot(en,da,'k.-',label='Data')

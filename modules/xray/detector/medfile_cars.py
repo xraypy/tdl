@@ -12,7 +12,7 @@ Modifications:
 
 #########################################################################
 
-import numpy as Num
+import numpy as num
 import string
 import os
 
@@ -430,7 +430,7 @@ def write_ascii_file(med, file):
 
     # Write data
     fp.write('DATA: \n')
-    counts = Num.zeros(n_det)
+    counts = num.zeros(n_det)
     for i in range(nchans):
         for d in range(n_det):
             counts[d]=data[d][i]

@@ -18,19 +18,19 @@ Todo
 #######################################################################
 
 import types
-import numpy as Num
+import numpy as num
 import scipy
 
 #######################################################################
 # some simple stuff
 def ave(x):
     #return (sum(x)/float(len(x)))
-    return Num.ave(x)
+    return num.ave(x)
 
 def std(x):
     #x_ave = self.ave(x)
-    #return( Num.sqrt( sum( (x-x_ave)**2 ) / float(len(x)) ) )
-    return Num.std(x)
+    #return( num.sqrt( sum( (x-x_ave)**2 ) / float(len(x)) ) )
+    return num.std(x)
 
 def line(x, offset, slope ):
     y =   slope * x + offset
@@ -103,12 +103,12 @@ def random_seed(x=None):
     Seds the random number generator
     """
     if x is None:
-        return Num.random.seed()
+        return num.random.seed()
     else:
         try:
-            return Num.random.seed([x])
+            return num.random.seed([x])
         except:
-            return Num.random.seed()
+            return num.random.seed()
 
 def random(a=1,b=1,c=1,npts=1,distribution='normal',**kw):
     """
@@ -117,7 +117,7 @@ def random(a=1,b=1,c=1,npts=1,distribution='normal',**kw):
     a,b,c are default arguments for the dist functions
     e.g. NR.normal a = mean, b = stdev of the distrobution
     """ 
-    NR = Num.random
+    NR = num.random
     if   distribution == 'binomial':        return NR.binomial(a,b,size=npts)
     elif distribution == 'geometric':       return NR.geometric(a,size=npts)    
     elif distribution == 'poisson':         return NR.poisson(a,size=npts)    
@@ -167,14 +167,14 @@ def gauss(x, xcen, fwhm, mag):
     # and makes it perform like a 
     # Kroniker-delta function
     if fwhm == 0.0:
-        xx  = Num.fabs(x-xcen)
-        idx = Num.where(xx == xx.min())
+        xx  = num.fabs(x-xcen)
+        idx = num.where(xx == xx.min())
         idx = idx[0]
-        y = Num.zeros(len(x))
+        y = num.zeros(len(x))
         y[idx] = mag
         return y
     a =   ( x - xcen )  / ( 0.600561 * fwhm ) 
-    y =   mag *  Num.exp( -1. * (a**2.) ) 
+    y =   mag *  num.exp( -1. * (a**2.) ) 
 
     return(y)
 
@@ -254,8 +254,8 @@ class Peak:
         if include != None: self.pk_include[idx] = include
 
     def calc(self,x):
-        x = Num.array(x)
-        y = Num.zeros(len(x))
+        x = num.array(x)
+        y = num.zeros(len(x))
         # bgr        
         if self.bgr_include == 1:
             offset = self.bgr_params[0]
@@ -291,7 +291,7 @@ class LinReg:
     >>from scipy.stats import linregress
     >>m = 1.4
     >>b = 10.0
-    >>x = Num.linespace(1,10)
+    >>x = num.linespace(1,10)
     >>y = m*x + b
     >>(m_s,b_s,r,tt,stderr)=linregress(x,y)
     >>print('Linear regression using stats.linregress')
@@ -319,11 +319,11 @@ class LinReg:
         # Residual and residual standard deviation
         resid = (y - (b + m*x) )
         SS_resid = sum(resid**2)
-        s_r = Num.sqrt(SS_resid/(n-2))
+        s_r = num.sqrt(SS_resid/(n-2))
 
         # std dev of slope and intercept
-        s_m = Num.sqrt(s_r**2/Sxx)
-        s_b = s_r * Num.sqrt( 1 /(n - (sum(x))**2 / sum(x**2) ) )
+        s_m = num.sqrt(s_r**2/Sxx)
+        s_b = s_r * num.sqrt( 1 /(n - (sum(x))**2 / sum(x**2) ) )
 
         self.m=m
         self.b=b
@@ -383,11 +383,11 @@ class LinReg:
         yc_ave = self.y_ave
 
         n     = len(y)
-        y_ave = Num.sum(y)/float(n)
+        y_ave = num.sum(y)/float(n)
 
         x = self.calc_x(y_ave)
 
-        s_x = (s_r/m) * Num.sqrt( (1/n) + (1/nc) + (y_ave - yc_ave)**2 / (Sxx * m**2 ) )
+        s_x = (s_r/m) * num.sqrt( (1/n) + (1/nc) + (y_ave - yc_ave)**2 / (Sxx * m**2 ) )
 
         return ([x,s_x])
 
@@ -400,9 +400,9 @@ def test_lr():
     n      = 100
     slope  = 7.0
     offset = 0.23
-    x   = Num.linspace(1,10,num=n)
+    x   = num.linspace(1,10,num=n)
     yo  = offset + slope*(x)
-    y   = offset + slope*(x+Num.random.randn(n)/5.)
+    y   = offset + slope*(x+num.random.randn(n)/5.)
     #import pylab
     #pylab.plot(x,yo)
     #pylab.plot(x,y,'.')
@@ -415,7 +415,7 @@ def test_peak():
     n      = 100
     slope  = 7.0
     offset = 0.23
-    x = Num.linspace(1,10,num=n)
+    x = num.linspace(1,10,num=n)
     p = Peak()
     p.set_bgr(slope=slope,offset=offset)
     p.set_peak(cen=3.,fwhm=1.2,mag=20.,flor=.3)
@@ -431,8 +431,8 @@ def test_minimize():
     n      = 100
     slope  = 7.0
     offset = 0.23
-    x   = Num.linspace(1,10,num=n)
-    y   = offset + slope*(x+Num.random.randn(n)/5.)
+    x   = num.linspace(1,10,num=n)
+    y   = offset + slope*(x+num.random.randn(n)/5.)
 
     # function    
     def fun(x,a,b,c,d=1):

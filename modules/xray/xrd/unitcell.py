@@ -12,7 +12,7 @@ Modifications:
 ##########################################################################
 
 import string
-import Numeric
+import numpy as num
 
 import Ifeffit
 import atomic
@@ -26,8 +26,8 @@ class UnitCell:
     def __init__(self):
         self.titles  = []
         self.atoms   = []
-        self.hkl     = Numeric.zeros(3)
-        self.abc     = Numeric.zeros(3)
+        self.hkl     = num.zeros(3)
+        self.abc     = num.zeros(3)
         self.p1_data  = {'a':0.,'b':0.,'c':0.,
                         'alpha':90.,'beta':90.,'gamma':90.,
                         'space':'p 1', 'core': '',
@@ -99,7 +99,7 @@ class UnitCell:
                 if (len(words) < 3):
                     print "Only %i miller indices given." % (len(words))
                 else:
-                    self.hkl = Numeric.array(map(float,words[:3]))
+                    self.hkl = num.array(map(float,words[:3]))
             else:
                 # read the free format keywords into self.p1_data
                 # replace '=' and ',' by ' '.
@@ -127,7 +127,7 @@ class UnitCell:
                   'alpha','beta','gamma', 'rmax'):
             self.p1_data[p] = float(self.p1_data[p])
             
-        self.abc = Numeric.array([self.p1_data['a'],
+        self.abc = num.array([self.p1_data['a'],
                                   self.p1_data['b'],
                                   self.p1_data['c']])
 
@@ -174,15 +174,15 @@ class UnitCell:
             i_e0   = 0
             for i in range(len(energy)):
                 if (abs(energy[i] - e0) < estep/10.): i_e0 = i
-            sfact  = Numeric.zeros(len(energy))
+            sfact  = num.zeros(len(energy))
                                 
         # q:
         hkl_abc = self.hkl / self.abc
-        d2inv   = Numeric.sum(hkl_abc*hkl_abc)     #      (1/d)^2 = Sum((h/a)^2 + (k/b)^2 + (l/c)^2)
-        dspace  = Numeric.sqrt(1/d2inv)
-        q       = 2 * Numeric.pi * hkl_abc
-        qhkl    = 2 * Numeric.pi * self.hkl
-        qnorm   = Numeric.sqrt(Numeric.sum(q*q))
+        d2inv   = num.sum(hkl_abc*hkl_abc)     #      (1/d)^2 = Sum((h/a)^2 + (k/b)^2 + (l/c)^2)
+        dspace  = num.sqrt(1/d2inv)
+        q       = 2 * num.pi * hkl_abc
+        qhkl    = 2 * num.pi * self.hkl
+        qnorm   = num.sqrt(num.sum(q*q))
         beta    = 0
         f0      = 0
         # sum over atoms in the unit cell
@@ -191,10 +191,10 @@ class UnitCell:
             tag   = atom['tag']
             f     = -1 * atomic.f0_cromer(sym,qnorm)
             z     = atomic.z(sym)
-            qdotr = Numeric.dot(qhkl, Numeric.array( (atom['x'], atom['y'], atom['z'])))
-            phase = Numeric.exp(1j * qdotr)
+            qdotr = num.dot(qhkl, num.array( (atom['x'], atom['y'], atom['z'])))
+            phase = num.exp(1j * qdotr)
             # DWF, occupancy factors
-            dwf   = atom['occupancy'] * Numeric.exp(-atom['dwf_b'] * d2inv / 4)
+            dwf   = atom['occupancy'] * num.exp(-atom['dwf_b'] * d2inv / 4)
 
             # f0:   non-resonant structure factor
             f0    = f0   + dwf * f * phase
@@ -250,8 +250,8 @@ class UnitCell:
             self.iff.put_array('st.imag', sfact.imag)
 
         # lorentz correction
-        dd = Numeric.arcsin(atomic.hc / (2*dspace*energy[i_e0]))
-        self.lorentz_normalization = ((atomic.hc / energy[i_e0])**3) / Numeric.sin(2*dd)
+        dd = num.arcsin(atomic.hc / (2*dspace*energy[i_e0]))
+        self.lorentz_normalization = ((atomic.hc / energy[i_e0])**3) / num.sin(2*dd)
 
 ##########################################################################
 ##########################################################################

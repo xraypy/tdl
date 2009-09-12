@@ -40,7 +40,7 @@ SymbolTable::
 ###########################################################
 
 import types
-import numpy as Num
+import numpy as num
 import sys
 import time
 
@@ -82,8 +82,8 @@ PYVARTYPES = [types.BooleanType,
               types.UnicodeType]
 
 # Include numpy types
-# NUMVARTYPES = [Num.ArrayType] + Num.typeDict.values() 
-NUMVARTYPES = [Num.ndarray] + Num.typeDict.values() 
+# NUMVARTYPES = [num.ArrayType] + num.typeDict.values() 
+NUMVARTYPES = [num.ndarray] + num.typeDict.values() 
 
 # VARTYPES are python + numpy 
 VARTYPES = PYVARTYPES + NUMVARTYPES 
@@ -114,7 +114,7 @@ FUNCTYPES = [types.BuiltinFunctionType,
              types.UnboundMethodType]
 
 # Make sure these include numpy ufuncs
-FUNCTYPES = FUNCTYPES + [type(Num.abs)]
+FUNCTYPES = FUNCTYPES + [type(num.abs)]
 
 """
 OTHERTYPES = [types.BufferType,
@@ -510,8 +510,8 @@ if __name__ == "__main__":
     i = Interpretor()
     
     i.execute('x=10'); i.execute('print x')
-    s = "import numpy as Num\n"; i.execute(s)
-    s = "xx = Num.array([1,2,3])\n"; i.execute(s); i.execute('print xx')
+    s = "import numpy as num\n"; i.execute(s)
+    s = "xx = num.array([1,2,3])\n"; i.execute(s); i.execute('print xx')
     s = "from test.test import t\n"; i.execute(s)
     s = "tt = t()\nyy=tt.calc(10)\nprint yy"; i.execute(s)
     s = "qq = t()\nqq.ll=100\nqq.t=t()"; i.execute(s)

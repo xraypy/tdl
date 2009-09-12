@@ -9,7 +9,7 @@ Modifications:
 """
 ##########################################################################
 
-import numpy as Num
+import numpy as num
 
 ##########################################################################
 def read_col_data(fname): 
@@ -26,5 +26,5 @@ def read_col_data(fname):
             d = map(float,tmp)
             #print d
             data.append(d)
-    data = Num.array(data)
-    return Num.transpose(data)
+    data = num.array(data)
+    return num.transpose(data)

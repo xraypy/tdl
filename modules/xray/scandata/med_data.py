@@ -11,7 +11,7 @@ Modifications:
 #######################################################################
 
 import types
-import numpy as Num
+import numpy as num
 import pylab
 import deadtime
 
@@ -66,7 +66,7 @@ def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
     # show fits if wanted
     if display:
         (ndet,npts) = yfit_arr.shape
-        ycorr_arr   = Num.zeros((ndet,npts))
+        ycorr_arr   = num.zeros((ndet,npts))
         if y == 'Med':
             for j in range(npts):
                 for k in range(ndet):

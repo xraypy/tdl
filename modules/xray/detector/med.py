@@ -23,7 +23,7 @@ Conventions for Med.get_data and Med.get_energy:
 
 ###########################################################################
 
-import numpy as Num
+import numpy as num
 import types
 import exceptions
 
@@ -41,7 +41,7 @@ class Med:
                Note detector indexing starts at zero!
 
     total: Set this keyword to return the sum of the spectra from all
-           of the Mcas as a 1-D Numeric array.
+           of the Mcas as a 1-D numeric array.
         
     align: Set this keyword to return spectra which have been shifted and
            and stretched to match the energy calibration parameters of the
@@ -56,7 +56,7 @@ class Med:
     ########################################################################
     def __repr__(self):
         lout = "  MED Name = %s\n" % self.name
-        lout = lout + "  Number of detectors = %i\n" % self.n_detectors
+        lout = lout + "  number of detectors = %i\n" % self.n_detectors
         lout = lout + '  Bad Detectors = %s\n' % str(self.bad_mca_idx)
         lout = lout + '  Align = %s\n' % str(self.align)
         lout = lout + '  Total = %s\n' % str(self.total)
@@ -192,7 +192,7 @@ class Med:
     #########################################################################
     def get_data(self,):
         """
-        Returns the data as a 2-D Numeric array
+        Returns the data as a 2-D numeric array
                 
         Outputs:
             This function returns a long 2-D array of counts dimensioned
@@ -205,7 +205,7 @@ class Med:
         nchans = len(temp)
 
         # init data to zeros
-        data = Num.zeros((self.n_detectors, nchans), dtype=Num.int)
+        data = num.zeros((self.n_detectors, nchans), dtype=num.int)
 
         # get (corrected) data from MCA 
         for d in range(self.n_detectors):
@@ -221,7 +221,7 @@ class Med:
                     energy = self.mca[d].get_energy()
                     temp   = spline_interpolate(energy, data[d,:], ref_energy)
                     # note adding .5 rounds the data
-                    data[d,:] = (temp+.5).astype(Num.int)
+                    data[d,:] = (temp+.5).astype(num.int)
 
         # make a total if requested. 
         if self.total == True and self.n_detectors > 1:
@@ -230,18 +230,18 @@ class Med:
                 # ie we wont know what the correct energy array is!
                 print "Warning, totaling data without aligning"
             data = data.sum(axis=0)
-            return Num.asarray([data])
+            return num.asarray([data])
         else:
             return data
 
     #########################################################################
     def get_energy(self,):
         """
-        Returns a 2-D Numpy array of energy values.
+        Returns a 2-D numpy array of energy values.
         """
         # One detector easy
         if self.n_detectors == 1:
-            return  Num.asarray([self.mca[0].get_energy()])
+            return  num.asarray([self.mca[0].get_energy()])
         
         # if align or total all energies are same.
         # use first good as energy/reference energy
@@ -250,18 +250,18 @@ class Med:
             ref_energy = self.mca[first_good].get_energy()
 
             if self.total:
-                return Num.asarray([ref_energy])
+                return num.asarray([ref_energy])
             #elif self.align:
             else:
                 energy = [ref_energy]*self.n_detectors
-                return Num.asarray(energy)
+                return num.asarray(energy)
         
         # otherwise all unique
         else:
             energy = []
             for mca in self.mca:
                 energy.append(mca.get_energy())
-            return Num.asarray(energy)
+            return num.asarray(energy)
 
     #########################################################################
     def get_calib_params(self,):
@@ -309,8 +309,8 @@ class Med:
             en.append(energy[j][idx])
             da.append(data[j][idx])
         try:
-            en = Num.array(en)
-            da = Num.array(da)
+            en = num.array(en)
+            da = num.array(da)
         except:
             print "Error in get data range"
 

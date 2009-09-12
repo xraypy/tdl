@@ -148,7 +148,7 @@ Procedure:
 """
 ########################################################################
 
-import numpy as Num
+import numpy as num
 import copy
 
 #import mpfit
@@ -253,15 +253,15 @@ class XrfPeak:
         Calculate the gaussian line shape.
         Inputs:  energy
         Output:  counts
-            Returns a Num array containing the predicted counts.
+            Returns a num array containing the predicted counts.
         """
 
         sigma = self.fwhm/SIGMA_TO_FWHM
-        counts = self.ampl * Num.exp(-((energy - self.energy)**2 / (2. * sigma**2)))
+        counts = self.ampl * num.exp(-((energy - self.energy)**2 / (2. * sigma**2)))
 
         if compute_area:
             #self.area = counts.sum()
-            self.area = Num.trapz(counts,energy)
+            self.area = num.trapz(counts,energy)
 
         return( counts )
     
@@ -272,18 +272,18 @@ class XrfPeak:
         makes a significant contribution.
         Inputs: energy
         Output: (counts, (idx_min,idx_max))
-            Returns a Num array containing the predicted counts.
+            Returns a num array containing the predicted counts.
             The array is limited in length to only the range that the peak makes
             a significant contribution.  The (idx_min, idx_max) tuple are the indicies
             of the energy array corresponding to the peak limits
         """
         (idx_min, idx_max) = self._en_range(energy)
         sigma = self.fwhm/SIGMA_TO_FWHM
-        counts = self.ampl * Num.exp(-((energy[idx_min:idx_max] - self.energy)**2 / (2. * sigma**2)))
+        counts = self.ampl * num.exp(-((energy[idx_min:idx_max] - self.energy)**2 / (2. * sigma**2)))
 
         if compute_area:
             #self.area = counts.sum()
-            self.area = Num.trapz(counts,energy[idx_min:idx_max])
+            self.area = num.trapz(counts,energy[idx_min:idx_max])
 
         return( counts, (idx_min,idx_max) )
 
@@ -297,8 +297,8 @@ class XrfPeak:
         nchan = len(energy)
 
         # find the index closest to the peak energy
-        del_e    = Num.abs(energy - self.energy)
-        idx_cen  = Num.where( del_e == min(del_e) )
+        del_e    = num.abs(energy - self.energy)
+        idx_cen  = num.where( del_e == min(del_e) )
         idx_cen  = idx_cen[0][0]
         
         # assume energy in ascending order and linear
@@ -457,9 +457,9 @@ class XrfSpectrum:
         self.predicted             = []        # Theory curve
         self.weights               = []        # Fit weights
         self.parinfo               = []        # Fit parameter info (transient)
-        self.nchan                 =  0        # Number of channels to fit
-        self.npeaks                =  0        # Number of peaks to fit
-        self.nparams               =  0        # Number of fit parameters
+        self.nchan                 =  0        # number of channels to fit
+        self.npeaks                =  0        # number of peaks to fit
+        self.nparams               =  0        # number of fit parameters
         self.n_eval                =  0        # Actual number of function evalutions
         self.n_iter                =  0        # Actual number of iterations
         self.chisqr                =  0.       # Chi-squared on output
@@ -484,15 +484,15 @@ class XrfSpectrum:
         """
         ###### set data
         if data != None:
-            self.data     = Num.asarray(data,dtype=float)
+            self.data     = num.asarray(data,dtype=float)
         if chans != None:
-            self.channels = Num.asarray(chans,dtype=Num.int)
+            self.channels = num.asarray(chans,dtype=num.int)
 
         # Check data/channels numbers
         # if data is set, but not channels, assume that channels
         # corresponds to array indicies of data
         if (len(self.channels) == 0) and len(self.data > 0):
-            self.channels = Num.asarray(range(len(self.data)),dtype=Num.int)
+            self.channels = num.asarray(range(len(self.data)),dtype=num.int)
 
         # make sure arrays match
         self.nchan = len(self.channels)
@@ -550,8 +550,8 @@ class XrfSpectrum:
     ################################################################################
     def _initFitParams(self,):
         """ Reset the internal data/parameters """
-        self.predicted = Num.zeros(self.nchan)
-        self.weights   = Num.ones(self.nchan)
+        self.predicted = num.zeros(self.nchan)
+        self.weights   = num.ones(self.nchan)
         self.npeaks    = len(self.peaks)
         self.parinfo   = []
         self.nparams   = 0
@@ -589,10 +589,10 @@ class XrfSpectrum:
         #   1 = Fix FWHM to global curve
         #   2 = Fix FWHM to input value
         if (peak.fwhm_flag == 1):
-            peak.fwhm = (self.fwhm_offset + self.fwhm_slope*Num.sqrt(peak.energy))
+            peak.fwhm = (self.fwhm_offset + self.fwhm_slope*num.sqrt(peak.energy))
         elif (peak.fwhm_flag == 0) and (guess==True):
             # use the same approx for guess fwhm?
-            peak.fwhm = (self.fwhm_offset + self.fwhm_slope*Num.sqrt(peak.energy))
+            peak.fwhm = (self.fwhm_offset + self.fwhm_slope*num.sqrt(peak.energy))
 
         # Peak ampl
         # Note peak.ampl_factor
@@ -665,7 +665,7 @@ class XrfSpectrum:
         """
         Predicts a Gaussian spectrum 
         """
-        self.predicted = Num.zeros(self.nchan, dtype=Num.float)
+        self.predicted = num.zeros(self.nchan, dtype=num.float)
         energy = self.get_energy()
         
         for peak in self.peaks:
@@ -682,7 +682,7 @@ class XrfSpectrum:
         Return array with predicted values for each peak 
         """
         npks   = len(self.peaks)
-        cnts   = Num.zeros((npks,self.nchan), dtype=Num.float)
+        cnts   = num.zeros((npks,self.nchan), dtype=num.float)
         energy = self.get_energy()
 
         for j in range(npks):
@@ -743,15 +743,15 @@ class XrfSpectrum:
         # Compute sigma of observations to computed weighted residuals
         # Default is ones set in _init_fit_
         if  (self.chi_exp > 0.0):
-            self.weights = Num.asarray(self.data,dtype=float)
+            self.weights = num.asarray(self.data,dtype=float)
 
             # get rid of zeros
-            idx = Num.where(self.weights < 1.)
-            if len(idx) > 0:  self.weights[idx] = Num.ones(len(idx))
+            idx = num.where(self.weights < 1.)
+            if len(idx) > 0:  self.weights[idx] = num.ones(len(idx))
 
             # Treat special cases of self.chi_exp=.5, 1.
             if (self.chi_exp == 0.5):
-                self.weights = 1./Num.sqrt(self.weights)
+                self.weights = 1./num.sqrt(self.weights)
             elif (self.chi_exp == 1.0):
                 self.weights = 1./self.weights
             else:
@@ -848,7 +848,7 @@ class XrfSpectrum:
                 np = np+1
                 self.parinfo.append(self.bgr.parinfo[j])
 
-        # Number of fit parameters and degrees of freedom
+        # number of fit parameters and degrees of freedom
         # self.nparams = np
         if len(self.parinfo) != self.nparams :
             print "Why are these not the same?"
@@ -890,7 +890,7 @@ class XrfSpectrum:
             np = np + 1
             if (peak.fwhm_flag == 1):
                 peak.fwhm = (self.fwhm_offset + 
-                             self.fwhm_slope*Num.sqrt(peak.energy))
+                             self.fwhm_slope*num.sqrt(peak.energy))
             else:
                 peak.fwhm = parameters[np]
 
@@ -932,7 +932,7 @@ def test_peak():
     import pylab
     # make some dat
     import _test_dat as test_dat
-    chans = Num.arange(2048)
+    chans = num.arange(2048)
     offset = 1.0
     slope = .01
     en = offset + slope*chans
@@ -960,7 +960,7 @@ def test_fit():
     #############################
     # Data
     #############################
-    chans = Num.arange(2048)
+    chans = num.arange(2048)
     offset = 1.0
     slope = .01
     en = offset + slope*chans

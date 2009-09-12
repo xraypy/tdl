@@ -18,7 +18,7 @@ Todo
 ########################################################################
 
 import types
-import numpy as Num
+import numpy as num
 
 from   detector import mca_calib as calib
 import xrf_peaks

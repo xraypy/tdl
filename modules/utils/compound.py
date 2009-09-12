@@ -51,7 +51,7 @@ mix = 0.98*alumina + 0.02*hem
 """
 #########################################################################
 
-import numpy as Num
+import numpy as num
 import types, exceptions
 
 import element_data
@@ -60,10 +60,10 @@ import physcon as pc
 #########################################################################
 # element = elem/El/Z/z, conc = CZ, moles = nZ, mass = mZ, mole frac = fZ
 class Element:
-    def __init__(self, symbol, name, num, wgt):
+    def __init__(self, symbol, name, Z, wgt):
         self.sym  = symbol # short symbol
         self.name = name   # long name
-        self.num  = num    # atomic number
+        self.Z    = Z      # atomic number
         self.wgt  = wgt    # amu g/mol
         self.ox   = 0.     # oxidation state
 

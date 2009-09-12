@@ -1,15 +1,15 @@
-import numpy as Num
+import numpy as num
 
 def sample_rotation(v,phi,chi,eta,mu):
     #use goniometer rotations on vector v:
-    Phi = Num.array([[cos(phi),sin(phi),0],[-sin(phi),cos(phi),0],[0,0,1]],float)
-    Chi = Num.array([[cos(chi),0,sin(chi)],[0,1,0],[-sin(chi),0,cos(chi)]],float)
-    Eta = Num.array([[cos(eta),sin(eta),0],[-sin(eta),cos(eta),0],[0,0,1]],float)
-    Mu  = Num.array([[1,0,0],[0,cos(mu),-sin(mu)],[0,sin(mu),cos(mu)]],float)
-    v = Num.dot(Phi,v)
-    v = Num.dot(Chi,v)
-    v = Num.dot(Eta,v)
-    v = Num.dot(Mu,v)   
+    Phi = num.array([[cos(phi),sin(phi),0],[-sin(phi),cos(phi),0],[0,0,1]],float)
+    Chi = num.array([[cos(chi),0,sin(chi)],[0,1,0],[-sin(chi),0,cos(chi)]],float)
+    Eta = num.array([[cos(eta),sin(eta),0],[-sin(eta),cos(eta),0],[0,0,1]],float)
+    Mu  = num.array([[1,0,0],[0,cos(mu),-sin(mu)],[0,sin(mu),cos(mu)]],float)
+    v = num.dot(Phi,v)
+    v = num.dot(Chi,v)
+    v = num.dot(Eta,v)
+    v = num.dot(Mu,v)   
     return v
 
 def distance(A,B):
@@ -67,16 +67,16 @@ Hw = 1.25
 Debug = True #Debug flag to print intermediate results
 #######################################################################################################################################
 #zero position of surface normal, e0 (diffractometer coordinates (You'99)) from spec file
-e0 = Num.array(tmp.state['G'][3:6],float)
+e0 = num.array(tmp.state['G'][3:6],float)
 # normalize e0
 e0 = e0/distance(([0,0,0]),e0)
 e0 = e0.transpose()
 if Debug: print e0
 #Sample corner points in surface zero position:
-phi_d1 = Num.radians(phi_d1)
-phi_d2 = Num.radians(phi_d2)
-E0 = Num.array([cos(phi_d1),-sin(phi_d1),(-e0[0]*cos(phi_d1)+e0[1]*sin(phi_d1))/e0[2]])*d1/2
-F0 = Num.array([cos(phi_d2),-sin(phi_d2),(-e0[0]*cos(phi_d2)+e0[1]*sin(phi_d2))/e0[2]])*d2/2
+phi_d1 = num.radians(phi_d1)
+phi_d2 = num.radians(phi_d2)
+E0 = num.array([cos(phi_d1),-sin(phi_d1),(-e0[0]*cos(phi_d1)+e0[1]*sin(phi_d1))/e0[2]])*d1/2
+F0 = num.array([cos(phi_d2),-sin(phi_d2),(-e0[0]*cos(phi_d2)+e0[1]*sin(phi_d2))/e0[2]])*d2/2
 E0 = E0.transpose()
 F0 = F0.transpose()
 H0 = -F0
@@ -86,19 +86,19 @@ if Debug:
 #Sample area
 S_area = 2* area(E0,F0,H0)
 #Beam corner points at plane perpendicular to beam (0,-1,0)
-A = Num.array([ Vw/2,  0,-Hw/2],float)
-B = Num.array([ Vw/2,  0, Hw/2],float)
+A = num.array([ Vw/2,  0,-Hw/2],float)
+B = num.array([ Vw/2,  0, Hw/2],float)
 #initialize correction arrays to whch results are appended    
-spilloff_array = Num.array([],float)
-footprint_array = Num.array([],float)
+spilloff_array = num.array([],float)
+footprint_array = num.array([],float)
 #loop through tmp
 i=0
 for i in range(tmp.dims[0]):
     #read diffractometer angles(!!!angle conventions for 13BM unknown!!! --> unsure about +-) 
-    eta = -Num.radians(tmp.scalers['eta'][i])
-    mu  = -Num.radians(tmp.scalers['mu'][i])
-    chi = Num.radians(tmp.positioners['chi'][i])
-    phi = -Num.radians(tmp.positioners['phi'][i])
+    eta = -num.radians(tmp.scalers['eta'][i])
+    mu  = -num.radians(tmp.scalers['mu'][i])
+    chi = num.radians(tmp.positioners['chi'][i])
+    phi = -num.radians(tmp.positioners['phi'][i])
     #Rotate surface normal
     e = sample_rotation(e0,phi,chi,eta,mu)
     #Rotate Sample corner points 
@@ -222,14 +222,14 @@ for i in range(tmp.dims[0]):
         spilloff = footprint/B_area
     else: spilloff = 1
 
-    footprint_array = Num.append(footprint_array, footprint)
-    spilloff_array = Num.append(spilloff_array, spilloff)
+    footprint_array = num.append(footprint_array, footprint)
+    spilloff_array = num.append(spilloff_array, spilloff)
 
     if Debug:
         print e
         print condition
-        alpha = Num.degrees(Num.arccos(Num.dot(e,([0,-1,0]))))-90
-        naz = 90-Num.degrees(Num.arccos(Num.dot(e,([1,0,0]))))
+        alpha = num.degrees(num.arccos(num.dot(e,([0,-1,0]))))-90
+        naz = 90-num.degrees(num.arccos(num.dot(e,([1,0,0]))))
         print naz
         print alpha #-tmp.scalers['Alpha'][i]
     

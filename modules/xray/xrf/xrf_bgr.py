@@ -136,7 +136,7 @@ Inputs to calc
 #############################################################################
 
 import copy
-import numpy as Num
+import numpy as num
 
 #############################################################################
 class Background:
@@ -247,7 +247,7 @@ class Background:
 
         #bgr         = copy.copy(data)
         nchans      = len(data)
-        self.bgr    = Num.zeros(nchans,dtype=Num.int)
+        self.bgr    = num.zeros(nchans,dtype=num.int)
         scratch     = copy.copy(data)
 
         # Compress scratch spectrum
@@ -273,9 +273,9 @@ class Background:
             #   First make a lookup table of this function
             chan_width  = top_width / (2. * slope)
             denom       = chan_width**exponent
-            indices     = Num.arange(float(nchans*2+1)) - nchans
+            indices     = num.arange(float(nchans*2+1)) - nchans
             power_funct = indices**exponent * (REFERENCE_AMPL / denom)
-            power_funct = Num.compress((power_funct <= max_counts), power_funct)
+            power_funct = num.compress((power_funct <= max_counts), power_funct)
             max_index   = len(power_funct)/2 - 1
 
             for center_chan in range(nchans):
@@ -285,7 +285,7 @@ class Background:
                 l           = last_chan - center_chan + max_index
                 test        = scratch[center_chan] + power_funct[f:l+1]
                 sub         = bckgnd[first_chan:last_chan+1] 
-                bckgnd[first_chan:last_chan+1] = Num.maximum(sub, test)
+                bckgnd[first_chan:last_chan+1] = num.maximum(sub, test)
 
         # Copy this approximation of background to scratch
         scratch = copy.copy(bckgnd)
@@ -296,7 +296,7 @@ class Background:
 
         ####################################################
         # Fit functions which come up from below
-        bckgnd = Num.arange(float(nchans)) - HUGE
+        bckgnd = num.arange(float(nchans)) - HUGE
 
         # First make a lookup table of this function
         chan_width = bottom_width / (2. * slope)
@@ -305,9 +305,9 @@ class Background:
         else:
             denom = chan_width**exponent
         
-        indices     = Num.arange(float(nchans*2+1)) - nchans
+        indices     = num.arange(float(nchans*2+1)) - nchans
         power_funct = indices**exponent  * (REFERENCE_AMPL / denom)
-        power_funct = Num.compress((power_funct <= max_counts), power_funct)
+        power_funct = num.compress((power_funct <= max_counts), power_funct)
         max_index   = len(power_funct)/2 - 1
 
         for center_chan in range(nchans-1):
@@ -316,17 +316,17 @@ class Background:
                 # Find slope of tangent to spectrum at this channel
                 first_chan    = max((center_chan - MAX_TANGENT), 0)
                 last_chan     = min((center_chan + MAX_TANGENT), (nchans-1))
-                denom         = center_chan - Num.arange(float(last_chan - first_chan + 1))
+                denom         = center_chan - num.arange(float(last_chan - first_chan + 1))
                 # is this correct?
                 denom         = max(max(denom), 1)
                 tangent_slope = (scratch[center_chan] - scratch[first_chan:last_chan+1]) / denom
-                tangent_slope = Num.sum(tangent_slope) / (last_chan - first_chan)
+                tangent_slope = num.sum(tangent_slope) / (last_chan - first_chan)
 
             first_chan = max((center_chan - max_index), 0)
             last_chan  = min((center_chan + max_index), (nchans-1))
             last_chan  = max(last_chan, first_chan)
             nc         = last_chan - first_chan + 1
-            lin_offset = scratch[center_chan] + (Num.arange(float(nc)) - nc/2) * tangent_slope
+            lin_offset = scratch[center_chan] + (num.arange(float(nc)) - nc/2) * tangent_slope
 
             # Find the maximum height of a function centered on this channel
             # such that it is never higher than the counts in any channel
@@ -341,7 +341,7 @@ class Background:
 
             test = height + lin_offset - power_funct[f:l+1]
             sub  = bckgnd[first_chan:last_chan+1]
-            bckgnd[first_chan:last_chan+1] = Num.maximum(sub, test)
+            bckgnd[first_chan:last_chan+1] = num.maximum(sub, test)
 
         ####################################################
         # Expand spectrum
@@ -350,7 +350,7 @@ class Background:
 
         # Bgr should be positive integers??
         bgr = bckgnd.astype(int)
-        idx = Num.where(bgr <= 0)
+        idx = num.where(bgr <= 0)
         bgr[idx] = 0
         self.bgr = bgr
 
@@ -373,8 +373,8 @@ def compress_array(array, compress):
       print 'Compression must be integer divisor of array length'
       return None
 
-   temp = Num.resize(array, (alen/compress, compress))
-   return Num.sum(temp, 1)/compress
+   temp = num.resize(array, (alen/compress, compress))
+   return num.sum(temp, 1)/compress
 
 ############################################################
 def expand_array(array, expand, sample=0):
@@ -387,11 +387,11 @@ def expand_array(array, expand, sample=0):
 
    alen = len(array)
    if (expand == 1): return array
-   if (sample == 1): return Num.repeat(array, expand)
+   if (sample == 1): return num.repeat(array, expand)
 
-   kernel = Num.ones(expand)/expand
+   kernel = num.ones(expand)/expand
    # The following mimic the behavior of IDL's rebin when expanding
-   temp = Num.convolve(Num.repeat(array, expand), kernel, mode=2)
+   temp = num.convolve(num.repeat(array, expand), kernel, mode=2)
    # Discard the first "expand-1" entries
    temp = temp[expand-1:]
    # Replace the last "expand" entries with the last entry of original
@@ -405,7 +405,7 @@ def test():
     import pylab
     # make some dat
     import _test_dat as test_dat
-    chans = Num.arange(2048)
+    chans = num.arange(2048)
     offset = 1.0
     slope = .01
     en = offset + slope*chans

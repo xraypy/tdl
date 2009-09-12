@@ -19,7 +19,7 @@ Todo
 import types
 from   glob import glob
 import os, copy
-import numpy as Num
+import numpy as num
 
 from   specfile import SpecFile
 import image_data
@@ -200,13 +200,13 @@ class ScanData:
         """
         ndet = self.med[0].n_detectors
         npnt = len(self.med)
-        ocr  = Num.zeros((npnt,ndet))
+        ocr  = num.zeros((npnt,ndet))
         for j in range(npnt):
             for k in range(ndet):
                 tot = self.med[j].mca[k].total_counts
                 lt  = self.med[j].mca[k].live_time
                 ocr[j][k] = float(tot)/float(lt)
-        return Num.transpose(ocr)
+        return num.transpose(ocr)
 
     ################################################################
     def med_update_tau(self,tau):
@@ -303,7 +303,7 @@ class ScanData:
 
         # idx of images to integrate
         if len(idx) == 0:
-            idx = Num.arange(len(self.image))
+            idx = num.arange(len(self.image))
         
         # update roi
         if len(roi) == 4:
@@ -364,17 +364,17 @@ class ScanData:
 
         # should we init all these or set based on an integrate flag?
         self.image_peaks  = {}
-        self.image_peaks['I']      = Num.zeros(npts,dtype=float)
-        self.image_peaks['Ierr']   = Num.zeros(npts,dtype=float)
-        self.image_peaks['Ibgr']   = Num.zeros(npts,dtype=float)
+        self.image_peaks['I']      = num.zeros(npts,dtype=float)
+        self.image_peaks['Ierr']   = num.zeros(npts,dtype=float)
+        self.image_peaks['Ibgr']   = num.zeros(npts,dtype=float)
         #
-        self.image_peaks['I_c']    = Num.zeros(npts,dtype=float)
-        self.image_peaks['Ierr_c'] = Num.zeros(npts,dtype=float)
-        self.image_peaks['Ibgr_c'] = Num.zeros(npts,dtype=float)
+        self.image_peaks['I_c']    = num.zeros(npts,dtype=float)
+        self.image_peaks['Ierr_c'] = num.zeros(npts,dtype=float)
+        self.image_peaks['Ibgr_c'] = num.zeros(npts,dtype=float)
         #
-        self.image_peaks['I_r']    = Num.zeros(npts,dtype=float)
-        self.image_peaks['Ierr_r'] = Num.zeros(npts,dtype=float)
-        self.image_peaks['Ibgr_r'] = Num.zeros(npts,dtype=float)
+        self.image_peaks['I_r']    = num.zeros(npts,dtype=float)
+        self.image_peaks['Ierr_r'] = num.zeros(npts,dtype=float)
+        self.image_peaks['Ibgr_r'] = num.zeros(npts,dtype=float)
         
     ################################################################
     def _integrate_image(self,idx=0,plot=True,fig=None):

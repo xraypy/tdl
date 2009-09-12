@@ -19,7 +19,7 @@ Todo
 import types
 from   glob import glob
 import os, copy
-import numpy as Num
+import numpy as num
 
 from   specfile import SpecFile
 from   data import ScanData
@@ -36,9 +36,9 @@ def spec_scan(spec,sc_num):
     positioners = d['P']
     for key in d['data'].keys():
         if key in positioners.keys():
-            positioners[key] = Num.array(d['data'][key])
+            positioners[key] = num.array(d['data'][key])
         else:
-            scalers[key] = Num.array(d['data'][key])
+            scalers[key] = num.array(d['data'][key])
     name  = d['file'] + ' Scan ' + str(int(sc_num))
     dims  = d['nrow']
     paxis = d['labels'][0]

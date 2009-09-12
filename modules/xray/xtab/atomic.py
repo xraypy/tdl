@@ -57,13 +57,13 @@
 ##########################################################################
 
 import types
-import Numeric as Num
+import numpy as num
 
 ##########################################################################
 
 hbarc = 1973.26960 # hbar*c in eV*Angstroms
 # could also computer here  hbarc=  299792458. * 1.e10* 1.054571596e-34 /1.602176462e-19
-hc    = hbarc * 2 * Num.pi
+hc    = hbarc * 2 * num.pi
 
 (SYMBOL,WEIGHT,KEDGE,L1EDGE,L2EDGE,L3EDGE,
  M1EDGE,M2EDGE,M3EDGE,M4EDGE,M5EDGE,
@@ -737,14 +737,14 @@ def f0_cromer(elem, q):
         print " element " , elem, " not found in tables."
         return -1
     
-    #  make sure q is a Numeric array
+    #  make sure q is a numeric array
     if (type(q) in (types.IntType, types.FloatType)):  q = [q]
-    if (type(q) == types.ListType):  q = Num.array(q)
+    if (type(q) == types.ListType):  q = num.array(q)
     
-    f0 = Num.ones(len(q)) * dat[8]
+    f0 = num.ones(len(q)) * dat[8]
     q2= -q*q
     for i in range(4):
-        f0  = f0 + dat[2*i] * Num.exp(dat[1+2*i]*q2)
+        f0  = f0 + dat[2*i] * num.exp(dat[1+2*i]*q2)
 
     if  (len(q) == 1):  f0 = f0[0]
     return f0

@@ -18,7 +18,7 @@ Todo
 
 import types
 import copy
-import numpy as Num
+import numpy as num
 
 from scandata import ScanData
 
@@ -59,41 +59,41 @@ def append_data(data1,data2,sort=True):
 
     # append scalers, all will be numarrays
     for key in data1.scalers.keys():
-        s1 = Num.array(data1.scalers[key])
-        s2 = Num.array(data2.scalers[key])
-        #tmp = Num.concatenate( (s1,s2) )
-        tmp = Num.append( s1,s2 )
+        s1 = num.array(data1.scalers[key])
+        s2 = num.array(data2.scalers[key])
+        #tmp = num.concatenate( (s1,s2) )
+        tmp = num.append( s1,s2 )
         if len(tmp) == npts:
             data3.scalers.update({key:tmp})
         else:
-            data3.scalers.update({key:Num.array([s1,s2])})
+            data3.scalers.update({key:num.array([s1,s2])})
 
     # append positioners, all will be numarrays
     for key in data1.positioners.keys():
-        s1 = Num.array(data1.positioners[key])
-        s2 = Num.array(data2.positioners[key])
-        tmp = Num.append(s1,s2)
+        s1 = num.array(data1.positioners[key])
+        s2 = num.array(data2.positioners[key])
+        tmp = num.append(s1,s2)
         if len(tmp) == npts:
             data3.positioners.update({key:tmp})
         else:
-            data3.positioners.update({key:Num.array([s1,s2])})
+            data3.positioners.update({key:num.array([s1,s2])})
 
     # combine state info,
     # these are not appened!  
     for key in data1.state.keys():
-        s1 = Num.array(data1.state[key])
-        s2 = Num.array(data2.state[key])
-        tmp = Num.array([s1,s2])
+        s1 = num.array(data1.state[key])
+        s2 = num.array(data2.state[key])
+        tmp = num.array([s1,s2])
         data3.state.update({key:tmp})
 
     # append meds, xrfs...
-    data3.med = Num.append(data1.med, data2.med)
-    data3.xrf = Num.append(data1.xrf, data2.xrf)
+    data3.med = num.append(data1.med, data2.med)
+    data3.xrf = num.append(data1.xrf, data2.xrf)
     data3.xrf_lines = data1.xrf_lines
     for key in data1.xrf_peaks.keys():
-        s1 = Num.array(data1.xrf_peaks[key])
-        s2 = Num.array(data2.xrf_peaks[key])
-        tmp = Num.append(s1,s2)
+        s1 = num.array(data1.xrf_peaks[key])
+        s2 = num.array(data2.xrf_peaks[key])
+        tmp = num.append(s1,s2)
         data3.xrf_peaks.update({key:tmp})
     
     # append images...
@@ -103,9 +103,9 @@ def append_data(data1,data2,sort=True):
 
     data3.image_rois = data1.image_rois
     for key in data1.image_peaks.keys():
-        s1 = Num.array(data1.image_peaks[key])
-        s2 = Num.array(data2.image_peaks[key])
-        tmp = Num.append(s1,s2)
+        s1 = num.array(data1.image_peaks[key])
+        s2 = num.array(data2.image_peaks[key])
+        tmp = num.append(s1,s2)
         data3.image_peaks.update({key:tmp})
 
     if sort: _sort_data(data3)
@@ -200,15 +200,15 @@ def merge_data(data=[],average=True,align=False,fast=True):
         tmp = []
         for j in range(ndat):
             if j == 0:
-                tmp.append(Num.array(data[j].scalers[key]))
+                tmp.append(num.array(data[j].scalers[key]))
             else:
-                s = Num.array(data[j].scalers[key])
+                s = num.array(data[j].scalers[key])
                 if align and (len(s) == npts):
                     oldx = data[j][paxis]
                     s = spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
-            tmp = Num.sum(tmp,0)
+            tmp = num.sum(tmp,0)
             if average:
                 tmp = tmp / (1.0*ndat)
         data_m.scalers.update({key:tmp})
@@ -219,16 +219,16 @@ def merge_data(data=[],average=True,align=False,fast=True):
         tmp = []
         for j in range(ndat):
             if j == 0:
-                tmp.append(Num.array(data[j].positioners[key]))
+                tmp.append(num.array(data[j].positioners[key]))
             else:
-                s = Num.array(data[j].positioner[key])
+                s = num.array(data[j].positioner[key])
                 if align and (len(s) == npts):
                     # does this work for positioners?
                     oldx = data[j][paxis]
                     s = spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
-            tmp = Num.sum(tmp,0)
+            tmp = num.sum(tmp,0)
             # always average
             tmp = tmp / (1.0*ndat)
         data_m.scalers.update({key:tmp})
@@ -257,15 +257,15 @@ def merge_data(data=[],average=True,align=False,fast=True):
         tmp = []
         for j in range(ndat):
             if j == 0:
-                tmp.append(Num.array(data[j].xrf_peaks[key]))
+                tmp.append(num.array(data[j].xrf_peaks[key]))
             else:
-                s = Num.array(data[j].xrf_peaks[key])
+                s = num.array(data[j].xrf_peaks[key])
                 if align and (len(s) == npts):
                     oldx = data[j][paxis]
                     s = spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
-            tmp = Num.sum(tmp,0)
+            tmp = num.sum(tmp,0)
             if average:
                 tmp = tmp / (1.0*ndat)
         data_m.xrf_peaks.update({key:tmp})
@@ -274,15 +274,15 @@ def merge_data(data=[],average=True,align=False,fast=True):
         tmp = []
         for j in range(ndat):
             if j == 0:
-                tmp.append(Num.array(data[j].image_peaks[key]))
+                tmp.append(num.array(data[j].image_peaks[key]))
             else:
-                s = Num.array(data[j].image_peaks[key])
+                s = num.array(data[j].image_peaks[key])
                 if align and (len(s) == npts):
                     oldx = data[j][paxis]
                     s = spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
-            tmp = Num.sum(tmp,0)
+            tmp = num.sum(tmp,0)
             if average:
                 tmp = tmp / (1.0*ndat)
         data_m.image_peaks.update({key:tmp})

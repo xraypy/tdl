@@ -10,7 +10,7 @@ Modifications:
 """
 #########################################################################
 
-import numpy as Num
+import numpy as num
 import os
 
 from mca import Mca
@@ -148,7 +148,7 @@ def read_ascii_file(file):
         elif (tag == 'SPECTRUM'):
             data = []
             for d in range(n_detectors):
-                data.append(Num.zeros(nchans, 'i'))
+                data.append(num.zeros(nchans, 'i'))
             for chan in range(nchans):
                 line = fp.readline()
                 counts = line.split(',')

@@ -16,7 +16,7 @@ import glob
 import types
 import copy
 import time
-import numpy as Num
+import numpy as num
 import pylab
 
 from   wxUtil import wxUtil
@@ -311,7 +311,7 @@ class wxSpecData(model.Background, wxUtil):
             if s.fname == sfile:
                 min = s.min_scan
                 max = s.max_scan
-                idx = Num.arange(min,max+1,dtype=int)
+                idx = num.arange(min,max+1,dtype=int)
                 idx = map(str,idx)
                 self.components.ScanNum.items = idx
                 self.components.ScanNum.stringSelection=idx[-1]
@@ -461,7 +461,7 @@ class wxSpecData(model.Background, wxUtil):
         ###
         # Med
         npts = data.dims[0]
-        pts = Num.arange(npts,dtype=int)
+        pts = num.arange(npts,dtype=int)
         pts = map(str,pts)
         self.components.ScanPnt.items = pts
         self.components.ScanPnt.stringSelection = '0'

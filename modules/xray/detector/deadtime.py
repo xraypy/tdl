@@ -131,7 +131,7 @@ the detector.
 
 ##############################################################################
 
-import numpy as Num
+import numpy as num
 import scipy
 from   scipy.optimize import leastsq
 
@@ -193,8 +193,8 @@ def calc_icr(ocr,tau):
     # max_ocr is the corresponding ocr value
     # we cannot correct the data if ocr > ocr_max
     max_icr = 1/tau
-    max_ocr = max_icr*Num.exp(-1)
-    if ocr >= Num.exp(-1)/tau:
+    max_ocr = max_icr*num.exp(-1)
+    if ocr >= num.exp(-1)/tau:
         print 'ocr exceeds maximum correctible value of %g cps' % max_ocr
         return None
 
@@ -202,8 +202,8 @@ def calc_icr(ocr,tau):
     x1 = ocr
     cnt = 0
     while (1):
-        f  = ocr - x1*Num.exp(-x1*tau)
-        df = Num.exp(-x1*tau) * (x1*tau - 1)
+        f  = ocr - x1*num.exp(-x1*tau)
+        df = num.exp(-x1*tau) * (x1*tau - 1)
         x2 = x1 - f/df
         check = abs(  x2 - x1  )
         if ( check < 0.01) :
@@ -255,14 +255,14 @@ def fit(Io,ocr,offset=True):
         off = params[2]
 
     """
-    Io  = Num.array(Io,dtype=float)
-    ocr = Num.array(ocr,dtype=float)
+    Io  = num.array(Io,dtype=float)
+    ocr = num.array(ocr,dtype=float)
     
     npts = len(Io)
     if len(ocr) != npts: return None
 
     # make a guess at tau, assume max(ocr) is the top of the deadtime curve
-    tau = 1./ (Num.exp(1.) * max(ocr) )
+    tau = 1./ (num.exp(1.) * max(ocr) )
 
     # make a guess at linear params, ie if the detector is linear
     #    ocr = icr = a*Io + off
@@ -276,8 +276,8 @@ def fit(Io,ocr,offset=True):
         a   = xx[0]
         off = xx[1]
     except:
-        Io_avg  = Num.average(Io[0:idx])
-        ocr_avg = Num.average(ocr[0:idx])
+        Io_avg  = num.average(Io[0:idx])
+        ocr_avg = num.average(ocr[0:idx])
         a   = 1.2*ocr_avg/Io_avg
         off = 0.0
     if offset:
@@ -299,7 +299,7 @@ def calc_ocr(params,Io,offset):
     else:
         off = 0.0
     icr = a*Io + off    
-    ocr = icr * Num.exp(-icr*tau)
+    ocr = icr * num.exp(-icr*tau)
     return ocr
 
 def deadtime_residual(params,Io,ocr,offset):
@@ -309,12 +309,12 @@ def deadtime_residual(params,Io,ocr,offset):
 ##############################################################################
 if __name__ == '__main__':
     # test fit
-    Io  = 10000. * Num.arange(500.0)
+    Io  = 10000. * num.arange(500.0)
     a   = 0.1
     tau = 0.00001
     print 'a= ', a, ' tau= ', tau
-    ocr = a*Io*Num.exp(-a*Io*tau)
-    ocr_meas = ocr + 2*Num.randn(len(ocr))
+    ocr = a*Io*num.exp(-a*Io*tau)
+    ocr_meas = ocr + 2*num.randn(len(ocr))
 
     (params,msg) = fit(Io,ocr_meas)
     tau = params[0]
@@ -325,7 +325,7 @@ if __name__ == '__main__':
     ocr = 0.3 * 1/tau
     icr = calc_icr(ocr,tau)
     print 'max icr = ', 1/tau
-    print 'max ocr = ', Num.exp(-1)/tau
+    print 'max ocr = ', num.exp(-1)/tau
     print 'ocr= ', ocr, ' icr_calc= ',icr
 
     rt = 1.

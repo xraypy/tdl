@@ -65,7 +65,7 @@ Todo
 """
 #######################################################################
 
-import numpy as Num
+import numpy as num
 import scipy
 import types, copy
 
@@ -230,7 +230,7 @@ class Slab:
      - If delta > 0 , we turn off roughness at top of
        any interface layer.
      - To index slabs according to original layer use:
-       self.z[Num.where(self.zidx==layer_idx)]
+       self.z[num.where(self.zidx==layer_idx)]
        
     """
     ########################################################################
@@ -241,7 +241,7 @@ class Slab:
         self.delta  = delta   # delta for slabify (if <0 slabs = layers)
         
         ### components
-        self.comp    = []     # list of components (component objects), len=NumX
+        self.comp    = []     # list of components (component objects), len=numX
         self.elem    = []     # list of elements (symbols), len=numel
         self.elem_z  = []     # list of elements Z, len=numel
         self.totV    = 1.0    # total volume of interface, cm^3
@@ -315,7 +315,7 @@ class Slab:
         ### add each material
         for mat in self.layer:
             _add(mat)
-        self.elem_z = Num.array(self.elem_z,dtype=Num.double)
+        self.elem_z = num.array(self.elem_z,dtype=num.double)
 
         ### Get 'interface' volume
         ### (excluding top and bottom layers)
@@ -397,7 +397,7 @@ class Slab:
         - If delta <= 0, slabs are same thickness as layers
         - If delta > 0 , we turn off roughness at top of
           any interface layer.
-        - To index use: self.z[Num.where(self.zidx==layer)]
+        - To index use: self.z[num.where(self.zidx==layer)]
         """
         self.z      = []    # z-values, len=numz
         self.zidx   = []    # which layer z belongs to, len=numz
@@ -411,43 +411,43 @@ class Slab:
         #
         for j in range(nlayer):
             mat    = self.layer[j]
-            thick  = Num.abs(float(mat.thickness))
-            rough  = Num.abs(float(mat.roughness))
+            thick  = num.abs(float(mat.thickness))
+            rough  = num.abs(float(mat.roughness))
             # sustrate
             if j == 0:
-                zz     = Num.array([-1.0*thick])
-                zzidx  = Num.array([0])
-                dd     = Num.array([thick])
-                sig    = Num.array([rough])
+                zz     = num.array([-1.0*thick])
+                zzidx  = num.array([0])
+                dd     = num.array([thick])
+                sig    = num.array([rough])
             # top
             elif j == nlayer - 1:
-                zz     = Num.concatenate((zz, Num.array([zt])) )
-                zzidx  = Num.concatenate((zzidx, Num.array([j])) )
-                dd     = Num.concatenate((dd, Num.array([thick])))
+                zz     = num.concatenate((zz, num.array([zt])) )
+                zzidx  = num.concatenate((zzidx, num.array([j])) )
+                dd     = num.concatenate((dd, num.array([thick])))
                 # ignore top sig
-                # sig  = Num.concatenate((sig, Num.array([rough])))
+                # sig  = num.concatenate((sig, num.array([rough])))
             # slab using layer thick
             elif delta0 <= 0:
-                zz     = Num.concatenate((zz, Num.array([zt])) )
+                zz     = num.concatenate((zz, num.array([zt])) )
                 zt     = zt + thick
-                zzidx  = Num.concatenate((zzidx, Num.array([j])) )
-                dd     = Num.concatenate((dd, Num.array([thick])))
-                sig    = Num.concatenate((sig, Num.array([rough])))
+                zzidx  = num.concatenate((zzidx, num.array([j])) )
+                dd     = num.concatenate((dd, num.array([thick])))
+                sig    = num.concatenate((sig, num.array([rough])))
             # slabify interface layer
             else:
                 zt     = zt + thick
-                nn     = Num.ceil((zt-zb)/delta0)
+                nn     = num.ceil((zt-zb)/delta0)
                 delta  = (zt-zb)/nn
                 #
-                tmp    = Num.arange(zb,zt,delta,dtype='float')
-                zz     = Num.concatenate((zz,tmp))
+                tmp    = num.arange(zb,zt,delta,dtype='float')
+                zz     = num.concatenate((zz,tmp))
                 #
-                tmp    = Num.ones(len(tmp),dtype='float')
-                zzidx  = Num.concatenate((zzidx,tmp*(j)))
-                dd     = Num.concatenate((dd,tmp*delta))
+                tmp    = num.ones(len(tmp),dtype='float')
+                zzidx  = num.concatenate((zzidx,tmp*(j)))
+                dd     = num.concatenate((dd,tmp*delta))
                 #
-                tmp    = Num.zeros(len(tmp),dtype='float')
-                sig    = Num.concatenate((sig,tmp))
+                tmp    = num.zeros(len(tmp),dtype='float')
+                sig    = num.concatenate((sig,tmp))
                 # no sigs for slabified!!
                 #sig[len(sig)-1] = rough 
                 #
@@ -469,7 +469,7 @@ class Slab:
         nlayer = len(self.layer)
         for idx in range(nlayer):
             xx = {}
-            idx = Num.where(self.zidx==idx)
+            idx = num.where(self.zidx==idx)
             zz  = self.z[idx]
             nz  = len(zz)
             xx['nz']     = nz
@@ -484,8 +484,8 @@ class Slab:
         Get the (first) idx which is closest to z
         """
         if z == None: return -1
-        zz  = Num.abs(self.z - z)
-        idx = Num.where(zz == min(zz))
+        zz  = num.abs(self.z - z)
+        idx = num.where(zz == min(zz))
         return idx[0][0]
     
     ########################################################################
@@ -504,10 +504,10 @@ class Slab:
         numX   = len(self.comp)
         numEl  = len(self.elem)
         #
-        self.rho = Num.zeros(numz,dtype='float')
-        self.CX  = Num.zeros((numX,numz),dtype='float')
-        self.CZ  = Num.zeros((numEl,numz),dtype='float')
-        self.fZ  = Num.zeros((numEl,numz),dtype='float')
+        self.rho = num.zeros(numz,dtype='float')
+        self.CX  = num.zeros((numX,numz),dtype='float')
+        self.CZ  = num.zeros((numEl,numz),dtype='float')
+        self.fZ  = num.zeros((numEl,numz),dtype='float')
 
         ### Loop through all components
         ### and all layers and generate initial
@@ -599,9 +599,9 @@ class Slab:
         #self.CZ.fill(0.0)
         #self.fZ.fill(0.0)
         #self.rho.fill(0.0)
-        CZ   = Num.zeros(self.CZ.shape)
-        fZ   = Num.zeros(self.fZ.shape)
-        rho  = Num.zeros(self.rho.shape)
+        CZ   = num.zeros(self.CZ.shape)
+        fZ   = num.zeros(self.fZ.shape)
+        rho  = num.zeros(self.rho.shape)
 
         # compute elem conc and slab densities
         nelem = len(self.elem)
@@ -614,7 +614,7 @@ class Slab:
             rho = rho + CZ[j] * amu
             fZ[j] = CZ[j] * self.d
         denom = fZ.sum(0)
-        if Num.min(denom) > 0:
+        if num.min(denom) > 0:
             fZ = fZ / denom
 
         # see if there are density constraints
@@ -804,7 +804,7 @@ class Slab:
         (idxmin,idxmax) = self._dist_range(dist,interface=interface)
         zst   = self.z[idxmin]
         zen   = self.z[idxmax]
-        denom = Num.fabs(zen - zst)
+        denom = num.fabs(zen - zst)
         if denom == 0.0:
             print "Error, linear model requires z-range!"
             return
@@ -815,7 +815,7 @@ class Slab:
         #
         y   = CX + slope*(zz - zst)
         if y.min() < 0:
-            y[Num.where(y<0)] = 0.0
+            y[num.where(y<0)] = 0.0
         #
         self.CX[cidx][idxmin:idxmax+1] = self.CX[cidx][idxmin:idxmax+1] + y
     
@@ -861,9 +861,9 @@ class Slab:
         zz  = self.z[idxmin:idxmax+1] + self.d[idxmin:idxmax+1]/2.
         #
         if compliment:
-            y   = Num.exp((zz-cen)/(sig))
+            y   = num.exp((zz-cen)/(sig))
         else:
-            y   = Num.exp((cen-zz)/(sig))
+            y   = num.exp((cen-zz)/(sig))
         y[y>1.] = 1.
         y  = CX * y
         #
@@ -886,11 +886,11 @@ class Slab:
         # Note below amp is 'correct' gaussian
         # ampl, ie makes the distribution normalized
         # such that the integral is equal to CX
-        #      amp = CX/(sig*Num.sqrt(2*Num.pi))
+        #      amp = CX/(sig*num.sqrt(2*num.pi))
         # Use this amp instead so that max of dist = CX
         amp = CX
         #
-        y   = amp*Num.exp( -1.*(zz-cen)**2. / (2.*(sig**2.)) )
+        y   = amp*num.exp( -1.*(zz-cen)**2. / (2.*(sig**2.)) )
         #
         self.CX[cidx][idxmin:idxmax+1] = self.CX[cidx][idxmin:idxmax+1] + y
 
@@ -939,14 +939,14 @@ class Slab:
         note hold only works with line plots
         """
         import pylab
-        zmin = Num.min(self.z)
-        zmax = Num.max(self.z+self.d)
+        zmin = num.min(self.z)
+        zmax = num.max(self.z+self.d)
         if bar == True: pylab.clf()
         if ty == 'density':
             if bar == True:
-                pylab.bar(self.z[0],    self.rho[0],    width= Num.abs(self.d[0]))
-                pylab.bar(self.z[1:-1], self.rho[1:-1], width= Num.abs(self.d[1:-1]))
-                pylab.bar(self.z[-1],   self.rho[-1],   width= Num.abs(self.d[-1]))
+                pylab.bar(self.z[0],    self.rho[0],    width= num.abs(self.d[0]))
+                pylab.bar(self.z[1:-1], self.rho[1:-1], width= num.abs(self.d[1:-1]))
+                pylab.bar(self.z[-1],   self.rho[-1],   width= num.abs(self.d[-1]))
             else:
                 pylab.plot([self.z[0],0.0], [self.rho[0],self.rho[0]],hold=hold)
                 pylab.plot([0.0,self.z[1]], [self.rho[0],self.rho[1]])
@@ -962,9 +962,9 @@ class Slab:
             for j in range(ncomp):
                 pylab.subplot(ncomp,1,j+1)
                 if bar == True:
-                    pylab.bar(self.z[0],    self.CX[j][0],    width= Num.abs(self.d[0]))
-                    pylab.bar(self.z[1:-1], self.CX[j][1:-1], width= Num.abs(self.d[1:-1]))
-                    pylab.bar(self.z[-1],   self.CX[j][-1],   width= Num.abs(self.d[-1]))
+                    pylab.bar(self.z[0],    self.CX[j][0],    width= num.abs(self.d[0]))
+                    pylab.bar(self.z[1:-1], self.CX[j][1:-1], width= num.abs(self.d[1:-1]))
+                    pylab.bar(self.z[-1],   self.CX[j][-1],   width= num.abs(self.d[-1]))
                 else:
                     pylab.plot([self.z[0],0.0], [self.CX[j][0],self.CX[j][0]], hold=hold)
                     pylab.plot([0.0,self.z[1]], [self.CX[j][0],self.CX[j][1]])
@@ -980,9 +980,9 @@ class Slab:
             for j in range(nelem):
                 pylab.subplot(nelem,1,j+1)
                 if bar == True:
-                    pylab.bar(self.z[0],    self.CZ[j][0],    width= Num.abs(self.d[0]))
-                    pylab.bar(self.z[1:-1], self.CZ[j][1:-1], width= Num.abs(self.d[1:-1]))
-                    pylab.bar(self.z[-1],   self.CZ[j][-1],   width= Num.abs(self.d[-1]))
+                    pylab.bar(self.z[0],    self.CZ[j][0],    width= num.abs(self.d[0]))
+                    pylab.bar(self.z[1:-1], self.CZ[j][1:-1], width= num.abs(self.d[1:-1]))
+                    pylab.bar(self.z[-1],   self.CZ[j][-1],   width= num.abs(self.d[-1]))
                 else:
                     pylab.plot([self.z[0],0.0], [self.CZ[j][0],self.CZ[j][0]], hold=hold)
                     pylab.plot([0.0,self.z[1]], [self.CZ[j][0],self.CZ[j][1]])
@@ -998,9 +998,9 @@ class Slab:
             for j in range(nelem):
                 pylab.subplot(nelem,1,j+1)
                 if bar == True:
-                    pylab.bar(self.z[0],    self.fZ[j][0],    width= Num.abs(self.d[0]))
-                    pylab.bar(self.z[1:-1], self.fZ[j][1:-1], width= Num.abs(self.d[1:-1]))
-                    pylab.bar(self.z[-1],   self.fZ[j][-1],   width= Num.abs(self.d[-1]))
+                    pylab.bar(self.z[0],    self.fZ[j][0],    width= num.abs(self.d[0]))
+                    pylab.bar(self.z[1:-1], self.fZ[j][1:-1], width= num.abs(self.d[1:-1]))
+                    pylab.bar(self.z[-1],   self.fZ[j][-1],   width= num.abs(self.d[-1]))
                 else:
                     pylab.plot([self.z[0],0.0], [self.fZ[j][0],self.fZ[j][0]], hold=hold)
                     pylab.plot([0.0,self.z[1]], [self.fZ[j][0],self.fZ[j][1]])
@@ -1044,7 +1044,7 @@ class Model:
             self.layer.append(_TOP)
 
         # theta
-        self.theta  = Num.array(theta,dtype=Num.double)
+        self.theta  = num.array(theta,dtype=num.double)
 
         # params
         self.params = {}
@@ -1147,7 +1147,7 @@ class Model:
         """
         Set theta
         """
-        self.theta  = Num.array(theta,dtype=Num.double)
+        self.theta  = num.array(theta,dtype=num.double)
         self._initR = True
     
     #######################################################################
@@ -1311,7 +1311,7 @@ def test_model():
 
     ### parameters
     delta = 5.
-    theta = Num.arange(0.01, 1.0, 0.01)
+    theta = num.arange(0.01, 1.0, 0.01)
     calc_params = {'energy':10000.,'wconv':0.01,'slen':20.,'bvert':0.01,
                    'aflag':1.,'fyidx':0,'fyenergy':7000.,'delz':delta,'pdepth':2.0}
 

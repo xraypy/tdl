@@ -10,7 +10,7 @@ Modifications:
 """
 #######################################################################
 
-import numpy as Num
+import numpy as num
 import os
 import types
 

@@ -23,7 +23,7 @@ import os
 
 from   wxUtil import wxUtil
 from   pds.util import PrintExceptErr
-import numpy as Num
+import numpy as num
 
 #############################################################################
 
@@ -97,7 +97,7 @@ class wxPlotSelection(model.Background, wxUtil):
             nc = '1'
             self.components.Ncol.text = nc
         nplot = int(nr)*int(nc)
-        list = Num.arange(1,nplot+1,dtype='int')
+        list = num.arange(1,nplot+1,dtype='int')
         list = map(str,list)
         return list
     ###########################################################

@@ -25,8 +25,8 @@ relative to the channel number of zero
 Therefore, the index of the channel array does not
 need to equal its value.  E.g. 
 
-  channels = Num.arange(nchan,dtype=int)        ==> [0,1,2................2048]
-  channels = Num.arange(mi_ch,ma_ch,dtype=int)  ==> [33,34,..............657]
+  channels = num.arange(nchan,dtype=int)        ==> [0,1,2................2048]
+  channels = num.arange(mi_ch,ma_ch,dtype=int)  ==> [33,34,..............657]
 
 are both valid.  
 
@@ -37,7 +37,7 @@ Note make shorter names for the functions:
 """
 ########################################################################
 
-import numpy as Num
+import numpy as num
 
 ########################################################################
 def channel_to_energy(channels, offset=0.0, slope=1.0, quad=0.0):
@@ -52,7 +52,7 @@ def channel_to_energy(channels, offset=0.0, slope=1.0, quad=0.0):
     Outputs:
         This function returns the equivalent energy for the input channels.
     """
-    c  = Num.asarray(channels,dtype=Num.double)
+    c  = num.asarray(channels,dtype=num.double)
     if quad != 0.:
         return offset +  c * (slope + c * quad)
     else:
@@ -69,22 +69,22 @@ def energy_idx(energy,emin=-1.,emax=-1.):
     """
     # find emin
     if emin >= 0.0:
-        delta    = Num.abs(energy - emin)
-        idx_min  = Num.where( delta == min(delta) )
+        delta    = num.abs(energy - emin)
+        idx_min  = num.where( delta == min(delta) )
         idx_min  = idx_min[0][0]
     else:
         idx_min = 0
 
     # find emax
     if emax >= 0.0 and emax >= emin:
-        delta    = Num.abs(energy - emax)
-        idx_max  = Num.where( delta == min(delta) )
+        delta    = num.abs(energy - emax)
+        idx_max  = num.where( delta == min(delta) )
         idx_max  = idx_max[0][0]
     else:
         idx_max = len(energy) - 1
  
     #return (idx_mi,idx_ma)
-    index = Num.arange(idx_min,idx_max+1,dtype=Num.int)
+    index = num.arange(idx_min,idx_max+1,dtype=num.int)
     return index
 
 ########################################################################
@@ -113,17 +113,17 @@ def energy_to_channel(energy, offset=0.0, slope=1.0, quad=0.0, clip=0):
         b = slope
         c = offset - energy
         # There are 2 roots.  I think we always want the "+" root?
-        channel = (-b + Num.sqrt(b**2 - 4.*a*c))/(2.*a)
-    channel = Num.around(channel)
+        channel = (-b + num.sqrt(b**2 - 4.*a*c))/(2.*a)
+    channel = num.around(channel)
 
     if (clip > 0):
-        channel = Num.clip(channel, 0, clip)
+        channel = num.clip(channel, 0, clip)
         # Note if energy is an array, below may
         # result in a return array of different length
         #condition = (channel >= 0) and (channel <=clip)
         #channel = channel.compress(condition)
 
-    channel = channel.astype(Num.int)
+    channel = channel.astype(num.int)
 
     return channel
 
@@ -149,7 +149,7 @@ def channel_to_d(channels,two_theta=0.0, offset=0.0, slope=1.0, quad=0.0):
         d = mca.channel_to_d(channels)
     """
     e = channel_to_energy(channels,offset=offset, slope=slope, quad=quad)
-    return 12.398 / (2. * e * Num.sin(two_theta*Num.pi/180.))
+    return 12.398 / (2. * e * num.sin(two_theta*num.pi/180.))
 
 
 ########################################################################
@@ -172,13 +172,13 @@ def d_to_channel(d, two_theta=0.0, offset=0.0, slope=1.0, quad=0.0, clip=0):
     Example:
         channel = d_to_channel(1.598)
     """
-    e = 12.398 / (2. * d * Num.sin(two_theta*Num.pi/180./2.))
+    e = 12.398 / (2. * d * num.sin(two_theta*num.pi/180./2.))
     return energy_to_channel(e,offset=offset, slope=slope, quad=quad, clip=clip)
 
 ########################################################################
 ########################################################################
 if __name__ == "__main__":
-    e = Num.arange(1,15.,.1)
+    e = num.arange(1,15.,.1)
     idx = energy_idx(e,1.66,1.66)
     print e[idx]
     

@@ -16,7 +16,7 @@ import os
 import types
 import copy
 import time
-import numpy as Num
+import numpy as num
 
 from   wxUtil import wxUtil
 import interface_model
@@ -872,13 +872,13 @@ class wxXrrIntModel(model.Background, wxUtil):
             tmp2 = self.shell.interp.symbol_table.list_symbols(symbol=model,tunnel=False)
             tmp  = tmp + tmp2['var']
         tmp.sort()
-        tmp.insert(0,'Num.arange(0.01,1.01,0.01)')
+        tmp.insert(0,'num.arange(0.01,1.01,0.01)')
         self.components.Theta.items = tmp
         #
         if thet in tmp:
             self.components.Theta.text = thet
         else:
-            #self.components.Theta.text = 'Num.arange(0.01,1.01,0.01)'
+            #self.components.Theta.text = 'num.arange(0.01,1.01,0.01)'
             self.components.Theta.text = ''
         return
 

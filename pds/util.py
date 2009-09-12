@@ -13,7 +13,7 @@ Utilities for shell program
 """
 ##########################################################################
 
-import numpy as Num
+import numpy as num
 import types
 import time
 import exceptions
@@ -55,11 +55,11 @@ def _isnumericarray(x):
 
 ##########################################################################
 def list2array(s):
-    """ attempt to convert a list to a NumPy array.
+    """ attempt to convert a list to a numpy array.
     Returns original list if the conversion is not possible"""
     if type(s) == types.ListType:
         try:
-            if _isnumericarray(s):return Num.array(s)
+            if _isnumericarray(s):return num.array(s)
         except:
             pass
     return s
@@ -840,11 +840,11 @@ class Menu:
                 if len(descr) > 0:
                     self.descr.append(descr[j])
         # sort
-        self.items = Num.array(self.items)
-        idx        = Num.argsort(self.items)
+        self.items = num.array(self.items)
+        idx        = num.argsort(self.items)
         self.items = list(self.items[idx][:])
         if len(descr) > 0:
-            self.descr = Num.array(self.descr)
+            self.descr = num.array(self.descr)
             self.descr = list(self.descr[idx][:])
         nitems = len(self.items)
 

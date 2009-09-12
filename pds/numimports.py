@@ -16,14 +16,14 @@ This adds numerical/plotting modules to the shell by default,
 as well as the calc function.
 
 The numerical/plotting modules are handled by the function call:
-(Num,scipy,pylab) = _modules(backend="Wx")
+(num,scipy,pylab) = _modules(backend="Wx")
 
 """
 #################################################################
 
 import sys
 import types
-import numpy as Num
+import numpy as num
 
 from   util import mod_import, show_more, PrintExceptErr
 
@@ -39,9 +39,9 @@ class _NumShell:
 
         #############        
         # add math functions / data to builtins
-        (Num,scipy,pylab) = _modules(backend=self.GUI)
+        (num,scipy,pylab) = _modules(backend=self.GUI)
         
-        self.interp.symbol_table.data["Num"] = Num
+        self.interp.symbol_table.data["num"] = num
         if scipy:
             self.interp.symbol_table.data["scipy"] = scipy
             #self.interp.symbol_table.data["optimize"] = __import__("scipy.optimize")
@@ -53,18 +53,18 @@ class _NumShell:
             self.close_pylab = _close_pylab
 
         startup = []
-        startup.append("__builtins__.update({'sin':Num.sin})")
-        startup.append("__builtins__.update({'asin':Num.arcsin})")
-        startup.append("__builtins__.update({'cos':Num.cos})")
-        startup.append("__builtins__.update({'acos':Num.arccos})")
-        startup.append("__builtins__.update({'tan':Num.tan})")
-        startup.append("__builtins__.update({'atan':Num.arctan})")
-        startup.append("__builtins__.update({'ln':Num.log})")
-        startup.append("__builtins__.update({'log':Num.log10})")
-        startup.append("__builtins__.update({'exp':Num.exp})")
-        startup.append("__builtins__.update({'sqrt':Num.sqrt})")
-        startup.append("__builtins__.update({'pi':Num.pi})")
-        startup.append("__builtins__.update({'e':Num.e})")
+        startup.append("__builtins__.update({'sin':num.sin})")
+        startup.append("__builtins__.update({'asin':num.arcsin})")
+        startup.append("__builtins__.update({'cos':num.cos})")
+        startup.append("__builtins__.update({'acos':num.arccos})")
+        startup.append("__builtins__.update({'tan':num.tan})")
+        startup.append("__builtins__.update({'atan':num.arctan})")
+        startup.append("__builtins__.update({'ln':num.log})")
+        startup.append("__builtins__.update({'log':num.log10})")
+        startup.append("__builtins__.update({'exp':num.exp})")
+        startup.append("__builtins__.update({'sqrt':num.sqrt})")
+        startup.append("__builtins__.update({'pi':num.pi})")
+        startup.append("__builtins__.update({'e':num.e})")
 
         # some MathUtil functions
         try:
@@ -151,8 +151,8 @@ class _NumShell:
         \r# The top value in the buffer can be used in an
         \r# expression with pop:
         \rcalc>10               # --> a
-        \rcalc>Num.log10(pop)   # --> expr(a)
-        \r  = 1.0               #  Num.log(3) = expr(a)
+        \rcalc>num.log10(pop)   # --> expr(a)
+        \r  = 1.0               #  num.log(3) = expr(a)
 
         \r# The pop occurs first, so when combined with the
         \r# operator syntax, the buffer value in the constructed
@@ -160,8 +160,8 @@ class _NumShell:
         \r# pop is allowed in an expression)
         \rcalc>1                # --> a
         \rcalc>10               # --> b
-        \rcalc>Num.log10(pop)-  # --> expr(b) op
-        \r  = 0.0               # 1 - (Num.log10(10)) = a op (expr(b))
+        \rcalc>num.log10(pop)-  # --> expr(b) op
+        \r  = 0.0               # 1 - (num.log10(10)) = a op (expr(b))
         \r
         """
         ################
@@ -229,7 +229,7 @@ class _NumShell:
         do_float = False
         calc_types = [types.BooleanType, types.ComplexType,
                       types.FloatType, types.IntType,
-                      types.LongType] + [Num.ndarray] + Num.typeDict.values()
+                      types.LongType] + [num.ndarray] + num.typeDict.values()
         while 1:
             line = raw_input('calc>')
             line = line.strip()
@@ -288,16 +288,16 @@ class _NumShell:
 def _modules(backend="TkAgg"):
     """
     import numpy, scipy and pylab - return as a tuple.
-    (Num,scipy,pylab) = Modules(backend="TkAgg")
+    (num,scipy,pylab) = Modules(backend="TkAgg")
     """
     ## numpy
     num_version = 0
     try:
-        #import numpy as Num
-        Num = mod_import('numpy')
-        Num.ArrayType = Num.ndarray
-        version = _parse_version(Num.__version__)
-        num_version = 'numpy %s' % Num.__version__
+        #import numpy as num
+        num = mod_import('numpy')
+        num.ArrayType = num.ndarray
+        version = _parse_version(num.__version__)
+        num_version = 'numpy %s' % num.__version__
     except:
         raise ImportError, 'Error importing numpy'     
     if num_version < 100:
@@ -323,7 +323,7 @@ def _modules(backend="TkAgg"):
         PrintExceptErr(s)
         pylab = None
 
-    return (Num,scipy,pylab)
+    return (num,scipy,pylab)
 
 #################################################################
 def _parse_version(s):

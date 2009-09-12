@@ -13,7 +13,7 @@ from PythonCard import model, dialog
 import wx
 import os
 import types
-import numpy as Num
+import numpy as num
 
 from   wxUtil import wxUtil
 import xrf_lookup
@@ -174,7 +174,7 @@ class wxXrf(model.Background, wxUtil):
         try:
             name = self.get_xrf_var_name(ignore_idx=True)
             m    = self.get_data(name)
-            if type(m) in (types.ListType, Num.ndarray):
+            if type(m) in (types.ListType, num.ndarray):
                 self.is_scan = True
                 idx  = self.get_scan_idx()
 
@@ -221,7 +221,7 @@ class wxXrf(model.Background, wxUtil):
         scan_idx = []
         name = self.get_xrf_var_name(ignore_idx=True)
         m    = self.get_data(name)
-        if type(m) in (types.ListType, Num.ndarray):
+        if type(m) in (types.ListType, num.ndarray):
             for k in range(len(m)):
                 scan_idx.append(str(k))
             return scan_idx
