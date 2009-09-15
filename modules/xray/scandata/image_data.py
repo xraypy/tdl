@@ -256,6 +256,7 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
     idx = num.where(bgr > bgr_arr_c)
     bgr[idx] = bgr_arr_c[idx]
     """
+    # take the average of the 2 bgrs
     if (rwidth > 0) and (cwidth > 0):
         bgr = (bgr_arr_r + bgr_arr_c)/2.
     elif rwidth > 0:
@@ -288,19 +289,30 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
 
 def _bgr(y,width):
     """
-    calc background for a given line 
+    calc background for a given line
+    simplified form of the algorithm used for
+    XRF bgr
     """
+
+    # first smooth and rebin y
+    # at end restore length with spline
     npts = len(y)
-    width_s = width**2
-    n       = int(2*width)
-    scratch = num.zeros(n+1)
+    
+    # here calc polynomial 
+    pow     = 0.5
+    npoly   = int(2*width) + 1
+    pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1)/2)
+    poly    = (width**2. - pdelx**2)**pow  - (width**2.)**pow
 
     # loop through each point
-    #for j in range(npts):
-    #    idx_left = num.max()
-    # pick up here, make simple fast version
-    # of background removal algo
-
+    delta = num.zeros(len(poly))
+    n = (npoly-1)/2
+    for j in range(npts):
+        lidx  = num.max((0,j-n))
+        ridx  = num.min((npts,j+n))
+        print n, lidx, ridx
+        delta = y[lidx:ridx] - (y[j] + poly[])
+    return delta
 
 ################################################################################
 class ImageAna:
@@ -490,6 +502,7 @@ class ImageAna:
 ################################################################################
 ################################################################################
 if __name__ == '__main__':
+    """
     import sys
     try:
         fname = sys.argv[1]
@@ -498,3 +511,14 @@ if __name__ == '__main__':
         sys.exit()
     a = read_file(fname)
     image_show(a)
+    """
+    import pylab
+    x = num.array(range(30))
+    y = 20.+num.exp( -1*((x-15.)**2.)/20.)
+    #pylab.plot(x,y)
+    #
+    p = _bgr(y,10)
+    print p
+    pylab.newplot(p,'o-')
+
+    

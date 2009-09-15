@@ -3,7 +3,7 @@
 #
 from tdl.Evaluator import Evaluator
 from tdl.Symbol import SymbolTable
-from tdl.Num import Num
+import numpy as num
 
 def myf1(a,b,c=10):
     return (a + b)/ c
@@ -16,12 +16,12 @@ def myf3(x,b):
 s = SymbolTable()
 p = Evaluator(symbolTable=s)
 
-b = Num.arange(64)
+b = num.arange(64)
 b.shape=(8,8)
 
-s.addVariable('a',Num.arange(7.))
+s.addVariable('a',num.arange(7.))
 s.addVariable('b',b)
-s.addVariable('c',Num.arange(10.)/10)
+s.addVariable('c',num.arange(10.)/10)
 s.addVariable('u',0.5)
 s.addVariable('x',3)
 s.addVariable('y',2)
@@ -37,7 +37,7 @@ s.addFunction('f1', myf1)
 s.addFunction('f2', myf2)
 s.addFunction('f3', myf3)
 
-array = Num.array
+array = num.array
 
 t = """
 1+2*3                    =>  7                => int

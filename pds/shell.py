@@ -637,8 +637,12 @@ class Shell(_NumShell):
 
     #############################################################
     def _show_builtins(self,_skip=True):
-        d = self.interp.symbol_table.list_builtins(_skip=_skip)
         print "\n***** Builtins ******"
+        # show python keywords
+        print "\n==== Python Key Words ===="
+        print show_list(PYTHON_KEY_WORDS,textwidth=82)
+        # get builtins
+        d = self.interp.symbol_table.list_builtins(_skip=_skip)
         self._print_show(d)
 
     #############################################################
