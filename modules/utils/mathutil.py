@@ -300,17 +300,24 @@ class LinReg:
             (m,b,m_s,b_s,stderr))
     """
     ########################################################
-    def __init__(self,x,y,plot=True):
+    def __init__(self,x,y,plot=False):
         self.fit(x,y,plot=plot)
         
     ########################################################
-    def fit(self, x, y, plot=True):
-        n = len(x)
+    def fit(self, x, y, plot=False):
+        """
+        fit lr
+        """
+        # store x 
+        self.x = x
+        
+        # calc stats
+        n     = len(x)
         x_ave = sum(x) / n
         y_ave = sum(y) / n
-        Sxx = sum( (x-x_ave)**2)
-        Syy = sum( (y-y_ave)**2)
-        Sxy = sum( (x-x_ave)*(y-y_ave))
+        Sxx   = sum( (x-x_ave)**2)
+        Syy   = sum( (y-y_ave)**2)
+        Sxy   = sum( (x-x_ave)*(y-y_ave))
 
         # slope and intercept
         m = Sxy/Sxx
@@ -338,21 +345,31 @@ class LinReg:
         self.s_b=s_b
         
         if plot:
-            import pylab
-            print "slope     = ", self.m, " +/- ", self.s_m
-            print "intercept = ", self.b, " +/- ", self.s_b 
-            pylab.clf()
+            self.plot(x,y)
+
+    ########################################################
+    def plot(self,x=None,y=None):
+        import pylab
+        print "slope     = ", self.m, " +/- ", self.s_m
+        print "intercept = ", self.b, " +/- ", self.s_b
+        if x == None: x = self.x
+        pylab.clf()
+        ycalc = self.calc_y(x)
+        pylab.plot(x,ycalc)
+        if y != None:
             pylab.plot(x,y,'bo')
-            pylab.plot(x,self.calc_y(x))
+            resid = y - ycalc
             pylab.plot(x,resid, 'ro')
             pylab.plot([x[0],x[n-1]],[0,0],'k-')
     
     ########################################################
-    def calc_y(self,x):
+    def calc_y(self,x=None):
         """
         calulate y given x
         y = mx + b
         """
+        if x == None:
+            x = self.x
         m = self.m
         b = self.b
         return (m*x + b)
@@ -403,11 +420,10 @@ def test_lr():
     x   = num.linspace(1,10,num=n)
     yo  = offset + slope*(x)
     y   = offset + slope*(x+num.random.randn(n)/5.)
-    #import pylab
-    #pylab.plot(x,yo)
-    #pylab.plot(x,y,'.')
-    lr = LinReg(x,y)
-
+    #lr = LinReg(x,y,plot=True)
+    line = LinReg(x,y,plot=True).calc_y()
+    print line
+    
 def test_peak():
     """
     test peak
@@ -422,6 +438,7 @@ def test_peak():
     p.set_peak(cen=6.,fwhm=0,mag=35.,flor=.3)
     y = p.calc(x)
     import pylab
+    pylab.clf()
     pylab.plot(x,y,'m.-')
     
 def test_minimize():
@@ -459,9 +476,12 @@ def test_minimize():
 #######################################################################
 #######################################################################
 if __name__ == "__main__":
+    print "Test lr"
     test_lr()
     raw_input('hit enter')
+    print "Test peak"
     test_peak()
     raw_input('hit enter')
+    print "Test minimize"
     test_minimize()
     
