@@ -292,7 +292,8 @@ def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
     Calculate the background for a given line, y.
 
     This is a simplified form of the algorithm used
-    for fitting XRF backgrounds
+    for fitting XRF backgrounds (see Kajfosz and Kwiatek (1987) Nuc.
+    Instr. Meth. in Phys. Res., B22, 78-81)
 
     At each data point a calculated polynomial is brought up from underneath
     untill its first contact with a data point within the polynomial range
@@ -318,10 +319,12 @@ def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
       steeper polynomials will result with  pow  > 0.5
 
     * nbgr is the number of end points to use for calculation of a linear
-      background, which is removed before polynomials are adjusted
+      background which is removed from the data before polynomials
+      are adjusted
 
-    * tangent is a flag (True/False) to indicate if subtracting the
-      average local linear slope of data before adjusting the polynomial
+    * tangent is a flag (True/False) to indicate if we add the
+      average local linear slope of the data to the polynomial
+      (this effectively removes the local slope of the data )
     
     * debug is a flag (True/False) to indicate if additional debug arrays
       should be calculated
@@ -357,7 +360,7 @@ def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
     pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1)/2)
     #poly    = (-1*pdelx**pow) / (width**pow)
     poly    = (width**2. - pdelx**2)**pow  - (width**2.)**pow
-
+    
     # loop through each point
     #delta = num.zeros(len(poly))
     n = (npoly-1)/2
@@ -370,20 +373,30 @@ def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
         if tangent:
             # calc avg val to l and r of center
             # and use to calc avg slope
-            lave = y[dlidx:j]
-            lave = lave.sum()/len(lave)
-            rave = y[j+1:dridx]
-            rave = rave.sum()/len(rave)
-            slope = (rave - lave)/len(y[dlidx:dridx])
-            # pick up here
-            """
-            line = slope*num.array(1)
-            """
-        delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx])
+            nl    = len(y[dlidx:j])
+            if nl == 0:
+                lyave = 0.0
+                lxave = 0.0
+            else:
+                lyave = num.sum(y[dlidx:j])/nl
+                lxave = num.sum(num.arange(dlidx,j))
+            nr    = len(y[j+1:dridx])
+            if nr == 0:
+                ryave = 0.0
+                rxave = 0.0
+            else:
+                ryave = num.sum(y[j+1:dridx])/nr
+                rxave = num.sum(num.arange(j+1,dridx))
+            slope = (ryave - lyave)/ num.abs(rxave - lxave)
+            line = slope*num.arange(-1*nl,nr+1) 
+            #print line
+        else:
+            line = num.zeros(len(y[dlidx:dridx]))
+        delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx]+line) 
         bgr[j] = y[j] + num.min((0,num.min(delta)))
         # debug arrays
         if debug:
-            p.append((y[j] + poly[plidx:pridx]))
+            p.append((y[j] + poly[plidx:pridx] + line))
             d.append(delta)
 
     # add back linbgr
@@ -423,7 +436,9 @@ def _plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
     pylab.subplot(2,1,1)
     pylab.plot(data-l,'k-o')
     pylab.subplot(2,1,2)
+    pylab.plot(data-l,'k-o')
     pylab.plot(num.zeros(npts),'k-')
+    pylab.plot(bgr-l,'k--')
 
     for j in range(len(p)):
         n = len(p[j])
@@ -435,7 +450,10 @@ def _plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
         pylab.subplot(2,1,1)
         pylab.plot(xx,p[j],'*-')
         pylab.subplot(2,1,2)
-        pylab.plot(xx,d[j],'*-')
+        #pylab.plot(xx,d[j],'*-')
+        dd = num.min((0,num.min(d[j]))) 
+        pylab.plot(xx,p[j]+dd,'*-')
+    
 
 
 ################################################################################
@@ -639,16 +657,16 @@ if __name__ == '__main__':
     import pylab
     from mathutil import gauss
     # generate a curve
-    npts = 30
+    npts = 35
     x = num.array(range(npts))
     g1  = gauss(x, npts/2., 1., 200)
     g2  = gauss(x, npts/2., 10., 200)
     r = num.random.normal(size=npts)
-    r = (mag/50.)*r/num.max(r)
+    r = 10.*r/num.max(r)
     y = (1.0*r+ 10.*x) + g1 + g2
     # plot bgr
-    width=5
+    width=4
     #_plot_bgr(y,width,pow=1,slope=True,debug=True)
-    _plot_bgr(y,width,pow=2,nbgr=3,tangent=False,debug=True)
+    _plot_bgr(y,width,pow=2,nbgr=3,tangent=True,debug=True)
     
     
