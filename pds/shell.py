@@ -220,6 +220,14 @@ class Shell(_NumShell):
                 startup.append(s)
         self.queue = startup
 
+        # execute the queue here before moving on
+        # otherwise startup stuff not available
+        # to files executed before we start the loop!
+        if self.queue:
+            for line in self.queue:
+                stop = self.exec_line(line)
+                if stop == QUIT: break
+            self.queue = []
         return
 
     ############################################################################
@@ -232,7 +240,7 @@ class Shell(_NumShell):
         Note for the python interpretor to work it is important that blank
         lines are passed, and that lines are not stripped entireley
         """
-        stop = None
+        stop = COMPLETE
         while stop != QUIT:
             if self.queue:
                 line = self.queue.pop(0)

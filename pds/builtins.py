@@ -82,8 +82,14 @@ class PdsBuiltins:
         "change directorty"
         if name == None:
             self.pwd()
-            return
-        name = name.strip()
+            return  
+        if type(name) == types.StringType:
+            name = name.strip()
+        else:
+            if hasattr(name,'__name__'):
+                name = name.__name__
+            else:
+                name = str(name)
         if name:
             try:
                 os.chdir(name)

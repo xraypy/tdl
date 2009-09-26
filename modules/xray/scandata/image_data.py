@@ -329,12 +329,25 @@ def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
     * debug is a flag (True/False) to indicate if additional debug arrays
       should be calculated
     
+    Note given the polynomial:
+        poly    = (r**2. - delx**2)**pow  - (r**2.)**pow
+    calc
+        d^2(poly)/dx^2 = 0
+    to determine where this function will have the max slope.
+    The result is:
+       delx_max_slope = r/sqrt(2*pow-1)
+    If we assume that the 'width' argument corresponds to this
+    delx_max_slope, then we can calc r for the polynomial as:
+       r = width*sqrt(2*pow-1)
+    (if pow<=1/2 just use r = width)
+
+
     """
     # make sure pow is positive
     # and create some debug stuff
-    if pow < 0:
-        print "Warning power is less than 0, setting it to 0"
-        pow = 0
+    if pow < 0.:
+        print "Warning power is less than 0, changing it to positive"
+        pow = -1.*pow
     if debug:
         p = []
         d = []
@@ -355,11 +368,14 @@ def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
     # create bgr array
     bgr  = num.zeros(ndat)
     
-    # here calc polynomial 
+    # here calc polynomial
     npoly   = int(2*width) + 1
     pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1)/2)
-    #poly    = (-1*pdelx**pow) / (width**pow)
-    poly    = (width**2. - pdelx**2)**pow  - (width**2.)**pow
+    if pow <= 0.5:
+        r = float(width)
+    else:
+        r = float(width)*sqrt(2.*pow-1.)
+    poly    = (r**2. - pdelx**2.)**pow  - (r**2.)**pow
     
     # loop through each point
     #delta = num.zeros(len(poly))
@@ -407,7 +423,6 @@ def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
         return bgr
 
 def _plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
-
     #
     if debug:
         (bgr,p,d,l) = _bgr(data,width,pow=pow,nbgr=nbgr,tangent=tangent,debug=debug)
@@ -454,8 +469,6 @@ def _plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
         dd = num.min((0,num.min(d[j]))) 
         pylab.plot(xx,p[j]+dd,'*-')
     
-
-
 ################################################################################
 class ImageAna:
     def __init__(self,image,roi=[],nbgr=5,cwidth=0,rwidth=0,
@@ -665,8 +678,8 @@ if __name__ == '__main__':
     r = 10.*r/num.max(r)
     y = (1.0*r+ 10.*x) + g1 + g2
     # plot bgr
-    width=4
+    width=3
     #_plot_bgr(y,width,pow=1,slope=True,debug=True)
-    _plot_bgr(y,width,pow=2,nbgr=3,tangent=True,debug=True)
+    _plot_bgr(y,width,pow=1.5,nbgr=3,tangent=True,debug=True)
     
     
