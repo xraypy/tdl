@@ -24,20 +24,68 @@ import scipy
 #######################################################################
 # some simple stuff
 def ave(x):
+    """
+    average of an array
+    """
     #return (sum(x)/float(len(x)))
     return num.ave(x)
 
 def std(x):
+    """
+    standard deviation of an array
+    """
     #x_ave = self.ave(x)
     #return( num.sqrt( sum( (x-x_ave)**2 ) / float(len(x)) ) )
     return num.std(x)
 
 def line(x, offset, slope ):
+    """
+    calculation of a line
+    """
     y =   slope * x + offset
     return(y)
 
 def square(a):
+    """
+    square of two numbers
+    """
     return a*a
+
+def cosd(x):
+    """
+    num.cos(x), x in degrees
+    """
+    return num.cos(num.radians(x))
+
+def sind(x):
+    """
+    num.sin(x), x in degrees
+    """
+    return num.sin(num.radians(x))
+
+def tand(x):
+    """
+    num.tan(x), x in degrees
+    """
+    return num.tan(num.radians(x))
+
+def arccosd(x):
+    """
+    num.arccos(x), result returned in degrees
+    """
+    return num.degrees(num.arccos(x))
+
+def arcsind(x):
+    """
+    num.arcsin(x), result returned in degrees
+    """
+    return num.degrees(num.arcsin(x))
+
+def arctand(x):
+    """
+    num.arctan(x), result returned in degrees
+    """
+    return num.degrees(num.arctan(x))
 
 #######################################################################
 def minimize(f,x,y,params,*args,**kws):

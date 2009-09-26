@@ -15,6 +15,9 @@ The _NumShell class should be used as a subclass within shell.Shell.
 This adds numerical/plotting modules to the shell by default,
 as well as the calc function.
 
+If numpy is not installed this should still be ok to use as a subclass
+of shell.Shell, it just wont add any of the numerical stuff... 
+
 The numerical/plotting modules are handled by the function call:
 (num,scipy,pylab) = _modules(backend="Wx")
 
@@ -23,10 +26,121 @@ The numerical/plotting modules are handled by the function call:
 
 import sys
 import types
-import numpy as num
-
 from   util import mod_import, show_more, PrintExceptErr
 
+#################################################################
+
+#################################################################
+# define some utility/convience functions
+#################################################################
+
+#################################################################
+def _parse_version(s):
+    """ parse a version string to an integer '1.0.1' -> 101"""
+    factor = 100.
+    version = 0.0
+    vlst = []
+    #for v in [int(i) for i in s.split('.')]:
+    for v in [i for i in s.split('.')]:
+        try:
+            version = version + int(v) * factor
+        except:
+            pass
+        factor = factor * 0.1000
+    return version
+
+#################################################################
+def _modules(backend="TkAgg"):
+    """
+    import numpy, scipy and pylab - return as a tuple.
+    (num,scipy,pylab) = Modules(backend="TkAgg")
+    """
+    ## numpy
+    num_version = 0
+    try:
+        num         = mod_import('numpy')
+        version     = _parse_version(num.__version__)
+        num_version = 'numpy %s' % num.__version__
+        # add some stuff
+        num.ArrayType = num.ndarray
+    except:
+        #raise ImportError, 'Error importing numpy'
+        s = "Warning no numpy"
+        PrintExceptErr(s)
+        num = None
+    if num_version < 100:
+        raise ImportError, 'Need numpy version 1.0 or higher: %s' % num_version    
+
+    ## scipy 
+    try:
+        #import scipy
+        scipy   = mod_import('scipy')
+        version = _parse_version(scipy.__version__)
+        scipy_version = 'scipy %s ' % version
+        if version < 48:
+            print "Warning Scipy version is old: %s" % scipy_version
+    except:
+        print "Warning no scipy"
+        scipy = None
+ 
+    ## pylab 
+    try:
+        pylab = _import_pylab(backend=backend)
+    except:
+        s = "Warning no pylab"
+        PrintExceptErr(s)
+        pylab = None
+
+    return (num,scipy,pylab)
+
+#################################################################
+def _import_pylab(backend="TkAgg",verbose=True):
+    #
+    import matplotlib
+    check = matplotlib.get_backend()
+    #
+    if backend == "TkAgg":
+        # below is kluge for compiled version, ie the way we are 
+        # running py2exe -> basically forces WX as backend.
+        #if check == "WXAgg":
+        #    pass
+        #else:
+        import Tkinter
+        PLOT_ROOT = Tkinter.Tk()
+        PLOT_ROOT.iconify()
+    elif backend == "WXAgg":
+        import wx
+        PLOT_ROOT = None
+    #
+    version = _parse_version(matplotlib.__version__)
+    txt = "    **INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
+    if verbose: sys.__stdout__.write(txt)
+    #
+    if version < 950:
+        matplotlib.use(backend)
+    else:
+        matplotlib.use(backend,warn=False)
+    import matplotlib.pylab as pylab
+    
+    # do we need this??
+    # ie plotting works without below line
+    # but this lets us grab tk if needed...
+    pylab.plot_root = PLOT_ROOT 
+    
+    # import plotter
+    import plotter
+    pylab.plotter    = plotter.plotter
+    pylab.newplotter = plotter.newplotter
+    pylab.cursor     = plotter.cursor
+
+    # Make sure we're interactive
+    #pylab.show._needmain=False
+    #matplotlib.interactive(True)
+    pylab.ion()
+    
+    return pylab
+
+#################################################################
 #################################################################
 class _NumShell:
     
@@ -38,13 +152,16 @@ class _NumShell:
         self.pds_commands.update({'calc':self.do_calc})
 
         #############        
-        # add math functions / data to builtins
+        # add modules to symbol table
         (num,scipy,pylab) = _modules(backend=self.GUI)
-        
-        self.interp.symbol_table.data["num"] = num
+
+        if num: 
+            self.interp.symbol_table.data["num"] = num
+
         if scipy:
             self.interp.symbol_table.data["scipy"] = scipy
             #self.interp.symbol_table.data["optimize"] = __import__("scipy.optimize")
+
         if pylab:
             self.interp.symbol_table.data["pylab"] = pylab
             #self.close_pylab = pylab.close
@@ -52,21 +169,28 @@ class _NumShell:
                 pylab.close('all')
             self.close_pylab = _close_pylab
 
+        # add to startup commands
         startup = []
-        startup.append("__builtins__.update({'sin':num.sin})")
-        startup.append("__builtins__.update({'asin':num.arcsin})")
-        startup.append("__builtins__.update({'cos':num.cos})")
-        startup.append("__builtins__.update({'acos':num.arccos})")
-        startup.append("__builtins__.update({'tan':num.tan})")
-        startup.append("__builtins__.update({'atan':num.arctan})")
-        startup.append("__builtins__.update({'ln':num.log})")
-        startup.append("__builtins__.update({'log':num.log10})")
-        startup.append("__builtins__.update({'exp':num.exp})")
-        startup.append("__builtins__.update({'sqrt':num.sqrt})")
-        startup.append("__builtins__.update({'pi':num.pi})")
-        startup.append("__builtins__.update({'e':num.e})")
 
-        # some MathUtil functions
+        # put some common numpy stuff into __builtins__
+        if num:
+            startup.append("__builtins__.update({'sin':num.sin})")
+            startup.append("__builtins__.update({'asin':num.arcsin})")
+            startup.append("__builtins__.update({'cos':num.cos})")
+            startup.append("__builtins__.update({'acos':num.arccos})")
+            startup.append("__builtins__.update({'tan':num.tan})")
+            startup.append("__builtins__.update({'atan':num.arctan})")
+            startup.append("__builtins__.update({'deg':num.degrees})")
+            startup.append("__builtins__.update({'rad':num.radians})")
+            
+            startup.append("__builtins__.update({'ln':num.log})")
+            startup.append("__builtins__.update({'log':num.log10})")
+            startup.append("__builtins__.update({'exp':num.exp})")
+            startup.append("__builtins__.update({'sqrt':num.sqrt})")
+            startup.append("__builtins__.update({'pi':num.pi})")
+            startup.append("__builtins__.update({'e':num.e})")
+
+        # put some mathutil functions into __builtins__
         try:
             import mathutil as __mathutil__
             self.interp.symbol_table.data["__mathutil__"] = __mathutil__
@@ -74,6 +198,14 @@ class _NumShell:
             startup.append("__builtins__.update({'std':__mathutil__.std})")
             startup.append("__builtins__.update({'square':__mathutil__.square})")
             startup.append("__builtins__.update({'minimize':__mathutil__.minimize})")
+            #
+            startup.append("__builtins__.update({'cosd':__mathutil__.cosd})")
+            startup.append("__builtins__.update({'acosd':__mathutil__.arccosd})")
+            startup.append("__builtins__.update({'sind':__mathutil__.sind})")
+            startup.append("__builtins__.update({'asind':__mathutil__.arcsind})")
+            startup.append("__builtins__.update({'tand':__mathutil__.tand})")
+            startup.append("__builtins__.update({'atand':__mathutil__.arctand})")
+            #
             startup.append("__builtins__.update({'random':__mathutil__.random})")
             startup.append("__builtins__.update({'voigt':__mathutil__.voigt})")
             #
@@ -82,14 +214,14 @@ class _NumShell:
         except:
             print "Cant load mathutil functions"
         
-        # plotter
-        startup.append("__builtins__.update({'plot':pylab.plotter})")
-        startup.append("__builtins__.update({'newplot':pylab.newplotter})")
-        startup.append("addcmd 'plot', 'pylab.plotter'")
-        startup.append("addcmd 'newplot', 'pylab.newplotter'")
-        #self.do_addcmd('plot',"pylab.plotter")
+        # put some plotter stuff into __builtins__
+        if pylab:
+            startup.append("__builtins__.update({'plot':pylab.plotter})")
+            startup.append("__builtins__.update({'newplot':pylab.newplotter})")
+            startup.append("addcmd 'plot', 'pylab.plotter'")
+            startup.append("addcmd 'newplot', 'pylab.newplotter'")
 
-        return startup        
+        return startup
 
     ##############################################################
 
@@ -229,7 +361,15 @@ class _NumShell:
         do_float = False
         calc_types = [types.BooleanType, types.ComplexType,
                       types.FloatType, types.IntType,
-                      types.LongType] + [num.ndarray] + num.typeDict.values()
+                      types.LongType]
+        try:
+            import numpy
+            calc_types.append([numpy.ndarray])
+            calc_types.append(numpy.typeDict.values())
+        except:
+            numpy = None
+            
+        ################
         while 1:
             line = raw_input('calc>')
             line = line.strip()
@@ -285,109 +425,3 @@ class _NumShell:
                         self.interp.set_data('__calc__.val',0.0)
 
 #################################################################
-def _modules(backend="TkAgg"):
-    """
-    import numpy, scipy and pylab - return as a tuple.
-    (num,scipy,pylab) = Modules(backend="TkAgg")
-    """
-    ## numpy
-    num_version = 0
-    try:
-        #import numpy as num
-        num = mod_import('numpy')
-        num.ArrayType = num.ndarray
-        version = _parse_version(num.__version__)
-        num_version = 'numpy %s' % num.__version__
-    except:
-        raise ImportError, 'Error importing numpy'     
-    if num_version < 100:
-        raise ImportError, 'Need numpy version 1.0 or higher: %s' % num_version    
-
-    ## scipy 
-    try:
-        #import scipy
-        scipy   = mod_import('scipy')
-        version = _parse_version(scipy.__version__)
-        scipy_version = 'scipy %s ' % scipy.__version__
-    except:
-        print "Warning no scipy"
-        scipy = None
-    if version < 48:
-        print "Warning Scipy version is old: %s" % scipy_version
-
-    ## pylab 
-    try:
-        pylab = _import_pylab(backend=backend)
-    except:
-        s = "Warning no pylab"
-        PrintExceptErr(s)
-        pylab = None
-
-    return (num,scipy,pylab)
-
-#################################################################
-def _parse_version(s):
-    """ parse a version string to an integer '1.0.1' -> 101"""
-    factor = 100.
-    version = 0.0
-    vlst = []
-    #for v in [int(i) for i in s.split('.')]:
-    for v in [i for i in s.split('.')]:
-        try:
-            version = version + int(v) * factor
-        except:
-            pass
-        factor = factor * 0.1000
-    return version
-
-#################################################################
-def _import_pylab(backend="TkAgg",verbose=True):
-    #
-    import matplotlib
-    check = matplotlib.get_backend()
-    #
-    if backend == "TkAgg":
-        # below is kluge for compiled version, ie the way we are 
-        # running py2exe -> basically forces WX as backend.
-        #if check == "WXAgg":
-        #    pass
-        #else:
-        import Tkinter
-        PLOT_ROOT = Tkinter.Tk()
-        PLOT_ROOT.iconify()
-    elif backend == "WXAgg":
-        import wx
-        PLOT_ROOT = None
-    #
-    version = _parse_version(matplotlib.__version__)
-    txt = "    **INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
-    if verbose: sys.__stdout__.write(txt)
-    #
-    if version < 950:
-        matplotlib.use(backend)
-    else:
-        matplotlib.use(backend,warn=False)
-    import matplotlib.pylab as pylab
-    
-    # do we need this??
-    # ie plotting works without below line
-    # but this lets us grab tk if needed...
-    pylab.plot_root = PLOT_ROOT 
-    
-    # import plotter
-    import plotter
-    pylab.plotter    = plotter.plotter
-    pylab.newplotter = plotter.newplotter
-    pylab.cursor     = plotter.cursor
-
-    # Make sure we're interactive
-    #pylab.show._needmain=False
-    #matplotlib.interactive(True)
-    pylab.ion()
-    
-    return pylab
-
-#################################################################
-
-
-
