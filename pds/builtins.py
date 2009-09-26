@@ -116,6 +116,12 @@ class PdsBuiltins:
     def path(self,pth=None,recurse=False,**kw):
         """
         modify or show python path
+        
+        if called with no arguments show sys.path
+        if passed the pth argument add add it to sys.path
+          (assume pth is a string path name)
+        if recurse=True all subdirectories (with names
+           starting with an alpha char) are added
         """
         ret = self._path(pth=pth,recurse=recurse,**kw)
         if ret: print ret

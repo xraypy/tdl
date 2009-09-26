@@ -658,19 +658,22 @@ def set_path(pth=None,recurse=False,verbose=False,clean=True):
     """
     if type(pth) == types.StringType: pth = pth.strip()
     if not pth: return
-    pth = os.path.abspath(pth)
-    if os.path.exists(pth):
-        if verbose: print 'add->', pth
-        if pth not in sys.path: sys.path.append(pth)
-        if recurse == True:
-            dirs = sub_dirs(pth)
-            for d in dirs:
-                if d not in sys.path:
-                    if os.path.exists(d):
-                        if verbose: print 'add->', d
-                        sys.path.append(d)
+    if pth == ".":
+        sys.path.append('.')
     else:
-        if verbose: print "Path '%s' doesnt exist" % pth
+        pth = os.path.abspath(pth)
+        if os.path.exists(pth):
+            if verbose: print 'add->', pth
+            if pth not in sys.path: sys.path.append(pth)
+            if recurse == True:
+                dirs = sub_dirs(pth)
+                for d in dirs:
+                    if d not in sys.path:
+                        if os.path.exists(d):
+                            if verbose: print 'add->', d
+                            sys.path.append(d)
+        else:
+            if verbose: print "Path '%s' doesnt exist" % pth
     if clean: clean_path()
     return
 
