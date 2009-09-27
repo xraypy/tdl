@@ -1,0 +1,214 @@
+#######################################################################
+"""
+Tom Trainor (tptrainor@alaska.edu)
+
+Methods to handle generic backgorund determination
+
+Modifications:
+--------------
+
+
+"""
+#######################################################################
+"""
+Todo
+   
+"""
+#######################################################################
+
+import types
+import copy
+import numpy as num
+import pylab
+
+from  mathutil import LinReg
+
+#######################################################################
+def background(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
+    """
+    Calculate the background for a given line, y.
+
+    This is a simplified form of the algorithm used for fitting
+    XRF backgrounds (see Kajfosz and Kwiatek (1987) Nuc.
+    Instr. Meth. in Phys. Res., B22, 78-81)
+
+    At each data point (i) a calculated polynomial is brought up from underneath
+    untill its first contact with any data point within the polynomial range
+    (+/-width).  The distance between the apex of the polynomial (which occurs
+    at point i) and zero is taken as the background for point i.
+
+    This algorithm also allows for the inclusion of a linear background
+    based on the end points.
+
+    * data is the data.  Note we assume that data is on a uniform
+      grid, ie delta_x steps between data values are all the same.
+      (therefore you might need to spline your data to a
+       uniform grid for this algo to work!)
+
+    * width is the polynomial (half) width in units of steps
+      in y.  If pow = 0.5, width is the radius of a circle.
+      Note that the extent of the polynomial used in bgr fitting
+      for a given point y[i] is given by 2*width+1
+
+    * pow is the power of the polynomial (pow>=0).
+      default 0.5 gives a circle
+      flatter polynomials will result with  pow < 0.5 (pow = 0 are linear)
+      steeper polynomials will result with  pow  > 0.5
+
+    * nbgr is the number of end points to use for calculation of a linear
+      background.  This part of the background is removed from the data
+      before polynomials are adjusted.  We then add it back to the polynomial
+      sum so the total background returned from this function includes both 
+
+    * tangent is a flag (True/False) to indicate if we add the
+      average local linear slope of the data to the polynomial
+      (this effectively removes the local slope of the data while
+      adjusting the position of the polynomials)
+    
+    * debug is a flag (True/False) to indicate if additional debug arrays
+      should be calculated
+    
+    Note given the polynomial:
+        poly    = (r**2. - delx**2)**pow  - (r**2.)**pow
+    calc
+        d^2(poly)/dx^2 = 0
+    to determine where this function will have the max slope.
+    The result is:
+       delx_max_slope = r/sqrt(2*pow-1)
+    If we assume that the 'width' argument corresponds to this
+    delx_max_slope, then we can calc r for the polynomial as:
+       r = width*sqrt(2*pow-1)
+    (if pow<=1/2 just use r = width)
+
+    """
+    # make sure pow is positive
+    # and create some debug stuff
+    if pow < 0.:
+        print "Warning power is less than 0, changing it to positive"
+        pow = -1.*pow
+    if debug:
+        p = []
+        d = []
+    
+    # linear bgr subtract data
+    ndat = len(data)
+    if nbgr > 0:
+        xlin = num.arange(0,nbgr,1,dtype=float)
+        xlin = num.append(xlin,num.arange(ndat-nbgr,npts,1))
+        ylin = num.array(data[0:nbgr],dtype=float)
+        ylin = num.append(ylin,data[ndat-nbgr:])
+        lr   = LinReg(xlin,ylin,plot=False)
+        linbgr = lr.calc_y(num.arange(ndat))
+    else:
+        linbgr = num.zeros(ndat)
+    y = data - linbgr
+
+    # create bgr array
+    bgr  = num.zeros(ndat)
+    
+    # here calc polynomial
+    npoly   = int(2*width) + 1
+    pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1)/2)
+    if pow <= 0.5:
+        r = float(width)
+    else:
+        r = float(width)*sqrt(2.*pow-1.)
+    poly    = (r**2. - pdelx**2.)**pow  - (r**2.)**pow
+    
+    # loop through each point
+    #delta = num.zeros(len(poly))
+    n = (npoly-1)/2
+    for j in range(ndat):
+        # data and polynomial indicies
+        dlidx = num.max((0,j-n))
+        dridx = num.min((ndat,j+n+1))
+        plidx = num.max((0,n-j))
+        pridx = num.min((npoly,ndat-j+n))
+        if tangent:
+            # calc avg val to l and r of center
+            # and use to calc avg slope
+            nl    = len(y[dlidx:j])
+            if nl == 0:
+                lyave = 0.0
+                lxave = 0.0
+            else:
+                lyave = num.sum(y[dlidx:j])/nl
+                lxave = num.sum(num.arange(dlidx,j))
+            nr    = len(y[j+1:dridx])
+            if nr == 0:
+                ryave = 0.0
+                rxave = 0.0
+            else:
+                ryave = num.sum(y[j+1:dridx])/nr
+                rxave = num.sum(num.arange(j+1,dridx))
+            slope = (ryave - lyave)/ num.abs(rxave - lxave)
+            line = slope*num.arange(-1*nl,nr+1) 
+            #print line
+        else:
+            line = num.zeros(len(y[dlidx:dridx]))
+        delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx]+line) 
+        bgr[j] = y[j] + num.min((0,num.min(delta)))
+        # debug arrays
+        if debug:
+            p.append((y[j] + poly[plidx:pridx] + line))
+            d.append(delta)
+
+    # add back linbgr
+    bgr = bgr + linbgr
+    if debug:
+        return (bgr,p,d,linbgr)
+    else:
+        return bgr
+
+############################################################################
+def plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
+    """
+    make a fancy background plot
+    """
+    #
+    if debug:
+        (bgr,p,d,l) = background(data,width,pow=pow,nbgr=nbgr,tangent=tangent,debug=debug)
+    else:
+        bgr = background(data,width,pow=pow,nbgr=nbgr,tangent=tangent,debug=debug)
+        
+    # plot data and bgr
+    pylab.figure(1)
+    pylab.clf()
+    npts = len(data)
+    pylab.subplot(1,1,1)
+    pylab.plot(data,'k-o',label='data')
+    pylab.plot(bgr,'r-*',label='bgr')
+    pylab.plot(data-bgr,'g-',label='data-bgr')
+    pylab.plot(num.zeros(npts),'k-')
+    pylab.legend(loc=2)
+
+    # plot data and polynomials
+    # and for each polynomial
+    # plot the diff between data
+    # and the polynomial
+    if debug == False: return
+    
+    pylab.figure(2)
+    pylab.clf()
+    pylab.subplot(2,1,1)
+    pylab.plot(data-l,'k-o')
+    pylab.subplot(2,1,2)
+    pylab.plot(data-l,'k-o')
+    pylab.plot(num.zeros(npts),'k-')
+    pylab.plot(bgr-l,'k--')
+
+    for j in range(len(p)):
+        n = len(p[j])
+        if j < int(width):
+            s = 0
+        else:
+            s = j - int(width)
+        xx = range(s,s+n)
+        pylab.subplot(2,1,1)
+        pylab.plot(xx,p[j],'*-')
+        pylab.subplot(2,1,2)
+        #pylab.plot(xx,d[j],'*-')
+        dd = num.min((0,num.min(d[j]))) 
+        pylab.plot(xx,p[j]+dd,'*-')
+    
+############################################################################

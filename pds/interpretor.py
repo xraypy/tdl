@@ -40,9 +40,12 @@ SymbolTable::
 ###########################################################
 
 import types
-import numpy as num
 import sys
 import time
+try:
+    import numpy as num
+except:
+    num = None
 
 import util
 import pyeval as eval
@@ -83,10 +86,12 @@ PYVARTYPES = [types.BooleanType,
 
 # Include numpy types
 # NUMVARTYPES = [num.ArrayType] + num.typeDict.values() 
-NUMVARTYPES = [num.ndarray] + num.typeDict.values() 
-
-# VARTYPES are python + numpy 
-VARTYPES = PYVARTYPES + NUMVARTYPES 
+if num:
+    NUMVARTYPES = [num.ndarray] + num.typeDict.values() 
+    # VARTYPES are python + numpy 
+    VARTYPES = PYVARTYPES + NUMVARTYPES 
+else:
+    VARTYPES = PYVARTYPES
 
 # INSTTYPES are general user created objects
 INSTTYPES = [types.InstanceType]
@@ -114,7 +119,8 @@ FUNCTYPES = [types.BuiltinFunctionType,
              types.UnboundMethodType]
 
 # Make sure these include numpy ufuncs
-FUNCTYPES = FUNCTYPES + [type(num.abs)]
+if num:
+    FUNCTYPES = FUNCTYPES + [type(num.abs)]
 
 """
 OTHERTYPES = [types.BufferType,

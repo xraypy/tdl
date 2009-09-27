@@ -43,7 +43,7 @@ import Image
 import pylab
 
 from  mathutil import LinReg
-import xrf_bgr
+from background import background
 
 #######################################################################
 def read_files(file_prefix,start=0,end=100,nfmt=3):
@@ -216,19 +216,16 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
     calculate a background for the image.
     we assume that image is already clipped
     and that it consists of a 'single peak'
-    and a non-lin bgr.
+    and a non-liner bgr.
 
     cwidth and rwidth are the 'widths' to be used
     for column and row sums respectivley. The cwidth
     value should correspond roughly to the actual peak
     width along the column direction (or the peak width in
-    the row sum).  Visa versa for rrwidth.  
+    the row sum).  Visa versa for rwidth.  
 
     Therefore the background should fit
     features that are in general broader than these values
-
-    initially try using the xrf bgr algorithm
-    if this works then we can optimize for images
 
     """
     bgr_arr_r = num.zeros(image.shape)
@@ -236,17 +233,13 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
 
     # fit to rows
     if rwidth > 0:
-        b = xrf_bgr.Background(bottom_width=rwidth,compress=1)
         for j in range(image.shape[0]):
-            b.calc(image[j])
-            bgr_arr_r[j,:] = copy.copy(b.bgr)
+            bgr_arr_r[j,:] = background(image[j],rwidth)
 
     # fit to cols
     if cwidth > 0:
-        b = xrf_bgr.Background(bottom_width=cwidth,compress=1)
         for j in range(image.shape[1]):
-            b.calc(image[:,j])
-            bgr_arr_c[:,j] = copy.copy(b.bgr)
+            bgr_arr_c[:,j] = background(image[:,j],cwidth)
 
     # combine the two bgrs 
     """
@@ -287,188 +280,6 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
 
     return bgr
 
-def _bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
-    """
-    Calculate the background for a given line, y.
-
-    This is a simplified form of the algorithm used
-    for fitting XRF backgrounds (see Kajfosz and Kwiatek (1987) Nuc.
-    Instr. Meth. in Phys. Res., B22, 78-81)
-
-    At each data point a calculated polynomial is brought up from underneath
-    untill its first contact with a data point within the polynomial range
-    (+/-width).  The distance between the apex of the polynomial and zero
-    is taken as the background.
-
-    This algorithm allows subration of a linear background based on the end
-    points before doing the polynomial fitting.
-
-    * data is the data.  Note we assume that data is on a uniform
-      grid, ie delta_x steps between data values are all the same.
-      (therefore you might need to spline your data to a
-       uniform grid for this algo to work!)
-
-    * width is the polynomial (half) width in units of steps
-      in y.  If pow = 0.5, width is the radius of a circle.
-      Note that the extent of the polynomial used in bgr fitting
-      for a given point y[i] is given by 2*width+1
-
-    * pow is the power of the polynomial (pow>=0).
-      default 0.5 gives a circle
-      flatter polynomials will result with  pow < 0.5 (pow = 0 are linear)
-      steeper polynomials will result with  pow  > 0.5
-
-    * nbgr is the number of end points to use for calculation of a linear
-      background which is removed from the data before polynomials
-      are adjusted
-
-    * tangent is a flag (True/False) to indicate if we add the
-      average local linear slope of the data to the polynomial
-      (this effectively removes the local slope of the data )
-    
-    * debug is a flag (True/False) to indicate if additional debug arrays
-      should be calculated
-    
-    Note given the polynomial:
-        poly    = (r**2. - delx**2)**pow  - (r**2.)**pow
-    calc
-        d^2(poly)/dx^2 = 0
-    to determine where this function will have the max slope.
-    The result is:
-       delx_max_slope = r/sqrt(2*pow-1)
-    If we assume that the 'width' argument corresponds to this
-    delx_max_slope, then we can calc r for the polynomial as:
-       r = width*sqrt(2*pow-1)
-    (if pow<=1/2 just use r = width)
-
-
-    """
-    # make sure pow is positive
-    # and create some debug stuff
-    if pow < 0.:
-        print "Warning power is less than 0, changing it to positive"
-        pow = -1.*pow
-    if debug:
-        p = []
-        d = []
-    
-    # linear bgr subtract data
-    ndat = len(data)
-    if nbgr > 0:
-        xlin = num.arange(0,nbgr,1,dtype=float)
-        xlin = num.append(xlin,num.arange(ndat-nbgr,npts,1))
-        ylin = num.array(data[0:nbgr],dtype=float)
-        ylin = num.append(ylin,data[ndat-nbgr:])
-        lr   = LinReg(xlin,ylin,plot=False)
-        linbgr = lr.calc_y(num.arange(ndat))
-    else:
-        linbgr = num.zeros(ndat)
-    y = data - linbgr
-
-    # create bgr array
-    bgr  = num.zeros(ndat)
-    
-    # here calc polynomial
-    npoly   = int(2*width) + 1
-    pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1)/2)
-    if pow <= 0.5:
-        r = float(width)
-    else:
-        r = float(width)*sqrt(2.*pow-1.)
-    poly    = (r**2. - pdelx**2.)**pow  - (r**2.)**pow
-    
-    # loop through each point
-    #delta = num.zeros(len(poly))
-    n = (npoly-1)/2
-    for j in range(ndat):
-        # data and polynomial indicies
-        dlidx = num.max((0,j-n))
-        dridx = num.min((ndat,j+n+1))
-        plidx = num.max((0,n-j))
-        pridx = num.min((npoly,ndat-j+n))
-        if tangent:
-            # calc avg val to l and r of center
-            # and use to calc avg slope
-            nl    = len(y[dlidx:j])
-            if nl == 0:
-                lyave = 0.0
-                lxave = 0.0
-            else:
-                lyave = num.sum(y[dlidx:j])/nl
-                lxave = num.sum(num.arange(dlidx,j))
-            nr    = len(y[j+1:dridx])
-            if nr == 0:
-                ryave = 0.0
-                rxave = 0.0
-            else:
-                ryave = num.sum(y[j+1:dridx])/nr
-                rxave = num.sum(num.arange(j+1,dridx))
-            slope = (ryave - lyave)/ num.abs(rxave - lxave)
-            line = slope*num.arange(-1*nl,nr+1) 
-            #print line
-        else:
-            line = num.zeros(len(y[dlidx:dridx]))
-        delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx]+line) 
-        bgr[j] = y[j] + num.min((0,num.min(delta)))
-        # debug arrays
-        if debug:
-            p.append((y[j] + poly[plidx:pridx] + line))
-            d.append(delta)
-
-    # add back linbgr
-    bgr = bgr + linbgr
-    if debug:
-        return (bgr,p,d,linbgr)
-    else:
-        return bgr
-
-def _plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
-    #
-    if debug:
-        (bgr,p,d,l) = _bgr(data,width,pow=pow,nbgr=nbgr,tangent=tangent,debug=debug)
-    else:
-        bgr = _bgr(data,width,pow=pow,nbgr=nbgr,tangent=tangent,debug=debug)
-        
-    # plot data and bgr
-    pylab.figure(1)
-    pylab.clf()
-    npts = len(data)
-    pylab.subplot(1,1,1)
-    pylab.plot(data,'k-o',label='data')
-    pylab.plot(bgr,'r-*',label='bgr')
-    pylab.plot(data-bgr,'g-',label='data-bgr')
-    pylab.plot(num.zeros(npts),'k-')
-    pylab.legend(loc=2)
-
-    # plot data and polynomials
-    # and for each polynomial
-    # plot the diff between data
-    # and the polynomial
-    if debug == False: return
-    
-    pylab.figure(2)
-    pylab.clf()
-    pylab.subplot(2,1,1)
-    pylab.plot(data-l,'k-o')
-    pylab.subplot(2,1,2)
-    pylab.plot(data-l,'k-o')
-    pylab.plot(num.zeros(npts),'k-')
-    pylab.plot(bgr-l,'k--')
-
-    for j in range(len(p)):
-        n = len(p[j])
-        if j < int(width):
-            s = 0
-        else:
-            s = j - int(width)
-        xx = range(s,s+n)
-        pylab.subplot(2,1,1)
-        pylab.plot(xx,p[j],'*-')
-        pylab.subplot(2,1,2)
-        #pylab.plot(xx,d[j],'*-')
-        dd = num.min((0,num.min(d[j]))) 
-        pylab.plot(xx,p[j]+dd,'*-')
-    
 ################################################################################
 class ImageAna:
     def __init__(self,image,roi=[],nbgr=5,cwidth=0,rwidth=0,
@@ -679,7 +490,7 @@ if __name__ == '__main__':
     y = (1.0*r+ 10.*x) + g1 + g2
     # plot bgr
     width=3
-    #_plot_bgr(y,width,pow=1,slope=True,debug=True)
-    _plot_bgr(y,width,pow=1.5,nbgr=3,tangent=True,debug=True)
+    #plot_bgr(y,width,pow=1,slope=True,debug=True)
+    plot_bgr(y,width,pow=1.5,nbgr=3,tangent=True,debug=True)
     
     
