@@ -24,7 +24,29 @@ import pylab
 from  mathutil import LinReg
 
 #######################################################################
-def background(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
+def linear_background(data,nbgr=0):
+    """
+    Calculate a linear background of the data based on the endpoints
+
+    Note we assume that the data is on an evenly spaced grid so no
+    abscica is used in calculating the background line
+    """
+    ndat = len(data)
+    if nbgr <= 0:
+        return num.zeros(ndat)
+    if ndat < 2*nbgr + 1:
+        return num.zeros(ndat)
+    # calc linear bgr from end points
+    xlin = num.arange(0,nbgr,1,dtype=float)
+    xlin = num.append(xlin,num.arange(ndat-nbgr,ndat,1))
+    ylin = num.array(data[0:nbgr],dtype=float)
+    ylin = num.append(ylin,data[ndat-nbgr:])
+    lr   = LinReg(xlin,ylin,plot=False)
+    linbgr = lr.calc_y(num.arange(ndat))
+    return linbgr
+
+#######################################################################
+def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     """
     Calculate the background for a given line, y.
 
@@ -40,25 +62,30 @@ def background(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
     This algorithm also allows for the inclusion of a linear background
     based on the end points.
 
-    * data is the data.  Note we assume that data is on a uniform
-      grid, ie delta_x steps between data values are all the same.
-      (therefore you might need to spline your data to a
-       uniform grid for this algo to work!)
+    Note we assume that data is on a uniform
+    grid, ie delta_x steps between data values are all the same,
+    therefore no abscissa is passed in here.
+    (therefore you might need to spline your data to a
+    uniform grid for this algo to work!)
 
-    * width is the polynomial (half) width in units of steps
-      in y.  If pow = 0.5, width is the radius of a circle.
-      Note that the extent of the polynomial used in bgr fitting
-      for a given point y[i] is given by 2*width+1
-
-    * pow is the power of the polynomial (pow>=0).
-      default 0.5 gives a circle
-      flatter polynomials will result with  pow < 0.5 (pow = 0 are linear)
-      steeper polynomials will result with  pow  > 0.5
+    * data is the data (ie y-data or ordinate).  
 
     * nbgr is the number of end points to use for calculation of a linear
       background.  This part of the background is removed from the data
       before polynomials are adjusted.  We then add it back to the polynomial
-      sum so the total background returned from this function includes both 
+      sum so the total background returned from this function includes both
+      
+    * width is the polynomial (half) width in units of steps
+      in y.  If pow = 0.5, width is the radius of a circle.
+      Note that the extent of the polynomial used in bgr fitting
+      for a given point y[i] is given by 2*width+1.  If width=0
+      then we just calculate and return a linear bgr based on
+      the end points
+
+    * pow is the power of the polynomial (pow>=0).
+      default value of 0.5 gives a circle
+      flatter polynomials will result with  pow < 0.5 (pow = 0 are linear)
+      steeper polynomials will result with  pow  > 0.5
 
     * tangent is a flag (True/False) to indicate if we add the
       average local linear slope of the data to the polynomial
@@ -91,19 +118,12 @@ def background(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
         d = []
     
     # linear bgr subtract data
-    ndat = len(data)
-    if nbgr > 0:
-        xlin = num.arange(0,nbgr,1,dtype=float)
-        xlin = num.append(xlin,num.arange(ndat-nbgr,npts,1))
-        ylin = num.array(data[0:nbgr],dtype=float)
-        ylin = num.append(ylin,data[ndat-nbgr:])
-        lr   = LinReg(xlin,ylin,plot=False)
-        linbgr = lr.calc_y(num.arange(ndat))
-    else:
-        linbgr = num.zeros(ndat)
+    linbgr = linear_background(data,nbgr=nbgr)
+    if width <= 0.: return linbgr
     y = data - linbgr
 
     # create bgr array
+    ndat = len(y)
     bgr  = num.zeros(ndat)
     
     # here calc polynomial
@@ -161,15 +181,17 @@ def background(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
         return bgr
 
 ############################################################################
-def plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
+def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     """
     make a fancy background plot
     """
     #
     if debug:
-        (bgr,p,d,l) = background(data,width,pow=pow,nbgr=nbgr,tangent=tangent,debug=debug)
+        (bgr,p,d,l) = background(data,nbgr=nbgr,width=width,pow=pow,
+                                 tangent=tangent,debug=debug)
     else:
-        bgr = background(data,width,pow=pow,nbgr=nbgr,tangent=tangent,debug=debug)
+        bgr = background(data,nbgr=nbgr,width=width,pow=pow,
+                         tangent=tangent,debug=debug)
         
     # plot data and bgr
     pylab.figure(1)
@@ -211,4 +233,20 @@ def plot_bgr(data,width,pow=0.5,nbgr=0,tangent=False,debug=False):
         dd = num.min((0,num.min(d[j]))) 
         pylab.plot(xx,p[j]+dd,'*-')
     
-############################################################################
+################################################################################
+################################################################################
+if __name__ == '__main__':
+    import pylab
+    from mathutil import gauss
+    # generate a curve
+    npts = 35
+    x = num.array(range(npts))
+    g1  = gauss(x, npts/2., 1., 200)
+    g2  = gauss(x, npts/2., 10., 200)
+    r = num.random.normal(size=npts)
+    r = 10.*r/num.max(r)
+    y = (1.0*r+ 10.*x) + g1 + g2
+    # plot bgr
+    width=3
+    plot_bgr(y,nbgr=3,width=width,pow=1.5,tangent=True,debug=True)
+    

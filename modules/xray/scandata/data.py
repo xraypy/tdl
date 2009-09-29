@@ -25,6 +25,12 @@ from   specfile import SpecFile
 import image_data
 import xrf_ops
 
+
+########################################################################
+IMG_BGR_PARAMS = {'bgrflag':0,
+                  'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
+                  'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
+
 ########################################################################
 class ScanData:
     """
@@ -358,10 +364,11 @@ class ScanData:
         if len(self.image_bgrpar) != npts:
             self.image_bgrpar = []
             for j in range(npts):
-                self.image_bgrpar.append({'nbgr':3,
-                                          'cwidth':0,
-                                          'rwidth':0})
-
+                #self.image_bgrpar.append({'nbgr':3,
+                #                          'cwidth':0,
+                #                          'rwidth':0})
+                self.image_bgrpar.append(IMG_BGR_PARAMS)
+                
         # should we init all these or set based on an integrate flag?
         self.image_peaks  = {}
         self.image_peaks['I']      = num.zeros(npts,dtype=float)
@@ -386,16 +393,16 @@ class ScanData:
         figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
         roi        = self.image_rois[idx]
         bgr_params = self.image_bgrpar[idx]
-        nbgr       = bgr_params.get('nbgr')
-        cwidth     = bgr_params.get('cwidth')
-        rwidth     = bgr_params.get('rwidth')
-        if  nbgr   == None: nbgr=0
-        if  cwidth == None: cwidth=0
-        if  rwidth == None: rwidth=0
+        #nbgr       = bgr_params.get('nbgr')
+        #cwidth     = bgr_params.get('cwidth')
+        #rwidth     = bgr_params.get('rwidth')
+        #if  nbgr   == None: nbgr=0
+        #if  cwidth == None: cwidth=0
+        #if  rwidth == None: rwidth=0
 
         img_ana = image_data.ImageAna(self.image[idx],roi=roi,
-                                      nbgr=nbgr,cwidth=cwidth,rwidth=rwidth,
-                                      plot=plot,fig=fig,figtitle=figtitle)
+                                      plot=plot,fig=fig,figtitle=figtitle,
+                                      **bgr_params)
 
         # results into image_peaks dictionary
         self.image_peaks['I'][idx]      = img_ana.I

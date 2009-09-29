@@ -17,81 +17,82 @@ import copy
 import numpy as num
 import pylab
 
+from   pds.util import Menu, get_yn, get_int, get_flt, get_tf
 from   plotter import cursor
 import image_data
 
 ########################################################################
-OPTIONS = """
-###################
-Options:
+IMG_HEADER = """
 Number of images  = %s
 Current image     = %s
 Current image roi = %s
-1.  Display image
-2.  Set roi from image zoom (Figure 1)
-3.  Plot row/column sums (Figure 2)
-4.  Select roi from sum plots (Figure 2)
-5.  Set background parameters
-6.  Apply current roi and background params to all images
-7.  Integrate current image
-8.  Integrate all images
-9.  Select scan point
-10. Select next point 
-11. Select previous point 
-12. Flag as bad point
-13. Set max image intensity value
-14. Done
-###################
 """
+
+IMG_LABELS = ['display','zoomroi','plotsums','selectroi','bgr',
+              'copyall','integrate','intall',
+              'point','next','previous','flag','imax','help','done']
+IMG_DESCR = ["Display image",
+             "Set roi from image zoom (Figure 1)",
+             "Plot row/column sums (Figure 2)",
+             "Select roi from sum plots (Figure 2)",
+             "Set background parameters",
+             "Apply current roi and background params to all images",
+             "Integrate current image",
+             "Integrate all images",
+             "Select scan point",
+             "Select next point ",
+             "Select previous point", 
+             "Flag as bad point",
+             "Set max image intensity value",
+             "Show options",
+             "Done"]
 
 ########################################################################
 def image_menu(data):
     """
     Interactively inspect images in scan data object
     """
-    prompt   = 'Select option (1)>'
+    prompt   = 'Select option >'
     npts     = len(data.image)
     scan_pnt = 0
     roi      = []
-    ret = 0
+    ret      = ''
 
-    # check init
+    # check init and plot first
     if len(data.image_peaks) != npts:
         data._init_image()
-
+    figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
+    image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+    
+    # make menu
+    m = Menu(labels=IMG_LABELS,descr=IMG_DESCR,sort=False,matchidx=True)
+    
     # loop
-    while ret != 14:
+    while ret != 'done':
         ###
-        roi  = data.image_rois[scan_pnt]
-        op = OPTIONS % (str(npts),str(scan_pnt),str(roi))
-        print op
-        rret = raw_input(prompt)
-        if not rret:
-            ret = 1
-        else:
-            try:
-                ret = int(rret)
-            except:
-                print "** Invalid option '%s' **" % rret
-                ret = -1
+        roi      = data.image_rois[scan_pnt]
+        header   = IMG_HEADER % (str(npts),str(scan_pnt),str(roi))
+        m.header = header
+        ret      = m.prompt(prompt)
+
         ####
-        if ret == -1:
-            pass
-        elif ret == 1:
+        if ret == 'display':
             figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
             image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
-        elif ret == 2:
+        elif ret == 'zoomroi':
             pylab.figure(1)
             (x1,x2,y1,y2) = pylab.axis()
             roi  = [int(x1),int(y1),int(x2),int(y2)]
             data.image_rois[scan_pnt] = roi
-        elif ret == 3:
+        elif ret == 'plotsums':
             roi = data.image_rois[scan_pnt]
             image = image_data.clip_image(data.image[scan_pnt],roi)
-            image_data.sum_plot(image,nbgr=bgr_params['nbgr'],fig=2)
-        elif ret == 4:
+            bgr_par = data.image_bgrpar[scan_pnt]
+            image_data.sum_plot(image,fig=2,**bgr_par)
+        elif ret == 'selectroi':
             image = data.image[scan_pnt]
-            image_data.sum_plot(image,nbgr=0,fig=2)
+            bgr_par = data.image_bgrpar[scan_pnt]
+            image_data.sum_plot(image,fig=2,**bgr_par)
             c = cursor(fig=2)
             (c1,y) = c.get_click(msg="Select left col sum")
             (c2,y) = c.get_click(msg="Select right col sum")
@@ -99,60 +100,24 @@ def image_menu(data):
             (r2,y) = c.get_click(msg="Select right row sum")
             roi = [int(c1),int(r1),int(c2),int(r2)]
             data.image_rois[scan_pnt] = roi
-        elif ret == 5:
-            # should make this a seperate menu function
-            # the text could then go into a 'h'elp menu
-            bgr_params = data.image_bgrpar[scan_pnt]
-
-            print "Note that linear backgrounds are applied to row"
-            print "and column sum integrals. These sums apply to the"
-            print "non-background substracted image roi"
-            p2 = "Num bgr points for linear background (0 for no bgr) (%s)>" % str(bgr_params['nbgr'])
-            print p2
-            tmp = raw_input('>>')
-            if len(tmp.strip()) > 0:
-                data.image_bgrpar[scan_pnt]['nbgr'] = int(tmp)
-                
-            print "The below widths are used for determining the image"
-            print "roi background.  If both are zero no background is "
-            print "applied.  If only one is non-zero the background is"
-            print "only calculated in the given direction (row or column)"
-            print "If both are non-zero the background is taken as the"
-            print "average of the background determined for each direction"
-            p2 = "Enter peak width in column direction, cwidth (%s)>" % bgr_params['cwidth']
-            print p2
-            tmp = raw_input('>>')
-            if len(tmp.strip()) > 0:
-                data.image_bgrpar[scan_pnt]['cwidth'] = int(tmp)
-            p2 = "Enter peak width in row direction, rwidth (%s)>" % bgr_params['rwidth']
-            print p2
-            tmp = raw_input('>>')
-            if len(tmp.strip()) > 0:
-                data.image_bgrpar[scan_pnt]['rwidth'] = int(tmp)
-            print "bgr params:", data.image_bgrpar[scan_pnt]
-            
-            #plot bgr
-            if  (data.image_bgrpar[scan_pnt]['rwidth'] > 0) or (data.image_bgrpar[scan_pnt]['cwidth'] > 0):
-                img = image_data.clip_image(data.image[scan_pnt],
-                                            roi=data.image_rois[scan_pnt])
-                image_data.image_bgr(img,
-                                     cwidth=data.image_bgrpar[scan_pnt]['cwidth'],
-                                     rwidth=data.image_bgrpar[scan_pnt]['rwidth'],
-                                     plot=True)
-        elif ret == 6:
+        elif ret == 'bgr':
+            bgr_par = data.image_bgrpar[scan_pnt]
+            bgr_par = bgr_menu(bgr_par)
+            data.image_bgrpar[scan_pnt] = bgr_par
+        elif ret == 'copyall':
             roi = data.image_rois[scan_pnt]
             data.image_rois = []
             for j in range(npts):
                 data.image_rois.append(copy.copy(roi))
-            
+            #
             bgr_par = data.image_bgrpar[scan_pnt]
             data.image_bgrpar = []
             for j in range(npts):
                 data.image_bgrpar.append(copy.copy(bgr_par))
-        elif ret == 7:
+        elif ret == 'integrate':
             data.integrate_image(idx=[scan_pnt],
                                  plot=True,fig=3)
-        elif ret == 8:
+        elif ret == 'intall':
             p2 = "Plot all images (False)>"
             print p2
             yn = raw_input('>>')
@@ -178,7 +143,7 @@ def image_menu(data):
             pylab.legend(loc = 9)
             pylab.xlabel('L')
             pylab.ylabel('Integrated Intensity')
-        elif ret == 9:
+        elif ret == 'point':
             p2 = "Enter scan point, max = %i (%i)>" % (npts-1,scan_pnt)
             print p2
             pnt = raw_input('>>')
@@ -191,37 +156,143 @@ def image_menu(data):
             scan_pnt = pnt
             figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
             image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
-        elif ret == 10:
+        elif ret == 'next':
             if scan_pnt + 1 < npts: 
                 scan_pnt = scan_pnt + 1
                 figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
                 image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
-        elif ret == 11:
+        elif ret == 'previous':
             if scan_pnt - 1 > -1: 
                 scan_pnt = scan_pnt - 1
                 figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
                 image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
-        elif ret ==12:
+        elif ret == 'flag':
             if int(scan_pnt) in data.bad_points:
                 data.bad_points.remove(scan_pnt)
                 print "Data point removed from bad list"
             else:
                 data.bad_points.append(int(scan_pnt))
                 print "Data point added to bad list"
-        elif ret == 13:
+        elif ret == 'imax':
             print "Enter maximum intensity value to apply to image"
-            Im_max = raw_input('>>')
-            if len(Im_max.strip()) == 0:
-                Im_max = None
+            im_max = raw_input('>>')
+            if len(im_max.strip()) == 0:
+                im_max = None
             else:
-                Im_max = int(Im_max)
+                im_max = int(im_max)
             figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle, Im_max = Im_max)
-        elif ret == 14:                
-            print "All done"
+            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle, im_max = im_max)
         else:
-            print "** Invalid option '%s' **" % ret
             pass
+
+
+########################################################################
+BGR_INFO = """
+################################################
+* bgrflag is flag for how to do backgrounds:
+   = 0 determine row and column backgrounds after summation
+   = 1 determine 2D background using 'c'olumn direction 
+   = 2 determine 2D background using 'r'ow direction 
+   = 3 determine 2D background using both 'r'ow and 'c'olumn direction 
+
+-> below params are for 'c'olumn and 'r'ow directions
+
+* c/rnbgr = number of end points to use in linear background determination
+  (see background.background)
+      
+* c/rwidth should correspond roughly to the actual peak
+  widths. The background funciton should fit
+  features that are in general broader than these values
+  Note estimate cwidth using width of peak in row sum
+  and rwidth using the width of the peak in the col sum.
+  Note that width = 0 corresponds to no polynomial bgr
+  
+* c/rpow is the power of the polynomial used in background determination
+  (see background.background)
+  
+* c/rtangent is a flag to indicate if local slope of the data should be fitted 
+  (see background.background)
+################################################
+"""
+
+BGR_HEADER = """
+* bgrflag=%i,
+* cnbgr=%i, cwidth=%g,cpow=%g,ctan=%s
+* rnbgr=%i, rwidth=%g,rpow=%g,rtan=%s
+"""
+
+BGR_LABELS = ['help','info','bgrflag',
+              'cnbgr','cwidth','cpow','ctan',
+              'rnbgr','rwidth','rpow','rtan',
+              'done']
+
+BGR_DESCR = ["Show options","Get more info on parameter defintions", "Set background flag",
+             "Set column sum num bgr for linear background",
+             "Set column sum peak width for non-linear background",
+             "Set column sum polynomial power for non-linear background",
+             "Set column sum tangent flag (True or False)",
+             "Set column row num bgr for linear background",
+             "Set column row peak width for non-linear background",
+             "Set column row polynomial power for non-linear background",
+             "Set column row tangent flag (True or False)",
+             "All done"]
+
+IMG_BGR_PARAMS = {'bgrflag':0,
+                  'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
+                  'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
+
+def bgr_menu(bgr_params=IMG_BGR_PARAMS):
+    """
+    Get bgr options
+    """
+    prompt   = 'Select option >'
+
+    # make menu
+    m   = Menu(labels=BGR_LABELS,descr=BGR_DESCR,sort=False,matchidx=True)
+    ret = ''
+    
+    while ret != 'done':
+        header = BGR_HEADER % (bgr_params['bgrflag'],
+                               bgr_params['cnbgr'],bgr_params['cwidth'],
+                               bgr_params['cpow'],str(bgr_params['ctan']),
+                               bgr_params['rnbgr'],bgr_params['rwidth'],
+                               bgr_params['rpow'],str(bgr_params['rtan']))
+        m.header = header
+        ret      = m.prompt(prompt)
+        #
+        if ret == 'bgrflag':
+            bgr_params['bgrflag'] = get_int(p='Enter bgrflag>',
+                                            d=bgr_params['bgrflag'],o=[0,1,2,3])
+        #
+        elif ret == 'cnbgr':
+            bgr_params['cnbgr'] = get_int(p='Enter col nbgr>',
+                                          d=bgr_params['cnbgr'])
+        elif ret == 'cwidth':
+            bgr_params['cwidth'] = get_int(p='Enter col width>',
+                                           d=bgr_params['cwidth'])
+        elif ret == 'cpow':
+            bgr_params['cpow'] = get_flt(p='Enter col pow>',
+                                         d=bgr_params['cpow'],min=0.,max=5.)
+        elif ret == 'ctan':
+            bgr_params['ctan'] = get_tf(p='Enter col tan flag>',
+                                           d=bgr_params['ctan'])
+        #
+        elif ret == 'rnbgr':
+            bgr_params['rnbgr'] = get_int(p='Enter row nbgr>',
+                                          d=bgr_params['rnbgr'])
+        elif ret == 'rwidth':
+            bgr_params['rwidth'] = get_int(p='Enter row width>',
+                                           d=bgr_params['rwidth'])
+        elif ret == 'rpow':
+            bgr_params['rpow'] = get_flt(p='Enter row pow>',
+                                         d=bgr_params['rpow'],min=0.,max=5.)
+        elif ret == 'rtan':
+            bgr_params['rtan'] = get_tf(p='Enter row tan flag>',
+                                           d=bgr_params['rtan'])
+        elif ret == 'info':
+            print BGR_INFO
+    return bgr_params
+        
 
 ################################################################################
 

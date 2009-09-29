@@ -42,7 +42,7 @@ import numpy as num
 import Image
 import pylab
 
-from  mathutil import LinReg
+from mathutil import LinReg
 from background import background
 
 #######################################################################
@@ -74,7 +74,32 @@ def read_file(tiff_file):
     return arr
 
 ############################################################################
-def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,Im_max = None):
+def clip_image(image,roi=[],cp=False):
+    """
+    roi = [c1,r1,c2,r2]
+    """
+    if len(roi) != 4:
+        roi = [0,0,image.shape[1], image.shape[0]]
+    if roi[0] < roi[2]:
+        c1 = roi[0]
+        c2 = roi[2]
+    else:
+        c1 = roi[2]
+        c2 = roi[0]
+    if roi[1] < roi[3]:
+        r1 = roi[1]
+        r2 = roi[3]
+    else:
+        r1 = roi[3]
+        r2 = roi[1]
+    #(c1,r1,c2,r2) = roi
+    if cp == True:
+        return copy.copy(image[r1:r2, c1:c2])
+    else:
+        return image[r1:r2, c1:c2]
+
+############################################################################
+def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,im_max = None):
     """
     show image
     
@@ -109,65 +134,49 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,Im_max = None):
                 cmap = getattr(pylab.cm,cmap)
             else:
                 cmap = None
-    pylab.imshow(img,cmap=cmap, vmax = Im_max)
+    pylab.imshow(img,cmap=cmap, vmax = im_max)
     pylab.colorbar(orientation='horizontal')
 
     if figtitle:
         pylab.title(figtitle, fontsize = 12)
 
 ############################################################################
-def sum_plot(image,nbgr=5,fig=None):
+def sum_plot(image,bgrflag=0,
+             cnbgr=5,cwidth=0,cpow=2.,ctan=False,
+             rnbgr=5,rwidth=0,rpow=2.,rtan=False,
+             fig=None):
+    """
+    plot sums with background.  Note should we calc the bgr according
+    to bgrflag???
+    """
     #
     if fig != None:
         pylab.figure(fig)
         pylab.clf()
     else:
         pylab.figure()
-    #
+
+    # col sum
     pylab.subplot(211)
     pylab.title('Column Sum')
-    (data, data_idx, bgr) = line_sum(image,sumflag='c',nbgr=nbgr)
+    (data, data_idx, bgr) = line_sum(image,sumflag='c',nbgr=cnbgr,
+                                     width=cwidth,pow=cpow,tangent=ctan)
     pylab.plot(data_idx, data, 'r')
-    if nbgr > 0:
-        pylab.plot(data_idx, bgr, 'b')
-    #
+    pylab.plot(data_idx, bgr, 'b')
+
+    # row sum
     pylab.subplot(212)
     pylab.title('Row Sum')
-    (data, data_idx, bgr) = line_sum(image,sumflag='r',nbgr=nbgr)
+    (data, data_idx, bgr) = line_sum(image,sumflag='r',nbgr=rnbgr,
+                                     width=rwidth,pow=rpow,tangent=rtan)
     pylab.plot(data_idx, data, 'r')
-    if nbgr > 0:
-        pylab.plot(data_idx, bgr, 'b')
+    pylab.plot(data_idx, bgr, 'b')
 
 ############################################################################
-def clip_image(image,roi=[],cp=False):
-    """
-    roi = [c1,r1,c2,r2]
-    """
-    if len(roi) != 4:
-        roi = [0,0,image.shape[1], image.shape[0]]
-    if roi[0] < roi[2]:
-        c1 = roi[0]
-        c2 = roi[2]
-    else:
-        c1 = roi[2]
-        c2 = roi[0]
-    if roi[1] < roi[3]:
-        r1 = roi[1]
-        r2 = roi[3]
-    else:
-        r1 = roi[3]
-        r2 = roi[1]
-    #(c1,r1,c2,r2) = roi
-    if cp == True:
-        return copy.copy(image[r1:r2, c1:c2])
-    else:
-        return image[r1:r2, c1:c2]
-
-############################################################################
-def line_sum(image,sumflag='c',nbgr=3):
+def line_sum(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
     """
     sum down 'c'olumns or across 'r'ows
-    this returns the summed data and linear background
+    this returns the summed data and background
     """
     if sumflag == 'c':
         data = image.sum(axis=0)
@@ -177,26 +186,21 @@ def line_sum(image,sumflag='c',nbgr=3):
     data_idx = num.arange(npts,dtype=float)
     #data_err  = data**(0.5)
 
-    ### compute linear background
-    bgr = num.zeros(npts)
-    if nbgr > 0:
-        xbgr = num.arange(0,nbgr,1,dtype=float)
-        xbgr = num.append(xbgr,num.arange(npts-nbgr,npts,1))
-        ybgr = num.array(data[0:nbgr],dtype=float)
-        ybgr = num.append(ybgr,data[npts-nbgr:])
-        lr   = LinReg(xbgr,ybgr,plot=False)
-        bgr  = lr.calc_y(data_idx)
+    ### compute background
+    bgr = background(data,nbgr=nbgr,width=width,pow=pow,tangent=tangent)
+    
     return (data, data_idx, bgr)
 
 ############################################################################
-def line_sum_integral(image,sumflag='c',nbgr=3):
+def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
+                      tangent=False):
     """
-    calc the integral after image is summed down 'c'olumns
-    or across 'r'ows.  This uses a linear background
+    Calc the integral after image is summed down 'c'olumns
+    or across 'r'ows.  
     """
     # get line sum
-    (data, data_idx, bgr) = line_sum(image,sumflag=sumflag,nbgr=nbgr)
-
+    (data, data_idx, bgr) = line_sum(image,sumflag=sumflag,nbgr=nbgr,width=width,
+                                     pow=pow,tangent=tangent)
     ### integrate
     #Itot = data.sum()
     #Ibgr = bgr.sum()
@@ -205,59 +209,53 @@ def line_sum_integral(image,sumflag='c',nbgr=3):
     Itot = num.trapz(data)
     Ibgr = num.trapz(bgr)
     I    = Itot - Ibgr
+    
     ### compute errors
     #Ierr = (data.sum() + bgr.sum())**(0.5)
     Ierr = (Itot + Ibgr)**(0.5)
+    
     return(I,Ierr,Ibgr)
 
-############################################################################
-def image_bgr(image,cwidth=100,rwidth=100,plot=False):
+##############################################################################
+def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
+              tangent=False,plot=False):
     """
-    calculate a background for the image.
-    we assume that image is already clipped
-    and that it consists of a 'single peak'
-    and a non-liner bgr.
+    Calculate a 2D background for the image.
 
-    cwidth and rwidth are the 'widths' to be used
-    for column and row sums respectivley. The cwidth
-    value should correspond roughly to the actual peak
-    width along the column direction (or the peak width in
-    the row sum).  Visa versa for rwidth.  
+    * image is the (hopefully clipped) image data
 
-    Therefore the background should fit
-    features that are in general broader than these values
+    * lineflag ('c' or 'r') corresponds to to direction which is
+      used to generate the background 
 
+    * nbgr = number of end points to use in linear background determination
+      (see background.background)
+          
+    * width should correspond roughly to the actual peak
+      width in the lineflag direction. The background should fit
+      features that are in general broader than this value
+      Note that width = 0 corresponds to no polynomial bgr
+      
+    * pow is the power of the polynomial used in background determination
+      (see background.background)
+      
+    * tangent is a flag to indicate if local slope of the data should be fitted 
+      (see background.background)
+
+     * plot is a flag to indicate if a 'plot' should be made
     """
-    bgr_arr_r = num.zeros(image.shape)
-    bgr_arr_c = num.zeros(image.shape)
+    bgr_arr = num.zeros(image.shape)
 
     # fit to rows
-    if rwidth > 0:
+    if lineflag=='r':
         for j in range(image.shape[0]):
-            bgr_arr_r[j,:] = background(image[j],rwidth)
+            bgr_arr[j,:] = background(image[j],nbgr=nbgr,width=width,pow=pow,
+                                      tangent=tangent)
 
     # fit to cols
-    if cwidth > 0:
+    if lineflag=='c':
         for j in range(image.shape[1]):
-            bgr_arr_c[:,j] = background(image[:,j],cwidth)
-
-    # combine the two bgrs 
-    """
-    # combine by taking the minimum of the
-    # two at each point ??
-    bgr = bgr_arr_r
-    idx = num.where(bgr > bgr_arr_c)
-    bgr[idx] = bgr_arr_c[idx]
-    """
-    # take the average of the 2 bgrs
-    if (rwidth > 0) and (cwidth > 0):
-        bgr = (bgr_arr_r + bgr_arr_c)/2.
-    elif rwidth > 0:
-        bgr = bgr_arr_r
-    elif cwidth > 0:
-        bgr = bgr_arr_c
-    else:
-        bgr = num.zeros(image.shape)
+            bgr_arr[:,j] = background(image[:,j],nbgr=nbgr,width=width,pow=pow,
+                                      tangent=tangent)
 
     #show
     if plot:
@@ -278,22 +276,50 @@ def image_bgr(image,cwidth=100,rwidth=100,plot=False):
         pylab.title("image - background")
         pylab.colorbar()
 
-    return bgr
+    return bgr_arr
 
 ################################################################################
 class ImageAna:
-    def __init__(self,image,roi=[],nbgr=5,cwidth=0,rwidth=0,
+    def __init__(self,image,roi=[],bgrflag=2,
+                 cnbgr=5,cwidth=0,cpow=2.,ctan=False,
+                 rnbgr=5,rwidth=0,rpow=2.,rtan=False,
                  plot=True,fig=None,figtitle=''):
         """
-        Note take x as the horizontal image axis index (col index), 
-        and y as vertical axis index (row index).
-        Therefore, in image indexing:
-          image[y1:y2,x1:x2] ==> rows y1 to y2 and cols x1 to x2
+        Analyze images
+        
+        * image is the image data
 
-        Parameters:
-          * roi  = [x1,y1,x2,y2]
-          * nbgr = number of bgr points
-          * show_plot = show fancy plot 
+        * roi is the 'peak' roi = [x1,y1,x2,y2]
+          Note take x as the horizontal image axis index (col index), 
+          and y as vertical axis index (row index).
+          Therefore, in image indexing:
+            image[y1:y2,x1:x2] ==> rows y1 to y2 and cols x1 to x2
+
+        * bgrflag is flag for how to do backgrounds:
+           = 0 determine row and column backgrounds after summation
+           = 1 determine 2D background using 'c'olumn direction 
+           = 2 determine 2D background using 'r'ow direction 
+           = 3 determine 2D background using both 'r'ow and 'c'olumn direction 
+
+        -> below params are for 'c'olumn and 'r'ow directions
+
+        * c/rnbgr = number of end points to use in linear background determination
+          (see background.background)
+              
+        * c/rwidth should correspond roughly to the actual peak
+          widths. The background funciton should fit
+          features that are in general broader than these values
+          Note estimate cwidth using width of peak in row sum
+          and rwidth using the width of the peak in the col sum.
+          Note that width = 0 corresponds to no polynomial bgr
+          
+        * c/rpow is the power of the polynomial used in background determination
+          (see background.background)
+          
+        * c/rtangent is a flag to indicate if local slope of the data should be fitted 
+          (see background.background)
+        
+        * plot = show fancy plot 
 
         """
         ### roi = [x1,y1,x2,y2] = [c1,r1,c2,r2]
@@ -314,7 +340,10 @@ class ImageAna:
         self.roi    = (int(c1),int(r1),int(c2),int(r2))
         #
         self.image  = image
-        self.nbgr   = nbgr
+        self.clpimg   = None
+        self.bgrimg   = None
+        self.integrated = False
+        #
         self.title  = figtitle
         #
         self.I      = 0.0
@@ -328,57 +357,92 @@ class ImageAna:
         self.Ierr_c = 0.0
         self.Ierr_r = 0.0
         #
-        self.bgr_cwidth = cwidth
-        self.bgr_rwidth = rwidth
-        #
+        self.bgrflag = bgrflag
+        self.cbgr = {'nbgr':cnbgr,'width':cwidth,'pow':cpow,'tan':ctan}
+        self.rbgr = {'nbgr':rnbgr,'width':rwidth,'pow':rpow,'tan':rtan}
+        self.plotflag = plot
+        
         self.integrate()
+
         # plot
-        if plot == True: self.plot(fig=fig)
+        if self.plotflag == True: self.plot(fig=fig)
             
     ############################################################################
     def integrate(self):
         """
-        Integrate Image.
+        Integrate image.
 
-        Note approx error by assuming data and bgr errors are:
+        Note approx error by assuming data and bgr std deviation are:
            sig_i = sqrt(I_i)
+           
         Therefore:
           (sig_Itot)**2 = Sum(I_i)
           (sig_Ibgr)**2 = Sum(Ibgr_i)
           Ierr = sqrt((sig_Itot)**2 + (sig_Ibgr)**2)
-        """
 
+        """
         # clip image
-        image = clip_image(self.image,self.roi)
+        self.clpimg = clip_image(self.image,self.roi)
 
         # integrate the roi
-        self.I = num.sum(num.trapz(image))
+        self.I = num.sum(num.trapz(self.clpimg))
 
-        # subtract image background
-        if (self.bgr_cwidth > 0) or (self.bgr_rwidth > 0):
-            bgr = image_bgr(image,cwidth=self.bgr_cwidth,
-                            rwidth=self.bgr_rwidth)
-            #image = image - bgr
-            #self.I = num.sum(num.trapz(image))
-            self.Ibgr = num.sum(num.trapz(bgr))
+        # calculate and subtract image background
+        self.bgrimg = None
+        self.Ibgr = 0.0
+        if self.bgrflag > 0:
+            if self.bgrflag == 1:
+                self.bgrimg = image_bgr(self.clpimg,lineflag='c',nbgr=self.cbgr['nbgr'],
+                                        width=self.cbgr['width'],pow=self.cbgr['pow'],
+                                        tangent=self.cbgr['tan'],plot=False)
+            elif self.bgrflag == 2:
+                self.bgrimg = image_bgr(self.clpimg,lineflag='r',nbgr=self.rbgr['nbgr'],
+                                        width=self.rbgr['width'],pow=self.rbgr['pow'],
+                                        tangent=self.rbgr['tan'],plot=False)
+            else:
+                bgr_r = image_bgr(self.clpimg,lineflag='c',nbgr=self.cbgr['nbgr'],
+                                  width=self.cbgr['width'],pow=self.cbgr['pow'],
+                                  tangent=self.cbgr['tan'],plot=False)
+                bgr_c = image_bgr(self.clpimg,lineflag='r',nbgr=self.rbgr['nbgr'],
+                                  width=self.rbgr['width'],pow=self.rbgr['pow'],
+                                  tangent=self.rbgr['tan'],plot=False)
+                # combine by taking the minimum at each point ??
+                # idx = num.where(bgr_r > bgr_c)
+                # self.bgrimg = bgr_r
+                # self.bgrimg[idx] = bgr_c[idx]
+
+                # combine the two bgrs by taking avg
+                self.bgrimg = (bgr_r + bgr_c)/2.
+                
+            # correct for 2D bgr
+            self.Ibgr = num.sum(num.trapz(self.bgrimg))
             self.I    = self.I - self.Ibgr
-
+        
         # error
         self.Ierr = (self.I + self.Ibgr)**0.5
-
-        # the below integrations should only be done
-        # if we have a flag set to do so??
-        # note these are done on the non background
-        # subtracted image
         
         # integrate col sum
-        (I,Ierr,Ibgr) = line_sum_integral(image,sumflag='c',nbgr=self.nbgr)
+        if self.bgrimg != None:
+            (I,Ierr,Ibgr) = line_sum_integral(self.clpimg-self.bgrimg,sumflag='c',nbgr=0)
+        else:
+            (I,Ierr,Ibgr) = line_sum_integral(self.clpimg,sumflag='c',
+                                              nbgr=self.cbgr['nbgr'],
+                                              width=self.cbgr['width'],
+                                              pow=self.cbgr['pow'],
+                                              tangent=self.cbgr['tan'])
         self.I_c      = I
         self.Ierr_c   = Ierr
         self.Ibgr_c   = Ibgr
         
         # integrate row sum
-        (I,Ierr,Ibgr) = line_sum_integral(image,sumflag='r',nbgr=self.nbgr)
+        if self.bgrimg != None:
+            (I,Ierr,Ibgr) = line_sum_integral(self.clpimg-self.bgrimg,sumflag='r',nbgr=0)
+        else:
+            (I,Ierr,Ibgr) = line_sum_integral(self.clpimg,sumflag='r',
+                                              nbgr=self.rbgr['nbgr'],
+                                              width=self.rbgr['width'],
+                                              pow=self.rbgr['pow'],
+                                              tangent=self.rbgr['tan'])
         self.I_r      = I
         self.Ierr_r   = Ierr
         self.Ibgr_r   = Ibgr
@@ -388,6 +452,9 @@ class ImageAna:
         """
         make fancy 4-panel plot
         """
+        if self.integrated == False:
+            self.integrate()
+        
         colormap = pylab.cm.hot
         if fig != None:
             pylab.figure(fig)
@@ -398,77 +465,91 @@ class ImageAna:
         title_c = 'I_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
         title_r = 'I_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
         title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
-        #
-        nbgr = self.nbgr
-        
-        # clipped image
-        image = clip_image(self.image,self.roi)
-
-        # background
-        if (self.bgr_cwidth > 0) or (self.bgr_rwidth > 0):
-            ibgr = image_bgr(image,cwidth=self.bgr_cwidth,
-                             rwidth=self.bgr_rwidth)
-            #image = image - bgr
+        if self.bgrimg != None:
             title_roi = title_roi + '\n(background subtracted)'
-        else:
-            ibgr = None
 
-        # full image with roi box
+        # calc full image with an roi box
         (c1,r1,c2,r2) = self.roi
-        bild= copy.copy(self.image)
+        bild = copy.copy(self.image)
         bild[r1-1:r1,c1:c2] = bild.max()
         bild[r2:r2+1,c1:c2] = bild.max()
         bild[r1:r2,c1-1:c1] = bild.max()
         bild[r1:r2,c2:c2+1] = bild.max()
 
-        # plot column sum
+        ###################################
+        #### plot column sum
         pylab.subplot(221)
         pylab.title(title_c, fontsize = 12)
-        (data, data_idx, bgr) = line_sum(image,sumflag='c',nbgr=nbgr)
-        pylab.plot(data_idx, data, 'r')
-        pylab.plot(data_idx, bgr, 'b')
-        pylab.axis([0, data_idx.max(), 0, data.max()*1.05])
-        #pylab.fill_between(data_idx,bgr,data,where= data>=bgr,facecolor='green')
-        #pylab.fill_between(data_idx,0,bgr,facecolor='blue')
-        if ibgr != None:
-            (data, data_idx, bgr) = line_sum(image-ibgr,sumflag='c',nbgr=0)
-            pylab.plot(data_idx, data, 'k-.')
-            (data, data_idx, bgr) = line_sum(ibgr,sumflag='c',nbgr=0)
-            pylab.plot(data_idx, data, 'g-.')
+        # plot raw sum
+        (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='c',nbgr=0)
+        rawmax = data.max()
+        pylab.plot(data_idx, data, 'k',label='raw sum')
+        # get bgr and data-bgr
+        if self.bgrimg != None:
+            # here data is automatically bgr subracted
+            (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='c',nbgr=0)
+            bgr = self.bgrimg.sum(axis=0)
+        else:
+            # here data is data and bgr is correct, therefore data = data-bgr
+            (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='c',
+                                             nbgr=self.cbgr['nbgr'],
+                                             width=self.cbgr['width'],
+                                             pow=self.cbgr['pow'],
+                                             tangent=self.cbgr['tan'])
+            data = data-bgr
+        # plot bgr and bgr subtracted data
+        pylab.plot(data_idx, bgr, 'r',label='bgr')
+        pylab.plot(data_idx, data, 'b',label='data-bgr')
+        pylab.axis([0, data_idx.max(), 0, rawmax*1.05])
+        pylab.legend()
 
+        ####################################
         # plot full image with ROI
         pylab.subplot(222)
         pylab.title(self.title, fontsize = 12)
         pylab.imshow(bild,cmap=colormap)
         pylab.colorbar(orientation='horizontal')
 
+        ####################################
         # plot zoom on image 
         pylab.subplot(223)
         pylab.title(title_roi,fontsize = 12)
-        if ibgr != None:
-            pylab.imshow(image - ibgr, cmap=colormap, aspect='auto')
+        if self.bgrimg != None:
+            pylab.imshow(self.clpimg-self.bgrimg, cmap=colormap, aspect='auto')
         else:
-            pylab.imshow(image, cmap=colormap, aspect='auto')
+            pylab.imshow(self.clpimg, cmap=colormap, aspect='auto')
             
+        ####################################
         # plot row sum
         pylab.subplot(224)
         pylab.title(title_r, fontsize = 12)
-        (data, data_idx, bgr) = line_sum(image,sumflag='r',nbgr=nbgr)
-        pylab.plot(data, data_idx, 'r')
-        pylab.plot(bgr, data_idx, 'b')
-        #pylab.fill_between(data, data_idx,bgr, where=bgr <= data, facecolor = 'green')
-        pylab.axis([0,data.max()*1.05, data_idx.max(), 0])
+        # plot raw sum
+        (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='r',nbgr=0)
+        rawmax = data.max()
+        pylab.plot(data, data_idx, 'k',label='raw sum')
+        # get bgr and data-bgr
+        if self.bgrimg != None:
+            # here data is automatically bgr subracted
+            (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='r',nbgr=0)
+            bgr = self.bgrimg.sum(axis=1)
+        else:
+            # here data is data and bgr is correct, therefore data = data-bgr
+            (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='r',
+                                             nbgr=self.rbgr['nbgr'],
+                                             width=self.rbgr['width'],
+                                             pow=self.rbgr['pow'],
+                                             tangent=self.rbgr['tan'])
+            data = data-bgr
+        # plot bgr and bgr subtracted data
+        pylab.plot(bgr, data_idx, 'r',label='bgr')
+        pylab.plot(data, data_idx, 'b',label='data-bgr')
+        pylab.axis([0,rawmax*1.05, data_idx.max(), 0])
         pylab.xticks(rotation=-45)
-        if ibgr != None:
-            (data, data_idx, bgr) = line_sum(image-ibgr,sumflag='r',nbgr=0)
-            pylab.plot(data, data_idx, 'k-.')
-            (data, data_idx, bgr) = line_sum(ibgr,sumflag='r',nbgr=0)
-            pylab.plot(data, data_idx, 'g-.')
+        pylab.legend()
 
 ################################################################################
 ################################################################################
 if __name__ == '__main__':
-    """
     import sys
     try:
         fname = sys.argv[1]
@@ -477,20 +558,7 @@ if __name__ == '__main__':
         sys.exit()
     a = read_file(fname)
     image_show(a)
-    """
-    import pylab
-    from mathutil import gauss
-    # generate a curve
-    npts = 35
-    x = num.array(range(npts))
-    g1  = gauss(x, npts/2., 1., 200)
-    g2  = gauss(x, npts/2., 10., 200)
-    r = num.random.normal(size=npts)
-    r = 10.*r/num.max(r)
-    y = (1.0*r+ 10.*x) + g1 + g2
-    # plot bgr
-    width=3
-    #plot_bgr(y,width,pow=1,slope=True,debug=True)
-    plot_bgr(y,width,pow=1.5,nbgr=3,tangent=True,debug=True)
+    
+ 
     
     

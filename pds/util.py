@@ -814,86 +814,125 @@ def _gtline(prompt='',default=None,pterm='>>',rettype=None,valid=None):
 
 ##########################################################################
 class Menu:
-    def __init__(self,items=[],descr=[],dohelp=True):
+    """
+    given a set of menu labels
+    and corresponding set of descriptions,
+    loop until there is a match to one of the labels
+    at the command line
+    """
+    ##########################################################
+    def __init__(self,labels=[],descr=[],header=None,
+                 dohelp=True,matchidx=True,sort=True):
         self.dohelp = dohelp
-        if (len(descr) != 0) and (len(descr) != len(items)):
-            print "Error length mis-match between items and descriptions"
+        if (len(descr) != 0) and (len(descr) != len(labels)):
+            print "Error length mis-match between labels and descriptions"
             raise exceptions.IndexError
         else:
-            self._init(items,descr)
+            self._init(labels,descr,header,matchidx,sort)
 
-    def _init(self,items,descr):
+    ##########################################################
+    def _init(self,labels,descr,header,matchidx,sort):
+
+        self.matchidx = matchidx
+        
         # add help
         if self.dohelp:
-            if 'help' not in items:
-                items.append('help')
+            if 'help' not in labels:
+                labels.append('help')
                 if len(descr) > 0:
                     descr.append('Show menu options')
 
-        # add items and descr
-        self.items  = []
+        # add labels and descr
+        self.labels  = []
         self.descr  = []
-        for j in range(len(items)):
-            item = items[j].lower
-            if item in self.items:
+        for j in range(len(labels)):
+            item = labels[j].lower
+            if item in self.labels:
                 print "Error '%s' is a repeated menu item" % item
                 raise exceptions.IndexError
             else:
-                self.items.append(items[j])
+                self.labels.append(labels[j])
                 if len(descr) > 0:
                     self.descr.append(descr[j])
+        nlabels = len(self.labels)
+
         # sort
-        self.items = num.array(self.items)
-        idx        = num.argsort(self.items)
-        self.items = list(self.items[idx][:])
-        if len(descr) > 0:
-            self.descr = num.array(self.descr)
-            self.descr = list(self.descr[idx][:])
-        nitems = len(self.items)
+        if sort:
+            self.labels = num.array(self.labels)
+            idx        = num.argsort(self.labels)
+            self.labels = list(self.labels[idx][:])
+            if len(descr) > 0:
+                self.descr = num.array(self.descr)
+                self.descr = list(self.descr[idx][:])
 
         # calc unique array 
-        # loop through chars of each item
-        # and determine when it becomes unique relative to all others
+        # loop through chars of each item and determine
+        # when it becomes unique relative to all others
         self.unique  = []
         maxchar = 1
-        for j in range(nitems):
+        for j in range(nlabels):
             unique = 1
-            nchar = len(self.items[j])
+            nchar  = len(self.labels[j])
             if nchar > maxchar: maxchar = nchar
             for k in range(nchar):
-                for l in range(nitems):
+                for l in range(nlabels):
                     if l != j:
-                        item = self.items[j][0:k]
-                        test = self.items[l]
-                        if test.find(item) > -1:
-                            unique = k+1
+                        item = self.labels[j][0:k+1]
+                        test = self.labels[l]
+                        if test[0:k+1] == item: unique = k+2
             self.unique.append(unique)
+
+        # header
+        if header != None:
+            self.header = str(header)
+        else:
+            self.header = None
 
         # calc options string
         options = ''
-        fmt = "%%s%%-%is: %%s\n" % maxchar
-        for j in range(nitems):
+        if self.matchidx:
+            fmt = "%%s(%%2i) %%-%is: %%s\n" % maxchar
+        else:
+            fmt = "%%s%%-%is: %%s\n" % maxchar
+        for j in range(nlabels):
             if len(self.descr) > 0:
                 descr = self.descr[j]
             else:
                 descr = ''
             idx  = self.unique[j]
-            item = self.items[j][0:idx].upper() + self.items[j][idx:]
-            options = fmt % (options, item, descr)
+            item = self.labels[j][0:idx].upper() + self.labels[j][idx:]
+            if self.matchidx:
+                options = fmt % (options,j+1, item, descr)
+            else:
+                options = fmt % (options, item, descr)
         self.options = options
 
+    ##########################################################
     def match(self,cmd):
+        """
+        match cmd to list of labels
+        """
         cmd0 = cmd
         cmd = cmd.strip().lower()
         nmatch = -1
         cmdnum = -1
-        nitems = len(self.items)
+        nlabels = len(self.labels)
         cmdlen = len(cmd)
-        for j in range(nitems):
-            if (cmdlen >= self.unique[j]):
-                if self.items[j].find(cmd,0,cmdlen) == 0:
-                    nmatch = nmatch + 1
-                    cmdnum = j
+
+        if self.matchidx:
+            try:
+                cmdnum = int(cmd)
+                if cmdnum in range(1,nlabels+1):
+                    cmdnum = cmdnum-1
+                    nmatch = 0
+            except:
+                pass
+        if cmdnum == -1:
+            for j in range(nlabels):
+                if (cmdlen >= self.unique[j]):
+                    if self.labels[j].find(cmd,0,cmdlen) == 0:
+                        nmatch = nmatch + 1
+                        cmdnum = j
         if nmatch == -1:
             print "Command '%s' not found" % cmd0
             return None
@@ -902,15 +941,21 @@ class Menu:
             return None
         else:
             if self.dohelp == True:
-                if self.items[cmdnum] == 'help':
+                if self.labels[cmdnum] == 'help':
                     print self.options
                     return None
-            return self.items[cmdnum]
+            return self.labels[cmdnum]
 
-    def prompt(self):
+    ##########################################################
+    def prompt(self,p='>>'):
+        """
+        Issue prompt till we recieve a match
+        Should we add a default option?
+        """
+        if self.header != None: print self.header
         if self.options != None: print self.options
         #
-        def _input(p='>>'):
+        def _input(p):
             cmd = raw_input(p)
             cmd = cmd.strip()
             if len(cmd) == 0:
@@ -918,24 +963,85 @@ class Menu:
             else:
                 return cmd
         #
-        cmd = _input('>>')
+        cmd = _input(p)
         if cmd != None:
             cmd = self.match(cmd)
         while cmd == None:
-            cmd = _input('>>')
+            cmd = _input(p)
             if cmd != None:
                 cmd = self.match(cmd)
         return cmd
     
 ##########################################################################
+def get_yn(prompt=None):
+    labels = ['yes','no']
+    if prompt == None:
+        prompt = "Enter Yes/No>>"
+    m = Menu(labels=labels,dohelp=False)
+    return m.prompt(prompt)
+    
+##########################################################################
+def get_tf(prompt='Enter True/False',d='True'):
+    while 1:
+        try:
+            ret = raw_input(p)
+            if ret.lower()=='true':
+                return True
+            elif ret.lower()=='false':
+                return False
+            else:
+                print 'Enter True or False'
+        except:
+            pass
+
+##########################################################################
+def get_int(p='Enter integer>>',d=None,o=[]):
+    while 1:
+        try:
+            i = int(raw_input(p))
+            if len(o) > 0:
+                if i in o:
+                    return i
+                else:
+                    print "Enter integer in range: ", o
+            else:
+                return i
+        except:
+            pass
+        
+def get_flt(p='Enter foat>>',d=None,min=None,max=None):
+    while 1:
+        try:
+            f = float(raw_input(p))
+            if min != None:
+                if f <= min:
+                    f = None
+            if max != None:
+                if f >= max:
+                    f = None
+            if f == None:
+                print "Enter float in range: ", min, max
+            else:
+                return f
+        except:
+            pass
+       
+
+
+##########################################################################
 ##########################################################################
 if __name__ == "__main__":
-    items = ['save','quit','run', 'zzz','ran','runner','n']
+    labels = ['save','quit','run', 'zzz','ran','runner','n']
     descr = ['save stuff',
              'all done',
              'do a thing',
              'zzzzzzz',
              'do the other thing',
              'x','y']
-    m = Menu(items=items,descr=descr)
-    print m.prompt()
+    header = "adf\njkd\n"
+    m = Menu(labels=labels,descr=descr,header=header,sort=False,matchidx=False)
+    print m.prompt('xx>')
+    #
+    print get_yn()
+    print get_tf()
+    print get_int()
