@@ -26,7 +26,7 @@ The numerical/plotting modules are handled by the function call:
 
 import sys
 import types
-from   util import mod_import, show_more, PrintExceptErr
+from   shellutil import mod_import, show_more, PrintExceptErr
 
 #################################################################
 

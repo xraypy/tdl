@@ -29,7 +29,6 @@ minimum the code in this module....
 ###################################################################
 
 import types
-import util
 
 ###################################################################
 def init_namespace():
@@ -47,7 +46,6 @@ def init_namespace():
     del vars['do_exec']
     del vars['do_execfile']
     del vars['do_eval']
-    del vars['util']
     del vars['types']
     return vars
 

@@ -47,7 +47,6 @@ try:
 except:
     num = None
 
-import util
 import pyeval as eval
 
 ######################################################################

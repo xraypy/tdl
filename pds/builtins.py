@@ -16,9 +16,9 @@ import sys
 import types
 import time
 
-from util import show_list, show_more, datalen
-from util import set_path, unescape_string, list2array
-from util import mod_import
+from shellutil import show_list, show_more, datalen
+from shellutil import set_path, unescape_string, list2array
+from shellutil import mod_import
 from interpretor import Group
 
 #####################################################################

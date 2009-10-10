@@ -15,13 +15,12 @@ import os
 import sys
 import types
 
-from util import datalen, verify_tdl
+from pds.shellutil import datalen
 import ASCIIFile.ASCIIFile as ASCIIFile
 
 ##########################################################################
 def tdl_read_ascii(fname, tdl=None,debug=False, **kw):
     " read ascii file of tdl code"
-    verify_tdl(tdl,'read_ascii')
 
     if debug: print 'reading.... ', fname
     if not os.path.exists(fname):

@@ -26,9 +26,9 @@ import getopt
 import time
 
 from   interpretor import Interpretor
-import util
-from   util import PrintExceptErr, command2expr, show_list
-from   util import split_args, show_more, trimstring
+import shellutil import set_path
+from   shellutil import PrintExceptErr, command2expr, show_list
+from   shellutil import split_args, show_more, trimstring
 from   numimports import _NumShell
 
 ##########################################################################
@@ -394,7 +394,7 @@ class Shell(_NumShell):
             except:
                 if self.file_error_break == True:
                     err_str =  "Exception in file %s" % fname
-                    util.PrintExceptErr(err_str)
+                    PrintExceptErr(err_str)
                     return COMPLETE
         if self.debug: print 'load done'
         return COMPLETE
@@ -520,8 +520,8 @@ class Shell(_NumShell):
         >save fname      # save all to fname
         >save data fname # save data to file
         """
-        from util import pickle_1 as pickle
-        #from util import pickle_2 as pickle
+        from shellutil import pickle_1 as pickle
+        #from shellutil import pickle_2 as pickle
 
         # parse input, get filename
         args = split_args(args)
@@ -550,8 +550,8 @@ class Shell(_NumShell):
         """
         Restore state from a file
         """
-        from util import unpickle_1 as unpickle
-        #from util import unpickle_2 as unpickle
+        from shellutil import unpickle_1 as unpickle
+        #from shellutil import unpickle_2 as unpickle
 
         pdata = unpickle(fname)
         if pdata == None:
@@ -773,10 +773,10 @@ def main(arg):
         print '    lib_path   = %s  ' % lib_path
         if os.path.exists(mods_path):
             print '    mods_path  = %s  ' % mods_path
-    util.set_path('.',recurse=False,verbose=verbose)
-    util.set_path(pds_path,recurse=False,verbose=verbose)
-    util.set_path(lib_path,recurse=False,verbose=verbose)
-    util.set_path(mods_path,recurse=True,verbose=verbose)
+    set_path('.',recurse=False,verbose=verbose)
+    set_path(pds_path,recurse=False,verbose=verbose)
+    set_path(lib_path,recurse=False,verbose=verbose)
+    set_path(mods_path,recurse=True,verbose=verbose)
 
     ##############################################################
     # startup  files:

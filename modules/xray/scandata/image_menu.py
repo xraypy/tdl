@@ -17,7 +17,8 @@ import copy
 import numpy as num
 import pylab
 
-from   pds.util import Menu, get_yn, get_int, get_flt, get_tf, show_more
+from   pds.shellutil import Menu, get_yn, get_int, get_flt, 
+from   pds.shellutil import get_tf, show_more
 from   plotter import cursor
 import image_data
 
