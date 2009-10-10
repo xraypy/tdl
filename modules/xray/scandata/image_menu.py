@@ -17,7 +17,7 @@ import copy
 import numpy as num
 import pylab
 
-from   pds.util import Menu, get_yn, get_int, get_flt, get_tf
+from   pds.util import Menu, get_yn, get_int, get_flt, get_tf, show_more
 from   plotter import cursor
 import image_data
 
@@ -26,12 +26,15 @@ IMG_HEADER = """
 Number of images  = %s
 Current image     = %s
 Current image roi = %s
+Current image rotation angle = %s
 """
 
-IMG_LABELS = ['display','zoomroi','plotsums','selectroi','bgr',
-              'copyall','integrate','intall',
-              'point','next','previous','flag','imax','help','done']
+IMG_LABELS = ['display','imax','rotangle','zoomroi','plotsums',
+              'selectroi','bgr','copyall','integrate','intall',
+              'point','next','previous','flag','help','done']
 IMG_DESCR = ["Display image",
+             "Set max image intensity value",
+             "Set image rotation angle (deg ccw)",
              "Set roi from image zoom (Figure 1)",
              "Plot row/column sums (Figure 2)",
              "Select roi from sum plots (Figure 2)",
@@ -43,7 +46,6 @@ IMG_DESCR = ["Display image",
              "Select next point ",
              "Select previous point", 
              "Flag as bad point",
-             "Set max image intensity value",
              "Show options",
              "Done"]
 
@@ -57,37 +59,56 @@ def image_menu(data):
     scan_pnt = 0
     roi      = []
     ret      = ''
+    im_max   = None
+
+    # local plot fun
+    def _implot(data,scan_pnt,im_max):
+        rotangle = data.image_rotangle[scan_pnt]
+        figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
+        image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle,
+                              im_max=im_max,rotangle=rotangle)
 
     # check init and plot first
     if len(data.image_peaks) != npts:
         data._init_image()
-    figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-    image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+    _implot(data,scan_pnt,im_max)
     
     # make menu
     m = Menu(labels=IMG_LABELS,descr=IMG_DESCR,sort=False,matchidx=True)
     
     # loop
     while ret != 'done':
-        ###
         roi      = data.image_rois[scan_pnt]
-        header   = IMG_HEADER % (str(npts),str(scan_pnt),str(roi))
+        rotangle = data.image_rotangle[scan_pnt]
+        header   = IMG_HEADER % (str(npts),str(scan_pnt),str(roi),str(rotangle))
         m.header = header
         ret      = m.prompt(prompt)
 
-        ####
         if ret == 'display':
-            figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+            _implot(data,scan_pnt,im_max)
+        elif ret == 'imax':
+            print "Enter maximum intensity value to apply to image"
+            im_max = raw_input('>>')
+            if len(im_max.strip()) == 0:
+                im_max = None
+            else:
+                im_max = int(im_max)
+            _implot(data,scan_pnt,im_max)
+        elif ret == "rotangle":
+            rotangle = get_flt(p='Enter rotation angle in degrees ccw>',
+                               d=0.0,min=-360.,max=360.)
+            data.image_rotangle[scan_pnt] = rotangle
+            _implot(data,scan_pnt,im_max)
         elif ret == 'zoomroi':
             pylab.figure(1)
             (x1,x2,y1,y2) = pylab.axis()
             roi  = [int(x1),int(y1),int(x2),int(y2)]
             data.image_rois[scan_pnt] = roi
         elif ret == 'plotsums':
-            roi = data.image_rois[scan_pnt]
-            image = image_data.clip_image(data.image[scan_pnt],roi)
-            bgr_par = data.image_bgrpar[scan_pnt]
+            roi      = data.image_rois[scan_pnt]
+            rotangle = data.image_rotangle[scan_pnt]
+            image    = image_data.clip_image(data.image[scan_pnt],roi,rotangle=rotangle)
+            bgr_par  = data.image_bgrpar[scan_pnt]
             image_data.sum_plot(image,fig=2,**bgr_par)
         elif ret == 'selectroi':
             image = data.image[scan_pnt]
@@ -105,14 +126,17 @@ def image_menu(data):
             bgr_par = bgr_menu(bgr_par)
             data.image_bgrpar[scan_pnt] = bgr_par
         elif ret == 'copyall':
-            roi = data.image_rois[scan_pnt]
+            roi      = data.image_rois[scan_pnt]
+            rotangle = data.image_rotangle[scan_pnt]
+            bgr_par  = data.image_bgrpar[scan_pnt]
+            #
             data.image_rois = []
+            data.image_rotangle = []
+            data.image_bgrpar = []
+            #
             for j in range(npts):
                 data.image_rois.append(copy.copy(roi))
-            #
-            bgr_par = data.image_bgrpar[scan_pnt]
-            data.image_bgrpar = []
-            for j in range(npts):
+                data.image_rotangle.append(rotangle)
                 data.image_bgrpar.append(copy.copy(bgr_par))
         elif ret == 'integrate':
             data.integrate_image(idx=[scan_pnt],
@@ -154,18 +178,15 @@ def image_menu(data):
             if pnt > npts-1: pnt = npts-1
             if pnt < 0: pnt = 0
             scan_pnt = pnt
-            figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+            _implot(data,scan_pnt,im_max)
         elif ret == 'next':
             if scan_pnt + 1 < npts: 
                 scan_pnt = scan_pnt + 1
-                figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-                image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+                _implot(data,scan_pnt,im_max)
         elif ret == 'previous':
             if scan_pnt - 1 > -1: 
                 scan_pnt = scan_pnt - 1
-                figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-                image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle)
+                _implot(data,scan_pnt,im_max)
         elif ret == 'flag':
             if int(scan_pnt) in data.bad_points:
                 data.bad_points.remove(scan_pnt)
@@ -173,15 +194,6 @@ def image_menu(data):
             else:
                 data.bad_points.append(int(scan_pnt))
                 print "Data point added to bad list"
-        elif ret == 'imax':
-            print "Enter maximum intensity value to apply to image"
-            im_max = raw_input('>>')
-            if len(im_max.strip()) == 0:
-                im_max = None
-            else:
-                im_max = int(im_max)
-            figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-            image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle, im_max = im_max)
         else:
             pass
 
@@ -193,7 +205,8 @@ BGR_INFO = """
    = 0 determine row and column backgrounds after summation
    = 1 determine 2D background using 'c'olumn direction 
    = 2 determine 2D background using 'r'ow direction 
-   = 3 determine 2D background using both 'r'ow and 'c'olumn direction 
+   = 3 determine 2D background using average of the
+       'r'ow and 'c'olumn directions 
 
 -> below params are for 'c'olumn and 'r'ow directions
 
@@ -290,7 +303,7 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
             bgr_params['rtan'] = get_tf(p='Enter row tan flag>',
                                            d=bgr_params['rtan'])
         elif ret == 'info':
-            print BGR_INFO
+            show_more(BGR_INFO)
     return bgr_params
         
 

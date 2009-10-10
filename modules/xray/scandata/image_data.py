@@ -39,8 +39,10 @@ Note in older versions of PIL:
 import types
 import copy
 import numpy as num
-import Image
 import pylab
+#import Image
+from Image import open as imopen
+from scipy import ndimage
 
 from mathutil import LinReg
 from background import background
@@ -64,7 +66,8 @@ def read_file(tiff_file):
     read file
     """
     try:
-        im  = Image.open(tiff_file)
+        #im  = Image.open(tiff_file)
+        im  = imopen(tiff_file)
     except:
         print "Error reading file: %s" % tiff_file
         return num.array([[0]])
@@ -74,7 +77,7 @@ def read_file(tiff_file):
     return arr
 
 ############################################################################
-def clip_image(image,roi=[],cp=False):
+def clip_image(image,roi=[],rotangle=0.0,cp=False):
     """
     roi = [c1,r1,c2,r2]
     """
@@ -93,13 +96,19 @@ def clip_image(image,roi=[],cp=False):
         r1 = roi[3]
         r2 = roi[1]
     #(c1,r1,c2,r2) = roi
+        
+    # rotate
+    if rotangle != 0:
+        image = ndimage.rotate(image,rotangle)    
+
     if cp == True:
         return copy.copy(image[r1:r2, c1:c2])
     else:
         return image[r1:r2, c1:c2]
 
 ############################################################################
-def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,im_max = None):
+def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
+               im_max=None,rotangle=0.0):
     """
     show image
     
@@ -111,6 +120,8 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,im_max = None):
                         # you can pass a string name if its in pylab.cm.colormaps
                         # or you can pass explicitly the colormap
        verbose = False  # Print some fig statistics
+       im_max  = None   # Max intensity value
+       rotangle = 0.0   # Rotation angle in degrees ccw
 
     * examples:
        >>>image_plot(im,fig=1,figtitle='Image',cmap='hot')
@@ -123,9 +134,14 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,im_max = None):
         print 'Image total= ', img.sum()
         print 'Max value = ',  img.max()
         print 'Min value = ',  img.min()
+        print '###################'
     if fig != None:
         pylab.figure(fig)
         pylab.clf()
+
+    # rotate
+    if rotangle != 0:
+        img = ndimage.rotate(img,rotangle)
 
     # pylab.imshow(img, cmap = pylab.cm.hot)
     if cmap != None:
@@ -146,7 +162,9 @@ def sum_plot(image,bgrflag=0,
              rnbgr=5,rwidth=0,rpow=2.,rtan=False,
              fig=None):
     """
-    plot sums with background.  Note should we calc the bgr according
+    plot sums with background.
+
+    Note should we calc the bgr according
     to bgrflag???
     """
     #
@@ -280,7 +298,8 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
 
 ################################################################################
 class ImageAna:
-    def __init__(self,image,roi=[],bgrflag=2,
+    def __init__(self,image,roi=[],rotangle=0.0,
+                 bgrflag=2,
                  cnbgr=5,cwidth=0,cpow=2.,ctan=False,
                  rnbgr=5,rwidth=0,rpow=2.,rtan=False,
                  plot=True,fig=None,figtitle=''):
@@ -294,6 +313,8 @@ class ImageAna:
           and y as vertical axis index (row index).
           Therefore, in image indexing:
             image[y1:y2,x1:x2] ==> rows y1 to y2 and cols x1 to x2
+
+        * rotangle is the image rotation angle in degrees ccw
 
         * bgrflag is flag for how to do backgrounds:
            = 0 determine row and column backgrounds after summation
@@ -338,10 +359,10 @@ class ImageAna:
             r1 = roi[3]
             r2 = roi[1]
         self.roi    = (int(c1),int(r1),int(c2),int(r2))
-        #
-        self.image  = image
-        self.clpimg   = None
-        self.bgrimg   = None
+        self.rotangle   = rotangle
+        self.image      = image
+        self.clpimg     = None
+        self.bgrimg     = None
         self.integrated = False
         #
         self.title  = figtitle
@@ -382,7 +403,7 @@ class ImageAna:
 
         """
         # clip image
-        self.clpimg = clip_image(self.image,self.roi)
+        self.clpimg = clip_image(self.image,self.roi,rotangle=self.rotangle)
 
         # integrate the roi
         self.I = num.sum(num.trapz(self.clpimg))
@@ -406,11 +427,6 @@ class ImageAna:
                 bgr_c = image_bgr(self.clpimg,lineflag='r',nbgr=self.rbgr['nbgr'],
                                   width=self.rbgr['width'],pow=self.rbgr['pow'],
                                   tangent=self.rbgr['tan'],plot=False)
-                # combine by taking the minimum at each point ??
-                # idx = num.where(bgr_r > bgr_c)
-                # self.bgrimg = bgr_r
-                # self.bgrimg[idx] = bgr_c[idx]
-
                 # combine the two bgrs by taking avg
                 self.bgrimg = (bgr_r + bgr_c)/2.
                 
@@ -470,7 +486,10 @@ class ImageAna:
 
         # calc full image with an roi box
         (c1,r1,c2,r2) = self.roi
-        bild = copy.copy(self.image)
+        if self.rotangle != 0.0:
+            bild = ndimage.rotate(self.image,self.rotangle)
+        else:
+            bild = copy.copy(self.image)
         bild[r1-1:r1,c1:c2] = bild.max()
         bild[r2:r2+1,c1:c2] = bild.max()
         bild[r1:r2,c1-1:c1] = bild.max()

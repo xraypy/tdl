@@ -53,7 +53,8 @@ class ScanData:
     ################################################################
     def __init__(self,name='',dims=[],scalers={},positioners={},
                  primary_axis=[],primary_det=None,state={},
-                 med=[],xrf=[],xrf_lines=None,image=[],image_rois=[]):
+                 med=[],xrf=[],xrf_lines=None,
+                 image=[],image_rois=[]):
         
         self.name         = name
         self.dims         = dims
@@ -67,8 +68,10 @@ class ScanData:
         self.xrf          = xrf
         self.xrf_lines    = xrf_lines
         self.xrf_peaks    = {}
+        #
         self.image        = image
         self.image_rois   = image_rois
+        self.image_rotangle = []
         self.image_bgrpar = []
         self.image_peaks  = {}
         #
@@ -292,7 +295,8 @@ class ScanData:
 
     ################################################################
     ################################################################
-    def integrate_image(self,idx=[],roi=[],bgr_params=[],plot=True,fig=None):
+    def integrate_image(self,idx=[],roi=[],rotangle=[],
+                        bgr_params=[],plot=True,fig=None):
         """
         integrate images
         roi  = [x1,y1,x2,y2]
@@ -318,7 +322,15 @@ class ScanData:
         elif len(roi) == len(idx):
             for j in idx:
                 self.image_rois[j] = roi[j]
-        
+
+        # update rot angles
+        if len(rotangle) == 1:
+            for j in idx:
+                self.image_rotangle[j] = rotangle
+        elif len(rotangle) == len(idx):
+            for j in idx:
+                self.image_rotangle[j] = rotangle[j]
+
         # update bgr
         if type(bgr_params) == types.DictType:
             for j in idx:
@@ -347,26 +359,34 @@ class ScanData:
     ################################################################
     def _init_image(self):
         npts = len(self.image)
+        # init arrays
         if npts == 0:
-            self.image_rois = []
-            self.image_bgrpar = []
-            self.image_peaks = {}
+            self.image_rois     = []
+            self.image_rotangle = []
+            self.image_bgrpar   = []
+            self.image_peaks    = {}
 
         if self.image_rois == None:
             self.image_rois = []
+        if self.image_bgrpar == None:
+            self.image_bgrpar = []
+
+        # init rois
         if len(self.image_rois) != npts:
             self.image_rois = []
             for j in range(npts):
                 self.image_rois.append([])
         
-        if self.image_bgrpar == None:
-            self.image_bgrpar = []
+        # init rotangle
+        if len(self.image_rotangle) != npts:
+            self.image_rotangle = []
+            for j in range(npts):
+                self.image_rotangle.append(0.0)
+
+        # init bgr
         if len(self.image_bgrpar) != npts:
             self.image_bgrpar = []
             for j in range(npts):
-                #self.image_bgrpar.append({'nbgr':3,
-                #                          'cwidth':0,
-                #                          'rwidth':0})
                 self.image_bgrpar.append(IMG_BGR_PARAMS)
                 
         # should we init all these or set based on an integrate flag?
@@ -392,15 +412,10 @@ class ScanData:
         #
         figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
         roi        = self.image_rois[idx]
+        rotangle   = self.image_rotangle[idx]
         bgr_params = self.image_bgrpar[idx]
-        #nbgr       = bgr_params.get('nbgr')
-        #cwidth     = bgr_params.get('cwidth')
-        #rwidth     = bgr_params.get('rwidth')
-        #if  nbgr   == None: nbgr=0
-        #if  cwidth == None: cwidth=0
-        #if  rwidth == None: rwidth=0
 
-        img_ana = image_data.ImageAna(self.image[idx],roi=roi,
+        img_ana = image_data.ImageAna(self.image[idx],roi=roi,rotangle=rotangle,
                                       plot=plot,fig=fig,figtitle=figtitle,
                                       **bgr_params)
 
