@@ -113,7 +113,7 @@ def _import_pylab(backend="TkAgg",verbose=True):
         PLOT_ROOT = None
     #
     version = _parse_version(matplotlib.__version__)
-    txt = "    **INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
+    txt = "    ** INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
     if verbose: sys.__stdout__.write(txt)
     #
     if version < 950:

@@ -442,10 +442,10 @@ class ImageAna:
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg-self.bgrimg,sumflag='c',nbgr=0)
         else:
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg,sumflag='c',
-                                              nbgr=self.cbgr['nbgr'],
-                                              width=self.cbgr['width'],
-                                              pow=self.cbgr['pow'],
-                                              tangent=self.cbgr['tan'])
+                                              nbgr=self.rbgr['nbgr'],
+                                              width=self.rbgr['width'],
+                                              pow=self.rbgr['pow'],
+                                              tangent=self.rbgr['tan'])
         self.I_c      = I
         self.Ierr_c   = Ierr
         self.Ibgr_c   = Ibgr
@@ -455,10 +455,10 @@ class ImageAna:
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg-self.bgrimg,sumflag='r',nbgr=0)
         else:
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg,sumflag='r',
-                                              nbgr=self.rbgr['nbgr'],
-                                              width=self.rbgr['width'],
-                                              pow=self.rbgr['pow'],
-                                              tangent=self.rbgr['tan'])
+                                              nbgr=self.cbgr['nbgr'],
+                                              width=self.cbgr['width'],
+                                              pow=self.cbgr['pow'],
+                                              tangent=self.cbgr['tan'])
         self.I_r      = I
         self.Ierr_r   = Ierr
         self.Ibgr_r   = Ibgr
@@ -511,15 +511,15 @@ class ImageAna:
         else:
             # here data is data and bgr is correct, therefore data = data-bgr
             (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='c',
-                                             nbgr=self.cbgr['nbgr'],
-                                             width=self.cbgr['width'],
-                                             pow=self.cbgr['pow'],
-                                             tangent=self.cbgr['tan'])
+                                             nbgr=self.rbgr['nbgr'],
+                                             width=self.rbgr['width'],
+                                             pow=self.rbgr['pow'],
+                                             tangent=self.rbgr['tan'])
             data = data-bgr
         # plot bgr and bgr subtracted data
         pylab.plot(data_idx, bgr, 'r',label='bgr')
         pylab.plot(data_idx, data, 'b',label='data-bgr')
-        pylab.axis([0, data_idx.max(), 0, rawmax*1.05])
+        pylab.axis([0, data_idx.max(), 0, rawmax*1.25])
         pylab.legend()
 
         ####################################
@@ -554,15 +554,15 @@ class ImageAna:
         else:
             # here data is data and bgr is correct, therefore data = data-bgr
             (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='r',
-                                             nbgr=self.rbgr['nbgr'],
-                                             width=self.rbgr['width'],
-                                             pow=self.rbgr['pow'],
-                                             tangent=self.rbgr['tan'])
+                                             nbgr=self.cbgr['nbgr'],
+                                             width=self.cbgr['width'],
+                                             pow=self.cbgr['pow'],
+                                             tangent=self.cbgr['tan'])
             data = data-bgr
         # plot bgr and bgr subtracted data
         pylab.plot(bgr, data_idx, 'r',label='bgr')
         pylab.plot(data, data_idx, 'b',label='data-bgr')
-        pylab.axis([0,rawmax*1.05, data_idx.max(), 0])
+        pylab.axis([0,rawmax*1.25, data_idx.max(), 0])
         pylab.xticks(rotation=-45)
         pylab.legend()
 

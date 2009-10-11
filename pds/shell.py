@@ -26,10 +26,10 @@ import getopt
 import time
 
 from   interpretor import Interpretor
-import shellutil import set_path
-from   shellutil import PrintExceptErr, command2expr, show_list
-from   shellutil import split_args, show_more, trimstring
-from   numimports import _NumShell
+from   shellutil   import set_path
+from   shellutil   import PrintExceptErr, command2expr, show_list
+from   shellutil   import split_args, show_more, trimstring
+from   numimports  import _NumShell
 
 ##########################################################################
 

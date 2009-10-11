@@ -17,8 +17,8 @@ import copy
 import numpy as num
 import pylab
 
-from   pds.shellutil import Menu, get_yn, get_int, get_flt, 
-from   pds.shellutil import get_tf, show_more
+from   pds.shellutil import Menu, show_more 
+from   pds.shellutil import get_tf, get_yn, get_int, get_flt
 from   plotter import cursor
 import image_data
 
@@ -204,22 +204,22 @@ BGR_INFO = """
 ################################################
 * bgrflag is flag for how to do backgrounds:
    = 0 determine row and column backgrounds after summation
-   = 1 determine 2D background using 'c'olumn direction 
-   = 2 determine 2D background using 'r'ow direction 
+   = 1 determine 2D background using fits to the 'c'olumn direction 
+   = 2 determine 2D background using fits to the 'r'ow direction 
    = 3 determine 2D background using average of the
-       'r'ow and 'c'olumn directions 
+       'r'ow and 'c'olumn direction fits 
 
--> below params are for 'c'olumn and 'r'ow directions
+  ==> below params are for 'c'olumn and 'r'ow directions
 
 * c/rnbgr = number of end points to use in linear background determination
   (see background.background)
       
-* c/rwidth should correspond roughly to the actual peak
-  widths. The background funciton should fit
-  features that are in general broader than these values
-  Note estimate cwidth using width of peak in row sum
-  and rwidth using the width of the peak in the col sum.
-  Note that width = 0 corresponds to no polynomial bgr
+* c/rwidth should correspond roughly to the actual peak widths
+  The background function should fit features that are in
+  general broader than these values
+    Estimate cwidth using the width of the peak in the row sum.
+    Estimate rwidth using the width of the peak in the col sum.
+  Note that width = 0 corresponds to no polynomial background
   
 * c/rpow is the power of the polynomial used in background determination
   (see background.background)
@@ -240,15 +240,16 @@ BGR_LABELS = ['help','info','bgrflag',
               'rnbgr','rwidth','rpow','rtan',
               'done']
 
-BGR_DESCR = ["Show options","Get more info on parameter defintions", "Set background flag",
-             "Set column sum num bgr for linear background",
-             "Set column sum peak width for non-linear background",
-             "Set column sum polynomial power for non-linear background",
-             "Set column sum tangent flag (True or False)",
-             "Set column row num bgr for linear background",
-             "Set column row peak width for non-linear background",
-             "Set column row polynomial power for non-linear background",
-             "Set column row tangent flag (True or False)",
+BGR_DESCR = ["Show options","Get more info on parameter defintions",
+             "Set background flag",
+             "Set num bgr for linear background - column direction",
+             "Set peak width for non-linear background - column direction",
+             "Set polynomial power for non-linear background - column direction",
+             "Set tangent flag (True or False) - column direction",
+             "Set num bgr for linear background - row direction",
+             "Set peak width for non-linear background - row direction",
+             "Set polynomial power for non-linear background - row direction",
+             "Set tangent flag (True or False) - row direction",
              "All done"]
 
 IMG_BGR_PARAMS = {'bgrflag':0,
