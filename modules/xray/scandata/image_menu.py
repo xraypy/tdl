@@ -32,7 +32,7 @@ Current image rotation angle = %s
 
 IMG_LABELS = ['display','imax','rotangle','zoomroi','plotsums',
               'selectroi','bgr','copyall','integrate','intall',
-              'point','next','previous','flag','help','done']
+              'point','next','previous','flag','help','quit']
 IMG_DESCR = ["Display image",
              "Set max image intensity value",
              "Set image rotation angle (deg ccw)",
@@ -48,7 +48,7 @@ IMG_DESCR = ["Display image",
              "Select previous point", 
              "Flag as bad point",
              "Show options",
-             "Done"]
+             "Quit / All Done"]
 
 ########################################################################
 def image_menu(data):
@@ -78,7 +78,7 @@ def image_menu(data):
     m = Menu(labels=IMG_LABELS,descr=IMG_DESCR,sort=False,matchidx=True)
     
     # loop
-    while ret != 'done':
+    while ret != 'quit':
         roi      = data.image_rois[scan_pnt]
         rotangle = data.image_rotangle[scan_pnt]
         header   = IMG_HEADER % (str(npts),str(scan_pnt),str(roi),str(rotangle))
@@ -238,7 +238,7 @@ BGR_HEADER = """
 BGR_LABELS = ['help','info','bgrflag',
               'cnbgr','cwidth','cpow','ctan',
               'rnbgr','rwidth','rpow','rtan',
-              'done']
+              'quit']
 
 BGR_DESCR = ["Show options","Get more info on parameter defintions",
              "Set background flag",
@@ -250,7 +250,7 @@ BGR_DESCR = ["Show options","Get more info on parameter defintions",
              "Set peak width for non-linear background - row direction",
              "Set polynomial power for non-linear background - row direction",
              "Set tangent flag (True or False) - row direction",
-             "All done"]
+             "Quit / All done"]
 
 IMG_BGR_PARAMS = {'bgrflag':0,
                   'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
@@ -266,7 +266,7 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
     m   = Menu(labels=BGR_LABELS,descr=BGR_DESCR,sort=False,matchidx=True)
     ret = ''
     
-    while ret != 'done':
+    while ret != 'quit':
         header = BGR_HEADER % (bgr_params['bgrflag'],
                                bgr_params['cnbgr'],bgr_params['cwidth'],
                                bgr_params['cpow'],str(bgr_params['ctan']),

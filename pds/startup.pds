@@ -42,16 +42,19 @@ addcmd 'edit', '__edit__'
 ##################################################
 ## Browser/Help
 ##################################################
-__browser__ = "C:\\Program Files\\Mozilla Firefox "
-def __web_browser__(path):
+#__browser__ = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
+__browser__ = "firefox.exe"
+def __web_browser__(path=''):
+    if path == '':
+        path="  http://cars9.uchicago.edu/iffwiki/tdl"
+    #import os
+    s = __browser__ + path
+    os.system(s)
     # spawn editor in new process
-    from subprocess import Popen
-    pid = Popen([__browser__, path]).pid
-    
+    #from subprocess import Popen
+    #pid = Popen([__browser__, path]).pid
+
 addcmd 'web', '__web_browser__'
-
-
-
 
 ##################################################
 ## Variables
