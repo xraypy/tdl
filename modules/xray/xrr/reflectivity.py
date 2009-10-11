@@ -6,7 +6,7 @@ Calculate reflectivity / reflection XSW
 Note for this module to work correctly you need to ensure that
  - Ifeffit is installed on the system, and the Ifeffit/bin
    directory is in the systems search path
- - The core/libs directory must also be in the systems path
+ - The wrap/libs directory must also be in the systems path
    so that _ref.dll can be loaded
    (which also needs to find the gsl dll's)
 
@@ -137,8 +137,8 @@ Modifications:
 import numpy as num
 import exceptions
 
-from Ifeffit import Ifeffit
-from core import _reflectivity
+from Ifeffit  import Ifeffit
+from wrap     import _reflectivity
 from mpcutils import element_data as elements
 
 ###############################################################################

@@ -70,7 +70,7 @@ import scipy
 import types, copy
 
 from reflectivity import RefModel, DEFAULT_PARAMS
-from xtab  import xrf_lookup
+from xtab     import xrf_lookup
 from mpcutils import element_data as elements
 from mpcutils import compound
 

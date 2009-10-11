@@ -4,7 +4,7 @@ T. Trainor (fftpt@uaf.edu)
 Wrapper for the reflectivity / reflection XSW
 functions in dll
 
-Note for this module to work the directory 'core/libs'
+Note for this module to work the directory 'wrap/libs'
 must be in your shell's execution path so the load_library
 command can find _ref.dll (which also needs to find the gsl dll's)
 
@@ -17,7 +17,7 @@ import os
 
 #######################################################################
 
-#Get the name of the 'libs' directory under core
+#Get the name of the 'libs' directory under wrap
 libspath = os.path.dirname(__file__)
 libspath = os.path.join(libspath,'libs')
 libspath = os.path.abspath(libspath)
