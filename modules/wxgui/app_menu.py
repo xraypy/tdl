@@ -14,9 +14,9 @@ import wx, string, sys, os, time
 from wx import stc
 
 #######################################################################
-class menuWindows:
+class menuApps:
     
-    def on_menuWindowPlotSelection_select(self, event):
+    def on_menuAppsPlotSelection_select(self, event):
         from wxPlotSelection import wxPlotSelection
         filename = os.path.join(self.rsrc_path,'wxPlotSelection.rsrc.py')
         self.PlotSelectionWindow = model.childWindow(self, wxPlotSelection,
@@ -25,7 +25,7 @@ class menuWindows:
         self.PlotSelectionWindow.visible = True
 
     """
-    def on_menuWindowLTeQ_select(self, event):
+    def on_menuAppsLTeQ_select(self, event):
         from LTEQ.wxLTEQ import vLTEQ
         filename = os.path.join(self.rsrc_path,'LTEQ','wxLTEQ.rsrc.py')
         self.PlotSelectionWindow = model.childWindow(self, vLTEQ,
@@ -34,7 +34,7 @@ class menuWindows:
         self.PlotSelectionWindow.visible = True                
     """
     
-    def on_menuWindowXRF_select(self, event):
+    def on_menuAppsXRF_select(self, event):
         import wxXrf
         wxXrf = mod_import(wxXrf)
         wxXrf = wxXrf.wxXrf
@@ -43,7 +43,7 @@ class menuWindows:
         self.XrfWindow.position = (200, 5)
         self.XrfWindow.visible = True
 
-    def on_menuWindowXRRBuild_select(self, event):
+    def on_menuAppsXRRBuild_select(self, event):
         #__import__('wxXrr')
         #from wxXrr import wxXrr
         import wxXrrBuilder
@@ -55,7 +55,7 @@ class menuWindows:
         self.XrrBuildWindow.position = (200, 5)
         self.XrrBuildWindow.visible = True
 
-    def on_menuWindowXRRModel_select(self, event):
+    def on_menuAppsXRRModel_select(self, event):
         #__import__('wxXrr')
         #from wxXrr import wxXrr
         import wxXrrIntModel
@@ -67,7 +67,7 @@ class menuWindows:
         self.XrrIntModelWindow.position = (200, 5)
         self.XrrIntModelWindow.visible = True
 
-    def on_menuWindowSpecData_select(self, event):
+    def on_menuAppsSpecData_select(self, event):
         import wxSpecData
         wxSpecData = mod_import(wxSpecData)
         wxSpecData = wxSpecData.wxSpecData

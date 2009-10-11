@@ -17,7 +17,7 @@ import wx, string, sys, os, time
 from   wx import stc
 
 from   wxUtil import wxUtil
-from   wxGuiWindows import menuWindows
+from   app_menu import menuApps
 import pds.shell
 
 #######################################################################
@@ -29,7 +29,7 @@ args  = None
 rsrc_path = '.'
 
 #######################################################################
-class wxShell(model.Background,menuWindows,wxUtil):
+class wxShell(model.Background,menuApps,wxUtil):
 
     def on_initialize(self, event):
 
@@ -164,11 +164,13 @@ class wxShell(model.Background,menuWindows,wxUtil):
     #             Menus                                       #
     ###########################################################
     
-    # note see wxGuiWindows for more...  
+    # note see app_menu.py for more...  
 
     def on_menuFileExit_select(self,event):
+        print "QUIT"
+        #self.exec_line("quit")
         #self.shell.do_quit()
-        self.close()
+        #self.close()
         sys.exit()
 
     def on_menuFile_CD_select(self,event):        
@@ -236,7 +238,15 @@ class wxShell(model.Background,menuWindows,wxUtil):
         self.loadShell()
         if self.application.shell is not None:
             self.application.shellFrame.visible = not self.application.shellFrame.visible
-    
+
+    def on_menuOptionsEditSiteStartup_select(self,event):
+        self.exec_line("import os")
+        self.exec_line("edit os.path.join(__pds__.pds_path,'startup.pds')")
+
+    def on_menuOptionsEditHomeStartup_select(self,event):
+        self.exec_line("import os")
+        self.exec_line("edit os.path.join(__home__,'.pds')")
+        
     def on_menuHelpUse_select(self, event):
         import wxShellHelp
         wxShellHelp = mod_import(wxShellHelp)
@@ -247,6 +257,9 @@ class wxShell(model.Background,menuWindows,wxUtil):
                                              filename=filename)
         self.wxShellHelp.position = (200, 5)
         self.wxShellHelp.visible = True
+
+    def on_menuHelpDocumentation_select(self,event):
+        self.exec_line("web 'http://cars9.uchicago.edu/iffwiki/tdl'")
 
     ###########################################################
     #             EVENTS                                      #

@@ -8,14 +8,7 @@
 ##################################################
 
 ##################################################
-## make sure help is defined
-##################################################
-if 'help' not in __builtins__.keys():
-   from pydoc import help as __help__
-   __builtins__['help']=__help__
-
-##################################################
-## Imports
+## Default Imports
 ##################################################
 
 ## ScanData module
@@ -25,52 +18,51 @@ import scandata
 from fmtfiles.read_fmt import read_col_data as read_dat
 
 ##################################################
+## Make sure help is defined
+##################################################
+if 'help' not in __builtins__.keys():
+    from pydoc import help as __help__
+    __builtins__['help']=__help__
+
+##################################################
 ## Editor
 ##################################################
-#__editor__ = 'edit '
-__editor__ = 'notepad '
-def __edit__(fname):
+def __edit__(fname=''):
+    """
+    Define an editor to call from command line
+    Note the editor needs to be on your path...
+    """
+    editor = 'notepad '
     #import os
-    #s = __editor__ + fname
+    #s = editor + fname
     #os.system(s)
-    # use this, spawn editor in new process
+    #Spawn editor in new process
     from subprocess import Popen
-    pid = Popen([__editor__, fname]).pid
-    
+    pid = Popen([editor, fname]).pid
 addcmd 'edit', '__edit__'
 
 ##################################################
 ## Browser/Help
 ##################################################
-#__browser__ = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
-__browser__ = "firefox.exe"
-def __web_browser__(path=''):
+def __web__(path='',new_win=True):
+    """
+    Define a web browser to call from command line
+    Note the browser needs to be on your path...
+    """
+    browser = "firefox.exe "
     if path == '':
         path="  http://cars9.uchicago.edu/iffwiki/tdl"
-    #import os
-    s = __browser__ + path
+    import os
+    if new_win:
+        s = "%s  %s" % (browser, "-new-window")
+    else:
+        s = "%s"  % (browser)
+    s = "%s  %s" % (s, path)
     os.system(s)
     # spawn editor in new process
     #from subprocess import Popen
-    #pid = Popen([__browser__, path]).pid
-
-addcmd 'web', '__web_browser__'
+    #pid = Popen([browser, path]).pid
+addcmd 'web', '__web__'
 
 ##################################################
-## Variables
-##################################################
-import os
-if os.getenv("HOME"):
-    home = os.getenv("HOME")
-elif os.getenv("HOMEPATH"):
-    home = os.getenv("HOMEPATH")
 
-#if os.getenv("work"):
-#    sys_vars['__pds__.work'] = os.getenv("work")
-#elif os.getenv("WORK"):
-#    sys_vars['__pds__.work'] = os.getenv("WORK")
-#else:
-#    sys_vars['__pds__.work'] = os.getcwd()
-#    sys_vars['__pds__.file_path'] = sys_vars['__pds__.work']
-#
-##################################################

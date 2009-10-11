@@ -798,7 +798,11 @@ def main(arg):
 
     # create a dictionary of default system variables
     sys_vars = {}
-    sys_vars['__pds__.home'] = user_home
+    if sys.platform == 'win32':
+        pds_path = pds_path.replace('\\','/')
+        user_home = user_home.replace('\\','/')
+    sys_vars['__pds__.pds_path'] = pds_path
+    sys_vars['__home__'] = user_home
     args = []
     for var in sys_vars.keys():
         #shell.interp.setVariable(var,sys_vars[var])
