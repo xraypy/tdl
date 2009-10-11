@@ -24,23 +24,28 @@ email   = "xxx"
 desc    = "tdl"
 
 #########################################################
-package_dir = {'tdl.astlib':'astlib',
-               'tdl.pds':'pds',
-               'tdl.modules':'modules', }
-packages = ['tdl.astlib','tdl.pds','tdl.modules']
+package_dir  = {'tdl.astlib':'astlib',
+                'tdl.pds':'pds',
+                'tdl.modules':'modules', }
+packages     = ['tdl.astlib','tdl.pds','tdl.modules']
 package_data = {'tdl.pds':['startup.pds']}
 
 ### Add-on modules
-packages.append('tdl.modules.core')
-package_data.update({'tdl.modules.core':['libs/_ref.dll']})
-package_data['tdl.modules.core'].append('libs/core.lib')
-package_data['tdl.modules.core'].append('libs/gsl.dll')
-package_data['tdl.modules.core'].append('libs/gsl.lib')
-package_data['tdl.modules.core'].append('libs/gslcblas.dll')
-packages.append('tdl.modules.utils')
-packages.append('tdl.modules.utils.file')
-packages.append('tdl.modules.utils.mpfit')
+#wrap and lib
+packages.append('tdl.modules.wrap')
+package_data.update({'tdl.modules.wrap':['libs/_ref.dll']})
+package_data['tdl.modules.wrap'].append('libs/core.lib')
+package_data['tdl.modules.wrap'].append('libs/gsl.dll')
+package_data['tdl.modules.wrap'].append('libs/gsl.lib')
+package_data['tdl.modules.wrap'].append('libs/gslcblas.dll')
+#mpcutils
+packages.append('tdl.modules.mpcutils')
+packages.append('tdl.modules.mpcutils.mpfit')
+#fmtfiles
+packages.append('tdl.modules.fmtfiles')
+#wxgui
 packages.append('tdl.modules.wxgui')
+#xray
 packages.append('tdl.modules.xray')
 packages.append('tdl.modules.xray.detector')
 packages.append('tdl.modules.xray.scandata')
@@ -48,6 +53,7 @@ packages.append('tdl.modules.xray.xrd')
 packages.append('tdl.modules.xray.xrf')
 packages.append('tdl.modules.xray.xrr')
 packages.append('tdl.modules.xray.xtab')
+#xtal
 packages.append('tdl.modules.xtal')
 
 ### call the setup command
