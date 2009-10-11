@@ -238,7 +238,7 @@ class _NumShell:
         help_2 = """*** Calculator Commands
         \r'c' = clear buffer
         \r'd' = debug (default off)
-        \r'f' = convert results to float (default off)
+        \r'f' = convert results to float (default on)
         \r'h' = help
         \r'p' = pop last entry from buffer
         \r'q' = exit
@@ -357,15 +357,16 @@ class _NumShell:
             return line
         
         ################
-        debug = False
-        do_float = False
+        debug      = False
+        do_float   = True
         calc_types = [types.BooleanType, types.ComplexType,
                       types.FloatType, types.IntType,
                       types.LongType]
         try:
             import numpy
-            calc_types.append([numpy.ndarray])
-            calc_types.append(numpy.typeDict.values())
+            calc_types.append(numpy.ndarray)
+            for xx in numpy.typeDict.values():
+                calc_types.append(xx)
         except:
             numpy = None
             

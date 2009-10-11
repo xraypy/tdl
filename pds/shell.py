@@ -29,7 +29,7 @@ from   interpretor import Interpretor
 from   shellutil   import set_path
 from   shellutil   import PrintExceptErr, command2expr, show_list
 from   shellutil   import split_args, show_more, trimstring
-from   numimports  import _NumShell
+from   numshell    import _NumShell
 
 ##########################################################################
 
