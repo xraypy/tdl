@@ -152,7 +152,7 @@ import numpy as num
 import copy
 
 #import mpfit
-from   utils.mpfit import nmpfit as mpfit
+from   mpcutils.mpfit import nmpfit as mpfit
 from   detector import mca_calib as calib
 import xrf_bgr
 

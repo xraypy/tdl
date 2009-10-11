@@ -71,8 +71,8 @@ import types, copy
 
 from reflectivity import RefModel, DEFAULT_PARAMS
 from xtab  import xrf_lookup
-from utils import element_data as elements
-from utils import compound
+from mpcutils import element_data as elements
+from mpcutils import compound
 
 #######################################################################
 class Layer(compound.Material):

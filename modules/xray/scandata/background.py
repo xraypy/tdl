@@ -21,7 +21,7 @@ import copy
 import numpy as num
 import pylab
 
-from  mathutil import LinReg
+from  mpcutils.mathutil import LinReg
 
 #######################################################################
 def linear_background(data,nbgr=0):
@@ -237,7 +237,7 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
 ################################################################################
 if __name__ == '__main__':
     import pylab
-    from mathutil import gauss
+    from mpcutils.mathutil import gauss
     # generate a curve
     npts = 35
     x = num.array(range(npts))

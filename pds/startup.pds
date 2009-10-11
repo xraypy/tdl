@@ -22,7 +22,7 @@ if 'help' not in __builtins__.keys():
 import scandata
 
 ## Read column files
-from utils.file.read_fmt import read_col_data as read_dat
+from fmtfiles.read_fmt import read_col_data as read_dat
 
 ##################################################
 ## Editor
@@ -38,6 +38,20 @@ def __edit__(fname):
     pid = Popen([__editor__, fname]).pid
     
 addcmd 'edit', '__edit__'
+
+##################################################
+## Browser/Help
+##################################################
+__browser__ = "C:\\Program Files\\Mozilla Firefox "
+def __web_browser__(path):
+    # spawn editor in new process
+    from subprocess import Popen
+    pid = Popen([__browser__, path]).pid
+    
+addcmd 'web', '__web_browser__'
+
+
+
 
 ##################################################
 ## Variables

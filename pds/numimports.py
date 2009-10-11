@@ -192,7 +192,7 @@ class _NumShell:
 
         # put some mathutil functions into __builtins__
         try:
-            import mathutil as __mathutil__
+            import mpcutils.mathutil as __mathutil__
             self.interp.symbol_table.data["__mathutil__"] = __mathutil__
             startup.append("__builtins__.update({'ave':__mathutil__.ave})")
             startup.append("__builtins__.update({'std':__mathutil__.std})")

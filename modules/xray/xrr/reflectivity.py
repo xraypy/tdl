@@ -139,7 +139,7 @@ import exceptions
 
 from Ifeffit import Ifeffit
 from core import _reflectivity
-from utils import element_data as elements
+from mpcutils import element_data as elements
 
 ###############################################################################
 

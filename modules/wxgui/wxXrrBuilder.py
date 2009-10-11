@@ -18,7 +18,7 @@ import time
 import numpy as num
 
 from   wxUtil import wxUtil
-import compound
+from   mpcutils import compound
 import interface_model
 
 #########################################################################

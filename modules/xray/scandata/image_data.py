@@ -44,7 +44,7 @@ import pylab
 from Image import open as imopen
 from scipy import ndimage
 
-from mathutil import LinReg
+from mpcutils.mathutil import LinReg
 from background import background
 
 #######################################################################
