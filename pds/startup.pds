@@ -49,15 +49,16 @@ def __web__(path='',new_win=True):
     Define a web browser to call from command line
     Note the browser needs to be on your path...
     """
-    browser = "firefox.exe "
+    browser = "C:/Program Files/Mozilla Firefox/firefox.exe "
     if path == '':
         path="  http://cars9.uchicago.edu/iffwiki/tdl"
     import os
     if new_win:
-        s = "%s  %s" % (browser, "-new-window")
+        s = '"%s"  %s' % (browser, "-new-window")
     else:
-        s = "%s"  % (browser)
+        s = '"%s"'  % (browser)
     s = "%s  %s" % (s, path)
+    #print s
     os.system(s)
     # spawn editor in new process
     #from subprocess import Popen

@@ -23,7 +23,11 @@ Todo
 """
 #######################################################################
 """
-Note in older versions of PIL:
+Note issue with organization of PIL/Image modules when
+try to build exe.  Therefore, just do import of Image
+inside function that needs it (read_file)
+
+Also, note in older versions of PIL:
  To read the pilatus, you must add this line:
     (1, 1, 1, (32,), ()): ("F", "F;32F"),
  to the OPEN_INFO dict in TiffImagePlugin.py (part of the Image module)
@@ -40,8 +44,6 @@ import types
 import copy
 import numpy as num
 import pylab
-#import Image
-from Image import open as imopen
 from scipy import ndimage
 
 from mpcutils.mathutil import LinReg
@@ -66,8 +68,11 @@ def read_file(tiff_file):
     read file
     """
     try:
-        #im  = Image.open(tiff_file)
-        im  = imopen(tiff_file)
+        #from Image import open as imopen
+        #im  = imopen(tiff_file)
+        #import Image
+        from PIL import Image
+        im  = Image.open(tiff_file)
     except:
         print "Error reading file: %s" % tiff_file
         return num.array([[0]])
