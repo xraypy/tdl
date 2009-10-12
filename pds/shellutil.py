@@ -7,13 +7,12 @@ Utilities for shell program
 --------------
 - Modified from tdl-revision 226
   for use with pds shell program
-  Tom Trainor (fftpt@uaf.edu)
+  Tom Trainor (tptrainor@alaska.edu)
 
 
 """
 ##########################################################################
 
-import numpy as num
 import types
 import time
 import exceptions
@@ -55,8 +54,11 @@ def _isnumericarray(x):
 
 ##########################################################################
 def list2array(s):
-    """ attempt to convert a list to a numpy array.
-    Returns original list if the conversion is not possible"""
+    """
+    Attempt to convert a list to a numpy array.
+    Returns original list if the conversion is not possible
+    """
+    import numpy as num
     if type(s) == types.ListType:
         try:
             if _isnumericarray(s):return num.array(s)
@@ -595,7 +597,7 @@ def unpickle_2(fname):
 ##########################################################################
 
 ##########################################################################
-def mod_import(name):
+def mod_import(name,debug=False):
     """
     wrapper for imports/reloads
     given a module name, try reloading the module
@@ -614,7 +616,10 @@ def mod_import(name):
             return name
         except ImportError:
             s = 'Error loading module %s' % name
-            PrintExceptErr(s)
+            if debug:
+                PrintExceptErr(s)
+            else:
+                print s
             return None
     elif type(name) == types.StringType:
         try:
@@ -625,7 +630,10 @@ def mod_import(name):
             return mod
         except ImportError:
             s = 'Error loading module %s' % name
-            PrintExceptErr(s)
+            if debug:
+                PrintExceptErr(s)
+            else:
+                print s
             return None
     else:
         return(name)
@@ -839,6 +847,8 @@ class Menu:
 
     ##########################################################
     def _init(self,labels,descr,header,matchidx,sort):
+        
+        import numpy as num
 
         self.matchidx = matchidx
         

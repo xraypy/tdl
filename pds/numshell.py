@@ -1,6 +1,6 @@
 #################################################################
 """
-Tom Trainor (fftpt@uaf.edu), 11-08
+Tom Trainor (tptrainor@alaska.edu), 11-08
 Numerical/plotting features for shell program
 
 Modifications:
@@ -64,12 +64,12 @@ def _modules(backend="TkAgg"):
         # add some stuff
         num.ArrayType = num.ndarray
     except:
-        #raise ImportError, 'Error importing numpy'
-        s = "Warning no numpy"
-        PrintExceptErr(s)
+        print "Warning no numpy"
         num = None
+        num_version = "None"
     if num_version < 100:
-        raise ImportError, 'Need numpy version 1.0 or higher: %s' % num_version    
+        print 'Need numpy version 1.0 or higher: %s' % num_version
+        num = None
 
     ## scipy 
     try:
@@ -87,8 +87,7 @@ def _modules(backend="TkAgg"):
     try:
         pylab = _import_pylab(backend=backend)
     except:
-        s = "Warning no pylab"
-        PrintExceptErr(s)
+        print "Warning no pylab"
         pylab = None
 
     return (num,scipy,pylab)
@@ -155,14 +154,14 @@ class _NumShell:
         # add modules to symbol table
         (num,scipy,pylab) = _modules(backend=self.GUI)
 
-        if num: 
+        if num != None: 
             self.interp.symbol_table.data["num"] = num
 
-        if scipy:
+        if scipy != None:
             self.interp.symbol_table.data["scipy"] = scipy
             #self.interp.symbol_table.data["optimize"] = __import__("scipy.optimize")
 
-        if pylab:
+        if pylab != None:
             self.interp.symbol_table.data["pylab"] = pylab
             #self.close_pylab = pylab.close
             def _close_pylab():
@@ -173,7 +172,7 @@ class _NumShell:
         startup = []
 
         # put some common numpy stuff into __builtins__
-        if num:
+        if num != None:
             startup.append("__builtins__.update({'sin':num.sin})")
             startup.append("__builtins__.update({'asin':num.arcsin})")
             startup.append("__builtins__.update({'cos':num.cos})")
@@ -215,7 +214,7 @@ class _NumShell:
             print "Cant load mathutil functions"
         
         # put some plotter stuff into __builtins__
-        if pylab:
+        if pylab != None:
             startup.append("__builtins__.update({'plot':pylab.plotter})")
             startup.append("__builtins__.update({'newplot':pylab.newplotter})")
             startup.append("addcmd 'plot', 'pylab.plotter'")

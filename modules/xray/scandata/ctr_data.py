@@ -1,6 +1,6 @@
 ##############################################################################
 """
-T. Trainor (fftpt@uaf.edu)
+T. Trainor (tptrainor@alaska.edu)
 Frank Heberling (Frank.Heberling@ine.fzk.de)
 Functions for extracting ctr data from ScanData objects
 
@@ -128,8 +128,8 @@ class CtrData:
         for i in range(len(self.L)):
             if self.I[i] > 0:
                 line = "%i    %i    %i    %6.3f    %6.6g    %6.6g\n" % (i,
-                                                                  self.H[i],
-                                                                  self.K[i],
+                                                                  round(self.H[i]),
+                                                                  round(self.K[i]),
                                                                   self.L[i],
                                                                   self.F[i],
                                                                   self.Ferr[i])
