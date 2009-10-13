@@ -40,11 +40,12 @@ CONTINUE =  1   # Continuation --> ps2
 
 # python keywords, make sure a command doesnt clash with these
 PYTHON_KEY_WORDS = ['and','as','del','for','is','raise',
-                  'assert','elif','from','lambda','return', 
-                  'break','else','global','not','None','try',      
-                  'class','except','if','or','while'    
-                  'continue','exec','import','pass','yield',    
-                  'def','finally','in','print']
+                    'assert','elif','from','lambda','return', 
+                    'break','else','global','not','None','try',      
+                    'class','except','if','or','while',    
+                    'continue','exec','import','pass','yield',    
+                    'def','finally','in','print']
+PYTHON_KEY_WORDS.sort()
 
 ##########################################################################
 HELP_STR =  """\n
