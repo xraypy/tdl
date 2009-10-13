@@ -777,14 +777,14 @@ def gtline(pterm='>>',p0=None,p1=None,p2=None,valid=None,
     Fancy get line function
 
     Arguments:
-    * p  = prompt terminator
-    * p0 = line to print prior to actual print
-    * p1 = prompt
-    * p2 = prompt on retry
-    * valid = list of valid entries
+    * pterm   = prompt terminator
+    * p0      = line to print prior to actual prompt
+    * p1      = prompt
+    * p2      = prompt on retry
+    * valid   = list of valid entries
     * default = default ret value
     * rettype = typing function, ie function to force ret type
-    * retry = retry on failure?  
+    * retry   = retry on failure?  
     
     """
     if p0 != None:
@@ -826,6 +826,137 @@ def _gtline(prompt='',default=None,pterm='>>',rettype=None,valid=None):
         if ret not in valid:
             ret = None
     return (ret) 
+
+##########################################################################
+def get_yn(prompt=None,default=None,nlprompt=True):
+    ylbl=['yes','y','1']
+    nlbl=['no','n','0']
+    if prompt == None:
+        prompt = "Enter Yes/No"
+    if default != None:
+        default = default.lower()
+        if default in ylbl or default in nlbl:
+            prompt = "%s (%s)" % (prompt,default)
+        else:
+            default = None
+    prompt = prompt + ">>"
+    if nlprompt==True: prompt = prompt + "\n"
+    while 1:
+        try:
+            ret = raw_input(prompt)
+            if ret.lower() in ylbl:
+                return 'yes'
+            elif ret.lower() in nlbl:
+                return 'no'
+            elif len(ret.strip()) == 0 and default != None:
+                return default
+            else:
+                print 'Please enter Yes (%s) or No (%s)' % (str(ylbl),
+                                                            str(nlbl))
+        except:
+            pass
+    
+##########################################################################
+def get_tf(prompt=None,default=None,nlprompt=True):
+    tlbl=['true','t','1']
+    flbl=['false','f','0']
+    if prompt == None:
+        prompt = "Enter True/False"
+    if default != None:
+        if type(default) == types.StringType:
+            default = default.lower()
+            if default in tlbl:
+                default = True
+            elif default in flbl:
+                default = False
+            else:
+                default = None
+        if default == True:
+            prompt = "%s (%s)" % (prompt,'True')
+        elif default == False:
+            prompt = "%s (%s)" % (prompt,'False')
+        else:
+            default = None
+    prompt = prompt + ">>"
+    if nlprompt==True: prompt = prompt + "\n"
+    while 1:
+        try:
+            ret = raw_input(prompt)
+            if len(ret.strip()) == 0 and default != None:
+                return default
+            elif ret.lower() in tlbl:
+                return True
+            elif ret.lower() in flbl:
+                return False
+            else:
+                print 'Enter True (%s) or False (%s)' % (str(tlbl),
+                                                         str(flbl))
+        except:
+            pass
+        
+##########################################################################
+def get_int(prompt=None,default=None,valid=[],min=None,max=None,nlprompt=True):
+    if prompt == None:
+        prompt = "Enter an integer"
+    if default != None:
+        if type(default) != types.IntType:
+            default = int(default)
+        prompt = "%s (%i)" % (prompt,default)
+    prompt = prompt + ">>"
+    if nlprompt==True: prompt = prompt + "\n"
+    while 1:
+        try:
+            ok = True
+            ret = raw_input(prompt)
+            if len(ret.strip()) == 0 and default != None:
+                return default
+            ret = int(ret)
+            if len(valid) > 0 and ok == True:
+                if ret not in valid:
+                    print "Enter integer in range %s " % str(valid)
+                    ok = False
+            if min != None and ok == True:
+                if ret < min:
+                    print "Enter integer greater than %i " % min
+                    ok = False
+            if max != None and ok == True:
+                if ret > max:
+                    print "Enter integer less than %i " % max
+                    ok = False
+            if ok == True:
+                return ret
+        except:
+            pass
+        
+##########################################################################
+def get_flt(prompt=None,default=None,min=None,max=None,nlprompt=True):
+    if prompt == None:
+        prompt = "Enter a float"
+    if default != None:
+        if type(default) != types.FloatType:
+            default = float(default)
+        prompt = "%s (%g)" % (prompt,default)
+    prompt = prompt + ">>"
+    if nlprompt==True: prompt = prompt + "\n"
+    while 1:
+        try:
+            ok = True
+            ret = raw_input(prompt)
+            if len(ret.strip()) == 0 and default != None:
+                return default
+            ret = float(ret)
+            if min != None and ok == True:
+                if ret < min:
+                    print "Enter float greater than %g " % min
+                    ok = False
+            if max != None and ok == True:
+                if ret > max:
+                    print "Enter float less than %g " % max
+                    ok = False
+            if ok == True:
+                return ret
+        except:
+            pass
 
 ##########################################################################
 class Menu:
@@ -964,7 +1095,7 @@ class Menu:
             return self.labels[cmdnum]
 
     ##########################################################
-    def prompt(self,p='>>'):
+    def prompt(self,p='>>',nlprompt=True):
         """
         Issue prompt till we recieve a match
         Should we add a default option?
@@ -980,6 +1111,8 @@ class Menu:
             else:
                 return cmd
         #
+        if nlprompt==True:
+            p = p + "\n"
         cmd = _input(p)
         if cmd != None:
             cmd = self.match(cmd)
@@ -988,63 +1121,7 @@ class Menu:
             if cmd != None:
                 cmd = self.match(cmd)
         return cmd
-    
-##########################################################################
-def get_yn(prompt=None):
-    labels = ['yes','no']
-    if prompt == None:
-        prompt = "Enter Yes/No>>"
-    m = Menu(labels=labels,dohelp=False)
-    return m.prompt(prompt)
-    
-##########################################################################
-def get_tf(prompt='Enter True/False',d='True'):
-    while 1:
-        try:
-            ret = raw_input(p)
-            if ret.lower()=='true':
-                return True
-            elif ret.lower()=='false':
-                return False
-            else:
-                print 'Enter True or False'
-        except:
-            pass
-
-##########################################################################
-def get_int(p='Enter integer>>',d=None,o=[]):
-    while 1:
-        try:
-            i = int(raw_input(p))
-            if len(o) > 0:
-                if i in o:
-                    return i
-                else:
-                    print "Enter integer in range: ", o
-            else:
-                return i
-        except:
-            pass
-        
-def get_flt(p='Enter foat>>',d=None,min=None,max=None):
-    while 1:
-        try:
-            f = float(raw_input(p))
-            if min != None:
-                if f <= min:
-                    f = None
-            if max != None:
-                if f >= max:
-                    f = None
-            if f == None:
-                print "Enter float in range: ", min, max
-            else:
-                return f
-        except:
-            pass
        
-
-
 ##########################################################################
 ##########################################################################
 if __name__ == "__main__":

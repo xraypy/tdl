@@ -65,9 +65,10 @@ def image_menu(data):
     # local plot fun
     def _implot(data,scan_pnt,im_max):
         rotangle = data.image_rotangle[scan_pnt]
-        figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt, data['L'][scan_pnt])
-        image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,figtitle=figtitle,
-                              im_max=im_max,rotangle=rotangle)
+        figtitle = "Scan Point = %i, L = %6.3f" % (scan_pnt,
+                                                   data['L'][scan_pnt])
+        image_data.image_plot(data.image[scan_pnt],fig=1,verbose=True,
+                              figtitle=figtitle,im_max=im_max,rotangle=rotangle)
 
     # check init and plot first
     if len(data.image_peaks) != npts:
@@ -96,8 +97,9 @@ def image_menu(data):
                 im_max = int(im_max)
             _implot(data,scan_pnt,im_max)
         elif ret == "rotangle":
-            rotangle = get_flt(p='Enter rotation angle in degrees ccw>',
-                               d=0.0,min=-360.,max=360.)
+            rotangle = get_flt(prompt='Enter rotation angle in degrees ccw',
+                               default=data.image_rotangle[scan_pnt],
+                               min=-360.,max=360.)
             data.image_rotangle[scan_pnt] = rotangle
             _implot(data,scan_pnt,im_max)
         elif ret == 'zoomroi':
@@ -108,7 +110,8 @@ def image_menu(data):
         elif ret == 'plotsums':
             roi      = data.image_rois[scan_pnt]
             rotangle = data.image_rotangle[scan_pnt]
-            image    = image_data.clip_image(data.image[scan_pnt],roi,rotangle=rotangle)
+            image    = image_data.clip_image(data.image[scan_pnt],roi,
+                                             rotangle=rotangle)
             bgr_par  = data.image_bgrpar[scan_pnt]
             image_data.sum_plot(image,fig=2,**bgr_par)
         elif ret == 'selectroi':
@@ -276,38 +279,46 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
         ret      = m.prompt(prompt)
         #
         if ret == 'bgrflag':
-            bgr_params['bgrflag'] = get_int(p='Enter bgrflag>',
-                                            d=bgr_params['bgrflag'],o=[0,1,2,3])
+            bgr_params['bgrflag'] = get_int(prompt='Enter bgrflag',
+                                            default=bgr_params['bgrflag'],
+                                            valid=[0,1,2,3])
         #
         elif ret == 'cnbgr':
-            bgr_params['cnbgr'] = get_int(p='Enter col nbgr>',
-                                          d=bgr_params['cnbgr'])
+            bgr_params['cnbgr'] = get_int(prompt='Enter col nbgr',
+                                          default=bgr_params['cnbgr'],
+                                          min=0)
         elif ret == 'cwidth':
-            bgr_params['cwidth'] = get_int(p='Enter col width>',
-                                           d=bgr_params['cwidth'])
+            bgr_params['cwidth'] = get_int(prompt='Enter col width',
+                                           default=bgr_params['cwidth'],
+                                           min=0)
         elif ret == 'cpow':
-            bgr_params['cpow'] = get_flt(p='Enter col pow>',
-                                         d=bgr_params['cpow'],min=0.,max=5.)
+            bgr_params['cpow'] = get_flt(prompt='Enter col pow',
+                                         default=bgr_params['cpow'],
+                                         min=0.,max=5.)
         elif ret == 'ctan':
-            bgr_params['ctan'] = get_tf(p='Enter col tan flag>',
-                                           d=bgr_params['ctan'])
+            bgr_params['ctan'] = get_tf(prompt='Enter col tan flag',
+                                        default=bgr_params['ctan'])
         #
         elif ret == 'rnbgr':
-            bgr_params['rnbgr'] = get_int(p='Enter row nbgr>',
-                                          d=bgr_params['rnbgr'])
+            bgr_params['rnbgr'] = get_int(prompt='Enter row nbgr',
+                                          default=bgr_params['rnbgr'],
+                                          min=0)
         elif ret == 'rwidth':
-            bgr_params['rwidth'] = get_int(p='Enter row width>',
-                                           d=bgr_params['rwidth'])
+            bgr_params['rwidth'] = get_int(prompt='Enter row width',
+                                           default=bgr_params['rwidth'],
+                                           min=0)
         elif ret == 'rpow':
-            bgr_params['rpow'] = get_flt(p='Enter row pow>',
-                                         d=bgr_params['rpow'],min=0.,max=5.)
+            bgr_params['rpow'] = get_flt(prompt='Enter row pow',
+                                         default=bgr_params['rpow'],
+                                         min=0.,max=5.)
         elif ret == 'rtan':
-            bgr_params['rtan'] = get_tf(p='Enter row tan flag>',
-                                           d=bgr_params['rtan'])
+            bgr_params['rtan'] = get_tf(prompt='Enter row tan flag',
+                                        default=bgr_params['rtan'])
         elif ret == 'info':
             show_more(BGR_INFO)
+            get_yn(prompt="Continue",default='y')
     return bgr_params
-        
+    
 
 ################################################################################
 

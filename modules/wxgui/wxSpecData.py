@@ -342,10 +342,10 @@ class wxSpecData(model.Background, wxUtil):
         snum = str(self.components.ScanNum.stringSelection)
         if self.components.AutoCalcVarName.checked:
             if self.components.LongName.checked:
-                scan_var = u"%s.S%s" % (sfile,snum)
+                scan_var = u"%s.s%s" % (sfile,snum)
                 scan_var = scan_var.replace('.','_')
             else:
-                scan_var = u"S%s" % (snum)
+                scan_var = u"s%s" % (snum)
             #
             items = self.components.ScanVar.items
             if scan_var not in items:
