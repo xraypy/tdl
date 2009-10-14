@@ -140,108 +140,54 @@ import sys
 import string
 
 ##########################################################################
-class Lattice:
-    """
-    Class that defines a lattice and various
-    operations within the lattice
-    """
-    def __init__(self,a=1.,b=1.,c=1.,alpha=90.,beta=90.,gamma=90.):
-        self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma)
+def g_matx(cell): # calculate g matrix from real space lattice parameters
+    a = cell[0]
+    b = cell[1]
+    c = cell[2]
+    alp = cell[3]
+    bet = cell[4]
+    gam = cell[5]
+    Pi  = num.pi
+    g = num.array([[a*a, a*b*(num.cos(gam*Pi/180)), a*c*(num.cos(bet*Pi/180))],
+                    [b*a*(num.cos(gam*Pi/180)), b*b, b*c*(num.cos(alp*Pi/180))],
+                    [c*a*(num.cos(bet*Pi/180)), c*b*(num.cos(alp*Pi/180)), c*c]])
+    return g
 
-    def update(a=None,b=None,c=None,alpha=None,beta=None,gamma=None):
-        """
-        update lattice parameters
-        """
-        if a != None: self.a = a
-        if b != None: self.b = b
-        if c != None: self.c = c
-        if alpha != None: self.alpha = alpha
-        if beta  != None: self.beta  = beta
-        if gamma != None: self.gamma = gamma
-        # update calc quantities
-        self._calc_g()
+##########################################################################
+def rlat(cell): # calculate reciprocal space lattice parameters
+    g = g_matx(cell)
+    g_inv = num.linalg.inv(g)
+    a_r = num.sqrt(g_inv[0,0])
+    b_r = num.sqrt(g_inv[1,1])
+    c_r = num.sqrt(g_inv[2,2])
+    Pi  = num.pi
+    alp_r = (180/Pi)*num.arccos(g_inv[1,2]/(b_r*c_r))
+    bet_r = (180/Pi)*num.arccos(g_inv[0,2]/(a_r*c_r))
+    gam_r = (180/Pi)*num.arccos(g_inv[0,1]/(a_r*b_r))
+    rcell = [a_r, b_r, c_r, alp_r, bet_r, gam_r]
+    return rcell
 
-    def _calc_g(self):
-        """
-        calculate the metric tensors and recip lattice params
-           self.g  = real space metric tensor
-           self.gr = recip space metric tensor
-        """
-        a = self.a
-        b = self.b
-        c = self.c
-        alp = num.radians(self.alpha)
-        bet = num.radians(self.beta)
-        gam = num.radians(self.gamma)
-        # real metric tensor
-        self.g = num.array([ [ a*a, a*b*num.cos(gam), a*c*num.cos(bet) ],
-                             [ b*a*num.cos(gam), b*b, b*c*num.cos(alp) ],
-                             [ c*a*num.cos(bet), c*b*num.cos(alp), c*c ] ])
-        # recip lattice metric tensor
-        # and recip lattice params
-        self.gr   = num.linalg.inv(self.g)
-        self.ar   = num.sqrt(self.gr[0,0])
-        self.br   = num.sqrt(self.gr[1,1])
-        self.cr   = num.sqrt(self.gr[2,2])
-        self.alphar = Num.degrees(num.arccos(self.gr[1,2]/(self.br*self.cr)))
-        self.betar  = Num.degrees(num.arccos(self.gr[0,2]/(self.ar*self.cr)))
-        self.gammar = Num.degrees(num.arccos(self.gr[0,1]/(self.ar*self.br)))
-        
-    def cell(self):
-        """
-        return array of real lattice cell parameters
-        """
-        return num.array([self.a,self.b,self.c,
-                          self.alpha,self.beta,self.gamma])
+##########################################################################
+def dot_product(u,v,cell):# calculate dot product of two vectors in basis defined by cell
+    g = g_matx(cell)
+    x = num.matrixmultiply(g,num.transpose(v)) 
+    dot_product = num.matrixmultiply(u,x) # dot product = u*g*v', from Sands.
+    return dot_product
 
-    def rcell(self):
-        """
-        return array of reciprocal lattice cell parameters
-        """
-        return num.array([self.ar,self.br,self.cr,
-                          self.alphar,self.betar,self.gammar])
-        
-    def dot(self,u,v,real=True):
-        """
-        calculate dot product of two vectors
-        if u and v are real space vectors real = True
-        if u and v are recip space vectors real = False
-        Note u and v are assumed to be normal numpy arrays
-        (ie not matrix objects)
-        """
-        if real == True: g = self.g
-        elif real == False: g = self.gr
-        # dot product = u*g*v, from Sands.
-        return num.dot(u,num.dot(g,v))
+##########################################################################
+def vector_mag(v,cell): # calculate magnitude of a vector in basis defined by cell
+    mag   = dot_product(v,v,cell)
+    v_mag = num.sqrt(mag)
+    return v_mag
 
-    def mag(self,v,real=True):
-        """
-        calculate the norm of a vector
-        if v is real space vector real = True
-        if v is recip space vector real = False
-        Note v is assumed to be normal numpy array
-        (ie not matrix objects)
-        """
-        if real == True: g = self.g
-        elif real == False: g = self.gr
-        m = num.sqrt(self.dot(v,v,real=real))
-        return m
-
-    def angle(self,u,v,real=True):
-        """
-        calculate dot product of two vectors
-        if u and v are real space vectors real = True
-        if u and v are recip space vectors real = False
-        Note u and v are assumed to be normal numpy arrays
-        (ie not matrix objects)
-        """
-        uv = self.dot(u,v,real=real)
-        vm = self.mag(v,real=real)
-        um = self.mag(u,real=real)
-        alpha = num.arccos(uv/(vm*um))
-        return num.degrees(alpha)
-
-
+##########################################################################
+def vector_angle(u,v,cell): # calculate angle between two vectors in basis defined by cell
+    x = dot_product(u,v,cell)
+    u_mag = vector_mag(u,cell)
+    v_mag = vector_mag(v,cell)
+    Pi = num.pi
+    v_angle = (180/Pi)*num.arccos(x/(u_mag*v_mag))
+    return v_angle
 
 ##########################################################################
 def d_spacing(hkl,cell): # calculate d-spacing for given h,k,l and cell parameters 

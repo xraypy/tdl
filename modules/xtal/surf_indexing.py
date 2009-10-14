@@ -10,7 +10,7 @@ Modifications:
 """
 ##########################################################################
 
-import numpy
+import numpy as num
 import xtal
 
 ##########################################################################
@@ -39,7 +39,7 @@ Vc = n*d
 MGFN = xtal.basis_transformation_matrix(Va,Vb,Vc)
 F = MGFN[2]
 # find repeat vector in surface basis
-Vr_s = numpy.matrixmultiply(F,numpy.transpose(Vr))
+Vr_s = num.matrixmultiply(F,num.transpose(Vr))
 del_1 = -1*Vr_s[0]
 del_2 = -1*Vr_s[1]
 mag_as = xtal.vector_mag(Va,cell)
