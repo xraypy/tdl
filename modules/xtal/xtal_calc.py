@@ -148,16 +148,16 @@ class Lattice:
     def __init__(self,a=1.,b=1.,c=1.,alpha=90.,beta=90.,gamma=90.):
         self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma)
 
-    def update(a=None,b=None,c=None,alpha=None,beta=None,gamma=None):
+    def update(self,a=None,b=None,c=None,alpha=None,beta=None,gamma=None):
         """
         update lattice parameters
         """
-        if a != None: self.a = a
-        if b != None: self.b = b
-        if c != None: self.c = c
-        if alpha != None: self.alpha = alpha
-        if beta  != None: self.beta  = beta
-        if gamma != None: self.gamma = gamma
+        if a != None: self.a = float(a)
+        if b != None: self.b = float(b)
+        if c != None: self.c = float(c)
+        if alpha != None: self.alpha = float(alpha)
+        if beta  != None: self.beta  = float(beta)
+        if gamma != None: self.gamma = float(gamma)
         # update calc quantities
         self._calc_g()
 
@@ -183,9 +183,9 @@ class Lattice:
         self.ar   = num.sqrt(self.gr[0,0])
         self.br   = num.sqrt(self.gr[1,1])
         self.cr   = num.sqrt(self.gr[2,2])
-        self.alphar = Num.degrees(num.arccos(self.gr[1,2]/(self.br*self.cr)))
-        self.betar  = Num.degrees(num.arccos(self.gr[0,2]/(self.ar*self.cr)))
-        self.gammar = Num.degrees(num.arccos(self.gr[0,1]/(self.ar*self.br)))
+        self.alphar = num.degrees(num.arccos(self.gr[1,2]/(self.br*self.cr)))
+        self.betar  = num.degrees(num.arccos(self.gr[0,2]/(self.ar*self.cr)))
+        self.gammar = num.degrees(num.arccos(self.gr[0,1]/(self.ar*self.br)))
         
     def cell(self):
         """
@@ -201,67 +201,72 @@ class Lattice:
         return num.array([self.ar,self.br,self.cr,
                           self.alphar,self.betar,self.gammar])
         
-    def dot(self,u,v,real=True):
+    def dot(self,u,v,recip=False):
         """
         calculate dot product of two vectors
-        if u and v are real space vectors real = True
-        if u and v are recip space vectors real = False
+        if u and v are real space vectors, recip = False
+        if u and v are recip space vectors, recip = True
         Note u and v are assumed to be normal numpy arrays
         (ie not matrix objects)
         """
-        if real == True: g = self.g
-        elif real == False: g = self.gr
+        if recip == True: g = self.gr
+        else: g = self.g
         # dot product = u*g*v, from Sands.
         return num.dot(u,num.dot(g,v))
 
-    def mag(self,v,real=True):
+    def mag(self,v,recip=False):
         """
         calculate the norm of a vector
-        if v is real space vector real = True
-        if v is recip space vector real = False
+        if v is real space vector, recip = False
+        if v is recip space vector, recip = True
         Note v is assumed to be normal numpy array
         (ie not matrix objects)
         """
-        if real == True: g = self.g
-        elif real == False: g = self.gr
-        m = num.sqrt(self.dot(v,v,real=real))
+        m = num.sqrt(self.dot(v,v,recip=recip))
         return m
 
-    def angle(self,u,v,real=True):
+    def angle(self,u,v,recip=False):
         """
         calculate dot product of two vectors
-        if u and v are real space vectors real = True
-        if u and v are recip space vectors real = False
+        if u and v are real space vectors, recip = False
+        if u and v are recip space vectors, recip = True
         Note u and v are assumed to be normal numpy arrays
         (ie not matrix objects)
         """
-        uv = self.dot(u,v,real=real)
-        vm = self.mag(v,real=real)
-        um = self.mag(u,real=real)
+        uv = self.dot(u,v,recip=recip)
+        vm = self.mag(v,recip=recip)
+        um = self.mag(u,recip=recip)
         alpha = num.arccos(uv/(vm*um))
         return num.degrees(alpha)
 
+    def d_space(self,hkl):
+        """
+        calculate d-spacing for given [h,k,l]
+        """
+        hkl = num.array(hkl,dtype=float)
+        if len(hkl)!=3:
+            print "need an array of [h,k,l]"
+            return 0.
+        H = self.mag(hkl,recip=True)
+        d = 1./H
+        return d
 
+    def d_vec(self,hkl):
+        """
+        calculate the real space vector d
+        which has a magnitude of d_spacing
+        and is normal to the plane HKL
+        """
+        hkl = num.array(hkl,dtype=float)
+        # convert hkl vector to real space indicies
+        dvec = num.dot(self.gr,hkl)
+        dspc = self.d_space(hkl)
+        dvec = (dspc**2.)*dvec
+        return dvec
 
 ##########################################################################
-def d_spacing(hkl,cell): # calculate d-spacing for given h,k,l and cell parameters 
-    rcell = rlat(cell)
-    H = vector_mag(hkl,rcell)
-    d_spacing = 1/H
-    return d_spacing
-
-##########################################################################
-def calc_d(hkl,cell): # calculate vector d in bulk real space basis which has a magnitude of d_spacing
-    g = g_matx(cell)
-    g_inv = num.linalg.inverse(g)
-    hkl = num.transpose(hkl)
-    d_spc = d_spacing(hkl,cell)
-    d = num.array(num.matrixmultiply(g_inv,hkl))
-    d = d_spc*d_spc*d
-    return d
-
-##########################################################################
-def basis_transform_cart(cell): #calculate Gc and Fc for transformations to cartesian basis
+def basis_transform_cart(cell):
+    #calculate Gc and Fc for transformations to cartesian basis
     a = cell[0]
     b = cell[1]
     c = cell[2]
@@ -288,7 +293,8 @@ def basis_transform_cart(cell): #calculate Gc and Fc for transformations to cart
     return Fc
 
 ##########################################################################
-def transform_to_cart(u,v,w,cell): # transform u,v,w to cartesian
+def transform_to_cart(u,v,w,cell):
+    # transform u,v,w to cartesian
     Fc = basis_transform_cart(cell) 
     uvw = [u, v, w]
     uvw_xyz = num.matrixmultiply(Fc, num.transpose(uvw))
@@ -296,7 +302,8 @@ def transform_to_cart(u,v,w,cell): # transform u,v,w to cartesian
     return xyz
 
 ##########################################################################
-def cart_to_cell(x,y,z,cell): # transform x,y,z to basis defined by cell
+def cart_to_cell(x,y,z,cell):
+    # transform x,y,z to basis defined by cell
     Fc = basis_transform_cart(cell)
     xyz = [x, y, z]
     xyz_uvw = num.matrixmultiply((num.linalg.inverse(Fc)),num.transpose(xyz))
@@ -304,7 +311,8 @@ def cart_to_cell(x,y,z,cell): # transform x,y,z to basis defined by cell
     return uvw
 
 ##########################################################################
-def trans_hexa_to_rhombo(Va): # transfrom any vector from hexa to rhombo system
+def trans_hexa_to_rhombo(Va):
+    # transfrom any vector from hexa to rhombo system
     MM = num.array([[0.6667, 0.3333, 0.3333],
                       [-0.3333, 0.3333, 0.3333],
                       [-0.3333, -0.6667, 0.3333]])
@@ -313,7 +321,8 @@ def trans_hexa_to_rhombo(Va): # transfrom any vector from hexa to rhombo system
     return V_rh
 
 ##########################################################################
-def trans_rhombo_to_hexa(Va): # transfrom any vector from rhombo to hexa system
+def trans_rhombo_to_hexa(Va):
+    # transfrom any vector from rhombo to hexa system
     MM = num.array([[0.6667, 0.3333, 0.3333],
                       [-0.3333, 0.3333, 0.3333],
                       [-0.3333, -0.6667, 0.3333]])
@@ -323,7 +332,8 @@ def trans_rhombo_to_hexa(Va): # transfrom any vector from rhombo to hexa system
     return V_hx
     
 ##########################################################################
-def inplane_vectors(hkl, cell): #calculate surface vectors for a given hkl plane through origin
+def inplane_vectors(hkl, cell):
+    #calculate surface vectors for a given hkl plane through origin
     V_tmp=[]
     for n1 in range(-4,5):
         for n2 in range(-4,5):
@@ -345,7 +355,8 @@ def inplane_vectors(hkl, cell): #calculate surface vectors for a given hkl plane
     return Vs
      
 ##########################################################################
-def slab_repeat_vectors(hkl,cell): # calculate number of possible slap repeat vectors
+def slab_repeat_vectors(hkl,cell):
+    # calculate number of possible slap repeat vectors
     g = g_matx(cell)
     g_inv = num.linalg.inverse(g)
     hkl = num.transpose(hkl)
@@ -374,7 +385,8 @@ def slab_repeat_vectors(hkl,cell): # calculate number of possible slap repeat ve
     return Vb
 
 ##########################################################################
-def basis_transformation_matrix(Va,Vb,Vc): # transform to basis defined by Va, Vb and Vc
+def basis_transformation_matrix(Va,Vb,Vc):
+    # transform to basis defined by Va, Vb and Vc
     # M transforms the basis to surface basis see Trainor et al. 2002
     #        xas   yas  zas
     # [M] =  xbs   ybs  zbs 
@@ -392,7 +404,8 @@ def basis_transformation_matrix(Va,Vb,Vc): # transform to basis defined by Va, V
     return MGFN
 
 ##########################################################################
-def calc_surf_cell(F,bulk_name,cell): # calculate the big surface cell
+def calc_surf_cell(F,bulk_name,cell):
+    # calculate the big surface cell
     # read bulk file
     file = open(bulk_name,'r')
     lines = file.readlines()

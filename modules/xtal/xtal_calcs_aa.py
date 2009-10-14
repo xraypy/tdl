@@ -96,7 +96,9 @@ def calc_B(cell):
     B1 = num.radians(cell_rez[3])
     B2 = num.radians(cell_rez[4])
     B3 = num.radians(cell_rez[5])
-    B = num.array([[b1, b2*cos(B3), b3*cos(B2)],[0, b2*sin(B3), -b3*sin(B2)*cos(A1)],[0, 0, 1/a3]])
+    B = num.array([[b1, b2*cos(B3), b3*cos(B2)],
+                   [0, b2*sin(B3), -b3*sin(B2)*cos(A1)],
+                   [0, 0, 1/a3]])
     return B
 
 def calc_U(h1, h2, angles1, angles2, lambda1, lambda2, cell):
