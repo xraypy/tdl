@@ -19,7 +19,7 @@ If numpy is not installed this should still be ok to use as a subclass
 of shell.Shell, it just wont add any of the numerical stuff... 
 
 The numerical/plotting modules are handled by the function call:
-(num,scipy,pylab) = _modules(backend="Wx")
+(num,scipy,pyplot) = _modules(backend="Wx")
 
 """
 #################################################################
@@ -52,8 +52,8 @@ def _parse_version(s):
 #################################################################
 def _modules(backend="TkAgg"):
     """
-    import numpy, scipy and pylab - return as a tuple.
-    (num,scipy,pylab) = Modules(backend="TkAgg")
+    import numpy, scipy and pyplot - return as a tuple.
+    (num,scipy,pyplot) = Modules(backend="TkAgg")
     """
     ## numpy
     num_version = 0
@@ -83,17 +83,17 @@ def _modules(backend="TkAgg"):
         print "Warning no scipy"
         scipy = None
  
-    ## pylab 
+    ## pyplot 
     try:
-        pylab = _import_pylab(backend=backend)
+        pyplot = _import_pyplot(backend=backend)
     except:
-        print "Warning no pylab"
-        pylab = None
+        print "Warning no matplotlib"
+        pyplot = None
 
-    return (num,scipy,pylab)
+    return (num,scipy,pyplot)
 
 #################################################################
-def _import_pylab(backend="TkAgg",verbose=True):
+def _import_pyplot(backend="TkAgg",verbose=True):
     #
     import matplotlib
     check = matplotlib.get_backend()
@@ -119,25 +119,25 @@ def _import_pylab(backend="TkAgg",verbose=True):
         matplotlib.use(backend)
     else:
         matplotlib.use(backend,warn=False)
-    import matplotlib.pylab as pylab
+    import matplotlib.pyplot as pyplot
     
     # do we need this??
     # ie plotting works without below line
     # but this lets us grab tk if needed...
-    pylab.plot_root = PLOT_ROOT 
+    pyplot.plot_root = PLOT_ROOT 
     
     # import plotter
     import plotter
-    pylab.plotter    = plotter.plotter
-    pylab.newplotter = plotter.newplotter
-    pylab.cursor     = plotter.cursor
+    pyplot.plotter    = plotter.plotter
+    pyplot.newplotter = plotter.newplotter
+    pyplot.cursor     = plotter.cursor
 
     # Make sure we're interactive
-    #pylab.show._needmain=False
+    #pyplot.show._needmain=False
     #matplotlib.interactive(True)
-    pylab.ion()
+    pyplot.ion()
     
-    return pylab
+    return pyplot
 
 #################################################################
 #################################################################
@@ -152,7 +152,7 @@ class _NumShell:
 
         #############        
         # add modules to symbol table
-        (num,scipy,pylab) = _modules(backend=self.GUI)
+        (num,scipy,pyplot) = _modules(backend=self.GUI)
 
         if num != None: 
             self.interp.symbol_table.data["num"] = num
@@ -161,12 +161,11 @@ class _NumShell:
             self.interp.symbol_table.data["scipy"] = scipy
             #self.interp.symbol_table.data["optimize"] = __import__("scipy.optimize")
 
-        if pylab != None:
-            self.interp.symbol_table.data["pylab"] = pylab
-            #self.close_pylab = pylab.close
-            def _close_pylab():
-                pylab.close('all')
-            self.close_pylab = _close_pylab
+        if pyplot != None:
+            self.interp.symbol_table.data["pyplot"] = pyplot
+            def _close_pyplot():
+                pyplot.close('all')
+            self.close_pyplot = _close_pyplot
 
         # add to startup commands
         startup = []
@@ -214,11 +213,11 @@ class _NumShell:
             print "Cant load mathutil functions"
         
         # put some plotter stuff into __builtins__
-        if pylab != None:
-            startup.append("__builtins__.update({'plot':pylab.plotter})")
-            startup.append("__builtins__.update({'newplot':pylab.newplotter})")
-            startup.append("addcmd 'plot', 'pylab.plotter'")
-            startup.append("addcmd 'newplot', 'pylab.newplotter'")
+        if pyplot != None:
+            startup.append("__builtins__.update({'plot':pyplot.plotter})")
+            startup.append("__builtins__.update({'newplot':pyplot.newplotter})")
+            startup.append("addcmd 'plot', 'pyplot.plotter'")
+            startup.append("addcmd 'newplot', 'pyplot.newplotter'")
 
         return startup
 

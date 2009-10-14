@@ -2,7 +2,7 @@
 """
 Tom Trainor (fftpt@uaf.edu)
 Simple wrapper functions and classes
-around some of matplotlib.pylab
+around some of matplotlib.pyplot
 
 Modifications:
 --------------
@@ -22,9 +22,9 @@ def newplotter(*arg,**kw):
     """
     create a new plot window
     """
-    import pylab
-    pylab.figure()
-    #pylab.clf()
+    from matplotlib import pyplot
+    pyplot.figure()
+    #pyplot.clf()
     if arg:
         plotter(*arg,**kw)
         
@@ -35,7 +35,7 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1.,yscale=1.,
     """
     plotting with many options
     """
-    import pylab
+    from matplotlib import pyplot
 
     x = num.array(x)
     if len(x) == 0:
@@ -73,13 +73,13 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1.,yscale=1.,
         return
 
     # check hold and set subplot (double check this...)
-    # if clf: pylab.clf()
-    #pylab.hold(hold)
-    pylab.subplot(nr,nc,np)
+    # if clf: pyplot.clf()
+    #pyplot.hold(hold)
+    pyplot.subplot(nr,nc,np)
     if hold == False:
-        pylab.cla()
+        pyplot.cla()
     else:
-        pylab.hold(True)
+        pyplot.hold(True)
     
     # if errbars, make an errorbar plot
     if (xerr!=None) or (yerr != None):
@@ -92,24 +92,24 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1.,yscale=1.,
         else:
             yerr_plot = None
         try:
-            pylab.errorbar(x_plot,y_plot,xerr=xerr_plot,yerr=yerr_plot,fmt=fmt,**kw)
+            pyplot.errorbar(x_plot,y_plot,xerr=xerr_plot,yerr=yerr_plot,fmt=fmt,**kw)
         except:
             PrintExceptErr('Error bar plot failed')
     else:
         try:
-            pylab.plot(x_plot,y_plot,fmt,**kw)
+            pyplot.plot(x_plot,y_plot,fmt,**kw)
         except:
             PrintExceptErr('Plot failed')
 
     # check logs
     if xlog:
         try:
-            pylab.semilogx()
+            pyplot.semilogx()
         except:
             PrintExceptErr('X log failed')
     if ylog:
         try:
-            pylab.semilogy()
+            pyplot.semilogy()
         except:
             PrintExceptErr('X log failed')
     
@@ -118,14 +118,14 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1.,yscale=1.,
 ################################################################################
 class PlotClick:
     def __init__(self,fig=None,verbose=False):
-        import pylab
-        self.backend = pylab.get_backend()
+        from matplotlib import pyplot
+        self.backend = pyplot.get_backend()
         #
         if self.backend == "WXAgg":
             import wx
             self.GUI = wx
         elif self.backend == "TkAgg":
-            self.GUI = pylab.plot_root
+            self.GUI = pyplot.plot_root
         else:
             self.GUI = None
         #
@@ -134,9 +134,9 @@ class PlotClick:
         self.y = 0.
         self.clicked = False
         if fig == None:
-            self.fig = pylab.figure()
+            self.fig = pyplot.figure()
         else:
-            self.fig = pylab.figure(fig)
+            self.fig = pyplot.figure(fig)
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
 
     def __repr__(self):
@@ -176,7 +176,7 @@ class PlotClick:
         get ((x1,y1),(x2,y2)) lasso
         http://matplotlib.sourceforge.net/examples/event_handling/lasso_demo.html
         Note could also just use zoom and then...
-        [x1,x2,y1,y2] = pylab.axis()
+        [x1,x2,y1,y2] = pyplot.axis()
         """
         pass
         
@@ -186,8 +186,8 @@ def cursor(fig=None,verbose=False):
     Allows interactive clicks...
     cursor()
     """
-    #import pylab
-    #pylab.connect('button_press_event', click.on_click)
+    #from matplotlib import pyplot
+    #pyplot.connect('button_press_event', click.on_click)
     click = PlotClick(fig=fig,verbose=verbose)
     return click
 

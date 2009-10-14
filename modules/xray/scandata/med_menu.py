@@ -11,7 +11,7 @@ Modifications:
 
 import types
 import numpy as num
-import pylab
+from matplotlib import pyplot
 import med_data
 
 ########################################################################
@@ -90,8 +90,8 @@ Options:
         elif ret == 7:
             ylog = not ylog
             if ylog:
-                pylab.semilogy()
-                pylab.ylim(ymin=1.)
+                pyplot.semilogy()
+                pyplot.ylim(ymin=1.)
         elif ret == 8:
             hold = not hold
         elif ret == 9:

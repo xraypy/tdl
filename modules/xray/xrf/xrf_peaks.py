@@ -929,7 +929,7 @@ def _fit_peaks(parameters, fjac = None, fit = None):
 ########################################################################
 ########################################################################
 def test_peak():
-    import pylab
+    from matplotlib import pyplot
     # make some dat
     import _test_dat as test_dat
     chans = num.arange(2048)
@@ -937,24 +937,24 @@ def test_peak():
     slope = .01
     en = offset + slope*chans
     data = test_dat.data1(en)
-    pylab.plot(en,data,'ko')
+    pyplot.plot(en,data,'ko')
     #
     p1 = XrfPeak(label='1',energy=4.,ampl=550,fwhm=.5)
     print p1.get_params()
     p2 = XrfPeak(label='1',energy=7.,ampl=850,fwhm=.6)
     print p2.get_params()
-    pylab.plot(en,p1.calc(en),'r')
-    pylab.plot(en,p2.calc(en),'r')
+    pyplot.plot(en,p1.calc(en),'r')
+    pyplot.plot(en,p2.calc(en),'r')
     #
     (y,(mi,ma)) = p1._calc_range(en)
     print mi,ma
-    pylab.plot(en[mi:ma],y,'g')
+    pyplot.plot(en[mi:ma],y,'g')
     #
-    pylab.show()
+    pyplot.show()
 
 ########################################################################
 def test_fit():
-    import pylab
+    from matplotlib import pyplot
     import _test_dat as test_dat
     from   xrf_bgr import Background
     #############################
@@ -965,8 +965,8 @@ def test_fit():
     slope = .01
     en = offset + slope*chans
     data = test_dat.data1(en)
-    pylab.subplot(211)
-    pylab.plot(en,data,'ko')
+    pyplot.subplot(211)
+    pyplot.plot(en,data,'ko')
 
     #############################
     # fit
@@ -979,20 +979,20 @@ def test_fit():
                         guess=True)
 
     # lets see how good the initial guess is
-    pylab.plot(en,xspec.peaks[0].calc(en),'r')
-    pylab.plot(en,xspec.peaks[1].calc(en),'r')
+    pyplot.plot(en,xspec.peaks[0].calc(en),'r')
+    pyplot.plot(en,xspec.peaks[1].calc(en),'r')
     
     # Now do the fit
     xspec.fit(opt_bgr=False,quiet=0)
     print xspec
-    pylab.subplot(212)
+    pyplot.subplot(212)
     en = xspec.energy_offset + xspec.energy_slope*chans
-    pylab.plot(en,data,'ko')
-    pylab.plot(en,xspec.predicted,'g')
-    pylab.plot(en,xspec.bgr.bgr,'k-')
+    pyplot.plot(en,data,'ko')
+    pyplot.plot(en,xspec.predicted,'g')
+    pyplot.plot(en,xspec.bgr.bgr,'k-')
 
     #############################
-    pylab.show()
+    pyplot.show()
     
 ########################################################################
 if __name__ == "__main__":

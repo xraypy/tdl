@@ -242,10 +242,10 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
     tiny = 1.e-6
 
     try:
-        import pylab
+        from matplotlib import pyplot
     except:
         return
-    if hold == False: pylab.clf()
+    if hold == False: pyplot.clf()
     
     en  = xrf.get_energy() + tiny
     da  = xrf.get_data() + tiny
@@ -255,25 +255,25 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
     bgr = num.array(bgr)  + tiny  
 
     if d == 'Data':
-        pylab.plot(en,da,'k.-',label='Data')
+        pyplot.plot(en,da,'k.-',label='Data')
     if d == 'Data-Bgr':
         if len(bgr) == len(da):
-            pylab.plot(en,da-bgr,'k.-',label='Data')
+            pyplot.plot(en,da-bgr,'k.-',label='Data')
         else:
-            pylab.plot(en,da,'k.-',label='Data')
+            pyplot.plot(en,da,'k.-',label='Data')
 
     if f == 'Fit':
-        pylab.plot(en,fit,'r-',label='Fit')
+        pyplot.plot(en,fit,'r-',label='Fit')
     elif f == 'Bgr':
-        pylab.plot(en,bgr,'r-',label='Bgr')
+        pyplot.plot(en,bgr,'r-',label='Bgr')
     elif f == 'Fit-Bgr':
         if len(bgr) == len(da):
-            pylab.plot(en,fit-bgr,'r-',label='Fit-Bgr')
+            pyplot.plot(en,fit-bgr,'r-',label='Fit-Bgr')
         else:
-            pylab.plot(en,fit,'r-',label='Fit')
+            pyplot.plot(en,fit,'r-',label='Fit')
     elif f == 'Fit and Bgr':
-        pylab.plot(en,fit,'r-',label='Fit')
-        pylab.plot(en,bgr,'g-',label='Bgr')
+        pyplot.plot(en,fit,'r-',label='Fit')
+        pyplot.plot(en,bgr,'g-',label='Bgr')
 
     if p == 'Peaks':
         npks = len(xrf.peaks)
@@ -282,7 +282,7 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
             lbls.append(pk.label)
         pk_fit = xrf.calc_peaks()
         for j in range(npks):
-            pylab.plot(en,pk_fit[j],label=lbls[j])
+            pyplot.plot(en,pk_fit[j],label=lbls[j])
     elif p == 'Peaks+Bgr':
         npks = len(xrf.peaks)
         lbls = []
@@ -291,48 +291,48 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
         pk_fit = xrf.calc_peaks()
         for j in range(npks):
             if len(bgr) == len(pk_fit[j]):
-                pylab.plot(en,pk_fit[j]+bgr,label=lbls[j])
+                pyplot.plot(en,pk_fit[j]+bgr,label=lbls[j])
             else:
-                pylab.plot(en,pk_fit[j],label=lbls[j])
+                pyplot.plot(en,pk_fit[j],label=lbls[j])
 
     if ylog:
-        pylab.semilogy()
-        pylab.ylim(ymin=1.)
+        pyplot.semilogy()
+        pyplot.ylim(ymin=1.)
     if xlog:
-        pylab.semilogx()
+        pyplot.semilogx()
 
     # annotation
-    pylab.legend()
-    pylab.xlabel('keV')
-    pylab.ylabel('counts')
+    pyplot.legend()
+    pyplot.xlabel('keV')
+    pyplot.ylabel('counts')
 
 
 ##############################################################################
 ##############################################################################
 if __name__ == "__main__":
-    import pylab
+    from matplotlib import pyplot
     xrf = read(file='_test.xrf',bad_mca_idx=[0,2,13],emin=4.,emax=9.)
-    pylab.plot(xrf.get_energy(),xrf.get_data(),'-k')
-    #pylab.show()
+    pyplot.plot(xrf.get_energy(),xrf.get_data(),'-k')
+    #pyplot.show()
     #
     xrf.init_lines(['Fe ka',7.12])
     #xrf.init_bgr()
     #
     xrf.calc()
-    pylab.plot(xrf.get_energy(),xrf.predicted,'-r')
+    pyplot.plot(xrf.get_energy(),xrf.predicted,'-r')
     #
     xrf.fit()
     en = xrf.get_energy()
-    pylab.plot(en,xrf.predicted,'-b')
+    pyplot.plot(en,xrf.predicted,'-b')
     #
     #for peak in xrf.peaks:
-    #    pylab.plot(en,1+peak.calc(en),'.')
+    #    pyplot.plot(en,1+peak.calc(en),'.')
     #
     cnts = xrf.calc_peaks()
     for j in range(len(xrf.peaks)):
-        pylab.plot(en,cnts[j],'.')
+        pyplot.plot(en,cnts[j],'.')
     #
     print xrf
-    pylab.semilogy()
-    pylab.show()
+    pyplot.semilogy()
+    pyplot.show()
     

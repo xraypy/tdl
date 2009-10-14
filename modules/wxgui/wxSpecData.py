@@ -17,7 +17,7 @@ import types
 import copy
 import time
 import numpy as num
-import pylab
+from matplotlib import pyplot
 
 from   wxUtil import wxUtil
 import scandata
@@ -191,7 +191,7 @@ class wxSpecData(model.Background, wxUtil):
     def init_GUI(self):
         if self.startup:
             self.startup = False
-            cmap = copy.copy(pylab.cm.cmapnames)
+            cmap = copy.copy(pyplot.cm.cmapnames)
             cmap.insert(0,'')
             self.components.ColorMap.items = cmap 
             self.components.ColorMap.stringSelection = ''
@@ -668,8 +668,8 @@ class wxSpecData(model.Background, wxUtil):
 
     ######################################################
     def _plot_scaler(self,var_name):
-        import pylab
-        pylab.figure(1)
+        from matplotlib import pyplot
+        pyplot.figure(1)
         hold = str(self.components.HoldCheck.checked)
         xlog = str(self.components.XlogCheck.checked)
         ylog = str(self.components.YlogCheck.checked)
@@ -695,8 +695,8 @@ class wxSpecData(model.Background, wxUtil):
         data = self.get_data(var_name)
         if data == None: return
         if len(data.med) == 0: return
-        import pylab
-        pylab.figure(2)
+        from matplotlib import pyplot
+        pyplot.figure(2)
         hold = str(self.components.MedHold.checked)
         ylog = str(self.components.MedYlog.checked)
         pnt = int(self.components.ScanPnt.stringSelection)
@@ -712,9 +712,9 @@ class wxSpecData(model.Background, wxUtil):
         data = self.get_data(var_name)
         if data == None: return
         if len(data.image) == 0: return
-        import pylab
-        pylab.figure(3)
-        pylab.clf()
+        from matplotlib import pyplot
+        pyplot.figure(3)
+        pyplot.clf()
         pnt = int(self.components.ScanPnt.stringSelection)
         s = "scandata.image_plot(%s.image[%s]" % (var_name,str(pnt))
         if self.components.ColorMap.stringSelection.strip()!='':

@@ -402,7 +402,7 @@ def expand_array(array, expand, sample=0):
 ########################################################################
 ########################################################################
 def test():
-    import pylab
+    from matplotlib import pyplot
     # make some dat
     import _test_dat as test_dat
     chans = num.arange(2048)
@@ -410,14 +410,14 @@ def test():
     slope = .01
     en = offset + slope*chans
     data = test_dat.data1(en)
-    pylab.plot(en,data,'ko')
+    pyplot.plot(en,data,'ko')
     #
     bgr = Background(bottom_width=4.,compress=4)
     bgr.calc(data,slope=slope)
     print bgr
-    pylab.plot(en,bgr.bgr,'r')
+    pyplot.plot(en,bgr.bgr,'r')
     #
-    pylab.show()
+    pyplot.show()
     
 ########################################################################
 if __name__ == "__main__":

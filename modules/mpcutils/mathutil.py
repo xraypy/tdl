@@ -397,18 +397,18 @@ class LinReg:
 
     ########################################################
     def plot(self,x=None,y=None):
-        import pylab
+        from matplotlib import pyplot
         print "slope     = ", self.m, " +/- ", self.s_m
         print "intercept = ", self.b, " +/- ", self.s_b
         if x == None: x = self.x
-        pylab.clf()
+        pyplot.clf()
         ycalc = self.calc_y(x)
-        pylab.plot(x,ycalc)
+        pyplot.plot(x,ycalc)
         if y != None:
-            pylab.plot(x,y,'bo')
+            pyplot.plot(x,y,'bo')
             resid = y - ycalc
-            pylab.plot(x,resid, 'ro')
-            pylab.plot([x[0],x[n-1]],[0,0],'k-')
+            pyplot.plot(x,resid, 'ro')
+            pyplot.plot([x[0],x[n-1]],[0,0],'k-')
     
     ########################################################
     def calc_y(self,x=None):
@@ -485,9 +485,9 @@ def test_peak():
     p.set_peak(cen=3.,fwhm=1.2,mag=20.,flor=.3)
     p.set_peak(cen=6.,fwhm=0,mag=35.,flor=.3)
     y = p.calc(x)
-    import pylab
-    pylab.clf()
-    pylab.plot(x,y,'m.-')
+    from matplotlib import pyplot
+    pyplot.clf()
+    pyplot.plot(x,y,'m.-')
     
 def test_minimize():
     """
@@ -516,10 +516,10 @@ def test_minimize():
     a,b = p
     yc = fun(x,a,b,c,d=d)
     
-    import pylab
-    pylab.clf()
-    pylab.plot(x,y,'o')
-    pylab.plot(x,yc,'-')
+    from matplotlib import pyplot
+    pyplot.clf()
+    pyplot.plot(x,y,'o')
+    pyplot.plot(x,yc,'-')
 
 #######################################################################
 #######################################################################

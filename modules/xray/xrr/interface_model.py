@@ -938,78 +938,78 @@ class Slab:
         """
         note hold only works with line plots
         """
-        import pylab
+        from matplotlib import pyplot
         zmin = num.min(self.z)
         zmax = num.max(self.z+self.d)
-        if bar == True: pylab.clf()
+        if bar == True: pyplot.clf()
         if ty == 'density':
             if bar == True:
-                pylab.bar(self.z[0],    self.rho[0],    width= num.abs(self.d[0]))
-                pylab.bar(self.z[1:-1], self.rho[1:-1], width= num.abs(self.d[1:-1]))
-                pylab.bar(self.z[-1],   self.rho[-1],   width= num.abs(self.d[-1]))
+                pyplot.bar(self.z[0],    self.rho[0],    width= num.abs(self.d[0]))
+                pyplot.bar(self.z[1:-1], self.rho[1:-1], width= num.abs(self.d[1:-1]))
+                pyplot.bar(self.z[-1],   self.rho[-1],   width= num.abs(self.d[-1]))
             else:
-                pylab.plot([self.z[0],0.0], [self.rho[0],self.rho[0]],hold=hold)
-                pylab.plot([0.0,self.z[1]], [self.rho[0],self.rho[1]])
-                pylab.plot(self.z[1:], self.rho[1:])
-                pylab.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.rho[-1],self.rho[-1]])
-            pylab.xlim(xmin=zmin,xmax=zmax)
-            pylab.title('Density')
-            pylab.ylabel("rho (g/cm^3)")
-            pylab.xlabel("z (angstroms)")
+                pyplot.plot([self.z[0],0.0], [self.rho[0],self.rho[0]],hold=hold)
+                pyplot.plot([0.0,self.z[1]], [self.rho[0],self.rho[1]])
+                pyplot.plot(self.z[1:], self.rho[1:])
+                pyplot.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.rho[-1],self.rho[-1]])
+            pyplot.xlim(xmin=zmin,xmax=zmax)
+            pyplot.title('Density')
+            pyplot.ylabel("rho (g/cm^3)")
+            pyplot.xlabel("z (angstroms)")
         if ty == 'comp':
             ncomp = len(self.comp)
-            pylab.subplot(ncomp,1,1)
+            pyplot.subplot(ncomp,1,1)
             for j in range(ncomp):
-                pylab.subplot(ncomp,1,j+1)
+                pyplot.subplot(ncomp,1,j+1)
                 if bar == True:
-                    pylab.bar(self.z[0],    self.CX[j][0],    width= num.abs(self.d[0]))
-                    pylab.bar(self.z[1:-1], self.CX[j][1:-1], width= num.abs(self.d[1:-1]))
-                    pylab.bar(self.z[-1],   self.CX[j][-1],   width= num.abs(self.d[-1]))
+                    pyplot.bar(self.z[0],    self.CX[j][0],    width= num.abs(self.d[0]))
+                    pyplot.bar(self.z[1:-1], self.CX[j][1:-1], width= num.abs(self.d[1:-1]))
+                    pyplot.bar(self.z[-1],   self.CX[j][-1],   width= num.abs(self.d[-1]))
                 else:
-                    pylab.plot([self.z[0],0.0], [self.CX[j][0],self.CX[j][0]], hold=hold)
-                    pylab.plot([0.0,self.z[1]], [self.CX[j][0],self.CX[j][1]])
-                    pylab.plot(self.z[1:], self.CX[j][1:])
-                    pylab.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.CX[j][-1],self.CX[j][-1]])
-                pylab.title(self.comp[j].name)
-                pylab.xlim(xmin=zmin,xmax=zmax)
-                pylab.ylabel("mole/cm^3")
-            pylab.xlabel("z (angstroms)")
+                    pyplot.plot([self.z[0],0.0], [self.CX[j][0],self.CX[j][0]], hold=hold)
+                    pyplot.plot([0.0,self.z[1]], [self.CX[j][0],self.CX[j][1]])
+                    pyplot.plot(self.z[1:], self.CX[j][1:])
+                    pyplot.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.CX[j][-1],self.CX[j][-1]])
+                pyplot.title(self.comp[j].name)
+                pyplot.xlim(xmin=zmin,xmax=zmax)
+                pyplot.ylabel("mole/cm^3")
+            pyplot.xlabel("z (angstroms)")
         if ty == 'el':
             nelem = len(self.elem)
-            pylab.subplot(nelem,1,1)
+            pyplot.subplot(nelem,1,1)
             for j in range(nelem):
-                pylab.subplot(nelem,1,j+1)
+                pyplot.subplot(nelem,1,j+1)
                 if bar == True:
-                    pylab.bar(self.z[0],    self.CZ[j][0],    width= num.abs(self.d[0]))
-                    pylab.bar(self.z[1:-1], self.CZ[j][1:-1], width= num.abs(self.d[1:-1]))
-                    pylab.bar(self.z[-1],   self.CZ[j][-1],   width= num.abs(self.d[-1]))
+                    pyplot.bar(self.z[0],    self.CZ[j][0],    width= num.abs(self.d[0]))
+                    pyplot.bar(self.z[1:-1], self.CZ[j][1:-1], width= num.abs(self.d[1:-1]))
+                    pyplot.bar(self.z[-1],   self.CZ[j][-1],   width= num.abs(self.d[-1]))
                 else:
-                    pylab.plot([self.z[0],0.0], [self.CZ[j][0],self.CZ[j][0]], hold=hold)
-                    pylab.plot([0.0,self.z[1]], [self.CZ[j][0],self.CZ[j][1]])
-                    pylab.plot(self.z[1:], self.CZ[j][1:])
-                    pylab.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.CZ[j][-1],self.CZ[j][-1]])
-                pylab.title(self.elem[j])
-                pylab.xlim(xmin=zmin,xmax=zmax)
-                pylab.ylabel("mole/cm^3")
-            pylab.xlabel("z (angstroms)")
+                    pyplot.plot([self.z[0],0.0], [self.CZ[j][0],self.CZ[j][0]], hold=hold)
+                    pyplot.plot([0.0,self.z[1]], [self.CZ[j][0],self.CZ[j][1]])
+                    pyplot.plot(self.z[1:], self.CZ[j][1:])
+                    pyplot.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.CZ[j][-1],self.CZ[j][-1]])
+                pyplot.title(self.elem[j])
+                pyplot.xlim(xmin=zmin,xmax=zmax)
+                pyplot.ylabel("mole/cm^3")
+            pyplot.xlabel("z (angstroms)")
         if ty == 'frac':
             nelem = len(self.elem)
-            pylab.subplot(nelem,1,1)
+            pyplot.subplot(nelem,1,1)
             for j in range(nelem):
-                pylab.subplot(nelem,1,j+1)
+                pyplot.subplot(nelem,1,j+1)
                 if bar == True:
-                    pylab.bar(self.z[0],    self.fZ[j][0],    width= num.abs(self.d[0]))
-                    pylab.bar(self.z[1:-1], self.fZ[j][1:-1], width= num.abs(self.d[1:-1]))
-                    pylab.bar(self.z[-1],   self.fZ[j][-1],   width= num.abs(self.d[-1]))
+                    pyplot.bar(self.z[0],    self.fZ[j][0],    width= num.abs(self.d[0]))
+                    pyplot.bar(self.z[1:-1], self.fZ[j][1:-1], width= num.abs(self.d[1:-1]))
+                    pyplot.bar(self.z[-1],   self.fZ[j][-1],   width= num.abs(self.d[-1]))
                 else:
-                    pylab.plot([self.z[0],0.0], [self.fZ[j][0],self.fZ[j][0]], hold=hold)
-                    pylab.plot([0.0,self.z[1]], [self.fZ[j][0],self.fZ[j][1]])
-                    pylab.plot(self.z[1:], self.fZ[j][1:])
-                    pylab.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.fZ[j][-1],self.fZ[j][-1]])
-                pylab.title(self.elem[j])
-                pylab.xlim(xmin=zmin,xmax=zmax)
-                pylab.ylabel("mole frac")
-            pylab.xlabel("z (angstroms)")
+                    pyplot.plot([self.z[0],0.0], [self.fZ[j][0],self.fZ[j][0]], hold=hold)
+                    pyplot.plot([0.0,self.z[1]], [self.fZ[j][0],self.fZ[j][1]])
+                    pyplot.plot(self.z[1:], self.fZ[j][1:])
+                    pyplot.plot([self.z[-1],self.z[-1]+self.d[-1]], [self.fZ[j][-1],self.fZ[j][-1]])
+                pyplot.title(self.elem[j])
+                pyplot.xlim(xmin=zmin,xmax=zmax)
+                pyplot.ylabel("mole frac")
+            pyplot.xlabel("z (angstroms)")
 
 ###########################################################################
 class Model:
@@ -1230,62 +1230,62 @@ class Model:
         ty = 'frac' for element fractions
         note hold is only useful for 'calc' plots
         """
-        import pylab
+        from matplotlib import pyplot
         if ty == 'calc':
-            if fignum: pylab.figure(1)
+            if fignum: pyplot.figure(1)
             self._plot_calc(hold=hold,FYflag=FYflag,Rdat=Rdat,FYdat=FYdat)
         else:
             if fignum:
-                if ty == 'density': pylab.figure(2)
-                if ty == 'comp': pylab.figure(3)
-                if ty == 'el': pylab.figure(4)
-                if ty == 'frac': pylab.figure(5)
+                if ty == 'density': pyplot.figure(2)
+                if ty == 'comp': pyplot.figure(3)
+                if ty == 'el': pyplot.figure(4)
+                if ty == 'frac': pyplot.figure(5)
             self.slab.plot(ty=ty,bar=bar,hold=hold)
 
     def _plot_calc(self,hold=False,FYflag=True,Rdat=None,FYdat=None):
-        import pylab
+        from matplotlib import pyplot
         if hold == False:
-            pylab.clf()
+            pyplot.clf()
         fyidx = int(self.ref.calc_params[6])
         if  (fyidx >= 0) and (FYflag== True):
-            pylab.subplot(2,1,1)
-            pylab.semilogy()
-            pylab.plot(self.ref.theta,self.ref.R)
-            pylab.grid()
+            pyplot.subplot(2,1,1)
+            pyplot.semilogy()
+            pyplot.plot(self.ref.theta,self.ref.R)
+            pyplot.grid()
             title = 'Reflectivity'
-            pylab.title(title)
+            pyplot.title(title)
             if Rdat != None:
                 try:
-                    pylab.plot(self.ref.theta,Rdat,'.')
+                    pyplot.plot(self.ref.theta,Rdat,'.')
                 except:
                     print "Error plotting R data"
             #
-            pylab.subplot(2,1,2)
-            pylab.plot(self.ref.theta,self.ref.Y)
-            pylab.grid()
+            pyplot.subplot(2,1,2)
+            pyplot.plot(self.ref.theta,self.ref.Y)
+            pyplot.grid()
             title = '%s Fluorescent Yield' % self.slab.elem[fyidx]
-            pylab.title(title)
+            pyplot.title(title)
             if FYdat != None:
                 try:
-                    pylab.plot(self.ref.theta,FYdat,'.')
+                    pyplot.plot(self.ref.theta,FYdat,'.')
                 except:
                     print "Error plotting FY data"
             #
-            pylab.xlabel("theta (deg)")
+            pyplot.xlabel("theta (deg)")
         else:
-            pylab.subplot(1,1,1)
-            pylab.semilogy()
-            pylab.plot(self.ref.theta,self.ref.R)
-            pylab.grid()
+            pyplot.subplot(1,1,1)
+            pyplot.semilogy()
+            pyplot.plot(self.ref.theta,self.ref.R)
+            pyplot.grid()
             title = 'Reflectivity'
-            pylab.title(title)
+            pyplot.title(title)
             if Rdat != None:
                 try:
-                    pylab.plot(self.ref.theta,Rdat,'.')
+                    pyplot.plot(self.ref.theta,Rdat,'.')
                 except:
                     print "Error plotting R data"
             #
-            pylab.xlabel("theta (deg)")
+            pyplot.xlabel("theta (deg)")
             
 ############################################################################
 ############################################################################

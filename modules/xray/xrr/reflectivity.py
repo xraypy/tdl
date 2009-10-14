@@ -414,8 +414,8 @@ class RefModel(_reflectivity._Reflectivity):
 ############################################################################
 def test():
     import time
-    import pylab
-    pylab.ion()
+    from matplotlib import pyplot
+    pyplot.ion()
 
     # make a simple multilayer and calc R and FY
     
@@ -496,10 +496,10 @@ def test():
                    theta=theta,params=calc_params)
 
     # plot R
-    pylab.subplot(3,1,1)
-    pylab.semilogy()
+    pyplot.subplot(3,1,1)
+    pyplot.semilogy()
     ref.calc_R()
-    pylab.plot(ref.theta,ref.R,'g.')
+    pyplot.plot(ref.theta,ref.R,'g.')
 
     # run the FY calcs
     t = time.time()
@@ -507,16 +507,16 @@ def test():
     print " Elapsed time = %f seconds\n" % (time.time() - t)
     
     #FY
-    pylab.subplot(3,1,1)
-    pylab.plot(ref.theta,ref.R,'r')
-    pylab.subplot(3,1,2)
-    pylab.plot(ref.theta,ref.Y)
+    pyplot.subplot(3,1,1)
+    pyplot.plot(ref.theta,ref.R,'r')
+    pyplot.subplot(3,1,2)
+    pyplot.plot(ref.theta,ref.Y)
     
     # hist of Fe dist
     #print comp
-    pylab.subplot(3,1,3)
+    pyplot.subplot(3,1,3)
     idx = num.arange(len(comp[4]))
-    pylab.bar(idx,comp[4])
+    pyplot.bar(idx,comp[4])
 
     return ref    
 

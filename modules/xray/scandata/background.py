@@ -19,7 +19,7 @@ Todo
 import types
 import copy
 import numpy as num
-import pylab
+from matplotlib import pyplot
 
 from  mpcutils.mathutil import LinReg
 
@@ -194,15 +194,15 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
                          tangent=tangent,debug=debug)
         
     # plot data and bgr
-    pylab.figure(1)
-    pylab.clf()
+    pyplot.figure(1)
+    pyplot.clf()
     npts = len(data)
-    pylab.subplot(1,1,1)
-    pylab.plot(data,'k-o',label='data')
-    pylab.plot(bgr,'r-*',label='bgr')
-    pylab.plot(data-bgr,'g-',label='data-bgr')
-    pylab.plot(num.zeros(npts),'k-')
-    pylab.legend(loc=2)
+    pyplot.subplot(1,1,1)
+    pyplot.plot(data,'k-o',label='data')
+    pyplot.plot(bgr,'r-*',label='bgr')
+    pyplot.plot(data-bgr,'g-',label='data-bgr')
+    pyplot.plot(num.zeros(npts),'k-')
+    pyplot.legend(loc=2)
 
     # plot data and polynomials
     # and for each polynomial
@@ -210,14 +210,14 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     # and the polynomial
     if debug == False: return
     
-    pylab.figure(2)
-    pylab.clf()
-    pylab.subplot(2,1,1)
-    pylab.plot(data-l,'k-o')
-    pylab.subplot(2,1,2)
-    pylab.plot(data-l,'k-o')
-    pylab.plot(num.zeros(npts),'k-')
-    pylab.plot(bgr-l,'k--')
+    pyplot.figure(2)
+    pyplot.clf()
+    pyplot.subplot(2,1,1)
+    pyplot.plot(data-l,'k-o')
+    pyplot.subplot(2,1,2)
+    pyplot.plot(data-l,'k-o')
+    pyplot.plot(num.zeros(npts),'k-')
+    pyplot.plot(bgr-l,'k--')
 
     for j in range(len(p)):
         n = len(p[j])
@@ -226,17 +226,17 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
         else:
             s = j - int(width)
         xx = range(s,s+n)
-        pylab.subplot(2,1,1)
-        pylab.plot(xx,p[j],'*-')
-        pylab.subplot(2,1,2)
-        #pylab.plot(xx,d[j],'*-')
+        pyplot.subplot(2,1,1)
+        pyplot.plot(xx,p[j],'*-')
+        pyplot.subplot(2,1,2)
+        #pyplot.plot(xx,d[j],'*-')
         dd = num.min((0,num.min(d[j]))) 
-        pylab.plot(xx,p[j]+dd,'*-')
+        pyplot.plot(xx,p[j]+dd,'*-')
     
 ################################################################################
 ################################################################################
 if __name__ == '__main__':
-    import pylab
+    from matplotlib import pyplot
     from mpcutils.mathutil import gauss
     # generate a curve
     npts = 35

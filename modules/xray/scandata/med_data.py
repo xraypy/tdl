@@ -12,7 +12,7 @@ Modifications:
 
 import types
 import numpy as num
-import pylab
+from matplotlib import pyplot
 import deadtime
 
 ########################################################################
@@ -91,12 +91,12 @@ def _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off):
     compute a corrected y and plot
     (for med compute by summing corrected data )
     """
-    pylab.clf()
-    pylab.subplot(2,1,1)
+    pyplot.clf()
+    pyplot.subplot(2,1,1)
 
     # data
     for yfit in yfit_arr:
-        pylab.plot(xfit,yfit,'k.')
+        pyplot.plot(xfit,yfit,'k.')
         
     # plot fit
     for j in range(len(tau)):
@@ -107,17 +107,17 @@ def _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off):
             params = (tau[j],a[j])
             offset = False
         ycal = deadtime.calc_ocr(params,xfit,offset)
-        pylab.plot(xfit,ycal,'r-')
+        pyplot.plot(xfit,ycal,'r-')
         
     # plot corrected data
-    pylab.subplot(2,1,2)
+    pyplot.subplot(2,1,2)
     for j in range(len(yfit_arr)):
-        pylab.plot(xfit,yfit_arr[j],'k.')
-        pylab.plot(xfit,ycorr_arr[j],'r-')
+        pyplot.plot(xfit,yfit_arr[j],'k.')
+        pyplot.plot(xfit,ycorr_arr[j],'r-')
         if offset:
-            pylab.plot(xfit,a[j]*xfit+off[j],'k--')
+            pyplot.plot(xfit,a[j]*xfit+off[j],'k--')
         else:
-            pylab.plot(xfit,a[j]*xfit,'k--')
+            pyplot.plot(xfit,a[j]*xfit,'k--')
 
 ########################################################################
 def med_plot(data,scan_pnt=0,hold=False,ylog=True):
@@ -130,18 +130,18 @@ def med_plot(data,scan_pnt=0,hold=False,ylog=True):
     bad = data.med[scan_pnt].bad_mca_idx
     nchan = len(ch)
     if not hold:
-        pylab.clf()
+        pyplot.clf()
     if nchan == 1:
-        pylab.plot(en[0],ch[0])
+        pyplot.plot(en[0],ch[0])
     else:
         for j in range(nchan):
             if j not in bad:
                 label = str(j)
-                pylab.plot(en[j],ch[j]+tiny,label=label)
-        pylab.legend()
+                pyplot.plot(en[j],ch[j]+tiny,label=label)
+        pyplot.legend()
     if ylog:
-        pylab.semilogy()
-        pylab.ylim(ymin=1.)
+        pyplot.semilogy()
+        pyplot.ylim(ymin=1.)
 
 ########################################################################
 

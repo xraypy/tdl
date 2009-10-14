@@ -15,7 +15,7 @@ Modifications:
 import types
 import copy
 import numpy as num
-import pylab
+from matplotlib import pyplot
 
 from   pds.shellutil import Menu, show_more 
 from   pds.shellutil import get_tf, get_yn, get_int, get_flt
@@ -103,8 +103,8 @@ def image_menu(data):
             data.image_rotangle[scan_pnt] = rotangle
             _implot(data,scan_pnt,im_max)
         elif ret == 'zoomroi':
-            pylab.figure(1)
-            (x1,x2,y1,y2) = pylab.axis()
+            pyplot.figure(1)
+            (x1,x2,y1,y2) = pyplot.axis()
             roi  = [int(x1),int(y1),int(x2),int(y2)]
             data.image_rois[scan_pnt] = roi
         elif ret == 'plotsums':
@@ -155,22 +155,22 @@ def image_menu(data):
                 yn = eval(yn)
             data.integrate_image(plot=yn)
             #
-            pylab.figure(5, figsize = [5,4])
-            pylab.clf()
+            pyplot.figure(5, figsize = [5,4])
+            pyplot.clf()
             #
-            pylab.plot(data['L'],data['I'],'b',label='image sum')
-            pylab.errorbar(data['L'],data['I'],data['Ierr'],fmt='bo')
+            pyplot.plot(data['L'],data['I'],'b',label='image sum')
+            pyplot.errorbar(data['L'],data['I'],data['Ierr'],fmt='bo')
             #
-            pylab.plot(data['L'],data['I_c'],'r',label='col sum')
-            pylab.errorbar(data['L'],data['I_c'],data['Ierr_c'],fmt='ro')
+            pyplot.plot(data['L'],data['I_c'],'r',label='col sum')
+            pyplot.errorbar(data['L'],data['I_c'],data['Ierr_c'],fmt='ro')
             #
-            pylab.plot(data['L'],data['I_r'],'g',label='row sum')
-            pylab.errorbar(data['L'],data['I_r'],data['Ierr_r'],fmt='go')
+            pyplot.plot(data['L'],data['I_r'],'g',label='row sum')
+            pyplot.errorbar(data['L'],data['I_r'],data['Ierr_r'],fmt='go')
             #
-            pylab.semilogy()
-            pylab.legend(loc = 9)
-            pylab.xlabel('L')
-            pylab.ylabel('Integrated Intensity')
+            pyplot.semilogy()
+            pyplot.legend(loc = 9)
+            pyplot.xlabel('L')
+            pyplot.ylabel('Integrated Intensity')
         elif ret == 'point':
             p2 = "Enter scan point, max = %i (%i)>" % (npts-1,scan_pnt)
             print p2

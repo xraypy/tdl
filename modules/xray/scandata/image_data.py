@@ -43,7 +43,7 @@ Also, note in older versions of PIL:
 import types
 import copy
 import numpy as num
-import pylab
+from matplotlib import pyplot
 from scipy import ndimage
 
 from mpcutils.mathutil import LinReg
@@ -122,7 +122,7 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
        fig = None       # Figure to plot to
        figtitle = ''    # Title
        cmap = None      # Colormap.  None uses default
-                        # you can pass a string name if its in pylab.cm.colormaps
+                        # you can pass a string name if its in pyplot.cm.colormaps
                         # or you can pass explicitly the colormap
        verbose = False  # Print some fig statistics
        im_max  = None   # Max intensity value
@@ -130,7 +130,7 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
 
     * examples:
        >>>image_plot(im,fig=1,figtitle='Image',cmap='hot')
-       >>>image_plot(im,fig=1,figtitle='Image',cmap=pylab.cm.Spectral)
+       >>>image_plot(im,fig=1,figtitle='Image',cmap=pyplot.cm.Spectral)
        
     """
     if verbose:
@@ -141,25 +141,25 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
         print 'Min value = ',  img.min()
         print '###################'
     if fig != None:
-        pylab.figure(fig)
-        pylab.clf()
+        pyplot.figure(fig)
+        pyplot.clf()
 
     # rotate
     if rotangle != 0:
         img = ndimage.rotate(img,rotangle)
 
-    # pylab.imshow(img, cmap = pylab.cm.hot)
+    # pyplot.imshow(img, cmap = pyplot.cm.hot)
     if cmap != None:
         if type(cmap) == types.StringType:
-            if cmap in pylab.cm.cmapnames:
-                cmap = getattr(pylab.cm,cmap)
+            if cmap in pyplot.cm.cmapnames:
+                cmap = getattr(pyplot.cm,cmap)
             else:
                 cmap = None
-    pylab.imshow(img,cmap=cmap, vmax = im_max)
-    pylab.colorbar(orientation='horizontal')
+    pyplot.imshow(img,cmap=cmap, vmax = im_max)
+    pyplot.colorbar(orientation='horizontal')
 
     if figtitle:
-        pylab.title(figtitle, fontsize = 12)
+        pyplot.title(figtitle, fontsize = 12)
 
 ############################################################################
 def sum_plot(image,bgrflag=0,
@@ -174,26 +174,26 @@ def sum_plot(image,bgrflag=0,
     """
     #
     if fig != None:
-        pylab.figure(fig)
-        pylab.clf()
+        pyplot.figure(fig)
+        pyplot.clf()
     else:
-        pylab.figure()
+        pyplot.figure()
 
     # col sum
-    pylab.subplot(211)
-    pylab.title('Column Sum')
+    pyplot.subplot(211)
+    pyplot.title('Column Sum')
     (data, data_idx, bgr) = line_sum(image,sumflag='c',nbgr=cnbgr,
                                      width=cwidth,pow=cpow,tangent=ctan)
-    pylab.plot(data_idx, data, 'r')
-    pylab.plot(data_idx, bgr, 'b')
+    pyplot.plot(data_idx, data, 'r')
+    pyplot.plot(data_idx, bgr, 'b')
 
     # row sum
-    pylab.subplot(212)
-    pylab.title('Row Sum')
+    pyplot.subplot(212)
+    pyplot.title('Row Sum')
     (data, data_idx, bgr) = line_sum(image,sumflag='r',nbgr=rnbgr,
                                      width=rwidth,pow=rpow,tangent=rtan)
-    pylab.plot(data_idx, data, 'r')
-    pylab.plot(data_idx, bgr, 'b')
+    pyplot.plot(data_idx, data, 'r')
+    pyplot.plot(data_idx, bgr, 'b')
 
 ############################################################################
 def line_sum(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
@@ -282,22 +282,22 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
 
     #show
     if plot:
-        pylab.figure(3)
-        pylab.clf()
-        pylab.subplot(3,1,1)
-        pylab.imshow(image)
-        pylab.title("image")
-        pylab.colorbar()
+        pyplot.figure(3)
+        pyplot.clf()
+        pyplot.subplot(3,1,1)
+        pyplot.imshow(image)
+        pyplot.title("image")
+        pyplot.colorbar()
 
-        pylab.subplot(3,1,2)
-        pylab.imshow(bgr)
-        pylab.title("background")
-        pylab.colorbar()
+        pyplot.subplot(3,1,2)
+        pyplot.imshow(bgr)
+        pyplot.title("background")
+        pyplot.colorbar()
 
-        pylab.subplot(3,1,3)
-        pylab.imshow(image-bgr)
-        pylab.title("image - background")
-        pylab.colorbar()
+        pyplot.subplot(3,1,3)
+        pyplot.imshow(image-bgr)
+        pyplot.title("image - background")
+        pyplot.colorbar()
 
     return bgr_arr
 
@@ -476,13 +476,13 @@ class ImageAna:
         if self.integrated == False:
             self.integrate()
         
-        colormap = pylab.cm.hot
+        colormap = pyplot.cm.hot
         if fig != None:
-            pylab.figure(fig)
-            pylab.clf()
-            pylab.figure(fig,figsize=[12,8])
+            pyplot.figure(fig)
+            pyplot.clf()
+            pyplot.figure(fig,figsize=[12,8])
         else:
-            pylab.figure(fig,figsize=[12,8])
+            pyplot.figure(fig,figsize=[12,8])
         title_c = 'I_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
         title_r = 'I_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
         title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
@@ -502,12 +502,12 @@ class ImageAna:
 
         ###################################
         #### plot column sum
-        pylab.subplot(221)
-        pylab.title(title_c, fontsize = 12)
+        pyplot.subplot(221)
+        pyplot.title(title_c, fontsize = 12)
         # plot raw sum
         (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='c',nbgr=0)
         rawmax = data.max()
-        pylab.plot(data_idx, data, 'k',label='raw sum')
+        pyplot.plot(data_idx, data, 'k',label='raw sum')
         # get bgr and data-bgr
         if self.bgrimg != None:
             # here data is automatically bgr subracted
@@ -522,35 +522,35 @@ class ImageAna:
                                              tangent=self.rbgr['tan'])
             data = data-bgr
         # plot bgr and bgr subtracted data
-        pylab.plot(data_idx, bgr, 'r',label='bgr')
-        pylab.plot(data_idx, data, 'b',label='data-bgr')
-        pylab.axis([0, data_idx.max(), 0, rawmax*1.25])
-        pylab.legend()
+        pyplot.plot(data_idx, bgr, 'r',label='bgr')
+        pyplot.plot(data_idx, data, 'b',label='data-bgr')
+        pyplot.axis([0, data_idx.max(), 0, rawmax*1.25])
+        pyplot.legend()
 
         ####################################
         # plot full image with ROI
-        pylab.subplot(222)
-        pylab.title(self.title, fontsize = 12)
-        pylab.imshow(bild,cmap=colormap)
-        pylab.colorbar(orientation='horizontal')
+        pyplot.subplot(222)
+        pyplot.title(self.title, fontsize = 12)
+        pyplot.imshow(bild,cmap=colormap)
+        pyplot.colorbar(orientation='horizontal')
 
         ####################################
         # plot zoom on image 
-        pylab.subplot(223)
-        pylab.title(title_roi,fontsize = 12)
+        pyplot.subplot(223)
+        pyplot.title(title_roi,fontsize = 12)
         if self.bgrimg != None:
-            pylab.imshow(self.clpimg-self.bgrimg, cmap=colormap, aspect='auto')
+            pyplot.imshow(self.clpimg-self.bgrimg, cmap=colormap, aspect='auto')
         else:
-            pylab.imshow(self.clpimg, cmap=colormap, aspect='auto')
+            pyplot.imshow(self.clpimg, cmap=colormap, aspect='auto')
             
         ####################################
         # plot row sum
-        pylab.subplot(224)
-        pylab.title(title_r, fontsize = 12)
+        pyplot.subplot(224)
+        pyplot.title(title_r, fontsize = 12)
         # plot raw sum
         (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='r',nbgr=0)
         rawmax = data.max()
-        pylab.plot(data, data_idx, 'k',label='raw sum')
+        pyplot.plot(data, data_idx, 'k',label='raw sum')
         # get bgr and data-bgr
         if self.bgrimg != None:
             # here data is automatically bgr subracted
@@ -565,11 +565,11 @@ class ImageAna:
                                              tangent=self.cbgr['tan'])
             data = data-bgr
         # plot bgr and bgr subtracted data
-        pylab.plot(bgr, data_idx, 'r',label='bgr')
-        pylab.plot(data, data_idx, 'b',label='data-bgr')
-        pylab.axis([0,rawmax*1.25, data_idx.max(), 0])
-        pylab.xticks(rotation=-45)
-        pylab.legend()
+        pyplot.plot(bgr, data_idx, 'r',label='bgr')
+        pyplot.plot(data, data_idx, 'b',label='data-bgr')
+        pyplot.axis([0,rawmax*1.25, data_idx.max(), 0])
+        pyplot.xticks(rotation=-45)
+        pyplot.legend()
 
 ################################################################################
 ################################################################################

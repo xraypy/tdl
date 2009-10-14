@@ -354,7 +354,7 @@ class Shell(_NumShell):
         Quit the shell 
         """
         try:
-            self.close_pylab()
+            self.close_pyplot()
         except:
             pass
         return QUIT

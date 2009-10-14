@@ -589,8 +589,8 @@ class wxPlotSelection(model.Background, wxUtil):
         return
 
     def plot_cmd(self):
-        self.exec_line("pylab.clf()")
-        #self.exec_line("pylab.hold(True)")
+        self.exec_line("pyplot.clf()")
+        #self.exec_line("pyplot.hold(True)")
         nr = self.components.Nrow.text.strip()
         nc = self.components.Ncol.text.strip()
         if len(nr) == 0: nr = '1'
@@ -623,11 +623,11 @@ class wxPlotSelection(model.Background, wxUtil):
                 #plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1,yscale=1,xnorm=False,ynorm=False,
                 #        xoff=0,yoff=0,xcen=False,ycen=False,xlog=False,ylog=False,nr=1,nc=1,np=1,hold=True,**kw)
                 if len(X) == 0:
-                    pstr = "pylab.plotter(%s," % (Y)
+                    pstr = "pyplot.plotter(%s," % (Y)
                 elif len(Y) == 0:
-                    pstr = "pylab.plotter(%s," % (X)
+                    pstr = "pyplot.plotter(%s," % (X)
                 else:
-                    pstr = "pylab.plotter(%s,%s," % (X,Y)
+                    pstr = "pyplot.plotter(%s,%s," % (X,Y)
                 pstr = pstr + 'fmt=' + "'" + color+symbol+line + "'" + ','
                 if len(Xerr) > 0:
                     pstr = pstr + 'xerr=' + Xerr + ','
@@ -688,37 +688,37 @@ class wxPlotSelection(model.Background, wxUtil):
             if Ignore != True:
                 #select plot
                 if len(PlotNum) == 0: PlotNum = '1'
-                pstr = "pylab.subplot(%s,%s,%s)" % (nr,nc,PlotNum)
+                pstr = "pyplot.subplot(%s,%s,%s)" % (nr,nc,PlotNum)
                 self.exec_line(pstr)
                 #axis 
                 if len(Xmin) or len(Xmin) or len(Xmin) or len(Xmin):
                     #use these as defaults
-                    self.exec_line("pylab.axis_lims = pylab.axis()")
-                    def_axis = self.getValue("pylab.axis_lims")
+                    self.exec_line("pyplot.axis_lims = pyplot.axis()")
+                    def_axis = self.getValue("pyplot.axis_lims")
                     if len(Xmin) == 0: Xmin = def_axis[0]
                     if len(Xmax) == 0: Xmax = def_axis[1]
                     if len(Ymin) == 0: Ymin = def_axis[2]
                     if len(Ymax) == 0: Ymax = def_axis[3]
-                    pstr = "pylab.axis([%s,%s,%s,%s])" % (Xmin,Xmax,Ymin,Ymax)
+                    pstr = "pyplot.axis([%s,%s,%s,%s])" % (Xmin,Xmax,Ymin,Ymax)
                     self.exec_line(pstr)
                 # logs
                 if Xlog:
-                    self.exec_line("pylab.semilogx()")
+                    self.exec_line("pyplot.semilogx()")
                 if Ylog:
-                    self.exec_line("pylab.semilogy()")
+                    self.exec_line("pyplot.semilogy()")
                 # titles
                 if len(Xtitle) > 0:
-                    pstr = 'pylab.xlabel("%s")' % Xtitle
+                    pstr = 'pyplot.xlabel("%s")' % Xtitle
                     self.exec_line(pstr)
                 if len(Ytitle) > 0:
-                    pstr = 'pylab.ylabel("%s")' % Ytitle
+                    pstr = 'pyplot.ylabel("%s")' % Ytitle
                     self.exec_line(pstr)
                 if len(PlotTitle) > 0:
-                    pstr = 'pylab.title("%s")' % PlotTitle
+                    pstr = 'pyplot.title("%s")' % PlotTitle
                     self.exec_line(pstr)
                 # legend
                 if ShowLegend:
-                    pstr = "pylab.legend("
+                    pstr = "pyplot.legend("
                     if len(LegendLoc) > 0:
                         pstr = pstr + 'loc=%s' % (LegendLoc)
                     pstr = pstr + ")"

@@ -476,8 +476,8 @@ def test():
     return read_med('test.xrf')
 
 if __name__ == "__main__":
-    import pylab
+    from matplotlib import pyplot
     med = test()
     print med
-    pylab.plot(med.get_energy()[0],med.get_data()[0])
+    pyplot.plot(med.get_energy()[0],med.get_data()[0])
     

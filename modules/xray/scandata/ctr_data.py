@@ -18,7 +18,7 @@ Todo
 #############################################################################
 
 import types
-import pylab
+from matplotlib import pyplot
 import numpy as num
 from xtal.active_area import active_area
 
@@ -114,11 +114,11 @@ class CtrData:
         """
         plot the rod
         """
-        pylab.figure()
-        pylab.plot(self.L, self.F,'b')
-        pylab.errorbar(self.L,self.F,self.Ferr, fmt ='o')
-        pylab.semilogy()
-        pylab.show()
+        pyplot.figure()
+        pyplot.plot(self.L, self.F,'b')
+        pyplot.errorbar(self.L,self.F,self.Ferr, fmt ='o')
+        pyplot.semilogy()
+        pyplot.show()
 
     ##########################################################################
     def write_HKL(self,fname = 'ctr.hkl'):
