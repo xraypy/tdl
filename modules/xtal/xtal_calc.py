@@ -148,6 +148,19 @@ class Lattice:
     def __init__(self,a=1.,b=1.,c=1.,alpha=90.,beta=90.,gamma=90.):
         self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma)
 
+    def __repr__(self,):
+        lout = "a=%6.5f, b=%6.5f, c=%6.5f" % (self.a, self.b, self.c)
+        lout = "%s, alpha=%6.5f,beta=%6.5f,gamma=%6.5f\n" % (lout,
+                                                             self.alpha,
+                                                             self.beta,
+                                                             self.gamma)
+        lout = "%sar=%6.5f, br=%6.5f, cr=%6.5f" % (lout,self.ar, self.br, self.cr)
+        lout = "%s, alphar=%6.5f,betar=%6.5f,gammar=%6.5f" % (lout,
+                                                              self.alphar,
+                                                              self.betar,
+                                                              self.gammar)
+        return lout
+
     def update(self,a=None,b=None,c=None,alpha=None,beta=None,gamma=None):
         """
         update lattice parameters
@@ -192,14 +205,14 @@ class Lattice:
         return array of real lattice cell parameters
         """
         return num.array([self.a,self.b,self.c,
-                          self.alpha,self.beta,self.gamma])
+                          self.alpha,self.beta,self.gamma],dtype=float)
 
     def rcell(self):
         """
         return array of reciprocal lattice cell parameters
         """
         return num.array([self.ar,self.br,self.cr,
-                          self.alphar,self.betar,self.gammar])
+                          self.alphar,self.betar,self.gammar],dtype=float)
         
     def dot(self,u,v,recip=False):
         """
@@ -211,6 +224,8 @@ class Lattice:
         """
         if recip == True: g = self.gr
         else: g = self.g
+        u = num.array(u,dtype=float)
+        v = num.array(v,dtype=float)
         # dot product = u*g*v, from Sands.
         return num.dot(u,num.dot(g,v))
 
@@ -234,16 +249,18 @@ class Lattice:
         (ie not matrix objects)
         """
         uv = self.dot(u,v,recip=recip)
-        vm = self.mag(v,recip=recip)
         um = self.mag(u,recip=recip)
-        alpha = num.arccos(uv/(vm*um))
+        vm = self.mag(v,recip=recip)
+        arg = uv/(um*vm)
+        if num.fabs(arg) > 1.0:
+            arg = arg / num.fabs(arg)
+        alpha = num.arccos(arg)
         return num.degrees(alpha)
 
     def d_space(self,hkl):
         """
         calculate d-spacing for given [h,k,l]
         """
-        hkl = num.array(hkl,dtype=float)
         if len(hkl)!=3:
             print "need an array of [h,k,l]"
             return 0.
@@ -257,7 +274,6 @@ class Lattice:
         which has a magnitude of d_spacing
         and is normal to the plane HKL
         """
-        hkl = num.array(hkl,dtype=float)
         # convert hkl vector to real space indicies
         dvec = num.dot(self.gr,hkl)
         dspc = self.d_space(hkl)
