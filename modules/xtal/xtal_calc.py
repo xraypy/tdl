@@ -12,9 +12,21 @@ Modifications:
 ##########################################################################
 """
 Todo
- - get xyz file from fit and par files and perform bond valence calcs
- - convert to classes etc..
- - add cell volume calcs to lattice
+ - Lattice:
+    - add cell volume calcs
+    - add real_to_recip and recip_to_real (ie get vector indicies
+      in different basis)
+    - calculate angles between real and recip vectors "angle_rr"
+
+ - LatticeTransform class 
+
+ - Reading cif files and others (maybe seperate module)
+   - e.g. get xyz file from fit and par files
+
+ - Structure analysis and bond valence calcs (seperate module)
+
+ - Make another module with space groups and typical lattice transformations
+   from the international tables...
  
 """
 ##########################################################################
@@ -141,28 +153,48 @@ class Lattice:
         alpha = num.arccos(arg)
         return num.degrees(alpha)
 
-    def d_space(self,hkl):
+    def d(self,hkl):
         """
-        calculate d-spacing for given [h,k,l]
+        calculate d space for given [h,k,l]
         """
         if len(hkl)!=3:
-            print "need an array of [h,k,l]"
+            print "Error need an array of [h,k,l]"
             return 0.
         H = self.mag(hkl,recip=True)
+        if H == 0.:
+            print "Error [h,k,l] magnitude is zero:", hkl
+            return 0.0
         d = 1./H
         return d
 
-    def d_vec(self,hkl):
+    def tth(self,hkl,lam=1.5406):
+        """
+        calculate 2Theta for given [h,k,l] and lambda
+        default lambda = Cu Ka1
+        """
+        d = self.d(hkl)
+        if d == 0.: return 0.
+        r = lam/(2.*d)
+        if num.fabs(r) > 1.0:
+            r = r/num.fabs(r)
+        tth = 2.*num.arcsin(r)
+        tth = num.degrees(tth)
+        return tth
+
+    def dvec(self,hkl):
         """
         calculate the real space vector d
-        which has a magnitude of d_spacing
+        which has a magnitude of the d spacing
         and is normal to the plane HKL
         """
+        dspc = self.d(hkl)
+        if dspc == 0: return num.array([0.,0.,0.])
         # convert hkl vector to real space indicies
+        hkl  = num.array(hkl,dtype=float)
         dvec = num.dot(self.gr,hkl)
-        dspc = self.d_space(hkl)
         dvec = (dspc**2.)*dvec
         return dvec
+
 
 ##########################################################################
 """
