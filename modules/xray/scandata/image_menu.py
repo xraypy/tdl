@@ -288,6 +288,7 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
                                           default=bgr_params['cnbgr'],
                                           min=0)
         elif ret == 'cwidth':
+            # could use flt??
             bgr_params['cwidth'] = get_int(prompt='Enter col width',
                                            default=bgr_params['cwidth'],
                                            min=0)
@@ -304,6 +305,7 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
                                           default=bgr_params['rnbgr'],
                                           min=0)
         elif ret == 'rwidth':
+            # could use flt??
             bgr_params['rwidth'] = get_int(prompt='Enter row width',
                                            default=bgr_params['rwidth'],
                                            min=0)

@@ -2,7 +2,7 @@
 """
 Tom Trainor (tptrainor@alaska.edu)
 
-Methods to handle generic backgorund determination
+Methods to handle generic background determination
 
 Modifications:
 --------------
