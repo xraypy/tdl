@@ -128,7 +128,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     
     # calc polynomial
     npoly   = int(2*width) + 1
-    pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1)/2)
+    pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
     if pow <= 0.5:
         r = float(width)
     else:
