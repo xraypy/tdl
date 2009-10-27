@@ -483,8 +483,8 @@ class ImageAna:
             pyplot.figure(fig,figsize=[12,8])
         else:
             pyplot.figure(fig,figsize=[12,8])
-        title_c = 'I_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
-        title_r = 'I_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
+        title_c = 'Col sum\nI_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
+        title_r = 'Row sum\nI_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
         title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
         if self.bgrimg != None:
             title_roi = title_roi + '\n(background subtracted)'

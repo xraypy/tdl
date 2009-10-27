@@ -30,7 +30,7 @@ Current image roi = %s
 Current image rotation angle = %s
 """
 
-IMG_LABELS = ['display','imax','rotangle','zoomroi','plotsums',
+IMG_LABELS = ['display','imax','rotangle','setroi','plotsums',
               'selectroi','bgr','copyall','integrate','intall',
               'point','next','previous','flag','help','quit']
 IMG_DESCR = ["Display image",
@@ -102,7 +102,7 @@ def image_menu(data):
                                min=-360.,max=360.)
             data.image_rotangle[scan_pnt] = rotangle
             _implot(data,scan_pnt,im_max)
-        elif ret == 'zoomroi':
+        elif ret == 'setroi':
             pyplot.figure(1)
             (x1,x2,y1,y2) = pyplot.axis()
             roi  = [int(x1),int(y1),int(x2),int(y2)]
@@ -294,7 +294,7 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
         elif ret == 'cpow':
             bgr_params['cpow'] = get_flt(prompt='Enter col pow',
                                          default=bgr_params['cpow'],
-                                         min=0.,max=5.)
+                                         min=0.)
         elif ret == 'ctan':
             bgr_params['ctan'] = get_tf(prompt='Enter col tan flag',
                                         default=bgr_params['ctan'])
@@ -310,7 +310,7 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
         elif ret == 'rpow':
             bgr_params['rpow'] = get_flt(prompt='Enter row pow',
                                          default=bgr_params['rpow'],
-                                         min=0.,max=5.)
+                                         min=0.)
         elif ret == 'rtan':
             bgr_params['rtan'] = get_tf(prompt='Enter row tan flag',
                                         default=bgr_params['rtan'])

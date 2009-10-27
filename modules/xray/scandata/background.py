@@ -126,14 +126,17 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     ndat = len(y)
     bgr  = num.zeros(ndat)
     
-    # here calc polynomial
+    # calc polynomial
     npoly   = int(2*width) + 1
     pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1)/2)
     if pow <= 0.5:
         r = float(width)
     else:
         r = float(width)*sqrt(2.*pow-1.)
-    poly    = (r**2. - pdelx**2.)**pow  - (r**2.)**pow
+    poly = (r**2. - pdelx**2.)**pow  - (r**2.)**pow
+    # renorm poly
+    pmax = num.max(num.fabs(poly))
+    poly = ((width*pow)/pmax) * poly
     
     # loop through each point
     #delta = num.zeros(len(poly))
@@ -241,12 +244,12 @@ if __name__ == '__main__':
     # generate a curve
     npts = 35
     x = num.array(range(npts))
-    g1  = gauss(x, npts/2., 1., 200)
-    g2  = gauss(x, npts/2., 10., 200)
+    g1  = gauss(x, npts/2., 5., 300)
+    g2  = gauss(x, npts/2., 30., 100)
     r = num.random.normal(size=npts)
     r = 10.*r/num.max(r)
     y = (1.0*r+ 10.*x) + g1 + g2
     # plot bgr
-    width=3
-    plot_bgr(y,nbgr=3,width=width,pow=1.5,tangent=True,debug=True)
+    width=5
+    plot_bgr(y,nbgr=3,width=width,pow=8.,tangent=True,debug=True)
     
