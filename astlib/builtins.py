@@ -5,7 +5,11 @@ import sys
 import numpy
 from util import closure
 from glob import glob
-    
+import tdlHelp
+import pydoc
+
+helper = tdlHelp.Helper()
+
 # inherit these from python's __builtin__
 _from_builtin= ('ArithmeticError', 'AssertionError', 'AttributeError',
                 'BaseException', 'BufferError', 'BytesWarning',
@@ -69,7 +73,7 @@ def _group(tdl=None,**kw):
 def _showgroup(gname=None,tdl=None):
     if tdl is not None:
         if gname is None: gname = '_main'
-        tdl.symtable.show_group(gname)
+        return tdl.symtable.show_group(gname)
 
 def _copy(obj,**kw):
     return copy.deepcopy(obj)
@@ -166,6 +170,23 @@ def _more(name,pagelength=24,**kws):
         f.close()
     show_more(l,filename=name,pagelength=pagelength)
     
+def _help(*args,**kws):
+    "show help on topic or object"
+    helper.buffer = []
+    tdl = kws.get('tdl',None)
+    if helper.tdl is None and tdl is not None:  helper.tdl = tdl
+
+    if args == ('',): args = ('help',)
+    # print '_help ', args
+
+    if helper.tdl is None:
+        helper.addtext('cannot start help system!')
+    else:
+        [helper.help(a) for a in args]
+
+    return helper.getbuffer()
+
+
 _local_funcs = {'group':_group,
                 'showgroup':_showgroup,
                 'reload':_reload,
@@ -173,5 +194,6 @@ _local_funcs = {'group':_group,
                 'more': _more,
                 'ls': _ls,
                 'cd': _cd,
+                'help': _help,
                 }
        

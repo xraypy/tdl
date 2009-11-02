@@ -83,16 +83,17 @@ class shell(cmd.Cmd):
     def tdl_execute(self,s_inp):  self.default(s_inp)
         
     def _helpshow(self,arg, cmd='help'):
-        if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
-        if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
-        self.default("%s('%s')"% (cmd,arg))
+        if arg.startswith('(') and arg.endswith(')'): arg = arg[1:-1]
+        # print 'helpshow ', arg, cmd
+        self.default("%s(%s)"% (cmd,repr(arg)))
+                     
         
     def default(self,text):
         text = text.strip()
         if text in ('quit','exit','EOF'):
             return 1
         elif text.startswith('!'):
-            self.do_shell(text[1:] )
+            self.do_shell(text[1:])
         else:
             ret = None
             self.input.put(text,lineno=0)

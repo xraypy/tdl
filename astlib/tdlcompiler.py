@@ -271,6 +271,7 @@ class Compiler:
     def compile(self,text):
         """compile statement/expression to Ast representation    """
         self.expr  = text
+        # print(" tdl compile: '%s'" % text)
         try:
             return ast.parse(text)
         except:
@@ -306,8 +307,8 @@ class Compiler:
         self.lineno = lineno
         self.error = []
         node = self.compile(expr)
-        # print(" eval: ", self.error)
-        # print("     : ", ast.dump(node))
+        #  print(" eval: ", expr, node, self.error)
+        #  print("     : ", ast.dump(node))
         if not self.error:
             return self.interp(node)
         
@@ -623,15 +624,24 @@ class Compiler:
         """
         symtable = self.symtable
         _sys     = symtable._sys
+        
+        for i in _sys.path:
+            if i not in sys.path:
+                sys.path.append(i)
 
+        print("Import Module :: ", name, asname, fromlist, reload)
+        print("  tdl path: ", _sys.path)
+        print("  python path: ", sys.path)
+        
         # step 1  import the module to a global location
         #   either sys.modules for python modules
         #   or  _sys.modules for tdl modules
         # reload takes effect here in the normal python way:
         #   if
-        if reload or (name not in sys.modules and
-                      name not in _sys.modules):
-            
+        do_load = (name not in _sys.modules and name not in sys.modules)
+        do_load = do_load or reload
+        
+        if do_load:
             # first look for "name.tdl"
             isTDL = False
             tdlname = "%s.tdl" % name

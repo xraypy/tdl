@@ -33,6 +33,9 @@ class Group(object):
         "return sorted list of names of members that are sub groups"
         return sorted([k for k,v in self.__dict__.items() if isGroup(v)])
 
+    def _members(self):
+        return sorted(self.__dict__.keys())
+
 class invalidName:
     # used to create a value that will NEVER be a useful symbol.
     # symbolTable._lookup() uses this to check for invalid names
@@ -182,7 +185,7 @@ class symbolTable(Group):
                     return getattr(g,name)
 
         # more complex case: not immediately found in Local or Module Group
-
+ 
         parts.reverse()
         top   = parts.pop()
         out   = self.__invalid_name
@@ -245,8 +248,7 @@ class symbolTable(Group):
                     i.startswith('_symbolTable__')):
                 o.append('  %s: %s' % (i,repr(getattr(grp,i))))
         msg = '\n'.join(o)
-        return "%s\n" % msg  ### self.__writer("%s\n" % msg)
-
+        return "%s\n" % msg  
 
     def placeGroup(gname,group=None,parent=None):
         if parent is None: parent = selg._get_localgroup()
