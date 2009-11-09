@@ -1,6 +1,6 @@
 ##########################################################################
 """
-Tom Trainor (fftpt@uaf.edu ) 
+Tom Trainor (tptrainor@alaska.edu) 
 Xtal calcs
 
 Modifications:
@@ -110,6 +110,20 @@ class Lattice:
         return num.array([self.ar,self.br,self.cr,
                           self.alphar,self.betar,self.gammar],dtype=float)
         
+    def V(self,recip=False):
+        """
+        Calculate the cell volume.
+          If recip == False, this is the real space vol in ang**3
+          If recip == True, this is the recip space vol in ang**-3
+        """
+        if recip == True: g = self.gr
+        else: g = self.g
+        det = num.linalg.det(g)
+        if det > 0:
+            return num.sqrt(det)
+        else:
+            return 0.0
+        
     def dot(self,u,v,recip=False):
         """
         calculate dot product of two vectors
@@ -194,6 +208,7 @@ class Lattice:
         dvec = num.dot(self.gr,hkl)
         dvec = (dspc**2.)*dvec
         return dvec
+
 
 
 ##########################################################################
