@@ -158,7 +158,15 @@ class PdsBuiltins:
                 mod = _import(m)
                 
     #################################################################
-
+    def source(self,object,**kw):
+        """
+        Show the source code of a python object
+        >>source(my_function)  
+        """
+        import inspect
+        src = inspect.getsource(object)
+        for l in src.split('\n'): print l
+        
 #####################################################################
 # Load the functions on import
 #####################################################################

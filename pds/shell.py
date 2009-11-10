@@ -198,6 +198,7 @@ class Shell(_NumShell):
         startup.append("__builtins__.update({'pwd':__pds__._cwd})")
         startup.append("__builtins__.update({'mod_import':__pds__.mod_import})")
         startup.append("__builtins__.update({'path':__pds__._path})")
+        startup.append("__builtins__.update({'source':__pds__.source})")
 
         # functions we want to use with command syntax
         self.do_addcmd('ls',"__pds__.ls")
@@ -206,6 +207,7 @@ class Shell(_NumShell):
         self.do_addcmd('more',"__pds__.more")
         self.do_addcmd('path',"__pds__.path")
         self.do_addcmd('mod_import',"__pds__.mod_import")
+        self.do_addcmd('source',"__pds__.source")
 
         # if numeric/scientific stuff is included
         # load it. Note leave this here in case there
