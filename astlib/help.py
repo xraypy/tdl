@@ -1,14 +1,14 @@
-main = """This is tdl main help"""
+main = """This is Larch main help"""
 
-import tdlHelpTopics
-Help_topics = tdlHelpTopics.generate()
+import helpTopics
+Help_topics = helpTopics.generate()
 
 class Helper(object):
     """Helper looks up an displays help topics
-    and/or pydoc help on tdl/python objects"""
+    and/or pydoc help on larch/python objects"""
     
     def __init__(self,*args,**kws):
-        self.tdl = None
+        self.larch = None
         self.buff = []
 
     def help(self,*args,**kws):
@@ -20,7 +20,7 @@ class Helper(object):
                 # print Help_topics[arg]
                 self.addtext(Help_topics[arg])
             else:
-                sym = self.tdl.symtable.getSymbol(arg,create=False)
+                sym = self.larch.symtable.getSymbol(arg,create=False)
                 self.addtext("   %s = %s" % (arg, repr(sym)))
                 
                 
@@ -35,7 +35,7 @@ class Helper(object):
 
 #     "show help on topic or object"
 #     outbuff = []
-#     has_tdl = tdl is not None
+#     has_larch = larch is not None
 # 
 #     for a in args:
 #         

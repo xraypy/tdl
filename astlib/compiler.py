@@ -10,7 +10,7 @@ import numpy
 import __builtin__
 from util import closure
 
-class TDLError(Exception):
+class LarchError(Exception):
     def __init__(self,error,descr = None,node = None):
         self.error = error
         self.descr = descr
@@ -61,9 +61,9 @@ class DefinedVariable(object):
     Note that the localGroup/moduleGroup are cached
     at compile time, and restored for evaluation.
     """
-    def __init__(self, expr=None, tdl=None):
+    def __init__(self, expr=None, larch=None):
         self.expr = expr
-        self.tdl = tdl
+        self.larch = larch
         self.ast = None
         self._groups = None,None
         self.compile()
@@ -72,9 +72,9 @@ class DefinedVariable(object):
         return "<DefinedVariable: '%s'>" % (self.expr)
         
     def compile(self):
-        if self.tdl is not None and self.expr is not None:
-            self.ast = self.tdl.compile(self.expr)
-            _sys = self.tdl.symtable._sys
+        if self.larch is not None and self.expr is not None:
+            self.ast = self.larch.compile(self.expr)
+            _sys = self.larch.symtable._sys
             self._groups = (_sys.localGroup,_sys.moduleGroup)
 
     def evaluate(self):
@@ -84,13 +84,13 @@ class DefinedVariable(object):
             msg = "Cannot compile '%s'"  % (self.expr)
             raise Warning(msg)
             
-        if hasattr(self.tdl,'interp'):
-            _sys = self.tdl.symtable._sys
+        if hasattr(self.larch,'interp'):
+            _sys = self.larch.symtable._sys
             # save current localGroup/moduleGroup 
             save_groups  = _sys.localGroup,_sys.moduleGroup
             
             _sys.localGroup,_sys.moduleGroup = self._groups
-            rval = self.tdl.interp(self.ast)
+            rval = self.larch.interp(self.ast)
 
             _sys.localGroup,_sys.moduleGroup = save_groups
             return rval
@@ -99,13 +99,13 @@ class DefinedVariable(object):
             raise ValueError, msg
 
 class Procedure(object):
-    """tdl procedure:  function """
-    def __init__(self, name, tdl=None, doc=None,
+    """larch procedure:  function """
+    def __init__(self, name, larch=None, doc=None,
                  body=None, args=None, kwargs=None,
                  vararg=None, varkws=None):
         self.name     = name
-        self.tdl = tdl
-        self.modgroup = tdl.symtable._sys.moduleGroup
+        self.larch = larch
+        self.modgroup = larch.symtable._sys.moduleGroup
         self.body     = body
         self.argnames = args
         self.kwargs   = kwargs
@@ -120,7 +120,7 @@ class Procedure(object):
             return "<Procedure: %s() %s>" % (self.name,self.__doc__)        
 
     def __call__(self,*args,**kwargs):
-        stable  = self.tdl.symtable
+        stable  = self.larch.symtable
         sys     = stable._sys      
         lgroup  = stable.createGroup()
 
@@ -141,20 +141,20 @@ class Procedure(object):
         stable._set_local_mod((lgroup, self.modgroup))
         
         retval = None
-        self.tdl.retval = None
+        self.larch.retval = None
         for node in self.body:
-            self.tdl.interp(node)
-            if self.tdl.retval is not None:
-                retval = self.tdl.retval
+            self.larch.interp(node)
+            if self.larch.retval is not None:
+                retval = self.larch.retval
                 break
 
         sys.localGroup,sys.moduleGroup = grps_save
         stable._set_local_mod(grps_save)
-        self.tdl.retval = None
+        self.larch.retval = None
         del lgroup
         return retval
     
-class TdlExceptionHolder:
+class LarchExceptionHolder:
     def __init__(self,node,msg='',fname='<StdIn>',
                  expr=None, lineno=0):
         self.node  = node
@@ -213,7 +213,7 @@ class Compiler:
   The following Python syntax is not supported:
       Exec, Lambda, Class, Global, Generators, Yield, Decorators
         
-  In addition, Function is greatly altered so as to allow a TDL procedure.
+  In addition, Function is greatly altered so as to allow a Larch procedure.
     
     """
     def __init__(self,symtable=None,input=None, writer=None):
@@ -234,24 +234,24 @@ class Compiler:
         imports = ((builtins._from_builtin, __builtin__,'_builtin'),
                    (builtins._from_numpy,   numpy, '_math'))
         
-        for symlist, pymod, tdlmod in imports:
-            group = getattr(symtable,tdlmod)
+        for symlist, pymod, larchmod in imports:
+            group = getattr(symtable,larchmod)
             for sym in symlist:
                 setattr(group, sym, getattr(pymod, sym))
 
         group = getattr(symtable, '_builtin')
         for fname,fcn in builtins._local_funcs.items():
-            setattr(group, fname, closure(func=fcn,tdl=self))
+            setattr(group, fname, closure(func=fcn,larch=self))
         setattr(group, 'definevar', closure(func=self.__definevar))
         
     def __definevar(self,name,expr):
         """define a defined variable (re-evaluate on access)"""
-        defvar = DefinedVariable(expr=expr,tdl=self)
+        defvar = DefinedVariable(expr=expr,larch=self)
         self.setSymbol(name,defvar)
 
     def NotImplemented(self,node):
         cname = node.__class__.__name__
-        TDLError("'%s' not supported" % (cname))
+        LarchError("'%s' not supported" % (cname))
 
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
@@ -261,7 +261,7 @@ class Compiler:
     def addException(self,node,msg=None):
         if self.error is None: self.error = []
         # print(" add except ", node, msg)
-        err = TdlExceptionHolder(node, msg=msg,
+        err = LarchExceptionHolder(node, msg=msg,
                                  expr=self.expr,
                                  fname=self.fname,
                                  lineno=self.lineno)
@@ -271,7 +271,7 @@ class Compiler:
     def compile(self,text):
         """compile statement/expression to Ast representation    """
         self.expr  = text
-        # print(" tdl compile: '%s'" % text)
+        # print(" larch compile: '%s'" % text)
         try:
             return ast.parse(text)
         except:
@@ -381,7 +381,7 @@ class Compiler:
             
         elif n.__class__ == ast.Attribute:
             if n.ctx.__class__  == ast.Load:
-                raise TDLError("canot Assign attribute %s???" % n.attr)
+                raise LarchError("canot Assign attribute %s???" % n.attr)
             setattr(self.interp(n.value),n.attr,val)
 
         elif n.__class__ == ast.Subscript:
@@ -411,12 +411,12 @@ class Compiler:
                 return val
             else:
                 msg = "'%s' does not have an '%s' attribute" 
-                raise TDLError( msg % (node.value,node.attr))
+                raise LarchError( msg % (node.value,node.attr))
 
         elif ctx == ast.Del:
             return delattr(sym,attr)
         elif ctx == ast.Store:
-            raise TDLError("attribute for storage: shouldn't be here!!")
+            raise LarchError("attribute for storage: shouldn't be here!!")
 
     def doAssign(self,node):    # ('targets', 'value')
         val = self.interp(node.value)
@@ -449,7 +449,7 @@ class Compiler:
             elif isinstance(node.slice,ast.ExtSlice):
                 return val[(nslice)]
         else:
-            raise TDLError("subscript with unknown context")
+            raise LarchError("subscript with unknown context")
 
     def doDelete(self,node):    # ('targets',)
         ctx = node.ctx.__class__
@@ -491,7 +491,7 @@ class Compiler:
 
     def doPrint(self,node):    # ('dest', 'values', 'nl') 
         """ note: implements Python2 style print statement, not
-        print() function.  Probably, the 'tdl2py' translation
+        print() function.  Probably, the 'larch2py' translation
         should look for and translate print -> print_() to become
         a customized function call.
         """
@@ -551,7 +551,7 @@ class Compiler:
     def doCall(self,node):    # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         if not callable(func):
-            raise TDLError("'%s' is not not callable" % (func))
+            raise LarchError("'%s' is not not callable" % (func))
 
         args = [self.interp(a) for a in node.args]
         if node.starargs is not None:
@@ -560,7 +560,7 @@ class Compiler:
         keywords = {}
         for k in node.keywords:
             if not isinstance(k,ast.keyword):
-                raise TDLError("keyword error in function call '%s'" % (func))
+                raise LarchError("keyword error in function call '%s'" % (func))
             keywords[k.arg] = self.interp(k.value)
         if node.kwargs is not None:  keywords.update(self.interp(node.kwargs))
         return func(*args,**keywords)
@@ -584,7 +584,7 @@ class Compiler:
             docnode = node.body.pop(0)
             doc = self.interp(docnode.value)
 
-        proc = Procedure(node.name, tdl=self,doc=doc,
+        proc = Procedure(node.name, larch=self,doc=doc,
                          body = node.body,
                          args = args,
                          kwargs = kwargs,
@@ -607,7 +607,7 @@ class Compiler:
 
     def import_module(self, name, asname=None, fromlist=None, reload=False):
         """
-        import a module (tdl or python), installing it into the symbol table.
+        import a module (larch or python), installing it into the symbol table.
         required arg:
             name       name of module to import
                           'foo' in 'import foo'
@@ -619,7 +619,7 @@ class Compiler:
                        or
                           ['s','t'] in 'from foo import x as s, y as t'
 
-        this method covers a lot of cases (tdl or python, import
+        this method covers a lot of cases (larch or python, import
         or from-import, use of asname) and so is fairly long.
         """
         symtable = self.symtable
@@ -630,25 +630,25 @@ class Compiler:
                 sys.path.append(i)
 
         print("Import Module :: ", name, asname, fromlist, reload)
-        print("  tdl path: ", _sys.path)
+        print("  larch path: ", _sys.path)
         print("  python path: ", sys.path)
         
         # step 1  import the module to a global location
         #   either sys.modules for python modules
-        #   or  _sys.modules for tdl modules
+        #   or  _sys.modules for larch modules
         # reload takes effect here in the normal python way:
         #   if
         do_load = (name not in _sys.modules and name not in sys.modules)
         do_load = do_load or reload
         
         if do_load:
-            # first look for "name.tdl"
-            isTDL = False
-            tdlname = "%s.tdl" % name
+            # first look for "name.lar"
+            isLarch = False
+            larchname = "%s.lar" % name
             for dirname in _sys.path:
-                if tdlname in os.listdir(dirname):
-                    isTDL = True
-                    modname = os.path.abspath(os.path.join(dirname,tdlname))
+                if larchname in os.listdir(dirname):
+                    isLarch = True
+                    modname = os.path.abspath(os.path.join(dirname,larchname))
 
                     # save current module group
                     #  create new group, set as moduleGroup and localGroup
@@ -674,8 +674,8 @@ class Compiler:
                 thismod = None
                 return
 
-            # or, if not a tdl module, load as a regular python module
-            if not isTDL:
+            # or, if not a larch module, load as a regular python module
+            if not isLarch:
                 try:
                     __import__(name)
                     thismod = sys.modules[name]
@@ -741,6 +741,6 @@ class Compiler:
 #             print(n)             
 
     def doRaise(self,node):    # ('type', 'inst', 'tback') 
+        raise LarchError()
         # print(self.dump(node,include_attributes=True))
-        raise TDLError()
         #, self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))

@@ -17,7 +17,7 @@ t = shell.shell(debug=debug)
 if len(args)>0:
     for s in args:
         if s.endswith('.py'):    s = s[:-3]
-        elif s.endswith('.tdl'): s = s[:-4]
+        elif s.endswith('.lar'): s = s[:-4]
         t.default("import %s" % s)
 else:
     t.cmdloop()

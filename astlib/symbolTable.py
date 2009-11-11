@@ -5,8 +5,8 @@ import os
 import sys
 import types
 
-# from config import tdlpath
-tdlpath_envvar = 'TDLPATH'
+# from config import larchpath
+larchpath_envvar = 'LARCHPATH'
 
 def isGroup(g): return isinstance(g,Group)
 
@@ -46,7 +46,7 @@ class symbolTable(Group):
     core_groups = ('_sys','_builtin','_math')
     __invalid_name = invalidName()
 
-    def __init__(self,tdl=None):
+    def __init__(self,larch=None):
         Group.__init__(self)
 
         # self.__writer = writer  or sys.stdout.write
@@ -63,9 +63,9 @@ class symbolTable(Group):
                                  'searchNames':None, 'searchGroups': None}
 
         self._sys.path         = ['.']
-        tdlpath = os.environ.get(tdlpath_envvar,None)
-        if tdlpath is not None:
-            self._sys.path.extend(tdl.path.split(':'))
+        larchpath = os.environ.get(larchpath_envvar,None)
+        if larchpath is not None:
+            self._sys.path.extend(larch.path.split(':'))
             
         self._sys.modules      = {'_main':self}
         for gname in self.core_groups:

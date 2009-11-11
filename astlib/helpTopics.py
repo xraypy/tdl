@@ -1,4 +1,4 @@
-"""Help topics for on-line documentation and help in tdl
+"""Help topics for on-line documentation and help in larch
 
 The data here contain python variable holding text that
 are used as principle help topics.
@@ -13,7 +13,7 @@ M. Newville Univ of Chicago, T. Trainor, Univ of Alaska Fairbanks (2005,2006)
 ##
 ## when  help(topic)  
 ##
-_h_Shell = """Tdl command-line shell help:
+_h_Shell = """Larch command-line shell help:
   
 """
 
@@ -39,20 +39,20 @@ _h_Show =  """
 """
 
 _h_Overview = """
-This is TDL (Tiny Data Language, Matt Newville and Tom Trainor 2006).
+This is Larch (Tiny Data Language, Matt Newville and Tom Trainor 2006).
 
-Tdl is a data processing language written in python and designed to be 
+Larch is a data processing language written in python and designed to be 
   - easy to use for novices.
   - complete enough for intermediate to advanced data processing.
   - data-centric, so that arrays of data are easy to manage and use.
   - easily extendable with python.
  
-Tdl uses Numeric Python and SciPy for all its numerical functionality, so
+Larch uses Numeric Python and SciPy for all its numerical functionality, so
 processing arrays of numerical data is easy and fast, and a wide range
 of 'advanced numeric capabilities' such as FFTs and non-linear least squares
-minimization is (potentially) available for Tdl.
+minimization is (potentially) available for Larch.
 
-TDL Features:
+Larch Features:
 
 ==Simple Syntax:
   Variable and function names are simple, undecorated strings.
@@ -63,22 +63,22 @@ TDL Features:
 
   Multi-dimensional data can be accessed either element-by-element or with
   more complicated "slices":
-        tdl> x   = 1             # int
-        tdl> y   = 7 + 2j        # complex number:  real + imag'j'
-        tdl> arr = arange(10)    # simple array 
-        tdl> print arr 
+        larch> x   = 1             # int
+        larch> y   = 7 + 2j        # complex number:  real + imag'j'
+        larch> arr = arange(10)    # simple array 
+        larch> print arr 
             [0 1 2 3 4 5 6 7 8 9 10]
-        tdl> print arr[3]
+        larch> print arr[3]
             3
-        tdl> print arr[2:8]
+        larch> print arr[2:8]
             [2 3 4 5 6 7]
-        tdl> str = 'here is a string'
-        tdl> print str[0:6]
+        larch> str = 'here is a string'
+        larch> print str[0:6]
             here i
 
 ==Full Featured, extensible:  many useful functions for numerical data
-  processing are built in to Tdl.  More importantly, it is easy to add more
-  functions, either from Python or as Tdl procedures (see below). 
+  processing are built in to Larch.  More importantly, it is easy to add more
+  functions, either from Python or as Larch procedures (see below). 
 
 ==Namespaces:  Each variable and function has two parts to its name:
   a Group Name and Variable Name.  The fully qualified name includes a '.'
@@ -87,7 +87,7 @@ TDL Features:
   Unqualified names (ie, a name without a 'group.' prefix) will use a default
   order to determine which Group to associate with a name:  There is always
   a "Default Data Group" and a "Default Function Group" each of which can be
-  changed during a TDL session.  At startup, there are two pre-defined groups:
+  changed during a Larch session.  At startup, there are two pre-defined groups:
   "_builtin", which contains many built in functions and constants (sin and pi,
   for example), and "_main".  At startup, "_main" is empty, and is set as the
   "Default Data Group" and "Default Function Group".
@@ -101,23 +101,23 @@ TDL Features:
      (Default Data Group, Default Function Group, "_main", "_builtin") 
 
   is used.  The Default Data Group can be changed with
-        tdl> datagroup('mydata')
+        larch> datagroup('mydata')
 
   and the Default Function Group can be changed with 
-        tdl> funcgroup('myfuncs')
+        larch> funcgroup('myfuncs')
 
   Assigning a fully qualified variable or function to a group that previously did
   not exist will create that group:
-        tdl> x = 1
-        tdl> group1.x = 3.3
-        tdl> print x
+        larch> x = 1
+        larch> group1.x = 3.3
+        larch> print x
             1
-        tdl> datagroup('group1')
-        tdl> print x
+        larch> datagroup('group1')
+        larch> print x
             3.3
-        tdl> print _main.x, group1.x
+        larch> print _main.x, group1.x
             1 3.3
-        tdl> show groups
+        larch> show groups
             Default Data Group = group1
             Default Function Group = _main
             All Groups:
@@ -128,8 +128,8 @@ TDL Features:
   The default group name for functions and commands is _main (functions and commands with
   this group name do not need full name qualification).
   Eg. you can also assign variables variable values with setvar() function:
-        tdl> setvar('v', 2.3, group='group1')
-        tdl> print group1.v
+        larch> setvar('v', 2.3, group='group1')
+        larch> print group1.v
 
   The potential advantage here is that 'v' and 'group1' are string types,
   not literal variable names, so they can be computed or passed in a
@@ -160,11 +160,11 @@ TDL Features:
             print 'Yep'
         endif
 
-  A design goal is that well-formed tdl code should be very easy to
+  A design goal is that well-formed larch code should be very easy to
   translate into valid python (and vice versa).
 
 ==User-defined functions (aka procedures):
-  User defined functions can be written in tdl:
+  User defined functions can be written in larch:
         def  myfunc(arg1, option='test'):
              'documentation string'
               print 'this is my funcition ', arg1
@@ -179,25 +179,25 @@ TDL Features:
         enddef
 
   which could be called as 
-        tdl> ret = myfunc(3., option = 'xx')
-        tdl> print ret, x.tmp
+        larch> ret = myfunc(3., option = 'xx')
+        larch> print ret, x.tmp
           False 1.73205080757
 
 ==dofile() function:
-  you can run a file of tdl commands with the dofile() function:
-        tdl> dofile('myfile.tdl')
+  you can run a file of larch commands with the dofile() function:
+        larch> dofile('myfile.larch')
 
 ==eval() function:
-  you can construct a tdl expression on the fly from strings and execute it:
+  you can construct a larch expression on the fly from strings and execute it:
 
-        tdl> eval("%s.value = %f" %  ['group', 10.2])
-        tdl> print group.value 
+        larch> eval("%s.value = %f" %  ['group', 10.2])
+        larch> print group.value 
           10.2
 
 ==read_ascii() function:
   you can read in ASCII column data files very easily.
 
-        tdl> read_ascii('my.dat', group='f')
+        larch> read_ascii('my.dat', group='f')
           ['f', 'x', ''y']
       
   this read 2 columns (labeled 'x' and 'y') from the column file and
@@ -211,9 +211,9 @@ TDL Features:
 ==Easy to add your python functions, including getting access to all  
   the 'data groups' inside your python function.
 
-==Differences between tdl and Python (for python users):
-  -  tdl has many builtins and assumes Numerical data. 
-  -  tdl has no tuples. Lists are used in their place.
+==Differences between larch and Python (for python users):
+  -  larch has many builtins and assumes Numerical data. 
+  -  larch has no tuples. Lists are used in their place.
   -  indentation does not matter. blocks are ended with 'end***' 
      (if / endif , for /endfor, def/enddef)
   -  when in doubt, assignment makes a copy, and does not give a reference
@@ -230,8 +230,8 @@ _h_Strings = """
 
   strings are sequence of text characters. To specify a string, you enclose it in quotes,
   either single or double quotes:
-      tdl>  x = 'this is a string'
-      tdl>  x = "A string with a ' in it "
+      larch>  x = 'this is a string'
+      larch>  x = "A string with a ' in it "
 
   There are a few special characters that can be included in strings by 'escaping' them with a
   backlash character "\\".  The most important of these are '\\n' to write a newline character,
@@ -249,22 +249,22 @@ _h_Strings = """
       
   You can escape quote characters ('\\"' or '\\'') so that they do not mark the end of a
   string sequence: 
-      tdl> x = 'a string\\'s string'
-      tdl> y = "\\"a string with a double quote\\", he said."
+      larch> x = 'a string\\'s string'
+      larch> y = "\\"a string with a double quote\\", he said."
 
  
   ==Multi-line Strings with Triple Quotes
    
-  Tdl allows multi-line strings (that is strings that span lines).  One simple way to do this is
+  Larch allows multi-line strings (that is strings that span lines).  One simple way to do this is
   to include a newline character ('\\n') character in the string, but this is not always sufficient.
   Another way is to use triple quotes (three quotes in a row: either ''' or  \"\"\") to enclose the
   string.  With this approach, the newlines of the enclosed string are preserved:
 
-     tdl> long_string = '''Here is a mult-line string
+     larch> long_string = '''Here is a mult-line string
      ...> line #2
      ...> line #3 of the long string '''
 
-     tdl> print long_string
+     larch> print long_string
      Here is a mult-line string
      line #2
      line #3 of the long string
@@ -280,7 +280,7 @@ _h_Strings = """
 
   Following normal conventions, a formatted string for a floating point number might look like this: 
 
-      tdl> print "x = %8.4f" % sqrt(12)
+      larch> print "x = %8.4f" % sqrt(12)
       x =   3.4641
       
   The "%8.4f" tells the formatting to format a floating point number (the 'f') with 8 total numbers
@@ -291,13 +291,13 @@ _h_Strings = """
   
   ==Using a dictionary for string formatting
 
-    Borrowing from Python, tdl also allow you to format a string using a dictionary instead of a
+    Borrowing from Python, larch also allow you to format a string using a dictionary instead of a
     simple list.  This can be a big advantage when formatting many values or formatting data from
     complicated data structures.  In this method, you explicitly set the dictionary key to use by
     naming them between the '%' and the format code:
     
-      tdl> data  = {'name':'File 1', 'date':'Monday, April 3, 2006', 'x': 12.4}
-      tdl> print " %(name)s , x = %(x)f" % data
+      larch> data  = {'name':'File 1', 'date':'Monday, April 3, 2006', 'x': 12.4}
+      larch> print " %(name)s , x = %(x)f" % data
       File 1 , x = 12.4
      
 """
@@ -348,7 +348,7 @@ _h_Control = """
    only under some conditions, or to be run repeatedly with different values
    for some variables in the block.
    
-   The syntax of tdl uses a colon ':' and a small number of keywords to define
+   The syntax of larch uses a colon ':' and a small number of keywords to define
    the blocks of code:
        if x==0:
           print 'cannot divide by zero'
@@ -360,7 +360,7 @@ _h_Control = """
  = If statements:
 
    if statements run a block of code only if some condition is met.  Since this
-   is so common, there are a few variations allowed in tdl.  First is the
+   is so common, there are a few variations allowed in larch.  First is the
    one line version:
 
        if x<0:  x = -x
@@ -381,7 +381,7 @@ _h_Control = """
 
    A warning: in many programming languages multiple conditions can be relied upon
    to only evaluate until the truth of the statement can be determined.  This is NOT
-   the case in tdl: the entire statement may be evaluated.
+   the case in larch: the entire statement may be evaluated.
 
    The second version uses the same 'if condition:', but on a line by itself, followed
    by  multiple statements.  This version ends with 'endif' to indicate how far the 

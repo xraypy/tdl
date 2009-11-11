@@ -26,7 +26,7 @@ def get_DefVar(text):
     return None, None
     
 class InputText:
-    """Input TDL Code Text:  handles loading and reading code text, and
+    """Input Larch Code:  handles loading and reading code text, and
     providing blocks of compile-able python code to be converted to AST.
     
     InputText accepts and stores single or multiple lines of input text,
@@ -48,17 +48,17 @@ class InputText:
     >>> text.get(s)   # get complete code block, ready for Compiler.eval
     
 
-    the following translations are made from valid TDL to valid Python:
+    the following translations are made from valid Larch to valid Python:
 
     1. Block Indentation:
-        tdl blocks may end with one of the tokens:
+        larch blocks may end with one of the tokens:
             ('end', 'endXXX', '#end', '#endXXX')
         for an 'XXX' block (one of 'if','for','while','try', and 'def')
         where the token starts a line of text, followed by whitespace or
         a comment starting with a '#'.
 
     2. Defined Variables:
-        tdl uses 'def VarName = Expression' for a Defined Variable
+        larch uses 'def VarName = Expression' for a Defined Variable
         (the expression is stored and accessing the VarName causes the
         expression to be re-evaluated)
 
@@ -67,7 +67,7 @@ class InputText:
              _builtin._definevar_("varname","text of expression")
 
     3. Command Syntax:
-        tdl allows lines of code which execute a function without return
+        larch allows lines of code which execute a function without return
         value to be viewed as "commands" and written without parentheses,
         so that the function call 
              function(x, y)
@@ -82,8 +82,8 @@ class InputText:
           
     """
     indent = ' '*4
-    ps1 = 'tdl>'
-    ps2 = '...>'
+    ps1 = 'larch>'
+    ps2 = '.....>'
     block_friends = {'if':  ('else','elif'),
                      'for':   ('else'),
                      'def':   (),

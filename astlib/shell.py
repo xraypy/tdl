@@ -8,7 +8,7 @@ import types
 import getopt
 import traceback
 import numpy
-import tdlcompiler
+import compiler
 
 import inputText
 from util import EvalError
@@ -20,16 +20,16 @@ except:
     scipy_version = '(not available)'
     
 
-banner = """  Tiny Data Language %s  M. Newville, T. Trainor (2009)
-  using python %s, numpy %s, and scipy %s""" % (tdlcompiler.__version__,
+banner = """  Larch %s  M. Newville, T. Trainor (2009)
+  using python %s, numpy %s, and scipy %s""" % (compiler.__version__,
                                                 '%i.%i.%i' % sys.version_info[:3],
                                                 numpy.__version__,
                                                 scipy_version)
 
 class shell(cmd.Cmd):
     intro  = "  === Type 'help' to get started ==="
-    ps1    = "tdl> "
-    ps2    = "...> "
+    ps1    = "larch> "
+    ps2    = ".....> "
     max_save_lines = 5000
     def __init__(self, completekey='tab', scripts=None, debug=False,
                  stdin=None, stdout=None, intro=None, GUI='TkAgg'):
@@ -46,7 +46,7 @@ class shell(cmd.Cmd):
 
         cmd.Cmd.__init__(self,completekey='tab')
 
-        self.historyfile = path.join(environ.get('HOME',getcwd()),'.tdl_history')
+        self.historyfile = path.join(environ.get('HOME',getcwd()),'.larch_history')
         if self.rdline is not None:
             try:
                 self.rdline.read_history_file(self.historyfile)
@@ -64,7 +64,7 @@ class shell(cmd.Cmd):
         self.stdout = sys.stdout
 
         
-        self.tdl    = tdlcompiler.Compiler()
+        self.larch  = compiler.Compiler()
         self.input  = inputText.InputText(prompt=self.ps1)
         self.prompt = self.ps1
 
@@ -80,7 +80,7 @@ class shell(cmd.Cmd):
     def do_help(self,arg):   self._helpshow(arg, cmd='help')
     def do_show(self,arg):   self._helpshow(arg, cmd='show')
 
-    def tdl_execute(self,s_inp):  self.default(s_inp)
+    def larch_execute(self,s_inp):  self.default(s_inp)
         
     def _helpshow(self,arg, cmd='help'):
         if arg.startswith('(') and arg.endswith(')'): arg = arg[1:-1]
@@ -99,10 +99,9 @@ class shell(cmd.Cmd):
             self.input.put(text,lineno=0)
             while len(self.input) >0:
                 block,fname,lineno = self.input.get()
-                ret = self.tdl.eval(block,fname=fname,lineno=lineno)
-                if self.tdl.error:
-                    # for i in self.tdl.error:
-                    i  = self.tdl.error[0]                        
+                ret = self.larch.eval(block,fname=fname,lineno=lineno)
+                if self.larch.error:
+                    i  = self.larch.error[0]                        
                     print "\n".join(i.get_error())
                         
                 if ret is not None: print ret
