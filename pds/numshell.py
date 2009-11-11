@@ -180,6 +180,7 @@ class _NumShell:
             startup.append("__builtins__.update({'atan':num.arctan})")
             startup.append("__builtins__.update({'deg':num.degrees})")
             startup.append("__builtins__.update({'rad':num.radians})")
+            startup.append("__builtins__.update({'arange':num.arange})")
             
             startup.append("__builtins__.update({'ln':num.log})")
             startup.append("__builtins__.update({'log':num.log10})")

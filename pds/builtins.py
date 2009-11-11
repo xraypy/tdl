@@ -28,12 +28,19 @@ class PdsBuiltins:
         self.module_list = []
 
     #################################################################
-    def group(self,):
+    def group(self,data={}):
         """
-        create a new group
-        g = group()
+        Create a new group
+         >>g = group()
+         >>g = group(data={'x':x,'y':y})
+         In the second example 'g.x' and 'g.y' will
+         be assigned from the dictionary
         """
         grp = Group()
+        if len(data) == 0:
+            return grp
+        for key in data.keys():
+            setattr(grp,key,data[key])
         return grp
 
     #################################################################
@@ -166,6 +173,29 @@ class PdsBuiltins:
         import inspect
         src = inspect.getsource(object)
         for l in src.split('\n'): print l
+
+    #################################################################
+    def interrogate(self,item):
+        """
+        Print useful information about item.
+        """
+        if hasattr(item, '__name__'):
+            print "NAME:    ", item.__name__
+        if hasattr(item, '__class__'):
+            print "CLASS:   ", item.__class__.__name__
+        print "ID:      ", id(item)
+        print "TYPE:    ", type(item)
+        print "VALUE:   ", repr(item)
+        print "CALLABLE:",
+        if callable(item):
+            print "Yes"
+        else:
+            print "No"
+        if hasattr(item, '__doc__'):
+            doc = getattr(item, '__doc__')
+        doc = doc.strip()   
+        firstline = doc.split('\n')[0]
+        print "DOC:     ", firstline
         
 #####################################################################
 # Load the functions on import

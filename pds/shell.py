@@ -73,12 +73,16 @@ about python scripting start at:  http://www.python.org
 ** Startup / Default Configuration
 The main purpose of pds is to make interactive python work easier.
 This is in large part achieved by making sure the default namespace
-that you are working in at startup has defined all the modules you need
+that you are working in at startup has defined all the modules you 
 commonly need.
- - more notes on editing startup files
+
+This can be customized via the startup files:
+   INSTALL_PATH/pds/startup.pds
+     - and -
+   HOMEPATH/.pds
 
 ** Commands
-The list of commands are dislplayed by typing 'show' at the command line
+The list of commands are displayed by typing 'show' at the command line
 Commands can be exectuted from the command line as:
 
   pds>command arg1, arg2
@@ -97,11 +101,8 @@ in one of two ways, depending on how the command was defined:
     Type 'help addcmd' and 'help alias' for more information on how to
     create these.
 
-** Data Organization and Display
-
-
-** Helpful Commands and Added Builtins
-
+More information on pds and the overall project can be found at:
+http://cars9.uchicago.edu/ifeffit/tdl/Docs/Pds
 
 *****************************************************************\n
 """ 
@@ -199,6 +200,7 @@ class Shell(_NumShell):
         startup.append("__builtins__.update({'mod_import':__pds__.mod_import})")
         startup.append("__builtins__.update({'path':__pds__._path})")
         startup.append("__builtins__.update({'source':__pds__.source})")
+        startup.append("__builtins__.update({'interrogate':__pds__.interrogate})")
 
         # functions we want to use with command syntax
         self.do_addcmd('ls',"__pds__.ls")
