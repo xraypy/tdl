@@ -26,39 +26,31 @@ _h_Help =  """
    ================================
 """
 
-_h_Show =  """
-  ###########################################################################
-   = show: show list groups and variables =
-    show              # summary of all top-level groups
-    show -l           # short list of all top-level groups
-    show mygroup      # list variables and sub-groups of mygroup
-    show myvariable   # summary for variable myvariable
-    (see also: 'help' and 'help topics')
-  ###########################################################################
-"""
-
 _h_Overview = """
-This is Larch (Tiny Data Language, Matt Newville and Tom Trainor 2006).
+This is Larch (Matt Newville and Tom Trainor 2009).
 
-Larch is a data processing language written in python and designed to be 
+Larch is a data processing language designed to be 
   - easy to use for novices.
   - complete enough for intermediate to advanced data processing.
   - data-centric, so that arrays of data are easy to manage and use.
   - easily extendable with python.
  
-Larch uses Numeric Python and SciPy for all its numerical functionality, so
-processing arrays of numerical data is easy and fast, and a wide range
-of 'advanced numeric capabilities' such as FFTs and non-linear least squares
-minimization is (potentially) available for Larch.
+Larch uses Numeric Python and SciPy for all its numerical functionality,
+so that processing data in arrays is both easy and fast. There is a wide
+range of 'advanced numeric capabilities' for Larch, including complex
+numbers, FFTs and non-linear least squares minimization.
 
 Larch Features:
 
 ==Simple Syntax:
-  Variable and function names are simple, undecorated strings.
+  Variable and function names are simple, undecorated strings.  The
+  syntax is deliberately close to Python, so that 
 
 ==Data Types:
-  Variabls can contain any of the following data types:  ints, floats,
-    complex, strings, lists, dictionaries (hashes), or NumPy arrays.
+
+  Named variables can contain any of the following data types: ints,
+  floats, complex, strings, lists, dictionaries (hashes), NumPy arrays,
+  or any other python data types.
 
   Multi-dimensional data can be accessed either element-by-element or with
   more complicated "slices":
@@ -72,17 +64,32 @@ Larch Features:
         larch> print arr[2:8]
             [2 3 4 5 6 7]
         larch> str = 'here is a string'
-        larch> print str[0:6]
-            here i
+        larch> print str[0:7]
+            here is
 
-==Full Featured, extensible:  many useful functions for numerical data
-  processing are built in to Larch.  More importantly, it is easy to add more
-  functions, either from Python or as Larch procedures (see below). 
+==Full Featured, extensible:
 
-==Namespaces:  Each variable and function has two parts to its name:
-  a Group Name and Variable Name.  The fully qualified name includes a '.'
-  and looks like group.var.
+  Many useful functions for numerical data processing are built in to
+  Larch.  More importantly, it is easy to add more functions, either
+  from Python or as Larch procedures.
 
+==Namespaces and Groups:
+
+  Each variable and function lives in Group, which can be nested much
+  like a file directory structure -- Group.Subgroup.Variable.  These is
+  no limit on the number of subgroups, within a group or the level of
+  nesting of groups.  This allows you to organize data,  
+     print DataSet1.Energy
+     print DataSet2.Energy
+
+  and so on. To access a variable, you can always use the Full name:
+     print Group1.SubgroupA.Variable
+     
+  If you ask for a name that is NOT a Full name, larch tries to look it up.
+
+  It does this by always having a "local group" which is always looked in first.
+  If 
+  
   Unqualified names (ie, a name without a 'group.' prefix) will use a default
   order to determine which Group to associate with a name:  There is always
   a "Default Data Group" and a "Default Function Group" each of which can be

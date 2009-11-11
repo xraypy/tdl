@@ -68,19 +68,20 @@ class shell(cmd.Cmd):
             self.rdline.set_history_length(1000)
             self.rdline.write_history_file(self.historyfile)
 
-    def emptyline(self):     pass
-    def do_shell(self, arg):   system(arg)
+    def emptyline(self):
+        pass
 
-    def do_help(self,arg):   self._helpshow(arg, cmd='help')
-    def do_show(self,arg):   self._helpshow(arg, cmd='show')
+    def do_shell(self, arg):
+        system(arg)
 
-    def larch_execute(self,s_inp):  self.default(s_inp)
-        
-    def _helpshow(self,arg, cmd='help'):
+    def do_help(self,arg):
         if arg.startswith('(') and arg.endswith(')'): arg = arg[1:-1]
-        # print 'helpshow ', arg, cmd
-        self.default("%s(%s)"% (cmd,repr(arg)))
-                     
+        if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
+        if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
+        self.default("help(%s)"% (repr(arg)))
+
+    def larch_execute(self,s_inp):
+        self.default(s_inp)
         
     def default(self,text):
         text = text.strip()
@@ -91,10 +92,16 @@ class shell(cmd.Cmd):
         else:
             ret = None
             self.input.put(text,lineno=0)
+            
             self.prompt = self.ps2
             while len(self.input) >0:
                 block,fname,lineno = self.input.get()
                 ret = self.larch.eval(block,fname=fname,lineno=lineno)
+                if  callable(ret):
+                    try:
+                        if 1 == len(block.split()):   ret = ret()
+                    except:
+                        pass
                 if self.larch.error:
                     i  = self.larch.error[0]                        
                     print "\n".join(i.get_error())

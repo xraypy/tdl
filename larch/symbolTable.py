@@ -5,7 +5,6 @@ import os
 import sys
 import types
 
-# from config import larchpath
 larchpath_envvar = 'LARCHPATH'
 
 def isGroup(g): return isinstance(g,Group)
