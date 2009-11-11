@@ -95,7 +95,6 @@ def _reload(mod,larch=None,**kw):
     if modname is not None:
         return larch.import_module(modname,reload=True)
 
-
 def show_more(text,filename=None,writer=None,pagelength=30,prefix=''):
     """show lines of text in the style of more """
     txt = text[:]
@@ -177,11 +176,12 @@ def _help(*args,**kws):
     if helper.larch is None and larch is not None:  helper.larch = larch
 
     if args == ('',): args = ('help',)
-    # print '_help ', args
+    # print ' :: _help ', args
 
     if helper.larch is None:
         helper.addtext('cannot start help system!')
     else:
+
         [helper.help(a) for a in args]
 
     return helper.getbuffer()

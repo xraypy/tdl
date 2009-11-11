@@ -7,22 +7,46 @@ class Helper(object):
     """Helper looks up an displays help topics
     and/or pydoc help on larch/python objects"""
     
+    TypeNames = {'<numpy.ndarray>': '<array>',
+                 '<compiler.Procedure>': '<procedure>'}
+    
+                 
     def __init__(self,*args,**kws):
         self.larch = None
         self.buff = []
 
-    def help(self,*args,**kws):
+    def help(self,*args):
         "return help text for a series of arguments"
+
         for arg in args:
             if arg is None: continue
-            # print arg, arg in Help_topics
-            if arg in Help_topics:
-                # print Help_topics[arg]
+            if isinstance(arg,(str,unicode)) and arg in Help_topics:
                 self.addtext(Help_topics[arg])
             else:
-                sym = self.larch.symtable.getSymbol(arg,create=False)
-                self.addtext("   %s = %s" % (arg, repr(sym)))
-                
+                self.show_symbol(arg)
+
+    def show_symbol(self,arg):
+        "show help for a symbol in the symbol table"
+        if isinstance(arg,(str,unicode)):
+            sym = self.larch.symtable.getSymbol(arg,create=False)
+            out = None
+        else:
+            out = sym = arg
+
+            
+        if sym is None:
+            self.addtext(" '%s' not found"  % (arg))
+        atype = str(type(sym))
+        atype = atype.replace('type ','').replace('class ','').replace("'",'')
+        atype = self.TypeNames.get(atype,atype)
+
+        if out is None:
+            out = "%s= %s" % (arg,repr(sym))
+
+        if atype in ('<tuple>','<list>','<dict>','<array>'):
+            out = "%s %s" % (out,atype)
+        self.addtext("  %s" % out)
+                        
                 
     def addtext(self,text):
         self.buff.append(text)

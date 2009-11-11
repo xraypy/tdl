@@ -18,13 +18,12 @@ _h_Shell = """Larch command-line shell help:
 """
 
 _h_Help =  """
-  ###########################################################################
+   ================================
    = Help options =
-    help                  # Help options (this list)
-    help topics  (-t)     # list topics for additional help
-    help <name>           # Detailed help on specific topic, function, or variable
-    (see also: 'help show')
-  ###########################################################################
+    help          # this help
+    help topics   # list topics for additional help
+    help name     # help on specific topic, variable, or procedure
+   ================================
 """
 
 _h_Show =  """

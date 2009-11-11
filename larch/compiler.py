@@ -114,10 +114,20 @@ class Procedure(object):
         self.__doc__  = doc
 
     def __repr__(self):
-        if self.__doc__ is None:        
-            return "<Procedure %s()>" % (self.name)
-        else:
-            return "<Procedure: %s() %s>" % (self.name,self.__doc__)        
+        sig = "%s(" % self.name
+        if len(self.argnames )>0:
+            sig = "%s%s" % (sig,','.join(self.argnames))
+        if len(self.kwargs)>0:
+            if len(self.argnames )>0:
+                sig = "%s," % sig            
+            _kw = ["%s=%s" % (k,v) for k,v in self.kwargs.items()]
+            sig = "%s%s" % (sig,','.join(_kw))
+            
+        sig = "<Procedure %s)>" % (sig)
+
+        if self.__doc__ is not None:
+            sig = "%s\n  %s" % (sig, self.__doc__)
+        return sig
 
     def __call__(self,*args,**kwargs):
         stable  = self.larch.symtable
@@ -629,9 +639,9 @@ class Compiler:
             if i not in sys.path:
                 sys.path.append(i)
 
-        print("Import Module :: ", name, asname, fromlist, reload)
-        print("  larch path: ", _sys.path)
-        print("  python path: ", sys.path)
+        # print("Import Module :: ", name, asname, fromlist, reload)
+        # print("  larch path: ", _sys.path)
+        # print("  python path: ", sys.path)
         
         # step 1  import the module to a global location
         #   either sys.modules for python modules

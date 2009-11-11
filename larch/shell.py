@@ -19,13 +19,11 @@ try:
 except:
     scipy_version = '(not available)'
     
-
 banner = """  Larch %s  M. Newville, T. Trainor (2009)
   using python %s, numpy %s, and scipy %s""" % (compiler.__version__,
                                                 '%i.%i.%i' % sys.version_info[:3],
                                                 numpy.__version__,
                                                 scipy_version)
-
 class shell(cmd.Cmd):
     intro  = "  === Type 'help' to get started ==="
     ps1    = "larch> "
@@ -34,18 +32,14 @@ class shell(cmd.Cmd):
     def __init__(self, completekey='tab', scripts=None, debug=False,
                  stdin=None, stdout=None, intro=None, GUI='TkAgg'):
 
-
         print banner
-        
         self.debug  = debug
         try:
             import readline
             self.rdline = readline
         except ImportError:
             self.rdline = None
-
         cmd.Cmd.__init__(self,completekey='tab')
-
         self.historyfile = path.join(environ.get('HOME',getcwd()),'.larch_history')
         if self.rdline is not None:
             try:
@@ -97,6 +91,7 @@ class shell(cmd.Cmd):
         else:
             ret = None
             self.input.put(text,lineno=0)
+            self.prompt = self.ps2
             while len(self.input) >0:
                 block,fname,lineno = self.input.get()
                 ret = self.larch.eval(block,fname=fname,lineno=lineno)
@@ -105,6 +100,7 @@ class shell(cmd.Cmd):
                     print "\n".join(i.get_error())
                         
                 if ret is not None: print ret
-
+                self.prompt = self.ps1
+            
 if __name__ == '__main__':
     t = shell(debug=True).cmdloop()

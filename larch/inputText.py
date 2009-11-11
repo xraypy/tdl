@@ -82,7 +82,7 @@ class InputText:
           
     """
     indent = ' '*4
-    ps1 = 'larch>'
+    ps1 = ' >'
     ps2 = '.....>'
     block_friends = {'if':  ('else','elif'),
                      'for':   ('else'),
@@ -137,7 +137,6 @@ class InputText:
             while not self.input_complete :
                 addText(self.input())
 
-        # print 'inp is complete ', self.input_complete
         if self.input_complete:
             self.prompt = self.ps1            
             nkeys, nblock = self.convert()
