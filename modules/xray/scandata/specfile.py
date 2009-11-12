@@ -53,7 +53,7 @@ class SpecFile:
 
     def _summarize(self):
         lineno = 0
-        (mnames,cmnd,date,xtime,Gvals,q,Pvals,atten,lab) = (None,None,None,None,None,None,None,None,None)
+        (mnames,cmnd,date,xtime,Gvals,q,Pvals,atten,energy,lab) = (None,None,None,None,None,None,None,None,None,None)
         (index, ncols, n_sline) = (0,0,0)
         for i in self._lines:
             lineno = lineno + 1
@@ -182,10 +182,10 @@ class SpecFile:
         # parse the various data into the dict
         sc_dict['cmd']  = s['cmd']
         sc_dict['date'] = s['date']
-        sc_dict['G']    = map(float,s['G'].split())
-        sc_dict['Q']    = map(float,s['Q'].split())
-        sc_dict['ATTEN'] = map(int,s['atten'].split())
-        sc_dict['ENERGY'] = map(float,s['energy'].split())
+        if s['G'] != None: sc_dict['G']    = map(float,s['G'].split())
+        if s['Q'] != None: sc_dict['Q']    = map(float,s['Q'].split())
+        if s['atten'] != None: sc_dict['ATTEN'] = map(int,s['atten'].split())
+        if s['energy'] != None: sc_dict['ENERGY'] = map(float,s['energy'].split())
         # get the motor positions
         p_dict = {}
         m_names = s['mot_names'].split()
