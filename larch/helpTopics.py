@@ -490,31 +490,34 @@ _h_Control = """
        endtry
 """
 
-
 _h_If = ""
 _h_For = ""
 _h_While = ""
 _h_Try = ""
 _h_Builtin = ""
-
 _h_Functions = ""
 _h_Procedures = ""
 _h_DefVariables = 'Defined Variables'
 
-_h_StringFormatting = "String Formatting"
+_h_String_Formatting = "String Formatting"
 
 def generate():
     topics = {}
     for key,val in globals().items():
         if key.startswith('_h_'):
-            name = key[3:].lower()
+            name = key[3:].lower().replace('_',' ')
             topics[name] = val
 
     tnames = ['== Help topics ==']
     s = ''
-    for t in sorted(topics.keys()):
-        s = "%s  %s" % (s,t)
-        if len(s) > 62:
+
+    topnames = sorted(topics.keys())
+    nx= 2 + sorted([len(i) for i in topnames])[-1]
+    
+    fmt = "%%%i.%is" % (nx,nx)
+    for t in topnames:
+        s = "%s %s" % (s,fmt%(t+(' '*nx)))
+        if len(s) > 50:
             tnames.append(s)
             s = ''
     tnames.append(s)

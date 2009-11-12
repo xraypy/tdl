@@ -741,12 +741,17 @@ class Compiler:
                         break
 
                     
-    def doTryFinally(self,node):    # ('body', 'finalbody') 
-        return self.NotImplemented(node)
-        
-    def doGeneratorExp(self,node):    # ('elt', 'generators') 
-        print('Incomplete GeneratorExp ')
-        print(ast.dump(node.elt),include_attributes=True)
+    def doTryFinally(self,node):    return self.NotImplemented(node)        
+    def doExec(self,node):          return self.NotImplemented(node)
+    def doLambda(self,node):        return self.NotImplemented(node)
+    def doClass(self,node):         return self.NotImplemented(node)
+    def doGlobal(self,node):        return self.NotImplemented(node)
+    def doGenerators(self,node):    return self.NotImplemented(node)
+    def doYield(self,node):         return self.NotImplemented(node)
+    def doDecorators(self,node):    return self.NotImplemented(node)
+    def doGeneratorExp(self,node):  return self.NotImplemented(node)        
+#         print('Incomplete GeneratorExp ')
+#         print(ast.dump(node.elt),include_attributes=True)
 #         for n in node.generators:
 #             print(n)             
 
