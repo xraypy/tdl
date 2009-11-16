@@ -1,8 +1,13 @@
 #!/usr/bin/python2.6
 
+try:
+    import lib as larch
+except:
+    import larch
+    
 import sys
 import getopt
-import shell
+
 
 debug=True
 opts, args = getopt.getopt(sys.argv[1:], "hq", ["help", "quiet"])
@@ -12,7 +17,7 @@ for k,v in opts:
     if k in ("-q", "--quiet"):  quiet = v
     if k in ("-d", "--debug"):  debug = v
 
-t = shell.shell(debug=debug)
+t = larch.shell(debug=debug)
 
 if len(args)>0:
     for s in args:
