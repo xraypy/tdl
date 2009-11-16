@@ -210,8 +210,8 @@ class LarchExceptionHolder:
                 
         return msg
 
-class Compiler:
-    """ program compiler and interpreter.
+class Interpreter:
+    """larch program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
   using python's ast module, and then executes the AST representation
   using a custom SymboplTable for named object (variable, functions).

@@ -8,7 +8,7 @@ class Helper(object):
     and/or pydoc help on larch/python objects"""
     
     TypeNames = {'<numpy.ndarray>': '<array>',
-                 '<compiler.Procedure>': '<procedure>'}
+                 '<interpreter.Procedure>': '<procedure>'}
     
                  
     def __init__(self,*args,**kws):

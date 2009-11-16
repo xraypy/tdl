@@ -8,7 +8,7 @@ import types
 import getopt
 import traceback
 import numpy
-import compiler
+import interpreter
 
 import inputText
 from util import EvalError
@@ -20,7 +20,7 @@ except:
     scipy_version = '(not available)'
     
 banner = """  Larch %s  M. Newville, T. Trainor (2009)
-  using python %s, numpy %s, and scipy %s""" % (compiler.__version__,
+  using python %s, numpy %s, and scipy %s""" % (interpreter.__version__,
                                                 '%i.%i.%i' % sys.version_info[:3],
                                                 numpy.__version__,
                                                 scipy_version)
@@ -58,7 +58,7 @@ class shell(cmd.Cmd):
         self.stdout = sys.stdout
 
         
-        self.larch  = compiler.Compiler()
+        self.larch  = interpreter.Interpreter()
         self.input  = inputText.InputText(prompt=self.ps1)
         self.prompt = self.ps1
 
