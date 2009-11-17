@@ -3,10 +3,15 @@ import copy
 import os
 import sys
 import numpy
-from util import closure
-from glob import glob
-import help
 import pydoc
+
+from glob import glob
+
+#
+#
+import plotter
+import help
+from util import closure
 
 helper = help.Helper()
 
@@ -187,6 +192,9 @@ def _help(*args,**kws):
     return helper.getbuffer()
 
 
+def _plot(*args,**kws):
+
+    
 _local_funcs = {'group':_group,
                 'showgroup':_showgroup,
                 'reload':_reload,
