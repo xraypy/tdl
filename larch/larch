@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/env python2.6
 
 try:
     import lib as larch
@@ -6,18 +6,18 @@ except:
     import larch
     
 import sys
-import getopt
+from optparse import OptionParser
 
+usage = "usage: %prog [options] file"
+parser = OptionParser(usage=usage, prog="larch",
+                      version="%s" % larch.__version__)
+parser.add_option("-q", "--quiet", dest="quiet", action="store_true",
+                  default=False, help="set quiet mode, default = False")
+parser.add_option("-d", "--debug", dest="debug", action="store_true",
+                  default=True, help="set debug mode, default = True")
+(options, args) = parser.parse_args()
 
-debug=True
-opts, args = getopt.getopt(sys.argv[1:], "hq", ["help", "quiet"])
-
-for k,v in opts:
-    if k in ("-h", "--help"):   show_usage()
-    if k in ("-q", "--quiet"):  quiet = v
-    if k in ("-d", "--debug"):  debug = v
-
-t = larch.shell(debug=debug)
+t = larch.shell(debug=options.debug)
 
 if len(args)>0:
     for s in args:

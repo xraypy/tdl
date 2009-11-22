@@ -1,15 +1,19 @@
-#!/usr/bin/python2.6
-
+#!/usr/bin/env python2.6
 
 """
   Larch: a data processing macro language for python
   
 """
 
-__version__  = '0.8.0'
-__date__     = '16-Nov-2009'
+__version__ = '0.9.1'
+ __date__   = '22-Nov-2009'
 
-##
+#
+import sys
+major,minor = sys.version_info[0], sys.version_info[1]
+if major == 2 and minor < 6:
+    raise EnvironmentError('requires python 2.6 or higher')
+
 ## require that numpy be available right away!!
 import numpy
 
@@ -18,4 +22,6 @@ from symbolTable import Group, symbolTable
 from shell import shell
 
 larch = interpreter.Interpreter
+
+
 

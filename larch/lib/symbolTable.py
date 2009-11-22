@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/env python2.6
 
 from __future__ import print_function
 import os
@@ -47,7 +47,8 @@ class symbolTable(Group):
 
     def __init__(self,larch=None):
         Group.__init__(self)
-
+        self.larch = larch
+        
         # self.__writer = writer  or sys.stdout.write
 
         setattr(self,self.top_group, self)

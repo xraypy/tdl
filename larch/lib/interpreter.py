@@ -8,22 +8,7 @@ import symbolTable
 import builtins
 import numpy
 import __builtin__
-from util import closure
-
-class LarchError(Exception):
-    def __init__(self,error,descr = None,node = None):
-        self.error = error
-        self.descr = descr
-    def __repr__(self):
-        return "%s: %s" % (self.error, self.descr)
-    __str__ = __repr__
-
-
-__version__ = '0.9.1'
-
-major,minor = sys.version_info[0], sys.version_info[1]
-if major == 2 and minor < 6:
-    raise EnvironmentError('requires python 2.6 or higher')
+from util import closure, LarchError
 
 _operators = {ast.Is:     lambda a,b: a is b,
               ast.IsNot:  lambda a,b: a is not b,

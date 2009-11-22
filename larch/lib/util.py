@@ -12,6 +12,14 @@ class EvalError(Exception):
         return "%s: %s" % (self.error, self.descr)
     __str__ = __repr__
 
+class LarchError(Exception):
+    def __init__(self,error,descr = None,node = None):
+        self.error = error
+        self.descr = descr
+    def __repr__(self):
+        return "%s: %s" % (self.error, self.descr)
+    __str__ = __repr__
+
 def PrintExceptErr(err_str,print_trace=True):
     " print error on exceptions"
     print '\n***********************************'

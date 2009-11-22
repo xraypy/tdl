@@ -9,7 +9,7 @@ from glob import glob
 
 #
 #
-import plotter
+# import plotter
 import help
 from util import closure
 
@@ -193,6 +193,7 @@ def _help(*args,**kws):
 
 
 def _plot(*args,**kws):
+    pass
 
     
 _local_funcs = {'group':_group,
