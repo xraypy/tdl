@@ -1,6 +1,6 @@
 Essentially every part of the system needs more testing.
 
-- builtin help system.  Not implemented.
+- builtin help system needs work.
 
 - exceptions: raise and try/except/finally, etc.
   run time exceptions seem to be working.  Areas that need work:
@@ -9,12 +9,12 @@ Essentially every part of the system needs more testing.
       little different for errors in python mods v. tdl mods, 
       in that python mods include an error from the failing 
       point in tdlcompiler....
-    . errors inside tdl procedures?
+    . errors inside tdl procedures not fully diagnosed....
 
- 
-- may want a '.tdl_config' file (or some equivalent) to set global runtime
+- should move loading of builtins and import_module from interpreter to symbolTable.
+
+- may want a '.larch_config' file (or some equivalent) to set global runtime
   params.  This should be in the compiler init method..
-
 
 - procedures (definition and execution): seems to be working, needs debugging.
    - Import / ImportFrom: this is working (for me), with both import and
