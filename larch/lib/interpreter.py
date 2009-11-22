@@ -10,6 +10,7 @@ import numpy
 import __builtin__
 from util import closure, LarchError
 
+__version__ = '0.9.1'
 _operators = {ast.Is:     lambda a,b: a is b,
               ast.IsNot:  lambda a,b: a is not b,
               ast.In:     lambda a,b: a in b,
