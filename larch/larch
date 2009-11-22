@@ -2,7 +2,7 @@
 
 try:
     import lib as larch
-except:
+except ImportError:
     import larch
     
 import sys
