@@ -5,9 +5,6 @@
   
 """
 
-__version__ = '0.9.1'
- __date__   = '22-Nov-2009'
-
 #
 import sys
 major,minor = sys.version_info[0], sys.version_info[1]
@@ -17,11 +14,11 @@ if major == 2 and minor < 6:
 ## require that numpy be available right away!!
 import numpy
 
-import interpreter
-from symbolTable import Group, symbolTable
-from shell import shell
+from . import interpreter
+from .symbolTable import Group, symbolTable
+from .shell import shell
 
 larch = interpreter.Interpreter
 
-
-
+__version__ = interpreter.__version__
+__date__    = '22-Nov-2009'
