@@ -87,6 +87,7 @@ class DefinedVariable(object):
 class Procedure(object):
     """larch procedure:  function """
     def __init__(self, name, larch=None, doc=None,
+                 fname='<StdIn>', lineno=0,
                  body=None, args=None, kwargs=None,
                  vararg=None, varkws=None):
         self.name     = name
@@ -98,7 +99,9 @@ class Procedure(object):
         self.vararg   = vararg
         self.varkws   = varkws
         self.__doc__  = doc
-
+        self.lineno   = lineno
+        self.fname    = fname
+        
     def __repr__(self):
         sig = "%s(" % self.name
         if len(self.argnames )>0:
@@ -109,37 +112,71 @@ class Procedure(object):
             _kw = ["%s=%s" % (k,v) for k,v in self.kwargs.items()]
             sig = "%s%s" % (sig,','.join(_kw))
             
-        sig = "<Procedure %s)>" % (sig)
+        sig = "<Procedure %s, file=%s)>" % (sig,self.fname)
 
         if self.__doc__ is not None:
             sig = "%s\n  %s" % (sig, self.__doc__)
         return sig
 
     def __call__(self,*args,**kwargs):
-        stable  = self.larch.symtable
-        sys     = stable._sys      
-        lgroup  = stable.createGroup()
+        try:
+            stable  = self.larch.symtable
+            sys     = stable._sys      
+            lgroup  = stable.createGroup()
+        except:
+            self.larch.addException(None,msg='Cannot run Procedure %s'%self.name
+                                    ,expr='<>',
+                                    fname=self.fname,lineno=self.lineno+1)
 
         args = list(args)
+        n_args = len(args)
+        n_expected = len(self.argnames)
+        if n_args < n_expected:
+            msg='not enough arguments for Procedure %s (expected %i, got %i)'%(self.name,n_expected,n_args)
+            self.larch.addException(None,msg=msg, expr='<>',
+                                    fname=self.fname,lineno=self.lineno+1)
+                
+            
         for argname in self.argnames:
             setattr(lgroup, argname,args.pop(0))
-        if self.vararg is not None and len(args)>0:
-            setattr(lgroup, self.vararg, args)
-        
-        for k,v in self.kwargs.items():
-            if kwargs.has_key(k):  v = kwargs.pop(k)
-            setattr(lgroup, k, v)
             
-        if self.varkws is not None:
-            setattr(lgroup, self.varkws, kwargs)
-        
+        try:         
+            if self.vararg is not None and len(args)>0:
+                setattr(lgroup, self.vararg, args)
+                
+            for k,v in self.kwargs.items():
+                if kwargs.has_key(k):  v = kwargs.pop(k)
+                setattr(lgroup, k, v)
+
+            if self.varkws is not None:
+                setattr(lgroup, self.varkws, kwargs)
+
+            if len(kwargs) > 0:
+                msg='extra keyword arguments for Procedure %s (%s)'%(self.name,','.join(kwargs.keys()))
+                self.larch.addException(None,msg=msg, expr='<>',
+                                        fname=self.fname,lineno=self.lineno+1)
+
+                
+                print("Left over C:", kwargs.items())                
+
+        except:
+            self.larch.addException(None,
+                                    msg='incorrect arguments for Procedure %s'%self.name,
+                                    expr='<>',
+                                    fname=self.fname,lineno=self.lineno+1)            
+            
+
         grps_save = sys.localGroup,sys.moduleGroup
         stable._set_local_mod((lgroup, self.modgroup))
         
         retval = None
         self.larch.retval = None
+        # print("***** Calling proc " , self.name, self.fname, self.lineno)
         for node in self.body:
-            self.larch.interp(node)
+            self.larch.interp(node,expr='<>',fname=self.fname,lineno=self.lineno)
+            
+            if len(self.larch.error)>0:
+                break
             if self.larch.retval is not None:
                 retval = self.larch.retval
                 break
@@ -162,39 +199,67 @@ class LarchExceptionHolder:
 
     def get_error(self):
         node = self.node
-        # print( "get error for node: ")
-        # print( ast.dump(node, include_attributes=True))
-        
-        lineno,col_offset=0,0
-        if self.node is not None:
-            lineno = node.lineno
-            col_offset = self.node.col_offset
+        node_lineno = 0
+        node_col_offset = 0
 
-        exc,exc_msg,tb= self.exc_info
-        self.lineno += lineno 
-        msg = []
-        msg.append("%s: %s" % (exc.__name__, exc_msg))
-        if self.fname is not None:
-            msg.append("File '%s', line %i" % (self.fname,self.lineno))
+        if node is not None:
+            try:
+                node_lineno = node.lineno
+                node_col_offset = self.node.col_offset
+            except: 
+                pass
             
-        if self.expr is not None:
-            elines = self.expr.split('\n')
-            nlines = len(elines)
-            if nlines > 0 and lineno > 1: ## nlines > self.lineno:
-                msg.append("  %s" % elines[lineno-1])
-            else:
-                msg.append("  %s" % self.expr)
-                
-        if col_offset >0:
-            msg.append("  %s^" % (' '*col_offset))
-        if node is None:
-            this_tb = traceback.extract_tb(tb)
-            this_tb.pop(0)
-            for fname,lineno,mod,txt in this_tb:
-                msg.append("File '%s', line %i %s" % (fname,lineno,mod))
-                msg.append("  %s" % (txt))                
-                
-        return msg
+        lineno = self.lineno + node_lineno 
+
+        exc_text = str(self.exc_info[1])
+        if exc_text in (None,'None'): exc_text = ''
+        expr = self.expr
+        if expr == '<>': # denotes non-saved expression -- go fetch from file!
+            ftmp = open(self.fname,'r')
+            expr = ftmp.readlines()[lineno-1][:-1]
+            ftmp.close()
+
+       # print("get error for node: ")
+
+        out = []
+        if len(exc_text) > 0: out.append(exc_text)
+        out.append(" %s, line number %i" % (self.fname,self.lineno))
+        out.append("     %s" % expr)
+        if node_col_offset>0: out.append("    %s^^^" % ((node_col_offset)*' '))
+        # out.append("  tb:     %s " % traceback.extract_tb(self.exc_info[2]))
+        return (self.msg,'\n'.join(out))
+
+
+#         lineno,col_offset=0,0
+#         if self.node is not None:
+#             lineno = node.lineno
+#             col_offset = self.node.col_offset
+# 
+#         exc,exc_msg,tb= self.exc_info
+#         self.lineno += lineno 
+#         msg = []
+#         msg.append("%s: %s" % (exc.__name__, exc_msg))
+#         if self.fname is not None:
+#             msg.append("File '%s', line %i" % (self.fname,self.lineno))
+#             
+#         if self.expr is not None:
+#             elines = self.expr.split('\n')
+#             nlines = len(elines)
+#             if nlines > 0 and lineno > 1: ## nlines > self.lineno:
+#                 msg.append("  %s" % '\n'.join(elines))
+#             else:
+#                 msg.append("  %s" % self.expr)
+#                 
+#         if col_offset >0:
+#             msg.append("  %s^" % (' '*col_offset))
+
+#         if node is None:
+#             this_tb = traceback.extract_tb(tb)
+#             this_tb.pop(0)
+#             for fname,lineno,mod,txt in this_tb:
+#                 msg.append("File '%s', line %i %s" % (fname,lineno,mod))
+#                 msg.append("  %s" % (txt))                
+
 
 class Interpreter:
     """larch program compiler and interpreter.
@@ -254,59 +319,76 @@ class Interpreter:
     #  interp :  ast -> result
     #  eval   :  string statement -> result = interp(compile(statement))
                       
-    def addException(self,node,msg=None):
+    def addException(self,node,msg='',expr=None,fname=None,lineno=0):
+
         if self.error is None: self.error = []
-        # print(" add except ", node, msg)
+        if expr  is None: expr  = self.expr
+        if fname is None: fname = self.fname        
+        if lineno is None: lineno = self.lineno
+
+        if len(self.error) > 0 and not isinstance(node, ast.Module):
+            msg = 'Extra Error'
+
         err = LarchExceptionHolder(node, msg=msg,
-                                 expr=self.expr,
-                                 fname=self.fname,
-                                 lineno=self.lineno)
+                                   expr= expr,
+                                   fname= fname,
+                                   lineno=lineno)
         self._interrupt = ast.Break()
+           
+            
         self.error.append(err)
         
-    def compile(self,text):
+    def compile(self,text,fname=None,lineno=0):
         """compile statement/expression to Ast representation    """
         self.expr  = text
         # print(" larch compile: '%s'" % text)
         try:
             return ast.parse(text)
         except:
-            self.addException(None,msg='Syntax Error')
+            self.addException(None,msg='Syntax Error',expr=text,fname=fname,lineno=lineno)
+            
         
-    def interp(self, node):
+    def interp(self, node, expr=None, fname=None, lineno=None):
         """executes compiled Ast representation for an expression"""
 
         # Note: keep the 'node is None' test: internal code here may run
         #    interp(None) and expect a None in return.
         if node is None: return None
         if isinstance(node,(str,unicode)):  node = self.compile(node)
-        
+
+               
         method = "do%s" % node.__class__.__name__
+        if lineno is not None: self.lineno = lineno
+        if fname  is not None: self.fname  = fname
+        if expr   is not None: self.expr   = expr
+
         ret = None
         try:
             fcn = getattr(self,method)
         except:
-            self.addException(node)
+            self.addException(node,msg='Lookup Error', expr=expr,fname=fname,lineno=lineno)
             return ret
         
         try:
             ret = fcn(node)
         except:
-            self.addException(node)
+            self.addException(node,msg='Runtime Error',expr=expr,fname=fname,lineno=lineno)
             
         if isinstance(ret,enumerate):  ret = list(ret)
         return ret
             
-    def eval(self,expr,fname=None,lineno=None):
+    def eval(self,expr,fname=None,lineno=0):
         """evaluates a single statement"""
         self.fname = fname        
         self.lineno = lineno
         self.error = []
-        node = self.compile(expr)
-        #  print(" eval: ", expr, node, self.error)
-        #  print("     : ", ast.dump(node))
+        node = self.compile(expr,fname=fname,lineno=lineno)
         if not self.error:
-            return self.interp(node)
+            o = self.interp(node,expr=expr,fname=fname,lineno=lineno)
+            if len(self.error) > 0:
+                self.addException(node,msg='Evaluation Error',expr=expr,fname=fname,lineno=lineno)
+            return o
+            
         
     def dump(self, node,**kw):  return ast.dump(node,**kw)
 
@@ -573,15 +655,16 @@ class Interpreter:
             
         for n in node.args.args: args.append(n.id)
      
-        # print(" do FuncDef ",  node.body[0])
-
         doc = None
         if isinstance(node.body[0],ast.Expr):
             docnode = node.body.pop(0)
             doc = self.interp(docnode.value)
 
-        proc = Procedure(node.name, larch=self,doc=doc,
+        proc = Procedure(node.name, larch=self,
+                         doc=doc,
+                         lineno = self.lineno,
                          body = node.body,
+                         fname = self.fname,
                          args = args,
                          kwargs = kwargs,
                          vararg = node.args.vararg,
@@ -637,6 +720,7 @@ class Interpreter:
         do_load = (name not in _sys.modules and name not in sys.modules)
         do_load = do_load or reload
         
+
         if do_load:
             # first look for "name.lar"
             isLarch = False
@@ -677,7 +761,7 @@ class Interpreter:
                     thismod = sys.modules[name]
                 except:
                     # print(" import error ", name, sys.exc_info())
-                    self.addException(None)
+                    self.addException(None,msg='Import Error')
                     return
                
         else: # previously loaded module, just do lookup

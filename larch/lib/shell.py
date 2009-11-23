@@ -103,8 +103,14 @@ class shell(cmd.Cmd):
                     except:
                         pass
                 if self.larch.error:
-                    i  = self.larch.error[0]                        
-                    print "\n".join(i.get_error())
+                    print '== Error =='
+                    err  = self.larch.error.pop(0)
+                    print "%s:\n%s" % err.get_error()
+                    for err in self.larch.error:
+                        err_type,err_msg =  err.get_error()
+                        if err_type != 'Extra Error':
+                            print err_msg
+                    print '==========='                    
                         
                 if ret is not None: print ret
                 self.prompt = self.ps1
