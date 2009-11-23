@@ -76,7 +76,7 @@ class DefinedVariable(object):
             save_groups  = _sys.localGroup,_sys.moduleGroup
             
             _sys.localGroup,_sys.moduleGroup = self._groups
-            rval = self.larch.interp(self.ast)
+            rval = self.larch.interp(self.ast,expr=self.expr)
 
             _sys.localGroup,_sys.moduleGroup = save_groups
             return rval
@@ -124,19 +124,21 @@ class Procedure(object):
             sys     = stable._sys      
             lgroup  = stable.createGroup()
         except:
-            self.larch.addException(None,msg='Cannot run Procedure %s'%self.name
-                                    ,expr='<>',
+            self.larch.addException(None,
+                                    msg='Cannot run Procedure %s'%self.name,
+                                    expr='<>',
                                     fname=self.fname,lineno=self.lineno+1)
 
-        args = list(args)
+        args   = list(args)
         n_args = len(args)
         n_expected = len(self.argnames)
         if n_args < n_expected:
-            msg='not enough arguments for Procedure %s (expected %i, got %i)'%(self.name,n_expected,n_args)
+            msg='not enough arguments for Procedure %s (expected %i, got %i)'%(self.name,
+                                                                               n_expected,
+                                                                               n_args)
             self.larch.addException(None,msg=msg, expr='<>',
                                     fname=self.fname,lineno=self.lineno+1)
                 
-            
         for argname in self.argnames:
             setattr(lgroup, argname,args.pop(0))
             
@@ -152,13 +154,12 @@ class Procedure(object):
                 setattr(lgroup, self.varkws, kwargs)
 
             if len(kwargs) > 0:
-                msg='extra keyword arguments for Procedure %s (%s)'%(self.name,','.join(kwargs.keys()))
+                msg='extra keyword arguments for Procedure %s (%s)'%(self.name,
+                                                                     ','.join(kwargs.keys()))
                 self.larch.addException(None,msg=msg, expr='<>',
                                         fname=self.fname,lineno=self.lineno+1)
 
                 
-                print("Left over C:", kwargs.items())                
-
         except:
             self.larch.addException(None,
                                     msg='incorrect arguments for Procedure %s'%self.name,
@@ -219,46 +220,14 @@ class LarchExceptionHolder:
             expr = ftmp.readlines()[lineno-1][:-1]
             ftmp.close()
 
-       # print("get error for node: ")
-
         out = []
         if len(exc_text) > 0: out.append(exc_text)
         out.append(" %s, line number %i" % (self.fname,self.lineno))
         out.append("     %s" % expr)
-        if node_col_offset>0: out.append("    %s^^^" % ((node_col_offset)*' '))
-        # out.append("  tb:     %s " % traceback.extract_tb(self.exc_info[2]))
+        if node_col_offset>0:
+            out.append("    %s^^^" % ((node_col_offset)*' '))
+
         return (self.msg,'\n'.join(out))
-
-
-#         lineno,col_offset=0,0
-#         if self.node is not None:
-#             lineno = node.lineno
-#             col_offset = self.node.col_offset
-# 
-#         exc,exc_msg,tb= self.exc_info
-#         self.lineno += lineno 
-#         msg = []
-#         msg.append("%s: %s" % (exc.__name__, exc_msg))
-#         if self.fname is not None:
-#             msg.append("File '%s', line %i" % (self.fname,self.lineno))
-#             
-#         if self.expr is not None:
-#             elines = self.expr.split('\n')
-#             nlines = len(elines)
-#             if nlines > 0 and lineno > 1: ## nlines > self.lineno:
-#                 msg.append("  %s" % '\n'.join(elines))
-#             else:
-#                 msg.append("  %s" % self.expr)
-#                 
-#         if col_offset >0:
-#             msg.append("  %s^" % (' '*col_offset))
-
-#         if node is None:
-#             this_tb = traceback.extract_tb(tb)
-#             this_tb.pop(0)
-#             for fname,lineno,mod,txt in this_tb:
-#                 msg.append("File '%s', line %i %s" % (fname,lineno,mod))
-#                 msg.append("  %s" % (txt))                
 
 
 class Interpreter:
@@ -327,8 +296,8 @@ class Interpreter:
         if lineno is None: lineno = self.lineno
 
         if len(self.error) > 0 and not isinstance(node, ast.Module):
-            msg = 'Extra Error'
-
+            msg = 'Extra Error (%s)' % msg
+            
         err = LarchExceptionHolder(node, msg=msg,
                                    expr= expr,
                                    fname= fname,

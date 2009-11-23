@@ -108,7 +108,7 @@ class shell(cmd.Cmd):
                     print "%s:\n%s" % err.get_error()
                     for err in self.larch.error:
                         err_type,err_msg =  err.get_error()
-                        if err_type != 'Extra Error':
+                        if not err_type.startswith('Extra Error'):
                             print err_msg
                     print '==========='                    
                         
