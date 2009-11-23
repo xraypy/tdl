@@ -5,7 +5,7 @@ try:
 except ImportError:
     import larch
     
-import sys
+import sys, os
 from optparse import OptionParser
 
 usage = "usage: %prog [options] file"
@@ -21,9 +21,10 @@ t = larch.shell(debug=options.debug)
 
 if len(args)>0:
     for s in args:
-        if s.endswith('.py'):    s = s[:-3]
-        elif s.endswith('.lar'): s = s[:-4]
-        t.default("import %s" % s)
+        if s.endswith('.py'):
+            t.default("import %s" %  s[:-3])
+        elif s.endswith('.lar'):
+            t.default("import %s" % s[:-4])
 else:
     t.cmdloop()
 

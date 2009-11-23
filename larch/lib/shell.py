@@ -11,7 +11,6 @@ import numpy
 import interpreter
 
 import inputText
-from util import EvalError
 
 try:
     import scipy
@@ -82,6 +81,11 @@ class shell(cmd.Cmd):
 
     def larch_execute(self,s_inp):
         self.default(s_inp)
+
+    def loadfile(self,filename):
+        fh = open(filename,'r')
+        for i,line in enumerate(fh.readlines()):
+            self.input.put(line, filename=filename,lineno=i)
         
     def default(self,text):
         text = text.strip()
@@ -96,6 +100,7 @@ class shell(cmd.Cmd):
             self.prompt = self.ps2
             while len(self.input) >0:
                 block,fname,lineno = self.input.get()
+                # print 'BLOCK, FNAME, LINENO ', block, fname, lineno
                 ret = self.larch.eval(block,fname=fname,lineno=lineno)
                 if  callable(ret):
                     try:
@@ -105,7 +110,7 @@ class shell(cmd.Cmd):
                 if self.larch.error:
                     print '== Error =='
                     err  = self.larch.error.pop(0)
-                    print "%s:\n%s" % err.get_error()
+                    print "%s: %s" % err.get_error()
                     for err in self.larch.error:
                         err_type,err_msg =  err.get_error()
                         if not err_type.startswith('Extra Error'):

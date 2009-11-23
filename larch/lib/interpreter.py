@@ -8,7 +8,7 @@ import symbolTable
 import builtins
 import numpy
 import __builtin__
-from util import closure, LarchError
+from util import closure
 
 __version__ = '0.9.1'
 _operators = {ast.Is:     lambda a,b: a is b,
@@ -121,13 +121,14 @@ class Procedure(object):
     def __call__(self,*args,**kwargs):
         try:
             stable  = self.larch.symtable
-            sys     = stable._sys      
+            _sys    = stable._sys      
             lgroup  = stable.createGroup()
         except:
             self.larch.addException(None,
                                     msg='Cannot run Procedure %s'%self.name,
                                     expr='<>',
-                                    fname=self.fname,lineno=self.lineno+1)
+                                    fname=self.fname,lineno=self.lineno+1,
+                                    py_exc=sys.exc_info())
 
         args   = list(args)
         n_args = len(args)
@@ -137,7 +138,8 @@ class Procedure(object):
                                                                                n_expected,
                                                                                n_args)
             self.larch.addException(None,msg=msg, expr='<>',
-                                    fname=self.fname,lineno=self.lineno+1)
+                                    fname=self.fname,lineno=self.lineno+1,
+                                    py_exc=sys.exc_info())
                 
         for argname in self.argnames:
             setattr(lgroup, argname,args.pop(0))
@@ -157,17 +159,19 @@ class Procedure(object):
                 msg='extra keyword arguments for Procedure %s (%s)'%(self.name,
                                                                      ','.join(kwargs.keys()))
                 self.larch.addException(None,msg=msg, expr='<>',
-                                        fname=self.fname,lineno=self.lineno+1)
+                                        fname=self.fname,lineno=self.lineno+1,
+                                        py_exc=sys.exc_info())
 
                 
         except:
             self.larch.addException(None,
                                     msg='incorrect arguments for Procedure %s'%self.name,
                                     expr='<>',
-                                    fname=self.fname,lineno=self.lineno+1)            
+                                    fname=self.fname,lineno=self.lineno+1,
+                                    py_exc=sys.exc_info())            
             
 
-        grps_save = sys.localGroup,sys.moduleGroup
+        grps_save = _sys.localGroup,_sys.moduleGroup
         stable._set_local_mod((lgroup, self.modgroup))
         
         retval = None
@@ -182,7 +186,7 @@ class Procedure(object):
                 retval = self.larch.retval
                 break
 
-        sys.localGroup,sys.moduleGroup = grps_save
+        _sys.localGroup,_sys.moduleGroup = grps_save
         stable._set_local_mod(grps_save)
         self.larch.retval = None
         del lgroup
@@ -190,11 +194,13 @@ class Procedure(object):
     
 class LarchExceptionHolder:
     def __init__(self,node,msg='',fname='<StdIn>',
+                 py_exc=(None,None),
                  expr=None, lineno=0):
-        self.node  = node
-        self.fname = fname
-        self.expr  = expr
-        self.msg   = msg         
+        self.node   = node
+        self.fname  = fname
+        self.expr   = expr
+        self.msg    = msg
+        self.py_exc = py_exc
         self.lineno = lineno
         self.exc_info = sys.exc_info()
 
@@ -222,12 +228,27 @@ class LarchExceptionHolder:
 
         out = []
         if len(exc_text) > 0: out.append(exc_text)
+        py_etype, py_eval = self.py_exc
+        #         if py_etype is not None and py_eval is not None:
+        #             out.append("%s: %s" % (py_etype, py_eval))
+        
         out.append(" %s, line number %i" % (self.fname,self.lineno))
         out.append("     %s" % expr)
         if node_col_offset>0:
             out.append("    %s^^^" % ((node_col_offset)*' '))
 
         return (self.msg,'\n'.join(out))
+
+
+class LarchError(Exception):
+    def __init__(self,error='Larch Error', descr=None, node=None):
+        self.error = error
+        self.descr = descr
+        self.node  = node
+    def __repr__(self): return "%s: %s" % (self.error, self.descr)
+    __str__ = __repr__
+
+
 
 
 class Interpreter:
@@ -281,14 +302,16 @@ class Interpreter:
 
     def NotImplemented(self,node):
         cname = node.__class__.__name__
-        LarchError("'%s' not supported" % (cname))
-
+        self.addException(node,"'%s' not supported" % (cname),
+                          py_exc=sys.exc_info())
+    
+    
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
     #  interp :  ast -> result
     #  eval   :  string statement -> result = interp(compile(statement))
                       
-    def addException(self,node,msg='',expr=None,fname=None,lineno=0):
+    def addException(self,node,msg='',expr=None,fname=None,lineno=0,py_exc=None):
 
         if self.error is None: self.error = []
         if expr  is None: expr  = self.expr
@@ -297,8 +320,16 @@ class Interpreter:
 
         if len(self.error) > 0 and not isinstance(node, ast.Module):
             msg = 'Extra Error (%s)' % msg
-            
-        err = LarchExceptionHolder(node, msg=msg,
+
+        if py_exc is None:
+            etype,evalue = None,None
+        else:
+            etype,evalue,tb = py_exc
+
+        # print(" ADD Except:", node, msg, expr, fname, lineno)
+        err = LarchExceptionHolder(node,
+                                   py_exc=(etype,evalue),
+                                   msg=msg,
                                    expr= expr,
                                    fname= fname,
                                    lineno=lineno)
@@ -312,9 +343,15 @@ class Interpreter:
         self.expr  = text
         # print(" larch compile: '%s'" % text)
         try:
-            return ast.parse(text)
+            return  ast.parse(text)
+
         except:
-            self.addException(None,msg='Syntax Error',expr=text,fname=fname,lineno=lineno)
+            self.addException(None,msg='Syntax Error',
+                              expr=text,
+                              fname=fname,
+                              lineno=lineno,
+                              py_exc=sys.exc_info())
+            
             
         
     def interp(self, node, expr=None, fname=None, lineno=None):
@@ -331,17 +368,24 @@ class Interpreter:
         if fname  is not None: self.fname  = fname
         if expr   is not None: self.expr   = expr
 
+        # print(" Interp: ", node, node.__class__.__name__,  fname, lineno)
+        # print(" Interp: ", expr)
         ret = None
         try:
             fcn = getattr(self,method)
         except:
-            self.addException(node,msg='Lookup Error', expr=expr,fname=fname,lineno=lineno)
+            self.addException(node,msg='Lookup Error',
+                              expr=expr,fname=fname,lineno=lineno,
+                              py_exc=sys.exc_info())
+
             return ret
         
         try:
             ret = fcn(node)
         except:
-            self.addException(node,msg='Runtime Error',expr=expr,fname=fname,lineno=lineno)
+            self.addException(node,msg='Runtime Error',
+                              expr=expr,fname=fname,lineno=lineno,
+                              py_exc=sys.exc_info())              
             
         if isinstance(ret,enumerate):  ret = list(ret)
         return ret
@@ -355,7 +399,11 @@ class Interpreter:
         if not self.error:
             o = self.interp(node,expr=expr,fname=fname,lineno=lineno)
             if len(self.error) > 0:
-                self.addException(node,msg='Evaluation Error',expr=expr,fname=fname,lineno=lineno)
+                self.addException(node,msg='Evaluation Error',
+                                  expr=expr,fname=fname,lineno=lineno,
+                                  py_exc=sys.exc_info())
+                
+                return o
             return o
             
         
@@ -428,7 +476,9 @@ class Interpreter:
             
         elif n.__class__ == ast.Attribute:
             if n.ctx.__class__  == ast.Load:
-                raise LarchError("canot Assign attribute %s???" % n.attr)
+                self.addException(node,
+                                  "cannot assign to attribute %s" % n.attr)
+
             setattr(self.interp(n.value),n.attr,val)
 
         elif n.__class__ == ast.Subscript:
@@ -458,12 +508,13 @@ class Interpreter:
                 return val
             else:
                 msg = "'%s' does not have an '%s' attribute" 
-                raise LarchError( msg % (node.value,node.attr))
+                self.addException(node,msg=msg, py_exc=sys.exc_info())
 
         elif ctx == ast.Del:
             return delattr(sym,attr)
         elif ctx == ast.Store:
-            raise LarchError("attribute for storage: shouldn't be here!!")
+            msg = "attribute for storage: shouldn't be here!"
+            self.addException(node,msg=msg, py_exc=sys.exc_info())        
 
     def doAssign(self,node):    # ('targets', 'value')
         val = self.interp(node.value)
@@ -496,7 +547,9 @@ class Interpreter:
             elif isinstance(node.slice,ast.ExtSlice):
                 return val[(nslice)]
         else:
-            raise LarchError("subscript with unknown context")
+            msg = "subscript with unknown context"
+            self.addException(node,msg=msg, py_exc=sys.exc_info())
+            
 
     def doDelete(self,node):    # ('targets',)
         ctx = node.ctx.__class__
@@ -598,7 +651,8 @@ class Interpreter:
     def doCall(self,node):    # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         if not callable(func):
-            raise LarchError("'%s' is not not callable" % (func))
+            msg = "'%s' is not not callable" % (func)
+            self.addException(node,msg=msg, py_exc=sys.exc_info())
 
         args = [self.interp(a) for a in node.args]
         if node.starargs is not None:
@@ -607,7 +661,9 @@ class Interpreter:
         keywords = {}
         for k in node.keywords:
             if not isinstance(k,ast.keyword):
-                raise LarchError("keyword error in function call '%s'" % (func))
+                msg = "keyword error in function call '%s'" % (func)
+                self.addException(node,msg=msg, py_exc=sys.exc_info())
+            
             keywords[k.arg] = self.interp(k.value)
         if node.kwargs is not None:  keywords.update(self.interp(node.kwargs))
         return func(*args,**keywords)
@@ -673,12 +729,12 @@ class Interpreter:
         symtable = self.symtable
         _sys     = symtable._sys
         
+        # print("  larch path: ", _sys.path)
+
         for i in _sys.path:
             if i not in sys.path:
                 sys.path.append(i)
 
-        # print("Import Module :: ", name, asname, fromlist, reload)
-        # print("  larch path: ", _sys.path)
         # print("  python path: ", sys.path)
         
         # step 1  import the module to a global location
@@ -690,6 +746,7 @@ class Interpreter:
         do_load = do_load or reload
         
 
+        # print("  larch do_load ", do_load)
         if do_load:
             # first look for "name.lar"
             isLarch = False
@@ -698,6 +755,7 @@ class Interpreter:
                 if larchname in os.listdir(dirname):
                     isLarch = True
                     modname = os.path.abspath(os.path.join(dirname,larchname))
+                    # print("Found larch module:" , modname)
 
                     # save current module group
                     #  create new group, set as moduleGroup and localGroup
@@ -730,7 +788,10 @@ class Interpreter:
                     thismod = sys.modules[name]
                 except:
                     # print(" import error ", name, sys.exc_info())
-                    self.addException(None,msg='Import Error')
+                    self.addException(None,msg='Import Error',
+                                      py_exc=sys.exc_info())
+                    
+                    
                     return
                
         else: # previously loaded module, just do lookup
@@ -789,12 +850,14 @@ class Interpreter:
     def doYield(self,node):         return self.NotImplemented(node)
     def doDecorators(self,node):    return self.NotImplemented(node)
     def doGeneratorExp(self,node):  return self.NotImplemented(node)        
+
 #         print('Incomplete GeneratorExp ')
 #         print(ast.dump(node.elt),include_attributes=True)
 #         for n in node.generators:
 #             print(n)             
 
     def doRaise(self,node):    # ('type', 'inst', 'tback') 
-        raise LarchError()
-        # print(self.dump(node,include_attributes=True))
-        #, self.interp(node.type),self.interp(node.inst),tback=self.interp(node.tback))
+        msg = "%s: %s" % (self.interp(node.type).__name__,
+                          self.interp(node.inst))
+        self.addException(node.type,msg=msg,
+                          py_exc=sys.exc_info())
