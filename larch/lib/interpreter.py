@@ -229,14 +229,14 @@ class LarchExceptionHolder:
         out = []
         if len(exc_text) > 0: out.append(exc_text)
         py_etype, py_eval = self.py_exc
-        # print(" exc_Text: ", exc_text)
-        # print(" py err:   ", py_etype, py_eval)
-
         
         #         if py_etype is not None and py_eval is not None:
         #             out.append("%s: %s" % (py_etype, py_eval))
-        
-        out.append(" %s, line number %i" % (self.fname,self.lineno))
+        if (self.fname == '<StdInput>' and self.lineno==0):
+            out.append(' ')
+        else:
+            out.append(" %s, line number %i" % (self.fname,self.lineno))
+            
         out.append("     %s" % expr)
         if node_col_offset>0:
             out.append("    %s^^^" % ((node_col_offset)*' '))
@@ -277,7 +277,7 @@ class Interpreter:
        
         if symtable is None:
             symtable = symbolTable.symbolTable()
-       
+        self.isGroup    = symtable.isGroup
         self.symtable   = symtable
         self.setSymbol  = symtable.setSymbol
         self.getSymbol  = symtable.getSymbol
@@ -373,9 +373,9 @@ class Interpreter:
         if lineno is not None: self.lineno = lineno
         if fname  is not None: self.fname  = fname
         if expr   is not None: self.expr   = expr
-
+        
         # print(" Interp: ", node, node.__class__.__name__,  fname, lineno)
-        # print(" Interp: ", expr)
+        # print(" Interp: ", expr, node, method)
         ret = None
         try:
             fcn = getattr(self,method)
@@ -405,7 +405,7 @@ class Interpreter:
         if not self.error:
             o = self.interp(node,expr=expr,fname=fname,lineno=lineno)
             if len(self.error) > 0:
-                self.addException(node,msg='Evaluation Error',
+                self.addException(node,msg='Eval Error',
                                   expr=expr,fname=fname,lineno=lineno,
                                   py_exc=sys.exc_info())
                 
@@ -513,8 +513,13 @@ class Interpreter:
                 if isinstance(val,DefinedVariable): val = val.evaluate()
                 return val
             else:
-                parent = self.interp(node.value)
-                msg = "'%s' does not have an '%s' attribute" % (parent, node.attr)
+                obj = self.interp(node.value)
+                fmt = "%s does not have member '%s'"                
+                if not self.isGroup(obj):
+                    obj = obj.__class__
+                    fmt = "%s does not have attribute '%s'"
+
+                msg= fmt % (obj, node.attr)                    
                 self.addException(node,msg=msg, py_exc=sys.exc_info())
 
         elif ctx == ast.Del:

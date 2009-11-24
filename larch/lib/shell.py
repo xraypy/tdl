@@ -120,10 +120,11 @@ class shell(cmd.Cmd):
                 block,fname,lineno = self.input.get()
                 # print 'BLOCK, FNAME, LINENO ', block, fname, lineno
                 ret = self.larch.eval(block,fname=fname,lineno=lineno)
-                
-                if callable(ret):
+
+                if callable(ret) and not isinstance(ret,type):
                     try:
-                        if 1 == len(block.split()):   ret = ret()
+                        if 1 == len(block.split()):
+                            ret = ret()
                     except:
                         pass
                 if self.larch.error:
@@ -132,10 +133,12 @@ class shell(cmd.Cmd):
                     print "%s: %s" % err.get_error()
                     for err in self.larch.error:
                         err_type,err_msg =  err.get_error()
-                        # if not err_type.startswith('Extra Error'):
-                        print err_type,  '/// ', err_msg
+                        if not (err_type.startswith('Extra Error') or
+                                err_type.startswith('Eval Error') ):
+                            print err_msg
                     print '==========='                    
-                if ret is not None: print ret
+                if ret is not None:
+                    print ret
                 self.prompt = self.ps1
             
 if __name__ == '__main__':

@@ -21,10 +21,9 @@ class Group(object):
         return max(1, len(dir(self))-1)
 
     def __repr__(self):
-        s = '<Group: ???'
         if self.__name__ is not None:
-            s = '<Group %s' % self.__name__
-        return '%s>: %i items>' % (s,len(self))
+            return '<Group %s>' % self.__name__
+        return '<Group: ??>'
         # return '%s>' % s
         # : %i items, id=%s>' % (s,len(self),hex(id(self)))
 
