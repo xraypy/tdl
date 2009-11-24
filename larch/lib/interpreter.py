@@ -2,10 +2,12 @@ from __future__ import division, print_function
 import os
 import sys
 import ast
+import exceptions
 import traceback
 import inputText
 import symbolTable
 import builtins
+
 import numpy
 import __builtin__
 from util import closure
@@ -477,6 +479,7 @@ class Interpreter:
         """here we assign a value (not the node.value object) to a node
         this is used by doAssign, but also by for, list comprehension, etc.
         """
+        if len(self.error)>0: return
         if n.__class__ == ast.Name:
             sym = self.setSymbol(n.id,value=val)
             
@@ -530,7 +533,9 @@ class Interpreter:
 
     def doAssign(self,node):    # ('targets', 'value')
         val = self.interp(node.value)
-        for n in node.targets:  self._NodeAssign(n,val)
+        if len(self.error)>0: return        
+        for n in node.targets:
+            self._NodeAssign(n,val)
         return # return val
 
     def doAugAssign(self,node):    # ('target', 'op', 'value')
@@ -641,9 +646,11 @@ class Interpreter:
     def doFor(self,node):    # ('target', 'iter', 'body', 'orelse')
         for val in self.interp(node.iter):
             self._NodeAssign(node.target,val)
+            if len(self.error)>0: return            
             self._interrupt = None
             for n in node.body:
                 v = self.interp(n)
+                if len(self.error)>0: return                
                 if self._interrupt is not None:  break
             if isinstance(self._interrupt,ast.Break): break
         else:
@@ -656,6 +663,7 @@ class Interpreter:
             if n.__class__ == ast.comprehension:
                 for val in self.interp(n.iter):
                     self._NodeAssign(n.target,val)
+                    if len(self.error)>0: return                    
                     add = True
                     for cond in n.ifs:
                         add = add and self.interp(cond)
@@ -839,22 +847,26 @@ class Interpreter:
 
     # not yet implemented:
     def doExceptHandler(self,node): # ('type', 'name', 'body')
-        # print("except handler")
-        return None
+        print("except handler", node.type, ast.dump(node.name))
+        return (self.interp(node.type),node.name, node.body)
     
     def doTryExcept(self,node):    # ('body', 'handlers', 'orelse') 
         for n in node.body:
             self.interp(n)
             if self.error:
-                e_type,e_value,e_tback = sys.exc_info()
+                e_type,e_value = self.error[-1].py_exc
+                this_exc = e_type()
                 for h in node.handlers:
-                    handler_type = self.interp(h.type)
-                    if handler_type is None or isinstance(e_type(),handler_type):
+                    try:
+                        htype = getattr(exceptions,h.type.id)
+                    except:
+                        htype = None
+                    if htype is None or isinstance(this_exc, htype):
                         self.error = []
-                        self._NodeAssign(h.name,e_value)
+                        if h.name is not None:
+                            self._NodeAssign(h.name,e_value)
                         for b in h.body: self.interp(b)
                         break
-
                     
     def doTryFinally(self,node):    return self.NotImplemented(node)        
     def doExec(self,node):          return self.NotImplemented(node)
