@@ -17,8 +17,11 @@ import numpy
 from . import interpreter
 from .symbolTable import Group, symbolTable
 from .shell import shell
+from .interpreter import Interpreter
+from .inputText import InputText
 
-larch = interpreter.Interpreter
+interp= Interpreter
+input = InputText
 
 __version__ = interpreter.__version__
 __date__    = '22-Nov-2009'

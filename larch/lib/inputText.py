@@ -119,6 +119,11 @@ class InputText:
         self.input_buff  = []
         self.input_complete = True
                 
+    def readfile(self,fname):
+        fh = open(fname,'r')
+        self.put(fh.read(),filename=fname,lineno=0)
+        fh.close()
+
     def put(self, text, filename=None, lineno=None ):
         """add line of input code text"""
         fname = filename or self.filename or '<StdInput>'

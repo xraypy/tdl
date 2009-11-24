@@ -24,14 +24,13 @@ banner = """  Larch %s  M. Newville, T. Trainor (2009)
                                                 numpy.__version__,
                                                 scipy_version)
 class shell(cmd.Cmd):
-    intro  = "  === Type 'help' to get started ==="
     ps1    = "larch> "
     ps2    = ".....> "
     max_save_lines = 5000
     def __init__(self, completekey='tab', scripts=None, debug=False,
-                 stdin=None, stdout=None, intro=None, GUI='TkAgg'):
+                 stdin=None, stdout=None, quiet=False):
 
-        print banner
+        if not quiet: print banner
         self.debug  = debug
         try:
             import readline
@@ -133,8 +132,7 @@ class shell(cmd.Cmd):
                     print "%s: %s" % err.get_error()
                     for err in self.larch.error:
                         err_type,err_msg =  err.get_error()
-                        if not (err_type.startswith('Extra Error') or
-                                err_type.startswith('Eval Error') ):
+                        if not err_type.startswith('Extra Error'):
                             print err_msg
                     print '==========='                    
                 if ret is not None:

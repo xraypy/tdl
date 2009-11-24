@@ -224,9 +224,12 @@ class LarchExceptionHolder:
         if exc_text in (None,'None'): exc_text = ''
         expr = self.expr
         if expr == '<>': # denotes non-saved expression -- go fetch from file!
-            ftmp = open(self.fname,'r')
-            expr = ftmp.readlines()[lineno-1][:-1]
-            ftmp.close()
+            try:
+                ftmp = open(self.fname,'r')
+                expr = ftmp.readlines()[lineno-1][:-1]
+                ftmp.close()
+            except IOError:
+                pass
 
         out = []
         if len(exc_text) > 0: out.append(exc_text)

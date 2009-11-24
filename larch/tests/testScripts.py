@@ -39,10 +39,10 @@ def doFile(inputfile,output=None):
             out( "%s: %s" % err.get_error())
             for err in interp.error:
                 err_type,err_msg =  err.get_error()
-                if not (err_type.startswith('Extra Error') or
-                        err_type.startswith('Eval Error') ):
+                if not err_type.startswith('Extra Error'):
                     out( err_msg)
             out('===========')
+            break
         if ret is not None:
             out(ret)
 
@@ -63,22 +63,25 @@ def compareFiles(fname1,fname2):
     for t1,t2 in zip(text1,text2):
         i = i+1
         if t1 != t2:
-            diff.append("line %i:\n expected '%s'\n got    's'" % (t1,t2))
+            diff.append("""line %i:\nexpected: %s\ngot     : %s\n""" % (i,t1[:-1],t2[:-1]))
     if len(diff)>0:
         diff.insert(0,"%s and %s differ!"%(fname1,fname2))
     if len(diff)>0:
         return "\n".join(diff)
-    return ' OK.' 
+    return 'OK.' 
             
 
 def testScript(script,output):
     tmpfile = '%s.test'% script
     doFile(script,output=tmpfile)
-    print compareFiles(output, tmpfile)
-    os.unlink(tmpfile)
+    comp =  compareFiles(output, tmpfile)
+    print comp
+    if comp=='OK.':
+        os.unlink(tmpfile)
+
     
 if __name__ == '__main__':
-    for t in ('t1','t2'):
+    for t in ('t1','t2','t3','t4'):
         script = '%s.lar' % t
         output = '%s.out' % t
         testScript(script,output)
