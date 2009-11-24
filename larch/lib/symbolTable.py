@@ -13,12 +13,23 @@ class Group(object):
     """container for variables, subgroups, and modules:
     a lightweight object, with 
     """
-        
+
+    def __init__(self,name=None):
+        self.__name__ = name
+
     def __len__(self):
-        return len(dir(self))
+        return max(1, len(dir(self))-1)
 
     def __repr__(self):
-        return '<Group: %i items, id=%s>' % (len(self),hex(id(self)))
+        s = '<Group: ???'
+        if self.__name__ is not None:
+            s = '<Group %s' % self.__name__
+        return '%s>: %i items>' % (s,len(self))
+        # return '%s>' % s
+        # : %i items, id=%s>' % (s,len(self),hex(id(self)))
+
+    def __id__(self):
+        return (id(self))
 
     def __setattr__(self,attr,val):
         """set group attributes."""
@@ -26,7 +37,8 @@ class Group(object):
 
     def __dir__(self):
         "return sorted list of names of member"
-        return sorted([i for i in self.__dict__.keys() if not i.startswith('_Group__')])
+        return sorted([i for i in self.__dict__.keys()
+                       if not i.startswith('_Group__') and not i=='__name__'])
    
     def _subgroups(self):
         "return sorted list of names of members that are sub groups"
@@ -46,15 +58,13 @@ class symbolTable(Group):
     __invalid_name = invalidName()
 
     def __init__(self,larch=None):
-        Group.__init__(self)
-        self.larch = larch
-        
+        Group.__init__(self,name=self.top_group)
         # self.__writer = writer  or sys.stdout.write
 
         setattr(self,self.top_group, self)
         for gname in self.core_groups:
-            setattr(self, gname, Group())
-            
+            setattr(self, gname, Group(name=gname))
+
         self._sys.searchNames  = []
         self._sys.searchGroups = []
         self._sys.localGroup   = self
@@ -205,7 +215,7 @@ class symbolTable(Group):
                 out = getattr(out,p)
             elif create: 
                 val = None
-                if len(parts) > 0: val = Group()
+                if len(parts) > 0: val = Group(name=p)
                 setattr(out,p,val)
                 out = getattr(out,p)
             else:
@@ -224,6 +234,9 @@ class symbolTable(Group):
             return sym
         else:
             raise LookupError, "symbol '%s' found, but not a group" % (gname)
+
+    def isGroup(self,s):
+        return isGroup(s)
 
     def show_group(self,gname=None):
         if gname is None: gname = '_main'
@@ -244,7 +257,7 @@ class symbolTable(Group):
         mem = dir(grp)
         o = ['== %s: %i symbols ==' % (title,len(mem))]
         for i in mem:
-            if not (i.startswith('_Group__') or
+            if not (i.startswith('_Group__') or i=='__name__' or
                     i.startswith('_symbolTable__')):
                 o.append('  %s: %s' % (i,repr(getattr(grp,i))))
         msg = '\n'.join(o)
@@ -310,12 +323,12 @@ class symbolTable(Group):
 if __name__ == '__main__':
     s = symbolTable()
 
-    s.group1 = Group()
-    s.group2 = Group()
+    s.group1 = Group(name='group1')
+    s.group2 = Group(name='group2')
 
     s.show_group('_sys')
     s.group1.x = 12.0
-    s.group1.g1 = Group()
+    s.group1.g1 = Group('g1')
 
     s.show_group('group1')
     s.group1.g1.title = 'a string here'

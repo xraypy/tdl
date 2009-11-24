@@ -45,7 +45,7 @@ class shell(cmd.Cmd):
                 self.rdline.read_history_file(self.historyfile)
             except IOError:
                 pass
-            
+
         self.use_rawinput = True
         if stdin is not None:
             sys.stdin = stdin
@@ -70,6 +70,24 @@ class shell(cmd.Cmd):
     def emptyline(self):
         pass
 
+    def parseline(self, line):
+        """Parse the line into a command name and a string containing
+        the arguments.  Returns a tuple containing (command, args, line).
+        'command' and 'args' may be None if the line couldn't be parsed.
+        """
+        line = line.strip()
+        if not line:
+            return None, None, line
+        elif line[0] == '?':
+            line = 'help ' + line[1:]
+        elif line[0] == '!':
+            if hasattr(self, 'do_shell'):
+                line = 'shell ' + line[1:]
+            else:
+                return None, None, line
+        return '', '', line
+
+
     def do_shell(self, arg):
         system(arg)
 
@@ -86,7 +104,7 @@ class shell(cmd.Cmd):
         fh = open(filename,'r')
         for i,line in enumerate(fh.readlines()):
             self.input.put(line, filename=filename,lineno=i)
-        
+
     def default(self,text):
         text = text.strip()
         if text in ('quit','exit','EOF'):
@@ -102,7 +120,8 @@ class shell(cmd.Cmd):
                 block,fname,lineno = self.input.get()
                 # print 'BLOCK, FNAME, LINENO ', block, fname, lineno
                 ret = self.larch.eval(block,fname=fname,lineno=lineno)
-                if  callable(ret):
+                
+                if callable(ret):
                     try:
                         if 1 == len(block.split()):   ret = ret()
                     except:
@@ -113,12 +132,12 @@ class shell(cmd.Cmd):
                     print "%s: %s" % err.get_error()
                     for err in self.larch.error:
                         err_type,err_msg =  err.get_error()
-                        if not err_type.startswith('Extra Error'):
-                            print err_msg
+                        # if not err_type.startswith('Extra Error'):
+                        print err_type,  '/// ', err_msg
                     print '==========='                    
-                        
                 if ret is not None: print ret
                 self.prompt = self.ps1
             
 if __name__ == '__main__':
+
     t = shell(debug=True).cmdloop()

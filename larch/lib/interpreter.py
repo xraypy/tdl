@@ -229,6 +229,10 @@ class LarchExceptionHolder:
         out = []
         if len(exc_text) > 0: out.append(exc_text)
         py_etype, py_eval = self.py_exc
+        # print(" exc_Text: ", exc_text)
+        # print(" py err:   ", py_etype, py_eval)
+
+        
         #         if py_etype is not None and py_eval is not None:
         #             out.append("%s: %s" % (py_etype, py_eval))
         
@@ -270,9 +274,10 @@ class Interpreter:
     def __init__(self,symtable=None,input=None, writer=None):
 
         self.__writer = writer or sys.stdout.write
-
+       
         if symtable is None:
             symtable = symbolTable.symbolTable()
+       
         self.symtable   = symtable
         self.setSymbol  = symtable.setSymbol
         self.getSymbol  = symtable.getSymbol
@@ -294,6 +299,7 @@ class Interpreter:
         for fname,fcn in builtins._local_funcs.items():
             setattr(group, fname, closure(func=fcn,larch=self))
         setattr(group, 'definevar', closure(func=self.__definevar))
+
         
     def __definevar(self,name,expr):
         """define a defined variable (re-evaluate on access)"""
@@ -507,7 +513,8 @@ class Interpreter:
                 if isinstance(val,DefinedVariable): val = val.evaluate()
                 return val
             else:
-                msg = "'%s' does not have an '%s' attribute" 
+                parent = self.interp(node.value)
+                msg = "'%s' does not have an '%s' attribute" % (parent, node.attr)
                 self.addException(node,msg=msg, py_exc=sys.exc_info())
 
         elif ctx == ast.Del:
@@ -552,9 +559,12 @@ class Interpreter:
             
 
     def doDelete(self,node):    # ('targets',)
-        ctx = node.ctx.__class__
-        assert ctx == ast.Del, 'wrong Context for delete???'
-        for n in node.targets: self.interp(n)
+        for n in node.targets:
+            ctx = n.ctx.__class__
+            assert ctx == ast.Del, 'wrong Context for delete???'
+
+            print(ast.dump(n))
+            print(" READY TO DELETE:: ", self.interp(n))
 
     def doUnaryOp(self,node):    # ('op', 'operand') 
         op = _operators[node.op.__class__]
