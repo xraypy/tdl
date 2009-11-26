@@ -62,7 +62,7 @@ def compareFiles(fname1,fname2):
     i = 0
     for t1,t2 in zip(text1,text2):
         i = i+1
-        if t1 != t2:
+        if t1.strip() != t2.strip():
             diff.append("""line %i:\nexpected: %s\ngot     : %s\n""" % (i,t1[:-1],t2[:-1]))
     if len(diff)>0:
         diff.insert(0,"%s and %s differ!"%(fname1,fname2))
@@ -80,8 +80,15 @@ def testScript(script,output):
         os.unlink(tmpfile)
 
     
+def_tests = ('t1','t2','t3','evaltest1')
 if __name__ == '__main__':
-    for t in ('t1','t2','t3','t4'):
+    import sys
+    if len(sys.argv)>1:
+        tests = sys.argv[1:]
+    else:
+        tests = def_tests
+    for t in tests:
+        if t.endswith('.lar'): t = t[:-4]
         script = '%s.lar' % t
         output = '%s.out' % t
         testScript(script,output)
