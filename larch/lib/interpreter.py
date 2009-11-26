@@ -111,7 +111,7 @@ class Procedure(object):
         if len(self.kwargs)>0:
             if len(self.argnames )>0:
                 sig = "%s," % sig            
-            _kw = ["%s=%s" % (k,v) for k,v in self.kwargs.items()]
+            _kw = ["%s=%s" % (k,v) for k,v in self.kwargs]
             sig = "%s%s" % (sig,','.join(_kw))
             
         sig = "<Procedure %s, file=%s)>" % (sig,self.fname)
@@ -135,29 +135,54 @@ class Procedure(object):
         args   = list(args)
         n_args = len(args)
         n_expected = len(self.argnames)
-        if n_args < n_expected:
-            msg='not enough arguments for Procedure %s (expected %i, got %i)'%(self.name,
-                                                                               n_expected,
-                                                                               n_args)
-            self.larch.addException(None,msg=msg, expr='<>',
-                                    fname=self.fname,lineno=self.lineno+1,
-                                    py_exc=sys.exc_info())
-                
+
+        #         print(" CALL: args     ",args)
+        #         print(" CALL: kwargs   ",kwargs)        
+        #         print(" CALL: kwargs   ",self.kwargs)
+        #         print(" CALL: vararg   ",self.vararg)
+        #         print(" CALL: varkws   ",self.varkws)
+        #         print(" CALL: argnames ",self.argnames)
+
+        if n_args != n_expected:
+            errmsg = None
+            if n_args < n_expected:            
+                errmsg = 'not enough arguments for Procedure %s' % self.name
+                errmsg = '%s (expected %i, got %i)'%(msg,n_expected,n_args)
+                self.larch.addException(None,msg=errmsg, expr='<>',
+                                        fname=self.fname,
+                                        lineno=self.lineno+1,
+                                        py_exc=sys.exc_info())
+
+            errmsg = "too many arguments for Procedure %s" % self.name
+            
         for argname in self.argnames:
             setattr(lgroup, argname,args.pop(0))
-            
-        try:         
-            if self.vararg is not None and len(args)>0:
-                setattr(lgroup, self.vararg, args)
+
+        if len(args)>0 and self.kwargs is not None:
+            mfmt = "got multiple values for keyword argument '%s' Procedure %s"
+            for t_a,t_kw in zip(args,self.kwargs):
+                if t_kw[0] in kwargs:
+                    errmsg = mfmt % (t_kw[0], self.name)
+                    self.larch.addException(None,msg=errmsg, expr='<>',
+                                            fname=self.fname,
+                                            lineno=self.lineno+1,
+                                            py_exc=sys.exc_info())
+
+                else:
+                    kwargs[t_a] = t_kw[1]
+
+        try:
+            if self.vararg is not None:
+                setattr(lgroup, self.vararg, tuple(args))
                 
-            for k,v in self.kwargs.items():
-                if kwargs.has_key(k):  v = kwargs.pop(k)
+            for k,v in self.kwargs:
+                if k in kwargs:  v = kwargs.pop(k)
                 setattr(lgroup, k, v)
 
             if self.varkws is not None:
                 setattr(lgroup, self.varkws, kwargs)
 
-            if len(kwargs) > 0:
+            elif len(kwargs) > 0:
                 msg='extra keyword arguments for Procedure %s (%s)'%(self.name,
                                                                      ','.join(kwargs.keys()))
                 self.larch.addException(None,msg=msg, expr='<>',
@@ -166,10 +191,11 @@ class Procedure(object):
 
                 
         except:
-            self.larch.addException(None,
-                                    msg='incorrect arguments for Procedure %s'%self.name,
+            msg='incorrect arguments for Procedure %s'%self.name
+            self.larch.addException(None,msg=msg,
                                     expr='<>',
-                                    fname=self.fname,lineno=self.lineno+1,
+                                    fname=self.fname,
+                                    lineno=self.lineno+1,
                                     py_exc=sys.exc_info())            
             
 
@@ -238,7 +264,7 @@ class LarchExceptionHolder:
         #         if py_etype is not None and py_eval is not None:
         #             out.append("%s: %s" % (py_etype, py_eval))
         if (self.fname == '<StdInput>' and self.lineno==0):
-            out.append(' ')
+            out.append(' <StdInput>')
         else:
             out.append(" %s, line number %i" % (self.fname,self.lineno))
             
@@ -697,26 +723,26 @@ class Interpreter:
     def doFunctionDef(self,node):    # ('name', 'args', 'body', 'decorator_list') 
         if node.decorator_list != []:
             print("Warning: decorated procedures not supported!")
-        args   = []
-        kwargs = {}
+
+        kwargs = []
         while node.args.defaults:
             defval = self.interp(node.args.defaults.pop())
             key    = self.interp(node.args.args.pop())
-            kwargs[key] = defval
-            
-        for n in node.args.args: args.append(n.id)
+            kwargs.append((key, defval))
+        kwargs.reverse()
+
+        args = [n.id for n in node.args.args]
      
         doc = None
         if isinstance(node.body[0],ast.Expr):
             docnode = node.body.pop(0)
             doc = self.interp(docnode.value)
 
-        proc = Procedure(node.name, larch=self,
-                         doc=doc,
+        proc = Procedure(node.name, larch= self, doc= doc,
                          lineno = self.lineno,
-                         body = node.body,
-                         fname = self.fname,
-                         args = args,
+                         body   = node.body,
+                         fname  = self.fname,
+                         args   = args,
                          kwargs = kwargs,
                          vararg = node.args.vararg,
                          varkws = node.args.kwarg)

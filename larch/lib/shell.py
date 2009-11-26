@@ -129,7 +129,7 @@ class shell(cmd.Cmd):
                 if self.larch.error:
                     print '== Error =='
                     err  = self.larch.error.pop(0)
-                    print "%s: %s" % err.get_error()
+                    print "%s:\n%s" % err.get_error()
                     for err in self.larch.error:
                         err_type,err_msg =  err.get_error()
                         if not err_type.startswith('Extra Error'):
