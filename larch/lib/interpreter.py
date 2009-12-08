@@ -307,7 +307,7 @@ class Interpreter:
         self.__writer = writer or sys.stdout.write
        
         if symtable is None:
-            symtable = symbolTable.symbolTable()
+            symtable = symbolTable.symbolTable(larch=self)
         self.isGroup    = symtable.isGroup
         self.symtable   = symtable
         self.setSymbol  = symtable.setSymbol

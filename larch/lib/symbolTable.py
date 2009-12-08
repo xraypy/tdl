@@ -60,6 +60,8 @@ class symbolTable(Group):
         Group.__init__(self,name=self.top_group)
         # self.__writer = writer  or sys.stdout.write
 
+        self.__interpreter = larch
+       
         setattr(self,self.top_group, self)
         for gname in self.core_groups:
             setattr(self, gname, Group(name=gname))

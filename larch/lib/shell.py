@@ -28,9 +28,12 @@ class shell(cmd.Cmd):
     ps2    = ".....> "
     max_save_lines = 5000
     def __init__(self, completekey='tab', scripts=None, debug=False,
-                 stdin=None, stdout=None, quiet=False):
+                 stdin=None, stdout=None, quiet=False,userbanner=None):
 
-        if not quiet: print banner
+        if not quiet:
+            print banner
+            if userbanner is not None: print userbanner
+            
         self.debug  = debug
         try:
             import readline
