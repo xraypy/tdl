@@ -179,13 +179,15 @@ class Reader:
         data.image_rois = self.image_rois
         
         # Spectra
+        # spec_path/xrf_files/spec_file/nnn/spec_file.spc_nnn.yyy
         if self.med or self.xrf:
             fmt_scan_num = '%03d' % int(scan)
             med_pfx = spec.fname
             med_pfx = "%s_%s" % (med_pfx, fmt_scan_num)
             if self.med_path == None:
                 spec_pfx = spec.fname.rsplit('.',1)[0]
-                path = os.path.join(spec.path,spec_pfx)
+                #path = os.path.join(spec.path,spec_pfx)
+                path = os.path.join(spec.path,'xrf_files',spec_pfx)
                 path = os.path.join(path,fmt_scan_num)
                 med_pfx = os.path.join(path,med_pfx)
             # get range for scan... ie first and last idx
@@ -217,6 +219,7 @@ class Reader:
                     print "Warning, number of spectra dont match scan"
 
         # Images
+        # spec_path/images/spec_file/Snnn/spec_file.spc_Snnn_yyy.tif
         if self.img:
             fmt_scan_num = '%03d' % int(scan)
             #image_pfx = spec.fname.rsplit('.',1)[0]
