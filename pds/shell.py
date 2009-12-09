@@ -210,6 +210,7 @@ class Shell(_NumShell):
         self.do_addcmd('path',"__pds__.path")
         self.do_addcmd('mod_import',"__pds__.mod_import")
         self.do_addcmd('source',"__pds__.source")
+        self.do_addcmd('interrogate',"__pds__.interrogate")
 
         # if numeric/scientific stuff is included
         # load it. Note leave this here in case there
