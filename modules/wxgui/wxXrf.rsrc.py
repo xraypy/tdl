@@ -408,9 +408,9 @@
 
 {'type':'CheckBox', 
     'name':'SetParFromSave', 
-    'position':(319, 43), 
-    'size':(146, -1), 
-    'label':'Set Parameters From Save', 
+    'position':(317, 43), 
+    'size':(152, -1), 
+    'label':'Set Params From Save', 
     },
 
 {'type':'CheckBox', 

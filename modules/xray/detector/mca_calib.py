@@ -63,7 +63,7 @@ def energy_idx(energy,emin=-1.,emax=-1.):
     """
     Get the indicies of the energy array for emin and emax:
 
-    idx = energy_idx(3.2,7.1,energy)
+    idx = energy_idx(energy,3.2,7.1)
     en  = energy[idx]
     dat = data[idx]
     """

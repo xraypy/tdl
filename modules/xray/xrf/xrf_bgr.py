@@ -370,7 +370,7 @@ def compress_array(array, compress):
 
    alen = len(array)
    if ((alen % compress) != 0):
-      print 'Compression must be integer divisor of array length'
+      print 'Warning compress must be integer divisor of array length'
       return None
 
    temp = num.resize(array, (alen/compress, compress))

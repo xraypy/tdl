@@ -146,6 +146,12 @@ class wxXrf(model.Background, wxUtil):
     ###########################################################
     def get_xrf_var_name(self,ignore_idx=False):
         node = self.components.Node.text
+        #idx = self.components.Node.selection
+        #if idx > -1:
+        #    if node != self.components.Node.items[idx]:
+        #        node = self.components.Node.items[idx]
+        #        self.components.Node.text = node
+        #print "node:",node
         if len(node.strip()) == 0: return None
 
         idx  = self.components.ScanIdxSelect.stringSelection
@@ -174,6 +180,10 @@ class wxXrf(model.Background, wxUtil):
         try:
             name = self.get_xrf_var_name(ignore_idx=True)
             m    = self.get_data(name)
+            if hasattr(m,'xrf'):
+                node = self.components.Node.text + '.xrf'
+                self.components.Node.text = node
+                m = m.xrf
             if type(m) in (types.ListType, num.ndarray):
                 self.is_scan = True
                 idx  = self.get_scan_idx()
@@ -265,10 +275,10 @@ class wxXrf(model.Background, wxUtil):
         tmp = tmp['var'] + tmp['ins']
         tmp.sort()
         self.components.Node.items = tmp
-        if node in tmp:
-            self.components.Node.text = node
-        else:
-            self.components.Node.text = ''
+        #if node in tmp:
+        self.components.Node.text = node
+        #else:
+        #    self.components.Node.text = ''
         return
 
     def on_Node_select(self,event):

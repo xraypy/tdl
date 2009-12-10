@@ -602,15 +602,15 @@ class XrfSpectrum:
         #  -1.0 = Fix amplitude at 0.0
         if (peak.ignore == True) or (peak.ampl_factor < 0.):
             peak.ampl = 0.
-        elif (peak.ampl_factor == 0.) and (guess == True):
-            chan = int( (peak.energy - self.energy_offset) / self.energy_slope )
-            chan = min( max(chan, 0), (self.nchan-1) )
-            peak.ampl = max(self.data[chan], 0.)
-            last_opt_peak = peak
-        elif (peak.ampl_factor > 0.):
-            peak.ampl = last_opt_peak.ampl * peak.ampl_factor
-            # Don't correct for FWHM here, this is just initial value???
-            # peak.ampl = peak.ampl * (last_opt_peak.fwhm / max(peak.fwhm, .001))
+        elif (peak.ampl_factor >= 0.) and (guess == True):
+            # find the index closest to the peak energy
+            energy = self.get_energy()
+            del_e  = num.abs(energy - peak.energy)
+            idx    = num.where( del_e == min(del_e) )
+            idx    = idx[0][0]
+            peak.ampl = max(self.data[idx], 0.)
+        #elif (peak.ampl_factor > 0.):
+        #    peak.ampl = last_opt_peak.ampl * peak.ampl_factor
 
     ################################################################################
     def get_params(self,):
@@ -877,6 +877,7 @@ class XrfSpectrum:
         self.fwhm_slope = parameters[np]
 
         # Peaks
+        last_opt_peak = None
         for peak in self.peaks:
             # Peak energy
             np = np + 1
@@ -906,7 +907,7 @@ class XrfSpectrum:
             elif (peak.ampl_factor == 0.):
                 peak.ampl = parameters[np]
                 last_opt_peak = peak
-            elif (peak.ampl_factor > 0.):
+            elif (peak.ampl_factor > 0.) and (last_opt_peak != None):
                 peak.ampl = (last_opt_peak.ampl * peak.ampl_factor)
                 peak.ampl = peak.ampl * (last_opt_peak.fwhm / max(peak.fwhm, .001))
 
