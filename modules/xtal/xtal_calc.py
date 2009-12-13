@@ -13,16 +13,8 @@ Modifications:
 """
 Todo
 
- - LatticeTransform class 
+ - Work on LatticeTransform class 
 
- - Reading cif files and others (maybe seperate module)
-   - e.g. get xyz file from fit and par files
-
- - Structure analysis and bond valence calcs (seperate module)
-
- - Make another module with space groups and typical lattice transformations
-   from the international tables...
- 
 """
 ##########################################################################
 """
@@ -306,7 +298,7 @@ class Lattice:
         """
         x = num.array(x,dtype=float)
         h = num.array(h,dtype=float)
-        hx = x*h
+        hx = num.sum(x*h)
         xm = self.mag(x,recip=False)
         hm = self.mag(h,recip=True)
         arg = hx/(hm*xm)
@@ -378,122 +370,216 @@ class Lattice:
         return hkl
 
 ##########################################################################
-"""
-Note make a new class:
 class LatticeTransform:
-    def __init__(lattice,)
-    def cartesian()
-      - calculates new cartesian basis
-    def new_basis(Va,Vb,Vc,shift)
-      - takes set of vectors in lattice basis that
-        defines a new basis
-    def real_indicies(uvw):
-      - takes uvw in lattice and gives same vector in new basis
-    def recip_indicies
-      - same as above except in recip space
-    need same as above 2 functions but going in opposite direction,
-    ie transform from new indicies to old indicies
-"""
-def basis_transform_cart(cell):
     """
-    * basis_transform_cart(cell) :
-      calculate basis and coordinate transformation matrix i.e. Gc and Fc to
-      transform to cartesian space from a basis defined by cell
-    """
-    #calculate Gc and Fc for transformations to cartesian basis
-    a = cell[0]
-    b = cell[1]
-    c = cell[2]
-    alp = cell[3]
-    bet = cell[4]
-    gam = cell[5]
-    Pi = num.pi
-    rcell = rlat(cell)
-    a_r = rcell[0]
-    b_r = rcell[1]
-    c_r = rcell[2]
-    alp_r = rcell[3]
-    bet_r = rcell[4]
-    gam_r = rcell[5]
-    # Gc transforms basis to cartesian
-    Gc = num.array([[1/a, 0 , 0],
-                     [-1/(a*num.tan(gam*Pi/180)), 1/(b*num.sin(gam*Pi/180)), 0],
-                     [a_r*num.cos(bet_r*Pi/180), b_r*num.cos(alp_r*Pi/180), c_r]])
-    # F transforms coordinates to cartesian
-    # F = inverse(G')
-    Fc = num.array([[a, b*num.cos(gam*Pi/180), c*num.cos(bet*Pi/180)],
-                     [0, b*num.sin(gam*Pi/180), -1*c*num.sin(bet*Pi/180)*num.cos(alp_r*Pi/180)],
-                     [0, 0, 1/c_r]])
-    return Fc
+    Generalized lattice transformations
 
-##########################################################################
-def transform_to_cart(u,v,w,cell):
+    Still need to add shift vector calcs...
+
     """
+    def __init__(self,lattice,Va=None,Vb=None,Vc=None,shift=None):
+        """
+        Initialize with a Lattice instance.
+
+        All transforms are defined with respect to this
+        lattice, ie this is the original unprimed lattice
+        """
+        self.lattice = lattice
+        self.Va    = num.array([1.,0.,0.])
+        self.Vb    = num.array([0.,1.,0.])
+        self.Vc    = num.array([0.,0.,1.])
+        self.shift = num.array([0.,0.,0.])
+        self._update(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
     
-    * transform_to_cart(u,v,w,cell) :
-      transform given u,v,w coordinates from basis defined by cell to cartesian basis
+    def basis(self,Va=None,Vb=None,Vc=None,shift=None):
+        """
+        Define new basis vectors.
+        Va, Vb and Vc should define the a',b',c' lattice
+        vectors of the new basis (rotation/dialation part).
+        Shift accounts for an origin shift of the lattice
+        
+        All the vectors should be defined in the original basis,
+        for example:
+           a' = x1*a + y1*b + z1*c 
+           b' = x2*a + y2*b + z2*c 
+           c' = x3*a + y3*b + z3*c
+        and
+           Va = [x1,y1,y1]
+           Vb = [x2,y2,y2]
+           Vc = [x3,y3,y3]
+        """
+        self._update(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
 
-    """
-    # transform u,v,w to cartesian
-    Fc = basis_transform_cart(cell) 
-    uvw = [u, v, w]
-    uvw_xyz = num.matrixmultiply(Fc, num.transpose(uvw))
-    xyz = num.transpose(uvw_xyz1)
-    return xyz
+    def _update(self,Va=None,Vb=None,Vc=None,shift=None):
+        if Va != None: self.Va = num.array(Va,dtype=float)
+        if Vb != None: self.Vb = num.array(Vb,dtype=float)
+        if Vc != None: self.Vc = num.array(Vc,dtype=float)
+        if shift != None: self.shift = num.array(shift,dtype=float)
+        F = [self.Va,self.Vb,self.Vc]
+        self.F = num.array(F, dtype=float)
+        self.G = num.linalg.inv(self.F)
+        self.M = self.G.transpose()
+        self.N = self.F.transpose()
+        
+    def cartesian(self,):
+        """
+        Calculates a cartesian basis
+          a' is parrallel to a
+          b' is perpendicular to a' and in the a/b plane
+          c' is perpendicular to the a'/c' plane
+        """
+        a    = self.lattice.a
+        b    = self.lattice.b
+        gam  = num.radians(self.lattice.gamma)
+        ar   = self.lattice.ar
+        br   = self.lattice.br
+        cr   = self.lattice.cr
+        alpr = num.radians(self.lattice.alphar)
+        betr = num.radians(self.lattice.betar)
+        
+        Va = [1./a, 0. , 0.]
+        Vb = [-1./(a*num.tan(gam)), 1./(b*num.sin(gam)), 0.]
+        Vc = [ar*num.cos(betr), br*num.cos(alpr), cr]
 
-##########################################################################
-def cart_to_cell(x,y,z,cell):
-    """
-    * cart_to_cell(x,y,z,cell) :
-      transform cartesian x,y,z coordinates to a basis defined by given cell 
-    """
-    # transform x,y,z to basis defined by cell
-    Fc = basis_transform_cart(cell)
-    xyz = [x, y, z]
-    xyz_uvw = num.matrixmultiply((num.linalg.inverse(Fc)),num.transpose(xyz))
-    uvw = num.transpose(xyz_uvw)
-    return uvw
+        self.basis(Va=Va,Vb=Vb,Vc=Vc,shift=[0.,0.,0.])
 
-##########################################################################
-# some lattice transformations
-"""
-should make a dictionary/ data structure that defines these in terms
-of set of lattice vectors / translations that defines new in terms of old
-then use to calc a new Lattice...
-See international tables for usual / typical transforms
-"""
-##########################################################################
-def trans_hexa_to_rhombo(Va):
-    """
-    * trans_hexa_to_rhombo(Va):
-      transfrom any vector Va from hexa to rhombo system
-    """
-    # transfrom any vector from hexa to rhombo system
-    MM = num.array([[0.6667, 0.3333, 0.3333],
-                      [-0.3333, 0.3333, 0.3333],
-                      [-0.3333, -0.6667, 0.3333]])
-    NN = num.linalg.inv(num.transpose(MM))
-    V_rh = num.matrixmultiply(NN,num.transpose(Va))
-    return V_rh
+    def xp(self,x):
+        """
+        Given x = [x,y,z] in the original lattice
+        compute the indicies of the vector in the new basis
+        """
+        x  = num.array(x,dtype=float)
+        return num.dot(self.M,x)
+        
+    def x(self,xp):
+        """
+        Given xp = [x',y',z'] in the primed basis
+        compute the indicies of the vector in the original basis
+        """
+        xp  = num.array(xp,dtype=float)
+        return num.dot(self.N,xp)
 
-##########################################################################
-def trans_rhombo_to_hexa(Va):
-    """
-    * trans_rhombo_to_hexa(Va):
-      transfrom any vector from rhombo to hexa system
-    """
-    # transfrom any vector from rhombo to hexa system
-    MM = num.array([[0.6667, 0.3333, 0.3333],
-                      [-0.3333, 0.3333, 0.3333],
-                      [-0.3333, -0.6667, 0.3333]])
-    NN = num.linalg.inv(num.transpose(MM))
-    NN_inv = num.linalg.inv(NN)
-    V_hx = num.matrixmultiply(NN_inv,num.transpose(Va))
-    return V_hx
+    def hp(self,h):
+        """
+        Given h = [h,k,l] in the original (recip) lattice
+        compute the indicies of the vector in the new (recip) basis
+        """
+        h  = num.array(h,dtype=float)
+        return num.dot(self.F,h)
+        
+    def h(self,hp):
+        """
+        Given hp = [h',k',l'] in the primed (recip) basis
+        compute the indicies of the vector in the original (recip) basis
+        """
+        hp  = num.array(hp,dtype=float)
+        return num.dot(self.G,hp)
+
+    def plat(self):
+        """
+        Return a Lattice instance for the primed basis 
+        """
+        a = self.lattice.mag(self.Va)
+        b = self.lattice.mag(self.Vb)
+        c = self.lattice.mag(self.Vc)
+        alp = self.lattice.angle(self.Vb,self.Vc)
+        bet = self.lattice.angle(self.Va,self.Vc)
+        gam = self.lattice.angle(self.Va,self.Vb)
+        return Lattice(a,b,c,alp,bet,gam)
     
+##########################################################################
+##########################################################################
+def test_lattice():
+    # create a new lattice instance
+    cell = Lattice(5.6,5.6,13,90,90,120)
+
+    # show lattice parameters and real
+    # recip lattice cell volumes
+    print cell
+    print cell.vol()
+    print cell.vol(recip=True)
+
+    # what the hkl = [0,0,1] dspace
+    # and 2 theta value for lambda = 1 ang.
+    print cell.d([0,0,1])
+    print cell.tth([0,0,1],lam=1.)
+    
+    # create a real space vector perpendicular
+    # to hkl = [0,0,1], with magnitude = dspace(001)
+    dv = cell.dvec([0,0,1])
+    print dv
+    print cell.mag(dv)
+
+    # compute the angle between some vectors
+    # recip lattice [1,0,0] and [0,1,0]
+    print cell.angle([1,0,0],[0,1,0],recip=True)
+    # recip lattice [1,0,0] and [0,0,1]
+    print cell.angle([1,0,0],[0,0,1],recip=True)
+    # recip lattice [0,0,1] and [1,1,1]
+    print cell.angle([0,0,1],[1,1,1],recip=True)
+
+    # real lattice [1,0,0] and [0,1,0]
+    print cell.angle([1,0,0],[0,1,0])
+    # real lattice [1,0,0] and [0,0,1]
+    print cell.angle([1,0,0],[0,0,1])
+    # real lattice [0,0,1] and [1,1,1]
+    print cell.angle([0,0,1],[1,1,1])
+
+    # real [0,0,1] and recip [0,0,1]
+    print cell.angle_rr([0,0,1],[0,0,1])
+    # real [1,1,1] and recip [0,0,1]
+    print cell.angle_rr([1,1,1],[0,0,1])
+    # real dv and recip [0,0,1]
+    print cell.angle_rr(dv,[0,0,1])
+    # real dv and recip [1,1,0]
+    print cell.angle_rr(dv,[1,1,0])
+
+    return cell
+
+def test_transform():
+    # create a new hexagonal lattice instance
+    cell = Lattice(5.6,5.6,13,90,90,120)
+    
+    # test lattice transform
+    # below defines rhombohedral basis vectors
+    # in terms of the heaxagonal basis vectors
+    Va_rhom = [0.6667, 0.3333, 0.3333]
+    Vb_rhom = [-0.3333, 0.3333, 0.3333]
+    Vc_rhom = [-0.3333, -0.6667, 0.3333]
+    t = LatticeTransform(cell,Va=Va_rhom,Vb=Vb_rhom,Vc=Vc_rhom)
+
+    # create an instance of the rhombohedral lattice
+    # shows the rhomb lattice params
+    print t.plat()
+
+    # given the hkl = [001] in hex calc hkl in rhom
+    print t.hp([0,0,1])
+    
+    # given the hkl = [111] in rhom calc hkl in hex
+    print t.h([1,1,1])
+
+    # create a cartesian representation
+    t.cartesian()
+    cart = t.plat()
+    print cart
+    
+    # convert a [1,1,0] vector in hex lattice to cartesian
+    vc = t.xp([1,1,0])
+    print vc
+
+    # check that the vector is the same length
+    print cell.mag([1,1,0])
+    print cart.mag(vc)
+
+    return t
+
+
 ##########################################################################
 ##########################################################################
 if __name__ == "__main__":
     """
     test 
     """
+    #test_lattice()
+    test_transform()
+    

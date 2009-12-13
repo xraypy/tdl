@@ -27,8 +27,6 @@ import sys
 import types
 
 ##########################################################################
-# generators
-##########################################################################
 class PositionGenerator:
     """
     class to generate atomic positions given symmetry operations
