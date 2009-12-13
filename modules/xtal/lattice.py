@@ -1,19 +1,12 @@
 ##########################################################################
 """
 Tom Trainor (tptrainor@alaska.edu) 
-Xtal calcs
+lattice calcs
 
 Modifications:
 --------------
 - convert matlab to python, Kunal Tanwar
-- Make into class, TPT
-
-"""
-##########################################################################
-"""
-Todo
-
- - Work on LatticeTransform class 
+- Convert classes, TPT
 
 """
 ##########################################################################
@@ -373,14 +366,10 @@ class Lattice:
 class LatticeTransform:
     """
     Generalized lattice transformations
-
-    Still need to add shift vector calcs...
-
     """
     def __init__(self,lattice,Va=None,Vb=None,Vc=None,shift=None):
         """
         Initialize with a Lattice instance.
-
         All transforms are defined with respect to this
         lattice, ie this is the original unprimed lattice
         """
@@ -396,17 +385,21 @@ class LatticeTransform:
         Define new basis vectors.
         Va, Vb and Vc should define the a',b',c' lattice
         vectors of the new basis (rotation/dialation part).
-        Shift accounts for an origin shift of the lattice
+        Shift describes an origin shift of the new lattice
+        (ie take the new basis defined by Va,Vb,Vc then
+        apply the shift vector)
         
-        All the vectors should be defined in the original basis,
-        for example:
+        All the vectors should be defined in terms of fractional
+        coordinate indicies in the original basis, for example:
            a' = x1*a + y1*b + z1*c 
            b' = x2*a + y2*b + z2*c 
            c' = x3*a + y3*b + z3*c
+           shift = x4*a + y4*b + z4*c
         and
            Va = [x1,y1,y1]
            Vb = [x2,y2,y2]
            Vc = [x3,y3,y3]
+           shift = [x4,y4,z4]
         """
         self._update(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
 
@@ -421,12 +414,16 @@ class LatticeTransform:
         self.M = self.G.transpose()
         self.N = self.F.transpose()
         
-    def cartesian(self,):
+    def cartesian(self,shift=[0.,0.,0.]):
         """
         Calculates a cartesian basis
           a' is parrallel to a
           b' is perpendicular to a' and in the a/b plane
           c' is perpendicular to the a'/c' plane
+        A shift vector may be specified to shift the origin
+        of the cartesian lattice relative to the original lattice
+        origin (specify shift in fractional coordinates of
+        the original lattice)
         """
         a    = self.lattice.a
         b    = self.lattice.b
@@ -441,23 +438,31 @@ class LatticeTransform:
         Vb = [-1./(a*num.tan(gam)), 1./(b*num.sin(gam)), 0.]
         Vc = [ar*num.cos(betr), br*num.cos(alpr), cr]
 
-        self.basis(Va=Va,Vb=Vb,Vc=Vc,shift=[0.,0.,0.])
+        self.basis(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
 
     def xp(self,x):
         """
         Given x = [x,y,z] in the original lattice
         compute the indicies of the vector in the new basis
+           xp = M*(x-shift)
         """
         x  = num.array(x,dtype=float)
-        return num.dot(self.M,x)
+        if self.shift.sum() != 0.:
+            x = x - self.shift
+        xp = num.dot(self.M,x)
+        return xp
         
     def x(self,xp):
         """
         Given xp = [x',y',z'] in the primed basis
         compute the indicies of the vector in the original basis
+            x = N*(xp+shiftp) = N*xp + shift
         """
         xp  = num.array(xp,dtype=float)
-        return num.dot(self.N,xp)
+        x = num.dot(self.N,xp)
+        if self.shift.sum() != 0.:
+            x = x + self.shift
+        return x
 
     def hp(self,h):
         """
