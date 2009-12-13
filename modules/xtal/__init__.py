@@ -1,4 +1,4 @@
 ##
-from xtal_calc import Lattice
+from lattice import Lattice, LatticeTransform
 from structure import PositionGenerator
 
