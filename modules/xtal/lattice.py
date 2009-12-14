@@ -139,8 +139,9 @@ Note that g and gr are always symmetric, therefore
 ##########################################################################
 
 import numpy as num
-import sys
-import types
+
+from mathutil import cosd, sind, tand
+from mathutil import arccosd, arcsind, arctand
 
 ##########################################################################
 class Lattice:
@@ -149,7 +150,13 @@ class Lattice:
     operations within the lattice
 
     """
-    def __init__(self,a=1.,b=1.,c=1.,alpha=90.,beta=90.,gamma=90.):
+    def __init__(self,a=10.,b=10.,c=10.,alpha=90.,beta=90.,gamma=90.,lam=1.5406):
+        """
+        Initialize by passing a,b,c in angstroms 
+        alpha, beta, gamma in degrees,
+        and lambda in angstroms (default lambda is Cu Ka1)
+        """
+        self.lam = lam
         self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma)
 
     def __repr__(self,):
@@ -159,51 +166,28 @@ class Lattice:
                                                              self.beta,
                                                              self.gamma)
         lout = "%sar=%6.5f, br=%6.5f, cr=%6.5f" % (lout,self.ar, self.br, self.cr)
-        lout = "%s, alphar=%6.5f,betar=%6.5f,gammar=%6.5f" % (lout,
-                                                              self.alphar,
-                                                              self.betar,
-                                                              self.gammar)
+        lout = "%s, alphar=%6.5f,betar=%6.5f,gammar=%6.5f\n" % (lout,
+                                                                self.alphar,
+                                                                self.betar,
+                                                                self.gammar)
+        lout = "%sDefault wavelength for angle calculations=%6.5f" % (lout,
+                                                                      self.lam)
         return lout
 
-    def update(self,a=None,b=None,c=None,alpha=None,beta=None,gamma=None):
+    def update(self,a=None,b=None,c=None,alpha=None,beta=None,gamma=None,lam=None):
         """
         Update lattice parameters
         """
-        if a != None: self.a = float(a)
-        if b != None: self.b = float(b)
-        if c != None: self.c = float(c)
+        if a != None:     self.a = float(a)
+        if b != None:     self.b = float(b)
+        if c != None:     self.c = float(c)
         if alpha != None: self.alpha = float(alpha)
         if beta  != None: self.beta  = float(beta)
         if gamma != None: self.gamma = float(gamma)
+        if lam != None:   self.lam = float(lam)
         # update calc quantities
         self._calc_g()
 
-    def _calc_g(self):
-        """
-        Calculate the metric tensors and recip lattice params
-           self.g  = real space metric tensor
-           self.gr = recip space metric tensor
-        """
-        a = self.a
-        b = self.b
-        c = self.c
-        alp = num.radians(self.alpha)
-        bet = num.radians(self.beta)
-        gam = num.radians(self.gamma)
-        # real metric tensor
-        self.g = num.array([ [ a*a, a*b*num.cos(gam), a*c*num.cos(bet) ],
-                             [ b*a*num.cos(gam), b*b, b*c*num.cos(alp) ],
-                             [ c*a*num.cos(bet), c*b*num.cos(alp), c*c ] ])
-        # recip lattice metric tensor
-        # and recip lattice params
-        self.gr   = num.linalg.inv(self.g)
-        self.ar   = num.sqrt(self.gr[0,0])
-        self.br   = num.sqrt(self.gr[1,1])
-        self.cr   = num.sqrt(self.gr[2,2])
-        self.alphar = num.degrees(num.arccos(self.gr[1,2]/(self.br*self.cr)))
-        self.betar  = num.degrees(num.arccos(self.gr[0,2]/(self.ar*self.cr)))
-        self.gammar = num.degrees(num.arccos(self.gr[0,1]/(self.ar*self.br)))
-        
     def cell(self):
         """
         Return array of real lattice cell parameters
@@ -217,6 +201,27 @@ class Lattice:
         """
         return num.array([self.ar,self.br,self.cr,
                           self.alphar,self.betar,self.gammar],dtype=float)
+
+    def _calc_g(self):
+        """
+        Calculate the metric tensors and recip lattice params
+           self.g  = real space metric tensor
+           self.gr = recip space metric tensor
+        """
+        (a,b,c,alp,bet,gam) = self.cell()
+        # real metric tensor
+        self.g = num.array([ [ a*a, a*b*cosd(gam), a*c*cosd(bet) ],
+                             [ b*a*cosd(gam), b*b, b*c*cosd(alp) ],
+                             [ c*a*cosd(bet), c*b*cosd(alp), c*c ] ])
+        # recip lattice metric tensor
+        # and recip lattice params
+        self.gr     = num.linalg.inv(self.g)
+        self.ar     = num.sqrt(self.gr[0,0])
+        self.br     = num.sqrt(self.gr[1,1])
+        self.cr     = num.sqrt(self.gr[2,2])
+        self.alphar = arccosd(self.gr[1,2]/(self.br*self.cr))
+        self.betar  = arccosd(self.gr[0,2]/(self.ar*self.cr))
+        self.gammar = arccosd(self.gr[0,1]/(self.ar*self.br))
         
     def vol(self,recip=False):
         """
@@ -281,8 +286,8 @@ class Lattice:
         arg = uv/(um*vm)
         if num.fabs(arg) > 1.0:
             arg = arg / num.fabs(arg)
-        alpha = num.arccos(arg)
-        return num.degrees(alpha)
+        alpha = arccosd(arg)
+        return alpha
 
     def angle_rr(self,x,h):
         """
@@ -297,8 +302,8 @@ class Lattice:
         arg = hx/(hm*xm)
         if num.fabs(arg) > 1.0:
             arg = arg / num.fabs(arg)
-        alpha = num.arccos(arg)
-        return num.degrees(alpha)
+        alpha = arccosd(arg)
+        return alpha
 
     def d(self,hkl):
         """
@@ -314,18 +319,20 @@ class Lattice:
         d = 1./h
         return d
 
-    def tth(self,hkl,lam=1.5406):
+    def tth(self,hkl,lam=None):
         """
-        Calculate 2Theta for given [h,k,l] and lambda
-        Default lambda = Cu Ka1
+        Calculate 2Theta for given [h,k,l] and wavelength
+        If lam is None the default lambda will be used (Cu Ka1)
+        If you pass in lam, this will change the default for
+        subsequent calls
         """
+        if lam != None: self.lam = float(lam)
         d = self.d(hkl)
         if d == 0.: return 0.
-        r = lam/(2.*d)
+        r = self.lam/(2.*d)
         if num.fabs(r) > 1.0:
             r = r/num.fabs(r)
-        tth = 2.*num.arcsin(r)
-        tth = num.degrees(tth)
+        tth = 2.*arcsind(r)
         return tth
 
     def dvec(self,hkl):
@@ -425,19 +432,11 @@ class LatticeTransform:
         origin (specify shift in fractional coordinates of
         the original lattice)
         """
-        a    = self.lattice.a
-        b    = self.lattice.b
-        gam  = num.radians(self.lattice.gamma)
-        ar   = self.lattice.ar
-        br   = self.lattice.br
-        cr   = self.lattice.cr
-        alpr = num.radians(self.lattice.alphar)
-        betr = num.radians(self.lattice.betar)
-        
-        Va = [1./a, 0. , 0.]
-        Vb = [-1./(a*num.tan(gam)), 1./(b*num.sin(gam)), 0.]
-        Vc = [ar*num.cos(betr), br*num.cos(alpr), cr]
-
+        (a,b,c,alp,bet,gam) = self.lattice.cell()
+        (ar,br,cr,alpr,betr,gamr) = self.lattice.rcell()
+        Va = [1./a,                 0. ,             0.]
+        Vb = [-1./(a*tand(gam)), 1./(b*sind(gam)),   0.]
+        Vc = [ar*cosd(betr),     br*cosd(alpr),      cr]
         self.basis(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
 
     def xp(self,x):
@@ -585,6 +584,6 @@ if __name__ == "__main__":
     """
     test 
     """
-    #test_lattice()
+    test_lattice()
     test_transform()
     
