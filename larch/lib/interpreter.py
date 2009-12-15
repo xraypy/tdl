@@ -317,7 +317,7 @@ class Interpreter:
         self.error      = []
         self.expr       = None
         self.retval     = None
-
+        self.fname      = '<StdIn>'
         imports = ((builtins._from_builtin, __builtin__,'_builtin'),
                    (builtins._from_numpy,   numpy, '_math'))
         
@@ -353,7 +353,7 @@ class Interpreter:
         if self.error is None: self.error = []
         if expr  is None: expr  = self.expr
         if fname is None: fname = self.fname        
-        if lineno is None: lineno = self.lineno
+        if lineno is None: lineno = 0
 
         if len(self.error) > 0 and not isinstance(node, ast.Module):
             msg = 'Extra Error (%s)' % msg
