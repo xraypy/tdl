@@ -156,8 +156,7 @@ class Lattice:
         alpha, beta, gamma in degrees,
         and lambda in angstroms (default lambda is Cu Ka1)
         """
-        self.lam = lam
-        self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma)
+        self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma,lam=lam)
 
     def __repr__(self,):
         lout = "a=%6.5f, b=%6.5f, c=%6.5f" % (self.a, self.b, self.c)
@@ -274,7 +273,7 @@ class Lattice:
 
     def angle(self,u,v,recip=False):
         """
-        Calculate dot product of two vectors
+        Calculate the angle between two vectors
           If u and v are real space vectors, use recip = False
           If u and v are recip space vectors, use recip = True
         Note u and v are assumed to be normal numpy arrays
@@ -322,6 +321,7 @@ class Lattice:
     def tth(self,hkl,lam=None):
         """
         Calculate 2Theta for given [h,k,l] and wavelength
+        
         If lam is None the default lambda will be used (Cu Ka1)
         If you pass in lam, this will change the default for
         subsequent calls
@@ -423,10 +423,10 @@ class LatticeTransform:
         
     def cartesian(self,shift=[0.,0.,0.]):
         """
-        Calculates a cartesian basis
-          a' is parrallel to a
-          b' is perpendicular to a' and in the a/b plane
-          c' is perpendicular to the a'/c' plane
+        Calculates a cartesian basis using:
+          Va = a' is parrallel to a
+          Vb = b' is perpendicular to a' and in the a/b plane
+          Vc = c' is perpendicular to the a'/c' plane
         A shift vector may be specified to shift the origin
         of the cartesian lattice relative to the original lattice
         origin (specify shift in fractional coordinates of

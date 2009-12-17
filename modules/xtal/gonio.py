@@ -43,10 +43,13 @@ system such that:
     (i.e. z is parallel to the phi axis)
 Therefore with all gonio angles set to zero the lab xyz axis are coincident
 with the goniometer axes in a well defined way (depending on the axis definitions).
-Under the instrument settings with all angles zero (phi frame) and with the
-sample oriented in an arbitrary maner the matrix U is used
-to calculate the lab frame indicies of an arbritrary recip lattice vector,
-h=[h,k,l], such that:
+Note that the yz plane is the horizontal scattering plane, and yx is the vertical
+scattering plane.
+
+With the instrument settings all at zero angles (phi frame), and with the
+sample oriented in an arbitrary maner, the matrix U is used to calculate
+the lab frame indicies (hphi) of a given reciprocal lattice vector, h=[h,k,l],
+according to:
    hphi = U*hc = U*B*h
 Therefore, U is a simple rotation matrix which gives
 the indicies of h in the phi frame accounting for how 
@@ -98,7 +101,8 @@ angles we can then solve for hphi
 The reciprocal lattice indicies (h) are then calc from
    h = inv(UB)*hphi
 This gives the hkl values of the vector that is in the
-diffraction condition for a given set of angles.  
+diffraction condition for a given set of angles.
+
 
 1. H. You, J. Appl. Cryst. (1999) 32, 614-623
 2. Busy and Leving
@@ -111,6 +115,8 @@ import types
 
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
+from mathutil import cartesian_mag, cartesian_angle
+
 from lattice import Lattice
 
 ##########################################################################
@@ -161,8 +167,9 @@ class Psic:
         alpha, beta, gamma in degrees,
         and lambda in angstroms
         """
-        # set lattice
-        self.lattice = Lattice(a,b,c,alpha,beta,gamma)
+        # set lattice and lambda
+        self.lattice = Lattice(a,b,c,alpha,beta,gamma,lam)
+        
         # dummy primary reflection
         tth = self.lattice.tth([0.,0.,1.],lam=lam)
         self.or1={'h':num.array([0.,0.,1.]),
@@ -173,24 +180,65 @@ class Psic:
         self.or2={'h':num.array([0.,1.,0.]),
                   'phi':0.0,'chi':0.0,'eta':tth/2.,'mu':0.0,
                   'nu':0.0,'delta':tth,'lam':lam}
+
+        # hold angles
+        self.angles={'phi':0.0,'chi':0.0,'eta':0.0,'mu':0.0,
+                     'nu':0.0,'delta':0.0}
+
         # compute initial matricies
         self.U = []
         self.B = []
+        self.UB = []
+        self.Z  = []
         self._update()
 
     def __repr__(self,):
         lout = self.lattice.__repr__()
-        # add or reflections...
+        lout = "%sPrimary:\n   h=%3.2f,k=%3.2f,l=%3.2f, lam=%6.6f\n" % (lout,
+                                                                        self.or1['h'],
+                                                                        self.or1['k'],
+                                                                        self.or1['l'],
+                                                                        self.or1['lam'])
+        lout = "%s   phi=%6.3f,chi=%6.3f,eta=%6.3f,mu=%6.3f,nu=%6.3f,delta=%6.3f\n" % (lout,
+                                                                                     self.or1['phi'],
+                                                                                     self.or1['chi'],
+                                                                                     self.or1['eta'],
+                                                                                     self.or1['mu'],
+                                                                                     self.or1['nu'],
+                                                                                     self.or1['delta'])
+        lout = "%sSecondary:\n   h=%3.2f,k=%3.2f,l=%3.2f, lam=%6.6f\n" % (lout,
+                                                                          self.or2['h'],
+                                                                          self.or2['k'],
+                                                                          self.or2['l'],
+                                                                          self.or2['lam'])
+        lout = "%s   phi=%6.3f,chi=%6.3f,eta=%6.3f,mu=%6.3f,nu=%6.3f,delta=%6.3f\n" % (lout,
+                                                                                     self.or2['phi'],
+                                                                                     self.or2['chi'],
+                                                                                     self.or2['eta'],
+                                                                                     self.or2['mu'],
+                                                                                     self.or2['nu'],
+                                                                                     self.or2['delta'])
+        lout = "%sSettings\n   phi=%6.3f,chi=%6.3f,eta=%6.3f,mu=%6.3f,nu=%6.3f,delta=%6.3f\n" % (lout,
+                                                                                     self.angles['phi'],
+                                                                                     self.angles['chi'],
+                                                                                     self.angles['eta'],
+                                                                                     self.angles['mu'],
+                                                                                     self.angles['nu'],
+                                                                                     self.angles['delta'])
         return lout
     
     def _update(self):
-        self._calc_B()
-        self._calc_U()
+        self._calc_UB()
+        self._calc_Z()
 
     def set_or1(self,h=None,phi=None,chi=None,eta=None,
                 mu=None,nu=None,delta=None,lam=None):
         """
         Set / adjust the primary orientation reflection
+
+        Angles are in degrees, lam is in angstroms
+        If lam = None, then lambda defined for the lattice
+        is used.
         """
         if h!=None:     self.or1['h'] = num.array(h,dtype=float)
         if phi!=None:   self.or1['phi']=float(phi)
@@ -206,6 +254,10 @@ class Psic:
                 mu=None,nu=None,delta=None,lam=None):
         """
         Set / adjust the secondary orientation reflection
+
+        Angles are in degrees, lam is in angstroms
+        If lam = None, then lambda defined for the lattice
+        is used.
         """
         if h!=None:     self.or2['h'] = num.array(h,dtype=float)
         if phi!=None:   self.or2['phi']=float(phi)
@@ -229,16 +281,46 @@ class Psic:
     def set_lat(self,a=None,b=None,c=None,alpha=None,
                 beta=None,gamma=None,lam=None):
         """
-        Update lattice parameters
+        Update lattice parameters and lambda
+
+        abc are in angstroms, angles are in degrees,
+        lam is in angstroms
+
         """
         self.lattice.update(a=a,b=b,c=c,alpha=alpha,
                             beta=beta,gamma=gamma,lam=lam)
         self._update()
+
+    def set_angles(self,phi=None,chi=None,eta=None,
+                   mu=None,nu=None,delta=None):
+        """
+        Set goniometer angles (all in degrees)
+        """
+        if phi!=None:   self.angles['phi']=float(phi)
+        if chi!=None:   self.angles['chi']=float(chi)
+        if eta!=None:   self.angles['eta']=float(eta)
+        if mu!=None:    self.angles['mu']=float(mu)
+        if nu!=None:    self.angles['nu']=float(nu)
+        if delta!=None: self.angles['delta']=float(delta)
+        self._calc_Z()
     
-    def _calc_B(self,):
+    def _calc_UB(self,):
         """
-        Calculate the B matrix
+        Calculate the orientation matrix, U,
+        from the primary and secondary
+        reflectons and given lattice
+
+        Note dont really ever use B by itself.  so we
+        should combine this and above to calc_UB and
+        just store UB??
+        
         """
+        # use these, note they are used below on vectors
+        # defined in the cartesian lab frame basis
+        cross = num.cross
+        norm = num.linalg.norm
+
+        #Calculate the B matrix
         (a,b,c,alp,bet,gam) = self.lattice.cell()
         (ar,br,cr,alpr,betr,gamr) = self.lattice.rcell()
 
@@ -246,26 +328,28 @@ class Psic:
                        [0.,  br*sind(gamr),  -cr*sind(betr)*cosd(alp)],
                        [0.,      0.,                 1./c            ]])
         self.B = B
-
-    def _calc_U(self,):
-        """
-        Calculate the orientation matrix, U, from the primary and secondary
-        reflectons and given lattice
-        """
-        # use these, note they are used below on vectors
-        # defined in the cartesian lab frame basis
-        cross = num.cross
-        norm = num.linalg.norm
         
         #calc Z and Q for the OR reflections
-        Z1 = self.calc_Z(self.or1['phi'],self.or1['chi'],
-                         self.or1['eta'],self.or1['mu'])
-        (Q1,ki1,kr1) = self.calc_Q(self.or1['nu'],self.or1['delta'],self.or1['lam'],)
+        tmp_angles = self.angles
+        tmp_lam = self.lattice.lam
+        #
+        self.lattice.lam = self.or1['lam']
+        self.set_angles(self.or1['phi'],self.or1['chi'],self.or1['eta'],
+                        self.or1['mu'],self.or1['nu'],self.or1['delta'])
+        #
+        Z1 = self.Z
+        Q1 = self.calc_Q()
+        #
+        self.lattice.lam = self.or2['lam']
+        self.set_angles(self.or2['phi'],self.or2['chi'],self.or2['eta'],
+                        self.or2['mu'],self.or2['nu'],self.or2['delta'])
+        #
+        Z2 = self.Z
+        Q2 = self.calc_Q()
+        #
+        self.lattice.lam = tmp_lam
+        self.angles = tmp_angles
 
-        Z2 = self.calc_Z(self.or2['phi'],self.or2['chi'],
-                         self.or2['eta'],self.or2['mu'])
-        (Q2,ki2,kr2) = self.calc_Q(self.or2['nu'],self.or2['delta'],self.or2['lam'],)
-        
         # calc the phi frame coords for diffraction vectors
         # note divide out 2pi since the diffraction is 2pi*h = Q
         vphi_1 = num.dot(num.linalg.inv(Z1), (Q1/(2.*num.pi)))
@@ -302,12 +386,19 @@ class Psic:
         # note either of the below work since Tc is orthogonal
         #self.U = num.dot(Tphi, Tc.transpose())
         self.U = num.dot(Tphi, num.linalg.inv(Tc))
+
+        # calc UB
+        self.UB = num.dot(self.U,self.B)
         
-    def calc_Z(self,phi=0.0,chi=0.0,eta=0.0,mu=0.0):
+    def _calc_Z(self,):
         """
         Calculate the goniometer rotation matrix Z
-        angles are in degrees
+        Angles are in degrees
         """
+        phi=self.angles['phi']
+        chi=self.angles['chi']
+        eta=self.angles['eta']
+        mu=self.angles['mu']
         P = num.array([[ cosd(phi), sind(phi), 0.],
                        [-sind(phi), cosd(phi), 0.],
                        [  0.,          0.,     1.]],float)
@@ -321,56 +412,308 @@ class Psic:
                         [  0.,      cosd(mu), -sind(mu)],
                         [  0.,      sind(mu), cosd(mu)]],float)
         Z = num.dot(num.dot(num.dot(M,H),X),P)
-        return Z
+        self.Z = Z
 
-    def calc_Q(self,nu=0.0,delta=0.0,lam=None):
+    def calc_Q(self,):
         """
-        Calculate ki, kr, and Q in lab frame.
+        Calculate Q in the cartesian lab frame.
         Angles are in degrees, lam is in angstroms
         If lam = None, then lambda defined for the lattice
         is used.
         """
-        if lam == None: lam = self.lattice.lam
+        (ki,kr) = self.calc_kvecs()
+        Q = kr - ki
+        return Q
+
+    def calc_kvecs(self,):
+        """
+        Calculate ki, kr in the cartesian lab frame.
+        """
+        nu    = self.angles['nu']
+        delta = self.angles['delta']
+        lam   = self.lattice.lam
         k  = (2.* num.pi / lam)
         ki = k * num.array([0.,1.,0.],dtype=float)
         kr = k * num.array([sind(delta),
                             cosd(nu)*cosd(delta),
                             sind(nu)*cosd(delta)],dtype=float)
-        Q = kr - ki
-        return (Q, ki, kr)
+        return (ki,kr)
 
-    def calc_h(self,phi=0.0,chi=0.0,eta=0.0,mu=0.0,
-               nu=0.0,delta=0.0,lam=None):
+    def calc_h(self,):
         """
-        Given the gonio angles and wavelength, calculate
-        the hkl values of the vector that is in the
-        diffraction condition for a given set of angles.  
+        Calculate the hkl values of the vector that is in the
+        diffraction condition for the given set of angles.  
 
         Solve for hphi:
            hphi = inv(Z) * Qm / (2*pi)
         then calc h from
            h = inv(UB)*hphi
         """
-        Z = self.calc_Z(phi=phi,chi=chi,eta=eta,mu=mu)
-        Q = self.calc_Q(nu=nu,delta=delta,lam=lam)
+        Z = self.Z
+        Q = self.calc_Q()
         hphi = (2.*pi)*num.dot(num.linalg.inv(Z),Q) 
-        UB   = num.dot(self.U,self.B)
-        h    = num.dot(num.linalg.inv(UB),hphi)
+        h    = num.dot(num.linalg.inv(self.UB),hphi)
         return h
 
-    def calc_surf_norm(self,f_chi,f_phi):
+    ## Pseudo angles etc 
+    def calc_tth(self):
         """
-        Calculate the surface normal hkl given
-        flat phi and flat chi settings
+        Calculate 2Theta, the scattering angle
+        
+        This should be the same as:
+          (ki,kr) = self.calc_kvecs()
+           tth = cartesian_angle(ki,kr)
+
+        You can also get this given h, the reciprocal lattice
+        vector that is in the diffraction condition.  E.g.
+          h   = self.calc_h()
+          tth = self.lattice.tth(h)
         """
-        pass
+        nu    = self.angles['nu']
+        delta = self.angles['delta']
+        tth   = arccosd(cosd(delta)*cosd(nu))
+        return tth
+
+    def calc_n(self,fchi=0.0,fphi=0.0):
+        """
+        Calculate the hkl values of a reference vector given
+        the chi and phi settings that align this
+        vector with the eta axis.
+
+        For example this algorith is used
+        to compute the surface normal from the (flat) chi and
+        (flat) phi angles that leave an optical reflection in
+        a fixed position during an eta rotation 
+
+        Note the vector is normalized such that
+        the largest component is unity,
+        ie n_hkl isn't a unit vector!
+        
+        """
+        # polar angles
+        sig_az = -fchi
+        tau_az = -fphi
+
+        # this block converts the chi and phi values to correctly 
+        # defined polar coordinates, ie 0<= sig_az <= 180deg .....
+        if sig_az < 0.:
+            sig_az = -1.*sig_az
+            if tau_az < 0.:
+                tau_az = 180. + tau_az
+            elif tau_az > 0.:
+                tau_az = tau_az - 180.
+
+        # n in the unrotated lab frame (ie phi frame):
+        # this is a unit vector!
+        n_phi = num.array([ sind(sig_az)*cosd(tau_az),
+                           -sind(sig_az)*sind(tau_az), 
+                                  cosd(sig_az)        ], dtype=float)
+        # n in HKL
+        n_hkl = num.dot(num.linalg.inv(self.UB),n_phi)
+        n_hkl = n_hkl/ num.max(num.abs(n_hkl))
+        
+        # note if l-component is negative, then its
+        # pointing into the surface (ie assume positive L
+        # is the positive direction away from the surface
+        # careful here!!
+        if n_hkl[2] < 0.:
+            n_hkl = -1.*n_hkl
+        return n_hkl
+
+    def calc_sigma_az(self,n=[0.,0.,1]):
+        """
+        sigma_az = angle between the z-axis and n in the phi frame
+        
+        The reference vector is given in recip lattice indicies (hkl) 
+        """
+        # calc n in the lab frame (unrotated) and make a unit vector
+        n = num.array(n,dtype=float)
+        n_phi = num.dot(self.UB,n)
+        n_phi = n_phi/cartesian_mag(n_phi)
+        
+        # note result of acosd is between 0 and pi
+        # get correct sign from the sign of the x-component
+        #sigma_az = num.sign(n_phi[0])*arccosd(n_phi[2])
+        sigma_az = arccosd(n_phi[2])
+        return sigma_az
+
+    def calc_tau_az(self,n=[0.,0.,1]):
+        """
+        tau_az = angle between the projection of n in the xy-plane and the x-axis
+
+        The reference vector is given in recip lattice indicies (hkl) 
+        """
+        n = num.array(n,dtype=float)
+        n_phi = num.dot(self.UB,n)
+        n_phi = n_phi/cartesian_mag(n_phi)
+        tau_az = num.arctan2(-n_phi[1], n_phi[0])
+        tau_az = tau_az*180./pi
+
+
+    def calc_nm(self,n=[0.,0.,1]):
+        """
+        Calculate the rotated cartesian lab indicies
+        of the reference vector n
+
+        The reference vector is given in recip lattice indicies (hkl) 
+        """
+        # calc n in the rotated lab frame and make a unit vector
+        Z  = self.Z
+        UB = self.UB
+        n  = num.array(n,dtype=float)
+        nm = num.dot(num.dot(Z,UB),n)
+        nm = nm/cartesian_mag(nm)
+        return (nm)
+
+    def calc_naz(self,n=[0.,0.,1]):
+        """
+        calc naz, this is the angle btwn the reference vector n 
+        and the yz plane at the given angle settings
+
+        The reference vector is given in recip lattice indicies (hkl) 
+        """
+        # get norm reference vector in cartesian lab frame
+        nm = self.calc_nm(n=n)
+        naz = arctan2( nm[0], nm[2] )
+        naz = num.degrees(naz)
+        return naz
+
+    def calc_alpha(self,n=[0.,0.,1]):
+        """
+        Calc alpha, ie incidence angle or angle btwn 
+        k_in (which is along y) and the plane perp to
+        the reference vector n.
+
+        The reference vector is given in recip lattice indicies (hkl) 
+        """
+        # get norm reference vector in cartesian lab frame
+        nm = self.calc_nm(n=n)
+        # note the neg sign
+        y = num.array([0.,-1.,0.],dtype=float)
+        alpha = arcsind(num.dot(nm,y))
+        return alpha
+
+    def calc_beta(self,n=[0.,0.,1]):
+        """
+        Calc beta, ie exit angle, or angle btwn k_r and the
+        # plane perp to the reference vector n
+        """
+        # get norm reference vector in cartesian lab frame
+        nm = self.calc_nm(n=n)
+        # get normalized kr
+        (ki,kr) = self.calc_kvecs()
+        k = 2.*pi/self.lattice.lam
+        kr = kr / k
+        beta = arcsind(num.dot(n, kr))
+        # beta = arcsind( 2*sind(tth/2)*cosd(tau) - sind(alpha) )
+        return beta
+
+    def calc_tau(self,n=[0.,0.,1]):
+        """
+        Calc tau, this is the angle btwn n and the scattering-plane
+        defined by ki and kr.  ie the angle between n and Q
+
+        Can also calc from:
+         tau = acos( cosd(alpha) * cosd(tth/2) * cosd(naz - qaz) ...
+                    + sind(alpha) * sind(tth/2) ) 
+        """
+        # get norm reference vector in cartesian lab frame
+        nm = self.calc_nm(n=n)
+        Q = self.Q()
+        tau = cartesian_angle(Q,n)
+
+    def calc_psi(self,n=[0.,0.,1]):
+        """
+        calc psi, this is the azmuthal angle of n wrt Q. 
+        ie for tau != 0, psi is the rotation of n about Q
+        """
+        tau = self.calc_tau(n=n)
+        alpha = self.calc_alpha(n=n)
+        tth = self.calc_tth()
+        xx = (cosd(tau)*sind(tth/2.) - sind(alpha))
+        xx = xx /(sind(tau)*cosd(tth/2.))
+        psi = arccosd( xx )
+        #beta = self.calc_beta()
+        #xx = (-cosd(tau)*sind(tth/2.) + sind(beta))
+        # xx = xx /(sind(tau)*cosd(tth/2.))
+        #psi = arccosd( xx )
+        return psi
+
+    def calc_qaz(self):
+        """
+        Calc qaz, the angle btwn Q and the yz plane 
+        """
+        nu    = self.angles['nu']
+        delta = self.angles['delta']
+        qaz = num.arctan2(sind(delta), cosd(delta)*sind(nu) )
+        qaz = qaz *180./num.pi
+        return qaz
+
+    def calc_omega(self):
+        """
+        calc omega, this is the angle between Q and the plane
+        which is perpendicular to the axis of the chi circle.
+        note for nu=mu=0 this is the same as the four circle def:
+        omega = 0.5*TTH - TH, where TTH is the detector motor (=del)
+        and TH is the sample circle (=eta).  Therefore, for 
+        mu=nu=0 and del=0.5*eta, omega = 0, which means that Q
+        is in the plane perpendicular to the chi axis.
+        """
+        phi=self.angles['phi']
+        chi=self.angles['chi']
+        eta=self.angles['eta']
+        mu=self.angles['mu']
+        H = num.array([[ cosd(eta), sind(eta), 0.],
+                       [-sind(eta), cosd(eta), 0.],
+                       [   0.,         0.,     1.]],float)
+        M  = num.array([[  1.,         0.,     0.      ],
+                        [  0.,      cosd(mu), -sind(mu)],
+                        [  0.,      sind(mu), cosd(mu)]],float)
+        # check the mult order here!!!!
+        # T = num.dot(H.transpose(),M.transpose())
+        T = num.dot(M.transpose(),H.transpose())
+        Q = self.calc_Q()
+        Qpp = num.dot(T*Q)
+        omega = -1.*cartesian_angle([Qpp[0], 0, Qpp[2]],Qpp)
+        return omega
 
 
 ##########################################################################
 ##########################################################################
 def test_psic():
     # create a new psic instance
-    psic = Psic(5.6,5.6,13,90,90,120,lam=1.2)
+    psic = Psic(5.6,5.6,13,90,90,120,lam=1.3756)
+
+    # diffr. angles:
+    delta = 46.9587
+    eta   = 6.6400
+    chi   = 37.1005
+    phi   = 65.78
+    nu    = 0.000
+    mu    = 0.0
+    # reference vector/surface normal in [h,k,l]
+    # n = [0, 0, 1]
+    n = [-0.0348357, -0.00243595, 1]
+
+    # test surf norm
+    n_phi = num.dot(psic.UB,n)
+    n_phi = n_phi/ num.fabs(cartesian_mag(n_phi))
+    print "nphi: ", n_phi
+    sigma_az=psic.calc_sigma_az(n)
+    print "sigma_az=",sigma_az
+    tau_az=psic.calc_sigma_az(n)
+    print "tau_az=",tau_az
+    print "calc n from sigma and tau az: ", psic.calc_n(-sigma_az,-tau_az)
+    
+    # calc miscut
+    print "miscut=",psic.lattice.angle([0,0,1],n,recip=True)
+    
+    # calc tth, d and magnitude of Q
+    h = psic.calc_h()
+    print "h=",h
+    print "tth =", psic.calc_tth()
+    print "tth =", psic.lattice.tth(h)
+
     return psic
 
 
@@ -382,154 +725,5 @@ if __name__ == "__main__":
     """
     psic = test_psic()
     
-    # diffr. angles:
-    delta = 46.9587
-    eta   = 6.6400
-    chi   = 37.1005
-    phi   = 65.78
-    nu    = 0.000
-    mu    = 0.0
-    lam   = 1.3756
-    # reference vector/surface normal in [h,k,l]
-    # n = [0, 0, 1]
-    n = [-0.0348357, -0.00243595, 1]
 
-##########################################################################
-##########################################################################
-##########################################################################
-##########################################################################
-"""
-function n_hkl = calc_surf_norm(f_chi, f_phi, UB);
-# calc the surface normal in HKL
-# given the flat phi and flat chi values
-
-sig_az = -f_chi;
-tau_az = -f_phi;
-
-# this block converts the chi and phi values to correctly 
-# defined polar coordinates, ie 0<= sig_az <= 180deg .....
-if sig_az < 0;
-   sig_az = -1*sig_az;
-   if tau_az < 0;
-      tau_az = 180 + tau_az;
-   elseif tau_az > 0;
-      tau_az = tau_az - 180;
-   end
-end
-
-# n in the unrotated lab frame (ie phi frame):
-# this is a unit vector!!!!
-n_phi = [  sind(sig_az)*cosd(tau_az) ; 
-          -sind(sig_az)*sind(tau_az) ; 
-                        cosd(sig_az) ];
-
-# n in HKL
-n_hkl = inv(UB)*n_phi;
-n_hkl = n_hkl/ max(abs(n_hkl));
-
-# note if l-component is negative, then its
-# pointing into the surface (ie asume positive L
-# is the positive direction away from the surface
-# careful here!!!!
-if n_hkl(3) < 0;
-   n_hkl = -1*n_hkl;
-end;
-
-# note to actually normalize need the cell parameters
-# above is just setting the largets component to unity
-# ie n_hkl isn't a unit vector!
-# also need cell params and (HKL) plane to calc miscut.
-# ie whats the angle between n_hkl and H_hkl
-
-# test
-#disp('#############test##############');
-#n_phi = UB*n_hkl;
-#n_phi = n_phi/ abs(v_mag(n_phi))
-#
-# note result of acosd is between 0 and pi
-# get correct sign from the sign of the x-component
-# sigma_az = acos(n_phi(3))*180/pi
-# sigma_az = sign(n_phi(1))*acos(n_phi(3))*180/pi
-# sigma_az = acos(n_phi(3))*180/pi
-#
-#tau_az = atan2(-n_phi(2), n_phi(1))*180/pi
-#tau_az = atan(-n_phi(2)/ n_phi(1))*180/pi
-"""
-#
-"""
-###################################################
-# Now calc some interesting parameters            #
-###################################################
-
-# calc tth, d and magnitude of Q
-#[tth, d, q_mag] = calc_tth(h,cell,lam);
-
-# alternate method of calc tth:
-tth = acos(cosd(del)*cosd(nu))*180/pi
-
-# calc qaz, the angle btwn Q and the yz plane 
-# qaz = atan2(tand(del), sind(nu) ) *180/pi
-qaz = atan2(sind(del), cosd(del)*sind(nu) ) *180/pi
-
-# calc n in the lab frame (unrotated) and make a unit vector:
-n_phi = UB*n;
-n_phi = n_phi/v_mag(n_phi)
-
-# calc n in the rotated lab frame and make a unit vector
-n_l = Z*UB*n;
-n_l = n_l/v_mag(n_l)
-
-# calc the sigma_az and tau_az angles:
-# sigma_az = angle between the z-axis and n
-# tau_az = angle between the projection of n
-#          in the xy-plane and the x-axis
-sigma_az = acos(n_phi(3))*180/pi
-tau_az = atan2(-n_phi(2), n_phi(1))*180/pi
-
-# calc naz, this is the angle btwn n and the yz plane
-naz = atan2( n_l(1), n_l(3) ) *180/pi
-
-# calc alpha, ie incidence angle or angle btwn 
-# k_in (which is along y) and the plane perp to n 
-# (note the neg sign):
-alpha = asin(dot_product(n_l,[0;-1;0]))*180/pi
-
-# calc tau, this is the angle btwn n and the scatt-plane
-# tau = acos( cosd(alpha) * cosd(tth/2) * cosd(naz - qaz) ...
-#            + sind(alpha) * sind(tth/2) ) * 180/pi
-tau = v_angle(Q_l,n_l)
-
-# calc beta, ie exit angle, or angle btwn k_f and the
-# plane perp to n
-# beta = asin( 2*sind(tth/2)*cosd(tau) - sind(alpha) ) * 180/pi
-kf_l = k*[sind(del); cosd(nu)*cosd(del); sind(nu)*cosd(del)];
-beta = asin( ( dot_product(n_l, kf_l)/k) ) *180/pi
-
-# calc psi, this is the azmuthal angle of n wrt Q, 
-# ie for tau != 0, psi is the rotation of n about Q
-xx = (cosd(tau)*sind(tth/2) - sind(alpha)) / ...
-             (sind(tau)*cosd(tth/2));
-psi = acos( xx ) * 180/pi
-
-#xx = (-cosd(tau)*sind(tth/2) + sind(beta)) / ...
-#             (sind(tau)*cosd(tth/2));
-#psi = acos( xx ) * 180/pi
-
-
-# calc omega, this is the angle between Q and the plane
-# which is perpendicular to the axis of the chi circle.
-# note for nu=mu=0 this is the same as the four circle def:
-# omega = 0.5*TTH - TH, where TTH is the detector motor (=del)
-# and TH is the sample circle (=eta).  Therefore, for 
-# mu=nu=0 and del=0.5*eta, omega = 0, which means that Q
-# is in the plane perpendicular to the chi axis.
-
-# check the mult order here!!!!
-# T = (H')*(M');
-T = (M')*(H');
-#T = inv(XX'); # this just gives back T
-Qpp = T*Q_l;
-omega = -1*v_angle([Qpp(1), 0, Qpp(3)],Qpp)
-
-"""
 

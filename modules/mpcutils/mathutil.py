@@ -87,6 +87,28 @@ def arctand(x):
     """
     return num.degrees(num.arctan(x))
 
+def cartesian_mag(v):
+    """
+    Calculate the norm of a vector defined in
+    a cartesian basis
+    """
+    m = num.sqrt(num.dot(v,v))
+    return m
+
+def cartesian_angle(u,v):
+    """
+    Calculate angle between two vectors defined in
+    a cartesian basis
+    """
+    uv = num.dot(u,v)
+    um = cartesian_mag(u)
+    vm = cartesian_mag(v)
+    arg = uv/(um*vm)
+    if num.fabs(arg) > 1.0:
+        arg = arg / num.fabs(arg)
+    alpha = arccosd(arg)
+    return alpha
+
 #######################################################################
 def minimize(f,x,y,params,*args,**kws):
     """
