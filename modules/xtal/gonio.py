@@ -36,7 +36,7 @@ the crystal lattice therefore is independant of the gonio angles.
 
 U is the matrix that defines how the sample is mounted on the
 diffractometer.  For example we define the lab frame coordinate
-system such that:
+system for the psic geometry such that:
   x is vertical (perpendicular, pointing to the ceiling of the hutch)
   y is directed along the incident beam path
   z make the system right handed and lies in the horizontal scattering plane
@@ -112,6 +112,7 @@ diffraction condition for a given set of angles.
 
 import numpy as num
 import types
+import copy
 
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
@@ -120,10 +121,36 @@ from mathutil import cartesian_mag, cartesian_angle
 from lattice import Lattice
 
 ##########################################################################
-def kap_angles(angles):
+def spec_angles(angles,calc_kappa=False):
     """
-    Angles defined by spec
+    Angles defined by spec for the OR's.
+    See specfile.py
+
+    Assume the following.
     
+    If parsing angles from the P array:
+    (generally shouldnt need this since angles
+    are tagged with motor notes on read)
+    angles = P
+    if psic:
+       angles = angles[0:5]
+    elif kappa fourc
+       angles = [angles[0:3], angles[8], angles[7]]
+
+    If parsing angles from the G array:
+      angles = G[x:y]
+    where x:y depend on whether you are
+    parsing out or0 or or1.
+    See spec_G below
+
+    We then assume the following:
+      del = angles[0]
+      eta = angles[1]
+      chi = angles[2]
+      phi = angles[3]
+      nu  = angles[4]
+      mu  = angles[5]
+
     Note: calc kappa, keta and kphi
     kap_alp = 50.031;
     keta    = eta - asin(-tan(chi/2)/tan(kap_alp))
@@ -131,22 +158,56 @@ def kap_angles(angles):
     kappa   = asin(sin(chi/2)/sin(kap_alp))
     """
     # angles from spec
-    phi = num.radians(angles[3])
-    chi = num.radians(angles[2])
-    eta = num.radians(angles[1])
-    mu  = num.radians(angles[5])
-    delta = num.radians(angles[0])
-    nu = num.radians(angles[4])
+    delta = angles[0]
+    eta   = angles[1]
+    chi   = angles[2]
+    phi   = angles[3]
+    nu    = angles[4]
+    mu    = angles[5]
 
     # kappa angles
-    kap_alp = 50.031;
-    keta    = eta - arcsind(-tand(chi/2.)/tand(kap_alp))
-    kphi    = phi - arcsind(-tand(chi/2.)/tand(kap_alp))
-    kappa   = asind(sind(chi/2.)/sind(kap_alp))
+    if calc_kappa:
+        kap_alp = 50.031;
+        keta    = eta - arcsind(-tand(chi/2.)/tand(kap_alp))
+        kphi    = phi - arcsind(-tand(chi/2.)/tand(kap_alp))
+        kappa   = asind(sind(chi/2.)/sind(kap_alp))
+        return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
+                'delta':delta,'nu':nu,
+                'keta':keta,'kphi':kphi,'kappa':kappa}
+    else:
+        return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
+                'delta':delta,'nu':nu}
+    
 
-    return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
-            'delta':delta,'nu':nu,
-            'keta':keta,'kphi':kphi,'kappa':kappa}
+def spec_psic_G(G):
+    """
+    Parse essential lattice and OR data
+    from the spec G array for psic geometry
+    See specfile.py for details.
+    
+    """
+    #azimuthal reference vector, n (hkl)
+    n = num.array(G[3:6],dtype=float)
+
+    #lattice params a,b,c,alp,bet,gam
+    cell = G[22:28]
+    # add lambda to end of cell
+    cell.append(G[66])
+    cell = num.array(cell,dtype=float)
+
+    # or0
+    or0 = {}
+    or0['h']   = num.array(G[34:37],dtype=float)
+    or0.update(spec_angles(num.array(G[40:46],dtype=float)))
+    or0['lam'] = float(G[52])
+
+    # or1
+    or1 = {}
+    or1['h']   = num.array(G[37:40],dtype=float)
+    or1.update(spec_angles(num.array(G[46:52],dtype=float)))
+    or1['lam'] = float(G[53])
+
+    return (cell,or0,or1,n)
 
 ##########################################################################
 class Psic:
@@ -172,12 +233,12 @@ class Psic:
         
         # dummy primary reflection
         tth = self.lattice.tth([0.,0.,1.],lam=lam)
-        self.or1={'h':num.array([0.,0.,1.]),
+        self.or0={'h':num.array([0.,0.,1.]),
                   'phi':0.0,'chi':0.0,'eta':0.0,'mu':tth/2.,
                   'nu':tth,'delta':0.0,'lam':lam}
         # dummy secondary reflection
         tth = self.lattice.tth([0.,1.,0.],lam=lam)
-        self.or2={'h':num.array([0.,1.,0.]),
+        self.or1={'h':num.array([0.,1.,0.]),
                   'phi':0.0,'chi':0.0,'eta':tth/2.,'mu':0.0,
                   'nu':0.0,'delta':tth,'lam':lam}
 
@@ -185,6 +246,10 @@ class Psic:
         self.angles={'phi':0.0,'chi':0.0,'eta':0.0,'mu':0.0,
                      'nu':0.0,'delta':0.0}
 
+        # hold n (reference) vector in HKL
+        # eg surface normal vector for psuedo angles
+        self.n = num.array([0.,0.,0.],dtype=float)
+        
         # compute initial matricies
         self.U = []
         self.B = []
@@ -195,10 +260,22 @@ class Psic:
     def __repr__(self,):
         lout = self.lattice.__repr__()
         lout = "%sPrimary:\n   h=%3.2f,k=%3.2f,l=%3.2f, lam=%6.6f\n" % (lout,
-                                                                        self.or1['h'],
-                                                                        self.or1['k'],
-                                                                        self.or1['l'],
-                                                                        self.or1['lam'])
+                                                                        self.or0['h'][0],
+                                                                        self.or0['h'][1],
+                                                                        self.or0['h'][2],
+                                                                        self.or0['lam'])
+        lout = "%s   phi=%6.3f,chi=%6.3f,eta=%6.3f,mu=%6.3f,nu=%6.3f,delta=%6.3f\n" % (lout,
+                                                                                     self.or0['phi'],
+                                                                                     self.or0['chi'],
+                                                                                     self.or0['eta'],
+                                                                                     self.or0['mu'],
+                                                                                     self.or0['nu'],
+                                                                                     self.or0['delta'])
+        lout = "%sSecondary:\n   h=%3.2f,k=%3.2f,l=%3.2f, lam=%6.6f\n" % (lout,
+                                                                          self.or1['h'][0],
+                                                                          self.or1['h'][1],
+                                                                          self.or1['h'][2],
+                                                                          self.or1['lam'])
         lout = "%s   phi=%6.3f,chi=%6.3f,eta=%6.3f,mu=%6.3f,nu=%6.3f,delta=%6.3f\n" % (lout,
                                                                                      self.or1['phi'],
                                                                                      self.or1['chi'],
@@ -206,18 +283,6 @@ class Psic:
                                                                                      self.or1['mu'],
                                                                                      self.or1['nu'],
                                                                                      self.or1['delta'])
-        lout = "%sSecondary:\n   h=%3.2f,k=%3.2f,l=%3.2f, lam=%6.6f\n" % (lout,
-                                                                          self.or2['h'],
-                                                                          self.or2['k'],
-                                                                          self.or2['l'],
-                                                                          self.or2['lam'])
-        lout = "%s   phi=%6.3f,chi=%6.3f,eta=%6.3f,mu=%6.3f,nu=%6.3f,delta=%6.3f\n" % (lout,
-                                                                                     self.or2['phi'],
-                                                                                     self.or2['chi'],
-                                                                                     self.or2['eta'],
-                                                                                     self.or2['mu'],
-                                                                                     self.or2['nu'],
-                                                                                     self.or2['delta'])
         lout = "%sSettings\n   phi=%6.3f,chi=%6.3f,eta=%6.3f,mu=%6.3f,nu=%6.3f,delta=%6.3f\n" % (lout,
                                                                                      self.angles['phi'],
                                                                                      self.angles['chi'],
@@ -231,10 +296,29 @@ class Psic:
         self._calc_UB()
         self._calc_Z()
 
-    def set_or1(self,h=None,phi=None,chi=None,eta=None,
+    def set_or0(self,h=None,phi=None,chi=None,eta=None,
                 mu=None,nu=None,delta=None,lam=None):
         """
         Set / adjust the primary orientation reflection
+
+        Angles are in degrees, lam is in angstroms
+        If lam = None, then lambda defined for the lattice
+        is used.
+        """
+        if h!=None:     self.or0['h'] = num.array(h,dtype=float)
+        if phi!=None:   self.or0['phi']=float(phi)
+        if chi!=None:   self.or0['chi']=float(chi)
+        if eta!=None:   self.or0['eta']=float(eta)
+        if mu!=None:    self.or0['mu']=float(mu)
+        if nu!=None:    self.or0['nu']=float(nu)
+        if delta!=None: self.or0['delta']=float(delta)
+        if lam!= None:  self.or0['lam']=float(lam)
+        self._update()
+
+    def set_or1(self,h=None,phi=None,chi=None,eta=None,
+                mu=None,nu=None,delta=None,lam=None):
+        """
+        Set / adjust the secondary orientation reflection
 
         Angles are in degrees, lam is in angstroms
         If lam = None, then lambda defined for the lattice
@@ -250,32 +334,13 @@ class Psic:
         if lam!= None:  self.or1['lam']=float(lam)
         self._update()
 
-    def set_or2(self,h=None,phi=None,chi=None,eta=None,
-                mu=None,nu=None,delta=None,lam=None):
-        """
-        Set / adjust the secondary orientation reflection
-
-        Angles are in degrees, lam is in angstroms
-        If lam = None, then lambda defined for the lattice
-        is used.
-        """
-        if h!=None:     self.or2['h'] = num.array(h,dtype=float)
-        if phi!=None:   self.or2['phi']=float(phi)
-        if chi!=None:   self.or2['chi']=float(chi)
-        if eta!=None:   self.or2['eta']=float(eta)
-        if mu!=None:    self.or2['mu']=float(mu)
-        if nu!=None:    self.or2['nu']=float(nu)
-        if delta!=None: self.or2['delta']=float(delta)
-        if lam!= None:  self.or2['lam']=float(lam)
-        self._update()
-
     def swap_or(self,):
         """
         Swap the primary and secondary reflection
         """
-        tmp = self.or1
-        self.or1 = self.or2
-        self.or2 = tmp
+        tmp = copy.copy(self.or0)
+        self.or0 = copy.copy(self.or1)
+        self.or1 = tmp
         self._update()
 
     def set_lat(self,a=None,b=None,c=None,alpha=None,
@@ -303,6 +368,18 @@ class Psic:
         if nu!=None:    self.angles['nu']=float(nu)
         if delta!=None: self.angles['delta']=float(delta)
         self._calc_Z()
+
+    def set_spec_G(self,G):
+        """
+        Take the spec G array for the psic geometry
+        and set all the relevant info...
+        """
+        (cell,or0,or1,n) = spec_psic_G(G)
+        self.n = n
+        self.or0 = or0
+        self.or1 = or1
+        self.lattice = Lattice(*cell)
+        self._update()
     
     def _calc_UB(self,):
         """
@@ -330,25 +407,23 @@ class Psic:
         self.B = B
         
         #calc Z and Q for the OR reflections
-        tmp_angles = self.angles
-        tmp_lam = self.lattice.lam
-        #
+        # make sure we save and restore current angles and lambda
+        tmp_lam    = self.lattice.lam
+        tmp_angles = copy.copy(self.angles)
+        
+        self.lattice.lam = self.or0['lam']
+        self.set_angles(self.or0['phi'],self.or0['chi'],self.or0['eta'],
+                        self.or0['mu'],self.or0['nu'],self.or0['delta'])
+        Z1 = self.Z
+        Q1 = self.calc_Q()
         self.lattice.lam = self.or1['lam']
         self.set_angles(self.or1['phi'],self.or1['chi'],self.or1['eta'],
                         self.or1['mu'],self.or1['nu'],self.or1['delta'])
-        #
-        Z1 = self.Z
-        Q1 = self.calc_Q()
-        #
-        self.lattice.lam = self.or2['lam']
-        self.set_angles(self.or2['phi'],self.or2['chi'],self.or2['eta'],
-                        self.or2['mu'],self.or2['nu'],self.or2['delta'])
-        #
         Z2 = self.Z
         Q2 = self.calc_Q()
-        #
         self.lattice.lam = tmp_lam
-        self.angles = tmp_angles
+
+        self.set_angles(**tmp_angles)
 
         # calc the phi frame coords for diffraction vectors
         # note divide out 2pi since the diffraction is 2pi*h = Q
@@ -356,8 +431,8 @@ class Psic:
         vphi_2 = num.dot(num.linalg.inv(Z2), (Q2/(2.*num.pi)))
         
         #calc cartesian coords of h vectors
-        hc_1 = num.dot(self.B, self.or1['h'])
-        hc_2 = num.dot(self.B, self.or2['h'])
+        hc_1 = num.dot(self.B, self.or0['h'])
+        hc_2 = num.dot(self.B, self.or1['h'])
 
         #So at this point the following should be true:
         #     vphi_1 = U*hc_1
@@ -449,9 +524,8 @@ class Psic:
         then calc h from
            h = inv(UB)*hphi
         """
-        Z = self.Z
         Q = self.calc_Q()
-        hphi = (2.*pi)*num.dot(num.linalg.inv(Z),Q) 
+        hphi = num.dot(num.linalg.inv(self.Z),Q) / (2.*num.pi) 
         h    = num.dot(num.linalg.inv(self.UB),hphi)
         return h
 
@@ -518,16 +592,18 @@ class Psic:
         # careful here!!
         if n_hkl[2] < 0.:
             n_hkl = -1.*n_hkl
-        return n_hkl
 
-    def calc_sigma_az(self,n=[0.,0.,1]):
+        self.n = n_hkl
+
+    def calc_sigma_az(self,n=None):
         """
         sigma_az = angle between the z-axis and n in the phi frame
         
         The reference vector is given in recip lattice indicies (hkl) 
         """
         # calc n in the lab frame (unrotated) and make a unit vector
-        n = num.array(n,dtype=float)
+        if n!=None: self.n = num.array(n,dtype=float)
+        n = self.n
         n_phi = num.dot(self.UB,n)
         n_phi = n_phi/cartesian_mag(n_phi)
         
@@ -537,20 +613,21 @@ class Psic:
         sigma_az = arccosd(n_phi[2])
         return sigma_az
 
-    def calc_tau_az(self,n=[0.,0.,1]):
+    def calc_tau_az(self,n=None):
         """
         tau_az = angle between the projection of n in the xy-plane and the x-axis
 
         The reference vector is given in recip lattice indicies (hkl) 
         """
-        n = num.array(n,dtype=float)
+        if n!=None: self.n = num.array(n,dtype=float)
+        n = self.n
         n_phi = num.dot(self.UB,n)
         n_phi = n_phi/cartesian_mag(n_phi)
         tau_az = num.arctan2(-n_phi[1], n_phi[0])
-        tau_az = tau_az*180./pi
+        tau_az = tau_az*180./num.pi
+        return tau_az
 
-
-    def calc_nm(self,n=[0.,0.,1]):
+    def calc_nm(self,n=None):
         """
         Calculate the rotated cartesian lab indicies
         of the reference vector n
@@ -558,14 +635,15 @@ class Psic:
         The reference vector is given in recip lattice indicies (hkl) 
         """
         # calc n in the rotated lab frame and make a unit vector
+        if n!=None: self.n = num.array(n,dtype=float)
+        n = self.n
         Z  = self.Z
         UB = self.UB
-        n  = num.array(n,dtype=float)
         nm = num.dot(num.dot(Z,UB),n)
         nm = nm/cartesian_mag(nm)
         return (nm)
 
-    def calc_naz(self,n=[0.,0.,1]):
+    def calc_naz(self,n=None):
         """
         calc naz, this is the angle btwn the reference vector n 
         and the yz plane at the given angle settings
@@ -578,7 +656,7 @@ class Psic:
         naz = num.degrees(naz)
         return naz
 
-    def calc_alpha(self,n=[0.,0.,1]):
+    def calc_alpha(self,n=None):
         """
         Calc alpha, ie incidence angle or angle btwn 
         k_in (which is along y) and the plane perp to
@@ -593,7 +671,7 @@ class Psic:
         alpha = arcsind(num.dot(nm,y))
         return alpha
 
-    def calc_beta(self,n=[0.,0.,1]):
+    def calc_beta(self,n=None):
         """
         Calc beta, ie exit angle, or angle btwn k_r and the
         # plane perp to the reference vector n
@@ -602,13 +680,13 @@ class Psic:
         nm = self.calc_nm(n=n)
         # get normalized kr
         (ki,kr) = self.calc_kvecs()
-        k = 2.*pi/self.lattice.lam
+        k = 2.*num.pi/self.lattice.lam
         kr = kr / k
-        beta = arcsind(num.dot(n, kr))
+        beta = arcsind(num.dot(nm, kr))
         # beta = arcsind( 2*sind(tth/2)*cosd(tau) - sind(alpha) )
         return beta
 
-    def calc_tau(self,n=[0.,0.,1]):
+    def calc_tau(self,n=None):
         """
         Calc tau, this is the angle btwn n and the scattering-plane
         defined by ki and kr.  ie the angle between n and Q
@@ -622,7 +700,7 @@ class Psic:
         Q = self.Q()
         tau = cartesian_angle(Q,n)
 
-    def calc_psi(self,n=[0.,0.,1]):
+    def calc_psi(self,n=None):
         """
         calc psi, this is the azmuthal angle of n wrt Q. 
         ie for tau != 0, psi is the rotation of n about Q
@@ -680,50 +758,72 @@ class Psic:
 
 ##########################################################################
 ##########################################################################
-def test_psic():
+def test_psic_1():
     # create a new psic instance
     psic = Psic(5.6,5.6,13,90,90,120,lam=1.3756)
 
     # diffr. angles:
-    delta = 46.9587
-    eta   = 6.6400
-    chi   = 37.1005
-    phi   = 65.78
-    nu    = 0.000
-    mu    = 0.0
+    psic.set_angles(phi=65.78,chi=37.1005,eta=6.6400,
+                    mu=0.0,nu=0.0,delta=46.9587)
+    #calc tth, d and magnitude of Q
+    h = psic.calc_h()
+    print "\nh=",h
+    print "tth =", psic.calc_tth()
+    print "tth =", psic.lattice.tth(h)
+
     # reference vector/surface normal in [h,k,l]
     # n = [0, 0, 1]
     n = [-0.0348357, -0.00243595, 1]
+    #calc miscut
+    print "\nmiscut=",psic.lattice.angle([0,0,1],n,recip=True)
 
     # test surf norm
     n_phi = num.dot(psic.UB,n)
     n_phi = n_phi/ num.fabs(cartesian_mag(n_phi))
-    print "nphi: ", n_phi
-    sigma_az=psic.calc_sigma_az(n)
-    print "sigma_az=",sigma_az
-    tau_az=psic.calc_sigma_az(n)
-    print "tau_az=",tau_az
-    print "calc n from sigma and tau az: ", psic.calc_n(-sigma_az,-tau_az)
-    
-    # calc miscut
-    print "miscut=",psic.lattice.angle([0,0,1],n,recip=True)
-    
-    # calc tth, d and magnitude of Q
-    h = psic.calc_h()
-    print "h=",h
-    print "tth =", psic.calc_tth()
-    print "tth =", psic.lattice.tth(h)
+    print "\nnphi: ", n_phi
 
+    sigma_az=psic.calc_sigma_az(n)
+    print "\nsigma_az=",sigma_az
+
+    tau_az=psic.calc_tau_az(n)
+    print "tau_az=",tau_az
+
+    psic.calc_n(-sigma_az,-tau_az)
+    print "calc n from sigma and tau az: ",psic.n 
+    
+    #calc miscut
+    print "\nmiscut=",psic.lattice.angle([0,0,1],n,recip=True)
+    
     return psic
 
+def test_psic_2():
 
+    psic = Psic()
+    G = [0.0, 0.0, 1.0, 0.0039915744589999998, 0.00075650941450000001, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 1.0, 4.0, 4.0, 5.0, 4.0, 0.0, 0.0, 8.0939999999999994, 4.9880000000000004, 6.0709999999999997, 90.0, 90.0, 90.0, 0.77627690969999996, 1.2596602459999999, 1.034950635, 90.0, 90.0, 90.0, 0.0, 0.0, 4.0, 2.0, 0.0, 2.4809999999999999, -0.00089999999999999998, 0.00080000000000000004, -0.1244, 175.2192, 31.965, 16.27375, 15.090299999999999, 7.5477999999999996, 11.9002, -96.048199999999994, 17.594249999999999, 0.35625000000000001, 0.83580100000000002, 0.83580100000000002, -0.23926186720000001, 1.1983306439999999, -0.0026481987470000001, -0.73847260000000003, -0.38826052760000002, -0.0050577973450000001, -0.004221190899, 0.001168841303, 1.034934888, -0.00011346681140000001, 0.0002801762336, 5.9400141580000003, 0.83580100000000002, 23.955432519999999, 24.314067479999999, 0.28474999779999999, 48.269500000000001, 0.075104988760000005, 0.17931763710000001, -0.00040199175790000001, -0.00014478299110000001, 0.48309999999999997, 108.00069999999999, 2.0, 0.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 2.0802999999999998, 123.1461, 0.0, 0.0, 0.0, 0.0, -180.0, -180.0, -180.0, -180.0, -180.0, -180.0, -180.0, -180.0, -180.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    psic.set_spec_G(G)
+
+    # diffr. angles:
+    psic.set_angles(phi=178.1354,chi=-0.1344,eta=0.0002,
+                    mu=24.4195,nu=48.2695,delta=-0.0003)
+
+    print "h calc is:", psic.calc_h()
+    print "h should be: [-0.000113467 0.000280176 5.94001]"
+
+    print "alpha calc is:", psic.calc_alpha()
+    print "alpha should be: 23.9554 "
+
+    print "beta calc is:", psic.calc_beta()
+    print "beta should be: 24.3141"
+
+    return psic
+    
 ##########################################################################
 ##########################################################################
 if __name__ == "__main__":
     """
     test 
     """
-    psic = test_psic()
+    #psic = test_psic_1()
+    psic = test_psic_2()
     
-
 

@@ -169,7 +169,7 @@ class Lattice:
                                                                 self.alphar,
                                                                 self.betar,
                                                                 self.gammar)
-        lout = "%sDefault wavelength for angle calculations=%6.5f" % (lout,
+        lout = "%sDefault wavelength for angle calculations=%6.5f\n" % (lout,
                                                                       self.lam)
         return lout
 
@@ -313,7 +313,7 @@ class Lattice:
             return 0.
         h = self.mag(hkl,recip=True)
         if h == 0.:
-            print "Error [h,k,l] magnitude is zero:", hkl
+            #print "Error [h,k,l] magnitude is zero:", hkl
             return 0.0
         d = 1./h
         return d

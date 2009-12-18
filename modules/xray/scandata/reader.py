@@ -31,9 +31,13 @@ def spec_scan(spec,sc_num):
     """
     return scan data from a specfile instance
     """
+    if type(spec) == types.StringType:
+        spec = SpecFile(spec)
+        if spec == None: return None
+    
     d = spec.scan_dict(sc_num)
     scalers = {}
-    positioners = d['P']
+    positioners = copy.copy(d['P'])
     for key in d['data'].keys():
         if key in positioners.keys():
             positioners[key] = num.array(d['data'][key])
@@ -44,7 +48,24 @@ def spec_scan(spec,sc_num):
     paxis = d['labels'][0]
     pdet  = d['labels'][-1]
 
-    state = {'G':d['G'],'Q':d['Q'], 'ATTEN':d['ATTEN'], 'ENERGY':d['ENERGY']}
+    # Grab state info.  Note make 'A' the essential
+    # gonio angles at the start of the scan
+    # this is APS sector 13 specific, and may change...
+    # We need a switch here based on the identification
+    # of the beamline and instrument...
+    A = {}
+    A['delta'] = d['P'].get('TwoTheta')
+    A['eta']   = d['P'].get('theta')
+    A['chi']   = d['P'].get('chi')
+    A['phi']   = d['P'].get('phi')
+    A['nu']    = d['P'].get('Nu')
+    A['mu']    = d['P'].get('Psi')
+    A['keta']  = d['P'].get('Omega')
+    A['kap']   = d['P'].get('Kappa')
+    A['kphi']  = d['P'].get('Phi')
+    
+    state = {'G':d.get('G'),'Q':d.get('Q'),'A':A,
+             'ATTEN':d.get('ATTEN'), 'ENERGY':d.get('ENERGY')}
 
     sd = ScanData(name=name,dims=[dims],scalers = scalers,
                   positioners=positioners,primary_axis=[paxis],
