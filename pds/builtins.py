@@ -19,7 +19,7 @@ import time
 from shellutil import show_list, show_more, datalen
 from shellutil import set_path, unescape_string, list2array
 from shellutil import mod_import
-from interpretor import Group
+from shellutil import Group
 
 #####################################################################
 class PdsBuiltins:
@@ -28,19 +28,19 @@ class PdsBuiltins:
         self.module_list = []
 
     #################################################################
-    def group(self,data={}):
+    def group(self,**kw):
         """
         Create a new group
          >>g = group()
-         >>g = group(data={'x':x,'y':y})
+         >>g = group(x=x,y=data['y'])
          In the second example 'g.x' and 'g.y' will
-         be assigned from the dictionary
+         be assigned from the kw arguments
         """
         grp = Group()
-        if len(data) == 0:
+        if len(kw) == 0:
             return grp
-        for key in data.keys():
-            setattr(grp,key,data[key])
+        for key in kw.keys():
+            setattr(grp,key,kw[key])
         return grp
 
     #################################################################

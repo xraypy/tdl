@@ -1,6 +1,6 @@
 """
 M. Newville (2006)
-Utilities for shell program
+Utilities for shell programs
 
 --------------
  Modifications
@@ -8,7 +8,6 @@ Utilities for shell program
 - Modified from tdl-revision 226
   for use with pds shell program
   Tom Trainor (tptrainor@alaska.edu)
-
 
 """
 ##########################################################################
@@ -22,10 +21,25 @@ import os
 import copy
 
 ##########################################################################
-
-##########################################################################
 #  Data Utilities
 ##########################################################################
+class Group:
+    """Generic group"""
+    def __init__(self,):
+        pass
+    def __repr__(self,):
+        attr = []
+        for a in dir(self):
+            if a[0].isalpha():
+                attr.append(a)
+        if len(attr) > 0:
+           lout = show_list(attr,textwidth=82)
+        else:
+            lout = 'Group is empty'
+        return lout
+
+def is_group(g):
+    return isinstance(g,Group)
 
 ##########################################################################
 def datalen(x):

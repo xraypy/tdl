@@ -5,6 +5,7 @@ Simple python interpretor
 
 Modifications:
 --------------
+- move Group class in shellutils
 
 """
 #######################################################################
@@ -22,7 +23,6 @@ Interpretor::
 .get_data(n)           #
 .set_function(n,fcn)   #
 .get_function(n)       #
-.add_group(n)          #
 .execute(s)            # run a single or list of statements
 .evaluate(s)           # run a single statement, ret value
 .get_input(p)          #
@@ -362,7 +362,7 @@ class SymbolTable:
         """
         list names of data and method atributes of a symbol
         if symbol is None we just pass to _list
-        if symbol is not none we assume its the name of a "group"
+        if symbol is not None we assume its the name of a "group"
         Note this will only "tunnel" on class instances
         """
         if symbol == None:
@@ -498,17 +498,6 @@ class Interpretor:
             print "Error: %s not a valid function type (type=%s)" % (name,type(val))
         return None
     
-    ####################################################
-    def add_group(self,name):
-        val = Group()
-        self.symbol_table.set_symbol(name,val)
-    
-##############################################
-class Group:
-    """generic group"""
-    def __init__(self,):
-        pass
-
 ##############################################################
 ##############################################################
 if __name__ == "__main__":
@@ -523,10 +512,10 @@ if __name__ == "__main__":
     
     ###
     print "\n----\n"
-    d = i.symbol_table.listAll()
+    d = i.symbol_table.list_symbols()
     print d
 
     print "\n----\n"
-    d = i.symbol_table.listAll(group='qq')
+    d = i.symbol_table.list_symbols(symbol='qq')
     print d    
     
