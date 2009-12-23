@@ -130,7 +130,7 @@ def spec_angles(angles,calc_kappa=False):
     
     If parsing angles from the P array:
     (generally shouldnt need this since angles
-    are tagged with motor notes on read)
+    are tagged with motor labels on read)
     angles = P
     if psic:
        angles = angles[0:5]

@@ -17,116 +17,101 @@ import numpy as num
 
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
+from mathutil import cartesian_mag, cartesian_angle
 
 ##########################################################################
-def active_area_psic_rect(gonio,n_vec,n_flag,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,plt);
+
+def calc_surf_transform(nm):
     """
-    gonio is a gonio instance which includes the lattice parameters
+    This routine calculates the matrix, M, which transforms the
+    indicies of vectors defined in the lab frame basis to the
+    a surface frame defined such that:
+        zs is along the surface normal (parrallel to nm)
+        ys is the projection of the -y axis onto the surface
+        xs is defined to make it a right handed orthonormal set
+           (and is therefore in the surface plane)
+
+    Note that nm is the surface normal (unit vector) pointing in
+    an arbitrary definition defined by a particular gonio setting.  
+    The vector nm is defined in the psic laboratory basis.
+
+    The transform is defined as:
+        |e_xs|      |e_x|              |vx|     
+        |e_ys| = F* |e_y|    and   F = |vy|   
+        |e_zs|      |e_z|              |vz|    
+    Where e's are the (cartesian) basis vectors.  Given a
+    vector [x,y,z] defined in the lab fram basis [e_x,e_y,e_z],
+    we can compute the indicies of this vector in the surface
+    basis from:
+        |xs|      |x|
+        |ys| = M* |y|
+        |zs|      |z|
+    where
+        M = transpose(inv(F)) = inv(transpose(F))
+        
+    Note see lattice.py for more notes on general transoform, and see
+    gonio_psic.py for note on calc of the surface normal vector.  
     """
+    v_z = gonio.nm
+
+    v   = num.array([0.,-1.,0.])
+    v_y = v - (num.dot(v,v_z) * v_z) / (cartesian_mag(v_z)**2.) 
+    v_y = v_y / cartesian_mag(v_y)
+    
+    v_x = num.cross(v_y,v_z)
+    v_x = v_x / cartesian_mag(v_x)
+
+    F = num.array([v_x,v_y,v_z])
+    M = num.linalg.inv(F.transpose())
+
+    return M
+
+##########################################################################
+def active_area_psic_rect(gonio,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,plt);
 #def active_area_psic_rect(angles,Uarray,n_vec,n_flag,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,plt);
-     """
-    function [A_ratio,alpha,beta,tth] = ...
-
-    # USE area_psic_rect_num_input.m fo INPUT parameters to test the new area correction 
-    # program T:\gpd_user\apps\m_files\sanjit\area_psic_rect_num.m 
-    # which is similar to the above program  active_area_psic_rect.m
-
-    ####################################################################################      
-    # [A_ratio,alpha,beta,tth ] = ...
-    #         active_area_psic_rect(angles,Uarray,n_vec,n_flag,wb,hb,wd,hd,xtal_shape,plt);
-    #
-    # calc the area of overlap of beam, sample and det parrallelograms
-    # A_ratio = intersection_area/beam_area 
-    # 
-    # use to correct scattering data for area effects, i.e.
-    #  Ic = I/A_ratio,   I = Idet/Io
-    #
-    # angles (motor settings for scan)
-    # del = angle(1);
-    # eta = angle(2);
-    # chi = angle(3);
-    # phi = angle(4);
-    # nu = angle(5);
-    # mu = angle(6);
-    #
-    # Uarray = U array from spec, ie OR data and cell params
-    #
-    # n_vec = [h k l] of surf normal  (nflag = 1)
-    # n_vec = [f_phi f_chi] of surf normal (nflag = 2)
-    #
-    # the slit settings (all in same units, eg mm):
-    # wb = beam horz width 
-    # hb = beam vert hieght
-    # wd = detector horz width
-    # hd = detector vert hieght
-    # xtal_shape = matrix giving co-ordinates of the four corners of the sample 
-    #              at all angle =0 and phi=f_phi and chi= f_chi in lab-frame cartesian
-    #              co-ordinate ( as beam direction is +ve y, up- is +ve x and outboard is z)
-    #  
-    # if plt = 1 then makes plot
-    #
-    # T2 April 30, 1999 
-    # T2 March 2002, update for generic six circle geom calcs
-    #
-    # T2 Bug if using Matlab6, renamed the continue var to contin
-    #
-    # SKG Jan 2006, updated for psic rotation and four cornered sample
-    # if uses parse_int_mac_rect.m for intergration then it takes care of both
-    # round and any fourcorner shape xtal SKG FEB2006 
-    # T:\gpd_user\apps\m_files\current\saag\xrd_ctr\data_red\int_ctr_data_3\parse_int_mac_rect.m
-    ###################################################################
     """
-    # get hkl of ref vector (ie surface normal)
-    if ( (n_flag == 1) & (len(n_vec) == 3)  ):
-        h_az = num.array(n_vec)
-    elif ( (n_flag ==2) & (length(n_vec) == 2) )
-        f_phi = n_vec[1]
-        f_chi = n_vec[2]
-        h_az  = gonio.calc_surf_norm(f_chi, f_phi)
-    else
-        disp('Error parsing surf normal data');
-        return None
+    Calc the area of overlap of beam, sample and det parrallelograms
+        A_ratio = intersection_area/beam_area 
+    Use to correct scattering data for area effects, i.e.
+        Ic = I/A_ratio,   I = Idet/Io
+
+    gonio is a gonio instance which includes the lattice parameters
+
+    the slit settings (all in same units, eg mm):
+    wb = beam horz width 
+    hb = beam vert hieght
+    wd = detector horz width
+    hd = detector vert hieght
+
+    xtal_shape = matrix giving co-ordinates of the four corners of the sample 
+                 at all angle =0 and phi=f_phi and chi= f_chi in lab-frame cartesian
+                 co-ordinate ( as beam direction is +ve y, up- is +ve x and outboard is z)
+      
+    if plt = 1 then makes plot
 
 
-
+    see: m_files\sanjit\area_psic_rect_num.m
+         m_files\current\saag\xrd_ctr\data_red\int_ctr_data_3\parse_int_mac_rect.m
+    """
     ######################
-    # now get Z-matrix for the current scan 
-    # the below Qm, ki and kr are the unit vectors (ie let k=1) pointing in
-    # the correct directions and the tth angle should be correct (ie just the 
-    # angle between ki and kr).  see calc_Z_andQ for how angles should be parsed
-    k = 1;
-    [Z,Qm,ki,kr,tth] = calc_Z_and_Q(angles,k);
-    #Z
+    if gonio.calc_psuedo == False:
+        gonio._update_psuedo()
+
+    alpha = gonio.pangles['alpha']
+    beta = gonio.pangles['beta']
+
+    print 'alpha = ', alpha, ', beta = ', beta
+    if alpha < -0.0:
+      print 'alpha is less than 0.0'
+      A_ratio = 0
+      return
+    elif beta < -0.0:
+      print 'beta is less than -0.0'
+      A_ratio = 0
+      return
 
     # Calc surf sys. transformation matrix
-    G = calc_surf_transform(h_az, Z, UB);
-    # calc the transformation matrix for taking lab frame
-    # vector indicies to surface frame indicies
-    # the inverse of the transpose of G is the correct matrix
-    # though I think G is unitary so F=G.
-    F = inv(G');
-
-    #####################
-    # calc alpha and beta
-    # first get the lab frame indicies for the surface normal
-     n = (inv(G))*[0;0;1];
-    # below is equivalent since G is orthogonal??
-    #n = (G')*[0;0;1];
-
-    alpha = asin(dot_product(n,[0;-1;0]))* (1/rad);
-    beta = asin( ( dot_product(n, kr)/k) ) *(1/rad);
-
-    t= ['alpha = ' num2str(alpha) ', beta = ' num2str(beta)];
-    disp(t)
-    if alpha<-0.0
-      disp('alpha is less than 0.0')
-      A_ratio = 0;
-      return
-    elseif beta < -0.0
-      disp('beta is less than -0.0')
-      A_ratio = 0;
-      return
-    end;
+    M = calc_surf_transform(gonio.nm)
 
     ###############################################################################
     ####   NEW ALOGORTHM INCLUDED FOR A FOUR SIDED SAMPLE SHAPE #########
@@ -166,10 +151,10 @@ def active_area_psic_rect(gonio,n_vec,n_flag,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,
     Svcr_4 = Z*Svc_4;
 
     #### vectors transformed in surf-frame
-    Svs_1 = F*Svcr_1;
-    Svs_2 = F*Svcr_2;
-    Svs_3 = F*Svcr_3;
-    Svs_4 = F*Svcr_4;
+    Svs_1 = M*Svcr_1;
+    Svs_2 = M*Svcr_2;
+    Svs_3 = M*Svcr_3;
+    Svs_4 = M*Svcr_4;
 
     #xtal_in_surf_coord = [ Svs_1 Svs_2 Svs_3 Svs_4 ]
 
@@ -203,17 +188,17 @@ def active_area_psic_rect(gonio,n_vec,n_flag,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,
     dv = DM*dv;
 
     # calc vectors in xs, ys,zs (i.e. surf frame)
-    bh_s = F*bh;
-    bv_s = F*bv;
+    bh_s = M*bh;
+    bv_s = M*bv;
 
-    dh_s = F*dh;
-    dv_s = F*dv;
+    dh_s = M*dh;
+    dv_s = M*dv;
     #disp('******* CHECKED UP TO HERE for syntax,dimensions and  results *******')
 
     # note ki and kr calc above and are already unit vectors
     # now transform to surface frame.
-    ki_s = F*ki;
-    kr_s = F*kr;
+    ki_s = M*ki;
+    kr_s = M*kr;
 
     ###################################################################
     # calc the intercepts of the corners of the beam,detector and sample        #
