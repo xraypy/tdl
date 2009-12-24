@@ -19,6 +19,8 @@ from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
 from mathutil import cartesian_mag, cartesian_angle
 
+from gonio_psic import calc_Z
+
 ##########################################################################
 
 def calc_surf_transform(nm):
@@ -66,9 +68,52 @@ def calc_surf_transform(nm):
 
     return M
 
+def get_sample_vectors(gonio,xtal):
+    """
+    xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
+             p1:[],p2:[],p3:[],p4:[]}
+    p1 - p4 are vectors that point to the 4 corners of the xtal.  The should be given
+    in general lab frame coordinates with the angle settings given.
+    The lab frame coordinate systems is defined such that:
+        x is vertical (perpendicular, pointing to the ceiling of the hutch)
+        y is directed along the incident beam path
+        z make the system right handed and lies in the horizontal scattering plane
+          (i.e. z is parallel to the phi axis)
+    The center (0,0,0) of the lab frame is the rotation center of the instrument.  
+    """
+    # get sample rotation matrix
+    Z = calc_Z(phi=xtal['phi'],chi=xtal['chi'],eta=xtal['eta'],mu=xtal['mu'])
+    Zinv = num.linalg.inv(Z)
+
+    # if p's have anly two components then we assume they are xy pairs
+    # therefore we can add a third value of zero for z
+    p1 = num.array(xtal['p1'])
+    if len(p1) == 2: p1 = p1.resize((3,))
+    p2 = num.array(xtal['p2'])
+    if len(p2) == 2: p2 = p2.resize((3,))
+    p3 = num.array(xtal['p3'])
+    if len(p3) == 2: p3 = p3.resize((3,))
+    p4 = num.array(xtal['p4'])
+    if len(p4) == 2: p4 = p4.resize((3,))
+    
+    # since p's are defined in lab frame at given set of angles
+    # we need to unrotate to get back to phi frame vectors
+    p1_phi = num.dot(Zinv,p1)
+    p2_phi = num.dot(Zinv,p2)
+    p3_phi = num.dot(Zinv,p3)
+    p4_phi = num.dot(Zinv,p4)
+    
+    # now rotate the vectors based on the current gonio settings
+    p1_m = gonio.Z*p1_phi
+    p2_m = gonio.Z*p2_phi
+    p3_m = gonio.Z*p3_phi
+    p4_m = gonio.Z*p4_phi
+
+    return (p1_m,p2_m,p3_m,p4_m)
+
 ##########################################################################
-def active_area_psic_rect(gonio,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,plt);
-#def active_area_psic_rect(angles,Uarray,n_vec,n_flag,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,plt);
+def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
+                          xtal=1.,plt=False):
     """
     Calc the area of overlap of beam, sample and det parrallelograms
         A_ratio = intersection_area/beam_area 
@@ -77,18 +122,33 @@ def active_area_psic_rect(gonio,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,plt);
 
     gonio is a gonio instance which includes the lattice parameters
 
-    the slit settings (all in same units, eg mm):
-    wb = beam horz width 
-    hb = beam vert hieght
-    wd = detector horz width
-    hd = detector vert hieght
+    The slit settings (all in same units, eg mm):
+    slits['wb'] = beam horz width 
+    slits['hb'] = beam vert hieght
+    slits['wd'] = detector horz width
+    slits['hd'] = detector vert hieght
 
-    xtal_shape = matrix giving co-ordinates of the four corners of the sample 
-                 at all angle =0 and phi=f_phi and chi= f_chi in lab-frame cartesian
-                 co-ordinate ( as beam direction is +ve y, up- is +ve x and outboard is z)
-      
-    if plt = 1 then makes plot
+    If xtal is a single number we take it as the diamter of a round sample
+    mounted flat.  
+    Otherwise use the following structure for a general parrallelepiped shape:
+    xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
+             p1:[],p2:[],p3:[],p4:[]}
+    p1 - p4 are vectors that point to the 4 corners of the xtal.  The should be given
+    in general lab frame coordinates with the angle settings given.
+    The lab frame coordinate systems is defined such that:
+        x is vertical (perpendicular, pointing to the ceiling of the hutch)
+        y is directed along the incident beam path
+        z make the system right handed and lies in the horizontal scattering plane
+          (i.e. z is parallel to the phi axis)
+    The center (0,0,0) of the lab frame is the rotation center of the instrument.  
 
+    The easiest way to determine the sample coordinate vectors is to take a picture
+    of the sample with a camera mounted such that is looks directly down the omega
+    axis and the gonio angles set at the sample flat phi and chi values and eta = mu = 0.
+    Then find the sample rotation center and measure the position of each corner (in mm)
+    with up being the +x direction, and downstream being the +y direction.  
+
+    If plt = True then makes plot
 
     see: m_files\sanjit\area_psic_rect_num.m
          m_files\current\saag\xrd_ctr\data_red\int_ctr_data_3\parse_int_mac_rect.m
@@ -113,53 +173,22 @@ def active_area_psic_rect(gonio,p_phi,p_chi,wb,hb,wd,hd,xtal_shape,plt);
     # Calc surf sys. transformation matrix
     M = calc_surf_transform(gonio.nm)
 
-    ###############################################################################
-    ####   NEW ALOGORTHM INCLUDED FOR A FOUR SIDED SAMPLE SHAPE #########
-    #################################################################################
-    # Sample positions determined from the picture taken at 
-    #del=0;eta=0;chi=f_chi;phi=f_phi;nu= 0;mu=0
-    ### xtal_shape =[ x1 x2 x3 x4     sample four corner co-ordinates in cartesian co-ordinate (lab-frame)
-    #                 y1 y2 y3 y4     determined from the camera picture and size
-    #                 z1 z2 z3 z4]    assuming center to be (0 0 0)
-    #
-    ######### If sample co-ordinates are defined at f_phi & f_chi
-    # rotate the vector from f_phi & f_chi position to zero lab-frame position
-    # with a new Z matrix with following angular values
-    #del=0;eta=0;chi=f_chi;phi=f_phi;nu= 0;mu=0
-    angles_0 = [0,0,p_chi,p_phi,0,0];
-    k = 1;
-    [Z_0,Qm_0,ki_0,kr_0,tth_0] = calc_Z_and_Q(angles_0,k);
-    #Z_0
-
-    
-    xtal_lab_unrot = xtal_shape';
-    Svc_1 = xtal_lab_unrot(1:3,1);
-    Svc_2 = xtal_lab_unrot(4:6,1);
-    Svc_3 = xtal_lab_unrot(7:9,1);
-    Svc_4 = xtal_lab_unrot(10:12,1);
-    # get the zero lab frame positions for the sample vectors
-    Svc_1 = Z_0*Svc_1;
-    Svc_2 = Z_0*Svc_2;
-    Svc_3 = Z_0*Svc_3;
-    Svc_4 = Z_0*Svc_4;
-    #xtal__lab0_coord = [ Svc_1 Svc_2 Svc_3 Svc_4]
-
-    ### after rotation of the crystal: rotated base
-    Svcr_1 = Z*Svc_1;
-    Svcr_2 = Z*Svc_2;
-    Svcr_3 = Z*Svc_3;
-    Svcr_4 = Z*Svc_4;
-
-    #### vectors transformed in surf-frame
-    Svs_1 = M*Svcr_1;
-    Svs_2 = M*Svcr_2;
-    Svs_3 = M*Svcr_3;
-    Svs_4 = M*Svcr_4;
-
-    #xtal_in_surf_coord = [ Svs_1 Svs_2 Svs_3 Svs_4 ]
+    #################################################################
+    # get the sample position vectors
+    #################################################################
+    if len(xtal) > 1:
+        (p1_m,p2_m,p3_m,p4_m) = get_sample_vectors(gonio,xtal)
+        # vectors in the surface-frame
+        p1_s = M*p1_m
+        p2_s = M*p2_m
+        p3_s = M*p3_m
+        p4_s = M*p4_m
+        sample_shape = True
+    else:
+        sample_shape = False
 
     #################################################################
-    # transform vectors from lab to surface frame                   #
+    # transform slit vectors from lab to surface frame  
     #################################################################
 
     # build beam vectors in x,y,z (i.e. lab frame)

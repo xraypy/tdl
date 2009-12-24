@@ -213,6 +213,11 @@ def calc_Z(phi=0.0,chi=0.0,eta=0.0,mu=0.0):
     """
     Calculate the psic goniometer rotation matrix Z
     Angles are in degrees
+
+    Z is the matrix that rotates a vector defined in the phi frame
+    ie a vector defined with all angles zero => vphi.  After rotation
+    the lab frame coordinates of the vector => vm are given by:
+         vm = Z*vphi
     """
     P = num.array([[ cosd(phi), sind(phi), 0.],
                    [-sind(phi), cosd(phi), 0.],
