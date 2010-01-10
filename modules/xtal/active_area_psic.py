@@ -19,7 +19,7 @@ from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
 from mathutil import cartesian_mag, cartesian_angle
 
-from gonio_psic import calc_Z
+from gonio_psic import calc_Z, calc_D
 
 ##########################################################################
 
@@ -29,32 +29,33 @@ def calc_surf_transform(nm):
     indicies of vectors defined in the lab frame basis to the
     a surface frame defined such that:
         zs is along the surface normal (parrallel to nm)
-        ys is the projection of the -y axis onto the surface
+        ys is the projection of the lab frame -y axis onto the surface
         xs is defined to make it a right handed orthonormal set
            (and is therefore in the surface plane)
 
-    Note that nm is the surface normal (unit vector) pointing in
-    an arbitrary definition defined by a particular gonio setting.  
-    The vector nm is defined in the psic laboratory basis.
+    Note that nm is the surface normal (unit vector), defined
+    in the laboratory m-frame (i.e. pointing in an arbitrary
+    direction for a particular gonio setting) - see gonio_psic.py
+    for more details.
 
-    The transform is defined as:
+    The surface transform is defined as follows:
         |e_xs|      |e_x|              |vx|     
         |e_ys| = F* |e_y|    and   F = |vy|   
         |e_zs|      |e_z|              |vz|    
-    Where e's are the (cartesian) basis vectors.  Given a
-    vector [x,y,z] defined in the lab fram basis [e_x,e_y,e_z],
+    where e's are the (cartesian) basis vectors.  Given a
+    vector [x,y,z] defined in the lab frame basis [e_x,e_y,e_z],
     we can compute the indicies of this vector in the surface
-    basis from:
+    basis [e_xs,e_ys,e_zs] from:
         |xs|      |x|
         |ys| = M* |y|
         |zs|      |z|
     where
         M = transpose(inv(F)) = inv(transpose(F))
         
-    Note see lattice.py for more notes on general transoform, and see
-    gonio_psic.py for note on calc of the surface normal vector.  
+    Note see lattice.py for more notes on general transforms, and see
+    gonio_psic.py for notes on calc of the surface normal vector.  
     """
-    v_z = gonio.nm
+    v_z = nm
 
     v   = num.array([0.,-1.,0.])
     v_y = v - (num.dot(v,v_z) * v_z) / (cartesian_mag(v_z)**2.) 
@@ -72,19 +73,20 @@ def get_sample_vectors(gonio,xtal):
     """
     xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
              p1:[],p2:[],p3:[],p4:[]}
-    p1 - p4 are vectors that point to the 4 corners of the xtal.  The should be given
-    in general lab frame coordinates with the angle settings given.
+    p1 - p4 are vectors that point to the 4 corners of the xtal.  They
+    should be given in general lab frame coordinates with the
+    angle settings as provided in the xtal argument.
+    
     The lab frame coordinate systems is defined such that:
         x is vertical (perpendicular, pointing to the ceiling of the hutch)
         y is directed along the incident beam path
         z make the system right handed and lies in the horizontal scattering plane
           (i.e. z is parallel to the phi axis)
-    The center (0,0,0) of the lab frame is the rotation center of the instrument.  
-    """
-    # get sample rotation matrix
-    Z = calc_Z(phi=xtal['phi'],chi=xtal['chi'],eta=xtal['eta'],mu=xtal['mu'])
-    Zinv = num.linalg.inv(Z)
 
+    The center (0,0,0) of the lab frame is the rotation center of the instrument.
+    When flat phi and chi values and sample hieght (Z) have been determined, the z
+    values of the p-vectors will be zero.  
+    """
     # if p's have anly two components then we assume they are xy pairs
     # therefore we can add a third value of zero for z
     p1 = num.array(xtal['p1'])
@@ -96,6 +98,10 @@ def get_sample_vectors(gonio,xtal):
     p4 = num.array(xtal['p4'])
     if len(p4) == 2: p4 = p4.resize((3,))
     
+    # get sample rotation matrix
+    Z = calc_Z(phi=xtal['phi'],chi=xtal['chi'],eta=xtal['eta'],mu=xtal['mu'])
+    Zinv = num.linalg.inv(Z)
+
     # since p's are defined in lab frame at given set of angles
     # we need to unrotate to get back to phi frame vectors
     p1_phi = num.dot(Zinv,p1)
@@ -104,10 +110,11 @@ def get_sample_vectors(gonio,xtal):
     p4_phi = num.dot(Zinv,p4)
     
     # now rotate the vectors based on the current gonio settings
-    p1_m = gonio.Z*p1_phi
-    p2_m = gonio.Z*p2_phi
-    p3_m = gonio.Z*p3_phi
-    p4_m = gonio.Z*p4_phi
+    # these are the m-frame vectors
+    p1_m = num.dot(gonio.Z,p1_phi)
+    p2_m = num.dot(gonio.Z,p2_phi)
+    p3_m = num.dot(gonio.Z,p3_phi)
+    p4_m = num.dot(gonio.Z,p4_phi)
 
     return (p1_m,p2_m,p3_m,p4_m)
 
@@ -129,12 +136,13 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     slits['hd'] = detector vert hieght
 
     If xtal is a single number we take it as the diamter of a round sample
-    mounted flat.  
-    Otherwise use the following structure for a general parrallelepiped shape:
+    mounted flat.
+    
+    Otherwise use the following structure for a general polygon shape:
     xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
              p1:[],p2:[],p3:[],p4:[]}
-    p1 - p4 are vectors that point to the 4 corners of the xtal.  The should be given
-    in general lab frame coordinates with the angle settings given.
+    p1 - p4 are vectors that point to the 4 corners of the xtal.  The should be 
+    given in cartesian lab frame coordinates with the angle settings given.
     The lab frame coordinate systems is defined such that:
         x is vertical (perpendicular, pointing to the ceiling of the hutch)
         y is directed along the incident beam path
@@ -150,8 +158,6 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
 
     If plt = True then makes plot
 
-    see: m_files\sanjit\area_psic_rect_num.m
-         m_files\current\saag\xrd_ctr\data_red\int_ctr_data_3\parse_int_mac_rect.m
     """
     ######################
     if gonio.calc_psuedo == False:
@@ -161,12 +167,12 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     beta = gonio.pangles['beta']
 
     print 'alpha = ', alpha, ', beta = ', beta
-    if alpha < -0.0:
+    if alpha < 0.0:
       print 'alpha is less than 0.0'
       A_ratio = 0
       return
-    elif beta < -0.0:
-      print 'beta is less than -0.0'
+    elif beta < 0.0:
+      print 'beta is less than 0.0'
       A_ratio = 0
       return
 
@@ -191,592 +197,527 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     # transform slit vectors from lab to surface frame  
     #################################################################
 
-    # build beam vectors in x,y,z (i.e. lab frame)
-    bh = [  0    ;   0;   0.5*wb];
-    bv = [0.5*hb ;   0;     0   ];
+    # build beam vectors, [x,y,z], in lab frame
+    bh = num.array([0.,     0., 0.5*slits['wb']])
+    bv = num.array([0.5*slits['hb'], 0.,  0.   ])
 
-    # build detector vectors in x,y,z (i.e. lab frame)
-    # note that these assume no rotations, need to transform as below
-    dh = [       0   ;   0 ;   0.5*wd];
-    dv = [    0.5*hd ;   0 ;     0   ];
+    # build detector vectors, [x,y,z] in lab frame
+    dh = num.array([   0.,          0.,  0.5*slits['wd']])
+    dv = num.array([0.5*slits['hd'],0.,        0.       ])
+    # note that these assume no rotations - need to transform
+    # get the rot matrix for the detector. 
+    D = calc_D(nu=gonio.angles['nu'],delta=gonio.angles['delta'])
+    dh = num.dot(D,dh)
+    dv = num.dot(D,dv)
 
-    # calc the rot matrix for the detector. 
-    del = angles(1);
-    nu = angles(5);
-    DM_1 = [  cosd(del),  sind(del),  0  ; 
-             -sind(del),  cosd(del),  0  ;
-             0     ,     0     ,  1 ];
-          
-    DM_2 = [    1 ,     0   ,      0     ;
-                0,  cosd(nu), -sind(nu)  ; 
-                0,  sind(nu),  cosd(nu) ];
-          
-    DM = (DM_2)*(DM_1);
+    # calc vectors in xs,ys,zs (i.e. surf frame)
+    bh_s = num.dot(M,bh)
+    bv_s = num.dot(M,bv)
+    dh_s = num.dot(M,dh)
+    dv_s = num.dot(M,dv)
 
-    dh = DM*dh;
-    dv = DM*dv;
+    # create unit vectors parrallel to ki and kr 
+    # and transform to surface frame.
+    ki   = num.array([0.,1.,0.])
+    ki_s = num.dot(M,ki)
+    kr   = num.array([0.,1.,0.])
+    kr   = num.dot(D,kr)
+    kr_s = num.dot(M,kr)
 
-    # calc vectors in xs, ys,zs (i.e. surf frame)
-    bh_s = M*bh;
-    bv_s = M*bv;
+    #####################################################################
+    # depending on whether we have a sample shape description
+    # or assume a round sample, pass along appropriate
+    # data to compute areas
+    #####################################################################
+    if shape == False:
+        A = _area_round_sample(bh_s,bv_s,dh_s,dv_s,ki_s,kr_s,xtal)
+    else:
+        A = _area_4point_sample(bh_s,bv_s,dh_s,dv_s,ki_s,kr_s,
+                                p1_s,p2_s,p3_s,p4_s)
 
-    dh_s = M*dh;
-    dv_s = M*dv;
-    #disp('******* CHECKED UP TO HERE for syntax,dimensions and  results *******')
+#########################################################################
+def _area_round_sample(bh_s,bv_s,dh_s,dv_s,ki_s,kr_s,diameter):
+    """
+    compute areas for round sample of fixed diameter
+    """
+    #####################################################################
+    # calc the vector intercepts with the surface plane
+    # each of the below is a vector with x_s and y_s vals 
+    #####################################################################
 
-    # note ki and kr calc above and are already unit vectors
-    # now transform to surface frame.
-    ki_s = M*ki;
-    kr_s = M*kr;
+    # surface intercepts of the corners of incident beam slit 
+    a = surface_intercept(ki_s,  bv_s + bh_s)
+    b = surface_intercept(ki_s,  bv_s - bh_s)
+    c = surface_intercept(ki_s, -bv_s - bh_s)
+    d = surface_intercept(ki_s, -bv_s + bh_s)
 
-    ###################################################################
-    # calc the intercepts of the corners of the beam,detector and sample        #
-    # each of the below is a row vector with x and y vals             #
-    ###################################################################
-
-    [a] = z_intercept(ki_s, [ bv_s + bh_s]);
-    [b] = z_intercept(ki_s, [ bv_s - bh_s]);
-    [c] = z_intercept(ki_s, [-bv_s - bh_s]);
-    [d] = z_intercept(ki_s, [-bv_s + bh_s]);
-
-    # calc the intercepts of the corners of the detector 
-
-    [e] = z_intercept(kr_s, [ dv_s + dh_s]);
-    [f] = z_intercept(kr_s, [ dv_s - dh_s]);
-    [g] = z_intercept(kr_s, [-dv_s - dh_s]);
-    [h] = z_intercept(kr_s, [-dv_s + dh_s]);
-
-    # calc the intercepts of the corners of the sample ###
-    # make these two dimension for cross product below
-    i= [Svs_1(1,1), Svs_1(2,1)];
-    j= [Svs_2(1,1), Svs_2(2,1)];
-    k= [Svs_3(1,1), Svs_3(2,1)];
-    l= [Svs_4(1,1), Svs_4(2,1)];
-
-    #vortices = [a;b;c;d;e;f;g;h;i;j;k;l];
-
-    ############## NUM CALCULATION OF INTERSECTION AREA ##########################
-    #Use the minimum intersection area formed out of beam,sample and detector ###
-    #the intersection area is defined by the ab,bc,cd,da,ef,fg,gh,he,ij,jk,kl & #
-    #lj lines #
-    #############################################################################
-
-    # params for lines                                                 #
-    # the lines array has a row for each intercept with                #
-    # col1 = m, col2 = b.  Note if a slope is inf or 0. large          #
-    # m is returned as inf and the x-val for the line is in b          #
-
-    ####################################################################
-    #### if any line parallel to x-axis then (slope m = 0)
-    #### check for slope <= 0.1, one can change it to lower/higher value
-    #### rotate all the vertices by a rotation angle
-
-    lines =line_foot_print(a,b,c,d,e,f,g,h,i,j,k,l);
-    l_idx = length(find(abs(lines(:,1))<=0.1));
-    m_rot_angle = 1;
-    while l_idx ~=0, 
-       m_rot_mat= [cosd(m_rot_angle),-sind(m_rot_angle);...
-                   sind(m_rot_angle),cosd(m_rot_angle)];
-        
-       a = (m_rot_mat*a(:))';
-       b = (m_rot_mat*b(:))';
-       c = (m_rot_mat*c(:))';
-       d = (m_rot_mat*d(:))';
-       e = (m_rot_mat*e(:))';
-       f = (m_rot_mat*f(:))';
-       g = (m_rot_mat*g(:))';
-       h = (m_rot_mat*h(:))';
-       i = (m_rot_mat*i(:))';
-       j = (m_rot_mat*j(:))';
-       k = (m_rot_mat*k(:))';
-       l = (m_rot_mat*l(:))';
-       lines= line_foot_print(a,b,c,d,e,f,g,h,i,j,k,l);
-       l_idx = length(find(abs(lines(:,1))<=0.1));
-    end
-
-    #vortices = [a;b;c;d;e;f;g;h;i;j;k;l];
-    lines =line_foot_print(a,b,c,d,e,f,g,h,i,j,k,l);
-
-    ####################################################################
-    # calc the area of the beam and det print                          #
-    # note these use long vals ie. tot f_print including beyond xtal   #
-    ####################################################################
-    # here just calc areas
-    #disp('******* beam,detector and sample footprint 2D area *******')
-
-    beam_area_surf =  norm(cross([a,0],[b,0])) ...
-                     + norm(cross([b,0],[c,0]));
-    det_area_surf  = norm(cross([e,0],[f,0])) ...
-                     + norm(cross([f,0],[g,0]));
-    sample_area_surf = norm(cross([i,0],[j,0])) ...
-                     + norm(cross([k,0],[l,0]));
-
-    ###############################################################
-    # find the y-intercepts( x-co-ordinate) for  all the lines
-    # until the x-height falls below tollerance
-    # then integrate the area under each del_y, area=del_y*x_height
-    # do the intergartion from origin to +ve y values first
-    # then origin to negavtive y values and then add the two to get the final
-    # area of the intersection polygon
-    #####################################################
-
-    ###############Integration for the positive side from the center(0,0)##
-
-    start_ints_area = min([beam_area_surf,det_area_surf,sample_area_surf]);
-    num_steps_p = 100; # number of steps one side
-    del_y = (sqrt(start_ints_area)/2)/(num_steps_p+1); # step size
-    y_ints=0.0;
-    line_yints=line_y_intercepts(y_ints,lines);
-    l_line_yints = length(line_yints);
-    sortx_line_yints= sort(line_yints(:,1));
-    x_height= abs(sortx_line_yints(7)- sortx_line_yints(6));
-    sum_area_p=y_ints*x_height;
-    count_p=0;
-    count_p_s=0;
-
-    while x_height >= 0.001, # 0.001 is the tollerance of the x-height
-       y_ints=y_ints+del_y;
-       line_yints=line_y_intercepts(y_ints,lines);
-       l_line_yints = length(line_yints);
-       sortx_line_yints= sort(line_yints(:,1));
-       x_height_1 = x_height;
-       x_height= abs(sortx_line_yints(7)- sortx_line_yints(6));
-       sum_area_p = sum_area_p + (del_y*x_height);
-       # rescaling the slices
-       if (x_height_1 - x_height)>= 0.1*x_height_1;
-          del_y=del_y*0.2;
-          count_p_s=count_p_s+1;
-       end
-      count_p=count_p+1;
-    end
-    #count_p
-    #x_height_f=x_height
-    #y_ints_f=y_ints
-    #sum_area_p_f=sum_area_p
-    #sum_area_p
-    #######################################################################
-
-    ###############Integration for the negative side from the center(0,0)##
-
-    del_y = (sqrt(start_ints_area)/2)/(num_steps_p+1); # step size
-    y_ints=0.0;
-    line_yints=line_y_intercepts(y_ints,lines);
-    l_line_yints = length(line_yints);
-    sortx_line_yints= sort(line_yints(:,1));
-    x_height= abs(sortx_line_yints(7)- sortx_line_yints(6));
-    sum_area_n=y_ints*x_height;
-    count_n=0;
-    count_n_s=0;
-
-    while x_height >= 0.001,# 0.001 is the tollerance of the x-height
-       y_ints=y_ints-del_y;
-       line_yints=line_y_intercepts(y_ints,lines);
-       l_line_yints = length(line_yints);
-       sortx_line_yints= sort(line_yints(:,1));
-       x_height_1 = x_height;
-       x_height= abs(sortx_line_yints(7)- sortx_line_yints(6));
-       sum_area_n = sum_area_n + (abs(del_y)*x_height);
-       # rescaling the slices
-       if (x_height_1 - x_height)>= 0.1*x_height_1;
-          del_y=del_y*0.2;
-          count_n_s=count_n_s+1;
-       end
-       count_n = count_n+1;
-    end 
-    #count_n
-    #sum_area_n
-    bsd_ints_area = sum_area_p + sum_area_n;
-    A_ratio = bsd_ints_area/beam_area_surf;
-
-    # include the areas of the sample, beam and detector slits
-    t= ['Area correction = ' num2str(A_ratio)];
-    disp(t)
-
-    if plt ==1
-     plot_lines(a,b,c,d,e,f,g,h,i,j,k,l);
-    end
-      
-    ###############get the boundary of integration ##################
-    #y_corner = [a(:,2),b(:,2),c(:,2),d(:,2),e(:,2),f(:,2),...
-    #               g(:,2),h(:,2),i(:,2),j(:,2),k(:,2),l(:,2)];
-    #[y_pos_min,y_pos_max,y_neg_min,y_neg_min] = sort_matrix(y_corner);
-
-    ###############################################################################
-
-     
-#################################################################
-################## functions ####################################
-#################################################################
-
-#find min max of a matrix not including zero
-function [pos_min,pos_max,neg_min,neg_max] = sort_matrix(matrix)
-    matrix = sort(matrix);
-    pos_idx = find(matrix(:)>0);
-    l_posidx = length(find(matrix(:)>0));           
-    pos_min = min(matrix(:,pos_idx(1,1):pos_idx(l_posidx,1)));
-    pos_max = max(matrix(:,pos_idx(1,1):pos_idx(l_posidx,1)));
-
-    neg_idx = find(matrix(:)<0);
-    l_negidx = length(find(matrix(:)<0));          
-    neg_min = min(matrix(:,neg_idx(1,1):neg_idx(l_negidx,1)));
-    neg_max = max(matrix(:,neg_idx(1,1):neg_idx(l_negidx,1)));
-
-###########################################################
-function line_yints = line_y_intercepts(y_ints,lines)
-    for i=1:1:12
-    line1=[0,y_ints];
-    line2=lines(i,:);
-    [line_yints(i,1),line_yints(i,2)] = y_line_intercept( line1,line2);
-    end
-
-    ##################################################################
-    # find the x-value  between lines y = b1(parallel to x) and y = m2*x +b2 
-    function [x,y] = y_line_intercept( line1,line2)
-
-    # m1=0 and b1 are params for line parallel to x
-    # m2 and b2 are params for line2
-    # therefore find the intersections of the line and see if 
-    # and get the x-value
-
-    m1 = line1(1);
-    b1 = line1(2);
-    m2 = line2(1);
-    b2 = line2(2);
-
-
-    if (m1~=inf) & (m2~=inf);
-    if (m1-m2)~=0
-     x= (b2-b1)/(m1-m2);
-     y= m1*x + b1;
-    else
-     # x= (b2-b1)/eps;
-     # y= m1*x + b1;
-     x= inf;
-     y = inf;
-    end;
-    elseif (m1==inf) & (m2~=inf)
-    x = b1;   # recall if vertical line b holds x-val
-    y = m2*x + b2;
-    elseif (m1~=inf) & (m2==inf)
-    x = b2;   # recall if vertical line b holds x-val
-    y = m1*x + b1;
-    else;
-    x = inf;
-    y = inf;
-    end;
+    # surface intercepts of the corners of the detector slit 
+    e = surface_intercept(kr_s,  dv_s + dh_s)
+    f = surface_intercept(kr_s,  dv_s - dh_s)
+    g = surface_intercept(kr_s, -dv_s - dh_s)
+    h = surface_intercept(kr_s, -dv_s + dh_s)
 
 ##################################################################
-function [int] = z_intercept(k,v)
+def surface_intercept(k,v,diameter=None):
+    """
+    Find surface coordinates [x,y] when the tip of vector v is
+    projected into the surface plane along k.  ie [x,y] for z=0
+    along k passing through the point defined by v
+    """
+    # if k[2] = 0 then k is parallel to xy plane
+    # and no intercept is possible.  
+    if k[2] == 0: return None
+    
+    x_int = v[0] - (k[0]/k[2])*v[2]
+    y_int = v[1] - (k[1]/k[2])*v[2]
 
-    # find x,y for z=0
-    ks = [k(1),k(2)];
-    x_int = v(1) - (k(1)/k(3))*v(3);
-    y_int = v(2) - (k(2)/k(3))*v(3);
+    vi = num.array([x_int, y_int])
 
-    int = [x_int, y_int];
+    return vi
 
-##################################################################
-# black sample
-# red is beam
-# green is det
-function  plot_lines(a,b,c,d,e,f,g,h,i,j,k,l)                           
-    disp('black is sample')
-    disp('red is beam')
-    disp('green is det')
+def surface_intercept_bounds(k,v,diameter):
+    """
+    Find z-intercepts within bounds
+    
+    We assume that the plane is a circle of fixed diameter, 
+    and scale back the intercept to the edge of the circle,
+    This is done along the in-plane projection of the k vector.
+    If that doesnt result in an intercept then just rescale
+    the original intercept vector.
+    
+    This is an approximate way to handle intercepts for
+    circular samples, not recommended for use...
+    """
+    vi = z_intercept(k,v)
+    
+    # check if we're out of bounds
+    r = cartesian_mag(vi)
+    if r <= diameter/2.:
+        return vi
+    
+    # k-projection in plane
+    ks = num.array(k[0:2])
 
-    clf, hold on, gup
+    # if r>diameter/2 need to scale it back
+    # This algortihm rescales the intercept
+    # by subtracting an in-plane vector parrallel to
+    # the surface projection of the k vector
+    # such the the intercept vector is within the radius.
+    # Therefore solve the following
+    # expression for mag
+    #    vi_new = vi - ks*mag/norm(ks),
+    # where
+    #    mag(vi_new) = diameter/2
+    #    ks = [k_x,k_y]
+    # therefore end up with a quadratic:
+    a = 1.
+    b = -2. * (v[0]*ks[0] + vi[1]*ks[1])/cartesian_mag(ks)
+    c = cartesian_mag(vi)**2. - (diameter/2.)**2.
+    arg = b**2. - 4.*a*c
+    # make sure this method will result in a solution
+    if arg > 0.: 
+        mag1 = (-b + num.sqrt(arg))/(2.*a)
+        mag2 = (-b - num.sqrt(arg))/(2.*a)
+        print mag1
+        print mag2
+        print vi, ks
+        vi1 = vi - ks*mag1/cartesian_mag(ks)
+        vi2 = vi - ks*mag2/cartesian_mag(ks)
 
-    plot([a(1),b(1)],[a(2), b(2)],'r')
-    plot([b(1),c(1)],[b(2), c(2)],'r')
-    plot([c(1),d(1)],[c(2), d(2)],'r')
-    plot([d(1),a(1)],[d(2), a(2)],'r')
+        # both of above give correct magnitude but only 
+        # one points in the correct direction,
+        # chose the one that makes smallest angle with the
+        # origninal intercept
+        angle1 = num.fabs(cartesian_angle(vi,vi1))
+        angle2 = num.fabs(cartesian_angle(vi,vi2))
+        if angle1 < angle2:
+            return vi1
+        else:
+            return vi2
+    # otherwise just rescale the original vector
+    # to have length given by radius
+    else:
+        vi = vi * (diameter/2.) / cartesian_mag(vi)
+        return vi
 
-    plot([e(1),f(1)],[e(2), f(2)],'g')
-    plot([f(1),g(1)],[f(2), g(2)],'g')
-    plot([g(1),h(1)],[g(2), h(2)],'g')
-    plot([h(1),e(1)],[h(2), e(2)],'g')
+#######################################################################
+def inner_polygon(poly1,poly2):
+    """
+    Given two polygons find the new polygon made up from
+    the inner intersections of the two
+    """
+    npts1 = len(poly1)
+    npts2 = len(poly2)
+    if npts1 < 3 or npts2 < 3: return None
+    (poly1,angles1) = sort_points(*poly1)
+    (poly2,angles2) = sort_points(*poly2)
+    # loop through all possible line combinations 
+    # looking for valid line intersections 
+    intercepts = []
+    for j in range(npts1):
+        p1 = poly1[j]
+        if j == npts1 - 1:
+            p2 = poly1[0]
+        else:
+            p2 = poly1[j+1]
+        for k in range(npts2):
+            p3 = poly2[k]
+            if k == npts2 - 1:
+                p4 = poly2[0]
+            else:
+                p4 = poly2[k+1]
+            (intercept,flag) = line_intercept(p1,p2,p3,p4)
+            if flag > 0:
+                intercepts.append(intercept)
+    #############
+    # now determine which points we can get to from
+    # the origin without crossing any poly lines, 
+    # ie the inner set of points
+    points = []
+    for p in poly1: points.append(p)
+    for p in poly2: points.append(p)
+    for p in intercepts: points.append(p)
+    (points,angles) = sort_points(*points)
+    inner_points    = []
+    for p in points:
+        # check against poly1
+        inner = is_inner(p,poly1)
+        # check against poly2
+        if inner == True:
+            inner = is_inner(p,poly2)
+        if inner == True:
+            inner_points.append(p)
+    # sort the inner points
+    (inner_points,angles) = sort_points(*inner_points)
+    return inner_points
 
-    plot([i(1),j(1)],[i(2), j(2)],'k')
-    plot([j(1),k(1)],[j(2), k(2)],'k')
-    plot([k(1),l(1)],[k(2), l(2)],'k')
-    plot([l(1),i(1)],[l(2), i(2)],'k')
+#######################################################################
+def is_inner(point,poly):
+    """
+    is the point inside the polygon
+    """
+    npts = len(poly)
+    p1 = [0.,0.]
+    p2 = point
+    inner = True
+    k = 0
+    while inner==True and k < npts:
+        p3 = poly[k]
+        if k == npts - 1:
+            p4 = poly[0]
+        else:
+            p4 = poly[k+1]
+        (intercept,flag) = line_intercept(p1,p2,p3,p4)
+        if flag == 1 :
+            inner = False
+        k = k+1
+    return inner
+
+#######################################################################
+def line_intercept(p1,p2,p3,p4):
+    """
+    Compute the point of intersection of the 2 lines defined
+    by p1-p2 and p3-p4.  The p's are assumed to be 2D
+    in-plane vectors (ie [x,y])
+
+    Return ([x,y],flag).
+
+    [x,y] = None if the lines do not intersect.  
+
+    flag = 0 if the intercept is outside the
+              extent of the 2 lines
+              (or no intercept)
+    flag = 1 if the intercept is in bounds,
+             i.e. within the limits of the two lines
+    flag = 2 if the intercept corresponds to the
+             terminus of one of the lines. ie the end
+             of one line is on the other line
+             (inclusive of end points on end points)
+    """
+    # Note if vertical line m = None and b holds x-val
+    (m1,b1) = line_param(p1,p2)
+    (m2,b2) = line_param(p3,p4)
+    if (m1 != None) and (m2 != None):
+        if (m1-m2) != 0.:
+            x = (b2-b1)/(m1-m2)
+            y = m1*x + b1
+        else:
+            return (None,0)
+    elif (m1 == None) and (m2 != None):
+        x = b1   
+        y = m2*x + b2
+    elif (m1 != None) and (m2 == None):
+        x = b2
+        y = m1*x + b1
+    else:
+        return (None,0) 
+    
+    # min and max of points. 
+    max_x1 = max(p1[0], p2[0])
+    min_x1 = min(p1[0], p2[0])
+    max_y1 = max(p1[1], p2[1])
+    min_y1 = min(p1[1], p2[1])
+    max_x2 = max(p3[0], p4[0])
+    min_x2 = min(p3[0], p4[0])
+    max_y2 = max(p3[1], p4[1])
+    min_y2 = min(p3[1], p4[1])
+    #check if the intersection is in bounds
+    flag = 1
+    if x > max_x1 or x < min_x1:
+        flag = 0
+    elif x > max_x2 or x < min_x2:
+        flag = 0
+    elif y > max_y1 or y < min_y1: 
+        flag = 0
+    elif y > max_y2 or y < min_y2: 
+        flag = 0
+    #check if the intersection point corresponds to an end point
+    intercept = num.array([x,y])
+    def _same(p1,p2,prec=0.001):
+        """ are two points the same """
+        #return num.all(num.equal(p1,p2))
+        t1 = num.fabs(p1[0]-p2[0]) < prec
+        t2 = num.fabs(p1[1]-p2[1]) < prec
+        if  t1 and t2:
+            return True
+    if flag == 1:
+        if _same(intercept,p1):
+            flag = 2
+        elif _same(intercept,p2):
+            flag = 2
+        elif _same(intercept,p3):
+            flag = 2
+        elif _same(intercept,p4):
+            flag = 2
+    return (intercept,flag)
 
 ###################################################################
-function [m,b] = line_param(v1,v2);
+def line_param(v1,v2):
+    """
+    Calc the params for straight line from two vectors
+    (this is defined for the in-plane (2D) case)
+    i.e. compute the equation of a line, y = m*x + b
+    that passes through the surface point defined by v1 and v2.
+    This gives back m and b.  If the line is vertical the returned
+    slope (m) = None and b = x-value of the line
+    """
+    if (v1[0]-v2[0] != 0.):
+        m = (v1[1] - v2[1])/(v1[0] - v2[0])
+        b = -m*v1[0] + v1[1]
+        if num.fabs(m)>1.0e6:
+            m = None
+            b = v1[0]
+    else:  
+        m =  None
+        b =  v1[0]
+    return (m,b)
 
-    # calc params for straight line from two vectors
-    # i.e. y = m*x + b , this gives back m and b
+##################################################################
+def poly_area(*pts,**kw):
+    """
+    Compute the area of a polygon defined
+    by a bunch of points (xy pairs). This assumes the 
+    points define a complete/enclosed polygon
+    (therefore a min of 3 points).
+    The points do not need to be in a particular order,
+    this algorithm sorts them accoding to the angle
+    with respect to the x-axis and then computes the
+    area defined by each segment defined from each pair
+    of points.  If they are already sorted pass sort=False
+    """
+    npts = len(pts)
+    if npts < 3: return 0.
+    sort = kw.get('sort')
+    if sort == None: sort=True
+    if sort == True:
+        (points,angles) = sort_points(*pts)
+    else:
+        points = pts
+        
+    # now loop through points cyclically computing
+    # area of each polygon segment defined by the points
+    # [0,0],[x1,y1],[x2,y2]
+    A = []
+    for j in range(npts):
+        p1 = points[j]
+        if j == npts - 1:
+            p2 = points[0]
+        else:
+            p2 = points[j+1]
+        a = segment_area(p1,p2)
+        A.append(a)
+    return num.sum(A)
 
-    if (v1(1)-v2(1) ~= 0)
-    m = (v1(2) - v2(2))/(v1(1) - v2(1));
-    b = -m*v1(1) + v1(2);
-    if abs(m)>1e6;     # arbitrary large number!!!!
-     m = inf;         # put these here to deal with numerical problems
-     b = v1(1);       # when you have near vert. lines (i.e. make em vert)
-    # disp('inf1')
-    end; 
-    else;  # set m to inf and b to the x-val for vertical line!!!
-    m =  inf;
-    b =  v1(1);
-    # disp('inf2')
-    end;
+##################################################################
+def sort_points(*pts):
+    """
+    given a sequence of [x,y] points
+    sort them according to angle (ccw w/r/t x-axis)
+    return sorted list of points and angles
+    """
+    npts = len(pts)
+    points = []
+    angles = []
+    #sort args by angle relative to x, c.c.w
+    def _angle(v):
+        # cartesian angle is always btwn 0 and 180
+        angle = cartesian_angle(v,[1.,0.])
+        if (v[1] < 0.):
+            return 360. - angle
+        else:
+            return angle
+    for v in pts:
+        v = num.array(v[0:2])
+        an = _angle(v)
+        j = 0
+        while j < npts -1:
+            if j > len(points)-1: break
+            if an < angles[j]: break
+            else: j = j + 1
+        points.insert(j,v)
+        angles.insert(j,an)
+    return (points,angles)
 
-#######################################################################
-function line_ints = get_line_intercepts(lines, a,b,c,d,e,f,g,h)
+##################################################################
+def segment_area(p1,p2):
+    """
+    Compute the in-plane area of the half the 
+    polygon defined by the origin and two points.
+    """
+    # this uses cross product
+    # which computes the full area of
+    # the parrallogram formed by the
+    # two vectors.  The polygon area
+    # is half this value.  
+    #p1 = num.array([p1[0],p1[1],0.])
+    #p2 = num.array([p2[0],p2[1],0.])
+    #a = 0.5*cartesian_mag(num.cross(p1,p2))
+    # This is result of cross product
+    a = (p1[0]*p2[1])**2. + (p2[0]*p1[1])**2. - (2.*p1[0]*p2[0]*p1[1]*p2[1])
+    a = 0.5 * num.sqrt(a)
+    return a
 
-    I(1,:) = line_intercept(lines(1,:), a, b, lines(5,:), e, f);
-    I(2,:) = line_intercept(lines(1,:), a, b, lines(6,:), f, g);
-    I(3,:) = line_intercept(lines(1,:), a, b, lines(7,:), g, h);
-    I(4,:) = line_intercept(lines(1,:), a, b, lines(8,:), h, e);
-    I(5,:) = line_intercept(lines(2,:), b, c, lines(5,:), e, f);
-    I(6,:) = line_intercept(lines(2,:), b, c, lines(6,:), f, g);
-    I(7,:) = line_intercept(lines(2,:), b, c, lines(7,:), g, h);
-    I(8,:) = line_intercept(lines(2,:), b, c, lines(8,:), h, e);
-    I(9,:) = line_intercept(lines(3,:), c, d, lines(5,:), e, f);
-    I(10,:) = line_intercept(lines(3,:), c, d, lines(6,:), f, g);
-    I(11,:) = line_intercept(lines(3,:), c, d, lines(7,:), g, h);
-    I(12,:) = line_intercept(lines(3,:), c, d, lines(8,:), h, e);
-    I(13,:) = line_intercept(lines(4,:), d, a, lines(5,:), e, f);
-    I(14,:) = line_intercept(lines(4,:), d, a, lines(6,:), f, g);
-    I(15,:) = line_intercept(lines(4,:), d, a, lines(7,:), g, h);
-    I(16,:) = line_intercept(lines(4,:), d, a, lines(8,:), h, e);
+##########################################################################
+def plot_polygon(*pts,**kw):
+    """
+    plot the lines around a polygon
+    """
+    try:
+        fmt = kw.pop('fmt')
+    except:
+        fmt='k'
+    (points,angles) = sort_points(*pts)
+    npts = len(points)
+    if npts < 3: return
+    for j in range(npts):
+        p1 = points[j]
+        if j == npts - 1:
+            p2 = points[0]
+        else:
+            p2 = points[j+1]
+        pyplot.plot([p1[0],p2[0]],[p1[1],p2[1]],fmt,**kw)
 
-    line_ints = I;
+##########################################################################
+def plot_points(*pts,**kw):
+    """
+    plot a bunch of in-plane ([x,y]) points
+    """
+    try:
+        fmt = kw.pop('fmt')
+    except:
+        fmt='k'
+    npts = len(pts)
+    if npts == 0: return
+    xy = num.zeros((npts,2))
+    for j in range(npts):
+        v = pts[j]
+        xy[j,0] = v[0]
+        xy[j,1] = v[1]
+    idx = num.argsort(xy[:,0])
+    xy  = xy[idx]
+    for j in range(len(xy)):
+        pyplot.plot([0.,xy[j,0]],[0,xy[j,1]],fmt,**kw)
 
+##################################################################
+def plot_circle(r,**kw):
+    """
+    plot a circle of given radius
+    """
+    try:
+        fmt = kw.pop('fmt')
+    except:
+        fmt='k'
+    x = num.arange(-r,r+0.01,0.01)
+    y = num.sqrt(num.fabs(r**2. - x**2.))
+    pyplot.plot(x,y,fmt,**kw)
+    pyplot.plot(x,-y,fmt,**kw)
 
-#######################################################################
-function int = line_intercept( line1, v1_1, v1_2, line2, v2_1, v2_2);
+##########################################################################
+def trans_point(p,theta=0.,scale=1.):
+    """
+    simple in-plane rotation of points
+    """
+    M = num.array([[cosd(theta), -sind(theta)],
+                   [sind(theta),  cosd(theta)]])
+    pp = scale*num.dot(M,p)
+    return pp
 
-    # m1 and b1 are params for line joining points v1_1 and v1_2
-    # m2 and b2 are params for line joining points v2_1 and v2_2
-    # therefore find the intersections of the line and see if 
-    # the intersection is within the bounds of the lines
+##########################################################################
+##########################################################################
+def test1():
+    from matplotlib import pyplot
+    r = 0.5
+    k = [0., 1., -0.1]
+    v = [.2, 0.,  1.]
+    v1 = z_intercept(k,v)
+    v2 = z_intercept_bounds(k,v,2*r)
+    print v1,v2
+    plot_circle(r)
+    plot_points(v1,v2)
+    pyplot.grid()
 
-    # int is returned with a int(3) = 0 if the intersection
-    # is in bounds, i.e. within the limits of the two lines
+##########################################################################
+def test2():
+    from matplotlib import pyplot
+    p1 = [1.,1.]
+    p2 = [-1.,1.]
+    p3 = [-1.,-1.]
+    p4 = [1.,-1.]
+    print poly_area(p1,p2,p3,p4)
+    #
+    plot_points(p1,p2,p3,p4)
+    plot_polygon(p1,p2,p3,p4)
+    plot_circle(2.2)
+    pyplot.grid()
 
-    m1 = line1(1);
-    b1 = line1(2);
-    m2 = line2(1);
-    b2 = line2(2);
+##########################################################################
+def test3():
+    from matplotlib import pyplot
+    #poly1 = [[1.,1.], [-1.,1.], [-1.,-1.],[1.,-1.]]
+    poly1 = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[1.,-1.]]
+    poly2 = [[0.5,2.], [-0.5,2.], [-0.5,-2.],[0.5,-2.]]
+    for j in range(len(poly1)):
+        poly1[j] = trans_point(poly1[j],theta = -20.,scale = 1.)
+    for j in range(len(poly2)):
+        poly2[j] = trans_point(poly2[j],theta = 20.,scale = 1.)
+    inner = inner_polygon(poly1,poly2)
+    print inner
+    #
+    pyplot.clf()
+    pyplot.grid()
+    #plot_points(*poly1,**{'fmt':'ro-'})
+    plot_polygon(*poly1,**{'fmt':'ro-'})
+    #plot_points(*poly2,**{'fmt':'ko-'})
+    plot_polygon(*poly2,**{'fmt':'ko-'})
+    plot_points(*inner,**{'fmt':'go-'})
+    plot_polygon(*inner,**{'fmt':'g--','linewidth':4})
+    plot_circle(2.2)
 
-
-    if (m1~=inf) & (m2~=inf);
-    if (m1-m2)~=0
-     x= (b2-b1)/(m1-m2);
-     y= m1*x + b1;
-    else
-     # x= (b2-b1)/eps;
-     # y= m1*x + b1;
-     x= inf;
-     y = inf;
-    end;
-    elseif (m1==inf) & (m2~=inf)
-    x = b1;   # recall if vertical line b holds x-val
-    y = m2*x + b2;
-    elseif (m1~=inf) & (m2==inf)
-    x = b2;   # recall if vertical line b holds x-val
-    y = m1*x + b1;
-    else;
-    x = inf;
-    y = inf;
-    end;
-
-    # limits of line 2
-    hx2 = max(v2_1(1), v2_2(1));
-    lx2 = min(v2_1(1), v2_2(1));
-    hy2 = max(v2_1(2), v2_2(2));
-    ly2 = min(v2_1(2), v2_2(2));
-
-    # limits of line 1
-    hx1 = max(v1_1(1), v1_2(1));
-    lx1 = min(v1_1(1), v1_2(1));
-    hy1 = max(v1_1(2), v1_2(2));
-    ly1 = min(v1_1(2), v1_2(2));
-
-    # check if the intersection is outside the range of the lines 
-    #if (x > hx2) | (x < lx2) | (x > hx1) | (x < lx1)
-    #  int = [x,y,1];
-    #elseif  (y > hy2) | (y < ly2) | (y > hy1) | (y < ly1) 
-    #  int = [x,y,1];
-    #else;
-    #  int = [x,y,0];
-    #end
-
-    p=0.001;
-
-    if cmp(x,hx2,p)==1 | cmp(x,lx2,p)==-1 | cmp(x,hx1,p)==1 | cmp(x,lx1,p)==-1
-    int = [x,y,1];
-    elseif cmp(y,hy2,p)==1 | cmp(y,ly2,p)==-1 | cmp(y,hy1,p)==1 | cmp(y,ly1,p)==-1 
-    int = [x,y,1];
-    else;
-    int = [x,y,0];
-    end
-
-
-
-############################################################################
-function int_1 = line_intercept_1( line1, v1_1, v1_2, line2, v2_1, v2_2);
-
-    # m1 and b1 are params for line joining points v1_1 and v1_2
-    # m2 and b2 are params for line joining points v2_1 and v2_2
-    # therefore find the intersections of the line and see if 
-    # the intersection is within the bounds of the lines
-
-    # int is returned with a int(3) = 0 if the intersection
-    # is in bounds, i.e. within the limits of the two lines
-
-    m1 = line1(1);
-    b1 = line1(2);
-    m2 = line2(1);
-    b2 = line2(2);
-
-
-    if (m1~=inf) & (m2~=inf);
-    if (m1-m2)~=0
-     x= (b2-b1)/(m1-m2);
-     y= m1*x + b1;
-    else
-     # x= (b2-b1)/eps;
-     # y= m1*x + b1;
-     x= inf;
-     y = inf;
-    end;
-    elseif (m1==inf) & (m2~=inf)
-    x = b1;   # recall if vertical line b holds x-val
-    y = m2*x + b2;
-    elseif (m1~=inf) & (m2==inf)
-    x = b2;   # recall if vertical line b holds x-val
-    y = m1*x + b1;
-    else;
-    x = inf;
-    y = inf;
-    end;
-
-    # limits of line 2
-    hx2 = max(v2_1(1), v2_2(1));
-    lx2 = min(v2_1(1), v2_2(1));
-    hy2 = max(v2_1(2), v2_2(2));
-    ly2 = min(v2_1(2), v2_2(2));
-
-    # limits of line 1
-    hx1 = max(v1_1(1), v1_2(1));
-    lx1 = min(v1_1(1), v1_2(1));
-    hy1 = max(v1_1(2), v1_2(2));
-    ly1 = min(v1_1(2), v1_2(2));
-
-    # check if the intersection is outside the range of the lines 
-    #if (x > hx2) | (x < lx2) | (x > hx1) | (x < lx1)
-    #  int = [x,y,1];
-    #elseif  (y > hy2) | (y < ly2) | (y > hy1) | (y < ly1) 
-    #  int = [x,y,1];
-    #else;
-    #  int = [x,y,0];
-    #end
-
-    p=0.001;
-
-    if cmp(x,hx2,p)==1 | cmp(x,lx2,p)==-1 | cmp(x,hx1,p)==1 | cmp(x,lx1,p)==-1
-     int_1 = [x,y,1];
-    elseif cmp(y,hy2,p)==1 | cmp(y,ly2,p)==-1 | cmp(y,hy1,p)==1 | cmp(y,ly1,p)==-1 
-    int_1 = [x,y,1];
-    else;
-    int_1 = [x,y,0];
-    end
-
-
-
-############################################################################
-function c = cmp(a,b,prec)
-    # compare two numbers
-    # c = 0 if a = b within prec
-    # c = 1 if a > b
-    # c = -1 if a < b
-    # maybe problems with infs
-
-    if abs(a-b) <= prec
-    c = 0;
-    elseif a > b;
-    c = 1;
-    elseif a < b;
-    c = -1;
-    end;
-
-#############################################################################
-function y_ints = get_y_ints(lines,a,b,c,d,e,f,g,h)
-
-    yz_ab = y_intercept(lines(1,:),a,b);
-    yz_bc = y_intercept(lines(2,:),b,c);
-    yz_cd = y_intercept(lines(3,:),c,d);
-    yz_da = y_intercept(lines(4,:),d,a);
-
-    yz_ef = y_intercept(lines(5,:),e,f);
-    yz_fg = y_intercept(lines(6,:),f,g);
-    yz_gh = y_intercept(lines(7,:),g,h);
-    yz_he = y_intercept(lines(8,:),h,e);
-
-    y_ints = [yz_ab; yz_bc; yz_cd; yz_da; yz_ef; yz_fg; yz_gh; yz_he];
-
-
-###########################################################################
-function [int] = y_intercept(line,v1,v2);
-
-    # find y = 0 for a line with params defined in lines
-    # and end points given by v1 and v2
-
-    m = line(1);
-    b = line(2);
-
-    # find x for y = 0;
-    if m~=inf & m~=0
-    x = -b/m;
-    elseif m==inf
-    x = b;  # recall if m=inf the x-val is in b
-    elseif m==0
-    x = inf;
-    end
-
-
-    # limits of line
-    hx = max(v1(1), v2(1));
-    lx  = min(v1(1), v2(1));
-
-    if (x > hx) | (x < lx)
-    int = [x,1];
-    else;
-    int = [x,0];
-    end
-
-###########################################################################
-function lines = line_foot_print(a,b,c,d,e,f,g,h,i,j,k,l)
-    # BEAM
-    # calc equations for line a-b
-    [lines(1,1),lines(1,2)] = line_param(a,b);
-    # calc equations for line b-c
-    [lines(2,1),lines(2,2)] = line_param(b,c);
-    # calc equations for line c-d
-    [lines(3,1),lines(3,2)] = line_param(c,d);
-    # calc equations for line d-a
-    [lines(4,1),lines(4,2)] = line_param(d,a);
-
-    #DETECTOR
-    # calc equations for line e-f
-    [lines(5,1),lines(5,2)] = line_param(e,f);
-    # calc equations for line f-g
-    [lines(6,1),lines(6,2)] = line_param(f,g);
-    # calc equations for line g-h
-    [lines(7,1),lines(7,2)] = line_param(g,h);
-    # calc equations for line h-e
-    [lines(8,1),lines(8,2)] = line_param(h,e);
-
-    #SAMPLE
-    # calc equations for line i-j
-    [lines(9,1),lines(9,2)] = line_param(i,j);
-    # calc equations for line j-k
-    [lines(10,1),lines(10,2)] = line_param(j,k);
-    # calc equations for line k-l
-    [lines(11,1),lines(11,2)] = line_param(k,l);
-    # calc equations for line l-i
-    [lines(12,1),lines(12,2)] = line_param(l,i);
-    lines;
-    #####################################################
+##########################################################################
+if __name__ == "__main__":
+    """
+    test 
+    """
+    #test1()
+    #test2()
+    test3()

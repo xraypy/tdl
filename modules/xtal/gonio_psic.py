@@ -2,7 +2,8 @@
 """
 Tom Trainor (tptrainor@alaska.edu)
 Frank Heberling (Frank.Heberling@ine.fzk.de)
-gonio calcs
+
+Gonio calcs for 6 circle psic geometry
 
 Modifications:
 --------------
@@ -212,7 +213,7 @@ def spec_psic_G(G):
 def calc_Z(phi=0.0,chi=0.0,eta=0.0,mu=0.0):
     """
     Calculate the psic goniometer rotation matrix Z
-    Angles are in degrees
+    for the 4 sample angles. Angles are in degrees
 
     Z is the matrix that rotates a vector defined in the phi frame
     ie a vector defined with all angles zero => vphi.  After rotation
@@ -254,6 +255,36 @@ def calc_kvecs(nu=0.0,delta=0.0,lam=1.0):
                         cosd(nu)*cosd(delta),
                         sind(nu)*cosd(delta)],dtype=float)
     return (ki,kr)
+
+
+def calc_D(nu=0.0,delta=0.0):
+    """
+    Calculate the detector rotation matrix.
+    Angles are in degrees
+
+    D is the matrix that rotates a vector defined in the phi frame
+    ie a vector defined with all angles zero => vphi.  After rotation
+    the lab frame coordinates of the vector => vm are given by:
+         vm = D*vphi
+    For example 
+                            |0|   
+         kr_phi = (2pi/lam) |1|
+                            |0|
+    Since kr is defined by the detector rotation, the lab frame 
+    coordinates of the kr vector after detector rotation are
+         kr_m = D*kr_phi
+    
+    """
+    D1 = num.array([[cosd(delta),  sind(delta),  0.], 
+                    [-sind(delta), cosd(delta),  0.],
+                    [     0.     ,     0.     ,  1.]])
+          
+    D2 = num.array([[    1.,     0.   ,      0.  ],
+                    [    0.,  cosd(nu), -sind(nu)], 
+                    [    0.,  sind(nu),  cosd(nu)]])
+          
+    D = num.dot(D2,D1)
+    return (D)
 
 ##########################################################################
 class Psic:

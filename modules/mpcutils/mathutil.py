@@ -90,7 +90,8 @@ def arctand(x):
 def cartesian_mag(v):
     """
     Calculate the norm of a vector defined in
-    a cartesian basis
+    a cartesian basis.
+    This should give same as num.linalg.norm
     """
     m = num.sqrt(num.dot(v,v))
     return m
@@ -98,7 +99,8 @@ def cartesian_mag(v):
 def cartesian_angle(u,v):
     """
     Calculate angle between two vectors defined in
-    a cartesian basis
+    a cartesian basis.  Reuslt is always between
+    0 and 180 degrees
     """
     uv = num.dot(u,v)
     um = cartesian_mag(u)
