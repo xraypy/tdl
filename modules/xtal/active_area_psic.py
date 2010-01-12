@@ -17,6 +17,7 @@ Notes
 ##########################################################################
 
 import numpy as num
+import types
 
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
@@ -24,7 +25,7 @@ from mathutil import cartesian_mag, cartesian_angle
 
 from gonio_psic import calc_Z, calc_D
 from polygon import poly_area, poly_area_num, inner_polygon
-from polygon import polt_polygon, plot_points, plot_circle
+from polygon import plot_polygon, plot_points, plot_circle
 
 ##########################################################################
 def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
@@ -47,6 +48,8 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
 
     If xtal is a single number we take it as the diamter of a round sample
     mounted flat.
+
+    If xtal == None, then we assume the sample is infinite in size    
     
     Otherwise use the following structure for a general polygon shape:
     xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
@@ -89,11 +92,11 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     if alpha < 0.0:
       print 'alpha is less than 0.0'
       A_ratio = 0
-      return
+      return None
     elif beta < 0.0:
       print 'beta is less than 0.0'
       A_ratio = 0
-      return
+      return None
 
     # Calc surf system transformation matrix
     M = calc_surf_transform(gonio.nm)
@@ -151,7 +154,10 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     #################################################################
     # get the sample position vectors
     #################################################################
-    if len(xtal) > 1:
+    if type(xtal) == types.DictType:
+        if len(xtal) < 3:
+            print "Error in xtal description"
+            return None
         # get sample polygon, note these are phi frame 3D vectors
         tmp = get_sample_polygon(gonio,xtal)
         sam_poly = []
@@ -176,37 +182,42 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     # of 2D surface frame vectors (ie in plane vectors)
     #####################################################################
     if shape == False:
-        (A_beam,A_det,A_int) = _area_round_sample(beam_poly,det_poly,diameter=xtal)
+        (A_beam,A_int) = _area_round_sample(beam_poly,det_poly,diameter=xtal)
     else:
-        (A_beam,A_det,A_int) = _area_polygon_sample(beam_poly,det_poly,sam_poly)
+        (A_beam,A_int) = _area_polygon_sample(beam_poly,det_poly,sam_poly)
 
 #########################################################################
 def _area_round_sample(beam_poly,det_poly,diameter=None):
     """
     compute areas for round sample of fixed diameter
+    if det_poly = None, then just compute the beam and
+    sample overlap ie A_int/A_beam = spill fraction
     """
     A_beam = poly_area(beam_poly)
-    A_det  = poly_area(det_poly)
-    # get the polygon describing the beam and detector overlap
-    inner_poly = inner_polygon(beam_poly,det_poly)
-    # now compute numerically the intersection area
-    # of the beam on the sample within sample diameter limits
-    A_int = poly_area_num(int_poly,diameter=diameter)
-    return (A_beam,A_det,A_int)
+    if det_poly != None:
+        #A_det  = poly_area(det_poly)
+        inner_poly = inner_polygon(beam_poly,det_poly)
+        A_int = poly_area_num(inner_poly,diameter=diameter)
+    else:
+        A_int = poly_area_num(beam_poly,diameter=diameter)
+        
+    return (A_beam,A_int)
 
 #########################################################################
 def _area_polygon_sample(beam_poly,det_poly,sam_poly):
     """
     compute areas for polgon sample
+    if det_poly = None, then just compute the beam and
+    sample overlap ie A_int/A_beam = spill fraction
     """
     A_beam = poly_area(beam_poly)
-    A_det  = poly_area(det_poly)
-    A_sam  = poly_area(sam_poly)
-    # get the polygon describing the beam and detector overlap
+    #A_sam  = poly_area(sam_poly)
     inner_poly = inner_polygon(beam_poly,sam_poly)
-    inner_poly = inner_polygon(inner_poly,det_poly)
+    if det_poly != None:
+        #A_det  = poly_area(det_poly)
+        inner_poly = inner_polygon(inner_poly,det_poly)
     A_int = poly_area(inner_poly)
-    return (A_beam,A_det,A_int)
+    return (A_beam,A_int)
 
 ##########################################################################
 def calc_surf_transform(nm):
@@ -304,7 +315,7 @@ def get_sample_polygon(xtal):
     return polygon_phi
 
 ##################################################################
-def surface_intercept(k,v,diameter=None):
+def surface_intercept(k,v):
     """
     Find surface coordinates [x,y] when the tip of vector v is
     projected into the surface plane along k.  ie [x,y] for z=0
@@ -321,6 +332,7 @@ def surface_intercept(k,v,diameter=None):
 
     return vi
 
+##########################################################################
 def surface_intercept_bounds(k,v,diameter):
     """
     Find z-intercepts within bounds
@@ -339,7 +351,7 @@ def surface_intercept_bounds(k,v,diameter):
     This is an approximate way to handle intercepts for
     circular samples, not recommended for use(!)
     """
-    vi = z_intercept(k,v)
+    vi = surface_intercept(k,v)
     r = cartesian_mag(vi)
     if r <= diameter/2.:
         return vi
@@ -379,8 +391,8 @@ def test1():
     r = 0.5
     k = [0., 1., -0.1]
     v = [.2, 0.,  1.]
-    v1 = z_intercept(k,v)
-    v2 = z_intercept_bounds(k,v,2*r)
+    v1 = surface_intercept(k,v)
+    v2 = surface_intercept_bounds(k,v,2*r)
     print v1,v2
     plot_circle(r)
     plot_points(v1,v2)
@@ -391,5 +403,5 @@ if __name__ == "__main__":
     """
     test 
     """
-    #test1()
+    test1()
 

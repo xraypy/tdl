@@ -406,6 +406,7 @@ def plot_polygon(polygon,**kw):
     """
     plot the lines around a polygon
     """
+    from matplotlib import pyplot
     try:
         fmt = kw.pop('fmt')
     except:
@@ -426,6 +427,7 @@ def plot_points(*pts,**kw):
     """
     plot a bunch of in-plane ([x,y]) points
     """
+    from matplotlib import pyplot
     try:
         fmt = kw.pop('fmt')
     except:
@@ -447,6 +449,7 @@ def plot_circle(r,**kw):
     """
     plot a circle of given radius
     """
+    from matplotlib import pyplot
     try:
         fmt = kw.pop('fmt')
     except:
