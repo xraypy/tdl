@@ -10,14 +10,18 @@ Modifications:
 """
 Notes
 
- - Interesting if we could set the detector polygon from on arbirary
-   set of pixels (e.g. roi) on image detector... especially if shifted
-   off center (or off center relative to a specific hkl)
+We assume here completley geometric projections.  ie we assume
+that the beam is perfectly parrallel (no divergence)
+
+Note would be interesting if we could set the detector polygon from an 
+arbirary set of pixels (e.g. roi) on image detector... especially if 
+shifted off center (or better off center relative to a specific hkl)
 """
 ##########################################################################
 
 import numpy as num
 import types
+from matplotlib import pyplot
 
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
@@ -28,14 +32,15 @@ from polygon import poly_area, poly_area_num, inner_polygon
 from polygon import plot_polygon, plot_points, plot_circle
 
 ##########################################################################
-def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
-                          xtal=1.,plt=False):
+def active_area(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
+                xtal=1.,plot=False):
     """
     Calc the area of overlap of beam, sample and detector
     surface polygon projections
+        A_beam = total area of the beam projection into the surface plane
         A_int = area of sample illuminated within the detector projection 
-        A_ratio = A_int/A_beam 
     Use to correct scattering data for area effects, including spilloff, i.e.
+        A_ratio = A_int/A_beam 
         Ic = I/A_ratio,   I = Idet/Io
 
     gonio is a gonio instance which includes the lattice parameters
@@ -53,7 +58,7 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     
     Otherwise use the following structure for a general polygon shape:
     xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
-             'polygon':'[[],[],[],[]]'}
+             'polygon':[[],[],[],[]]}
     polygon is a list of vectors that describe the shape of
     the xtal.  They should be given in general lab frame coordinates.
     The angle settings are the instrument angles at the time the sample
@@ -159,7 +164,7 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
             print "Error in xtal description"
             return None
         # get sample polygon, note these are phi frame 3D vectors
-        tmp = get_sample_polygon(gonio,xtal)
+        tmp = get_sample_polygon(xtal)
         sam_poly = []
         # now rotate the vectors based on the current gonio settings
         # then compute values in the surface-frame
@@ -167,7 +172,7 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
         # frame if they are defined correctly 
         for p_phi in tmp:
             p_m = num.dot(gonio.Z,p_phi)
-            p_s = num.dot(M,p)
+            p_s = num.dot(M,p_m)
             if num.fabs(p_s[2]) > 0.01:
                 print "Warning sample hieght problem"
             sam_poly.append(p_s[:2])
@@ -181,35 +186,55 @@ def active_area_psic_rect(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     # data to compute areas.  Note all the polygons are lists
     # of 2D surface frame vectors (ie in plane vectors)
     #####################################################################
-    if shape == False:
-        (A_beam,A_int) = _area_round_sample(beam_poly,det_poly,diameter=xtal)
+    if sample_shape == False:
+        (A_beam,A_int) = _area_round(beam_poly,det_poly,diameter=xtal,plot=plot)
     else:
-        (A_beam,A_int) = _area_polygon_sample(beam_poly,det_poly,sam_poly)
+        (A_beam,A_int) = _area_polygon(beam_poly,det_poly,sam_poly,plot=plot)
+
+    return (A_beam,A_int)
 
 #########################################################################
-def _area_round_sample(beam_poly,det_poly,diameter=None):
+def _area_round(beam_poly,det_poly,diameter=None,plot=False):
     """
     compute areas for round sample of fixed diameter
     if det_poly = None, then just compute the beam and
     sample overlap ie A_int/A_beam = spill fraction
     """
+    if plot: pyplot.clf()
     A_beam = poly_area(beam_poly)
     if det_poly != None:
         #A_det  = poly_area(det_poly)
         inner_poly = inner_polygon(beam_poly,det_poly)
-        A_int = poly_area_num(inner_poly,diameter=diameter)
+        A_int = poly_area_num(inner_poly,diameter=diameter,plot=plot)
     else:
-        A_int = poly_area_num(beam_poly,diameter=diameter)
-        
+        A_int = poly_area_num(beam_poly,diameter=diameter,plot=plot)
+    # make plots
+    if plot:
+        plot_polygon(beam_poly,fmt='ro-',label='Beam')
+        if det_poly != None:
+            plot_polygon(det_poly,fmt='ko-',label='Detector')
+            plot_points(inner_poly,fmt='go-')
+            plot_polygon(inner_poly,fmt='g--',linewidth=4,label='Intersection')
+        if diameter!= None:
+            plot_circle(diameter/2.,fmt='b-',label='Sample')
+        #
+        pyplot.xlabel('Xs')
+        pyplot.ylabel('Ys')
+        ll = round(num.sqrt(3.*A_int))
+        pyplot.xlim(-ll,ll)
+        pyplot.ylim(-ll,ll)
+        pyplot.grid()
+        pyplot.legend()
     return (A_beam,A_int)
 
 #########################################################################
-def _area_polygon_sample(beam_poly,det_poly,sam_poly):
+def _area_polygon(beam_poly,det_poly,sam_poly,plot=False):
     """
     compute areas for polgon sample
     if det_poly = None, then just compute the beam and
     sample overlap ie A_int/A_beam = spill fraction
     """
+    if plot: pyplot.clf()
     A_beam = poly_area(beam_poly)
     #A_sam  = poly_area(sam_poly)
     inner_poly = inner_polygon(beam_poly,sam_poly)
@@ -217,6 +242,22 @@ def _area_polygon_sample(beam_poly,det_poly,sam_poly):
         #A_det  = poly_area(det_poly)
         inner_poly = inner_polygon(inner_poly,det_poly)
     A_int = poly_area(inner_poly)
+    # make plots
+    if plot:
+        plot_polygon(beam_poly,fmt='ro-',label='Beam')
+        plot_polygon(sam_poly,fmt='bo-',label='Sample')
+        if det_poly != None:
+            plot_polygon(det_poly,fmt='ko-',label='Detector')
+        plot_points(inner_poly,fmt='go-')
+        plot_polygon(inner_poly,fmt='g--',linewidth=4,label='Intersection')
+        #
+        pyplot.xlabel('Xs')
+        pyplot.ylabel('Ys')
+        ll = round(num.sqrt(3.*A_int))
+        pyplot.xlim(-ll,ll)
+        pyplot.ylim(-ll,ll)
+        pyplot.grid()
+        pyplot.legend()
     return (A_beam,A_int)
 
 ##########################################################################
@@ -293,8 +334,18 @@ def get_sample_polygon(xtal):
     defined in the lab phi frame.  These will need to be rotated to the
     M-frame for an arbitrary gonio setting
     """
-    # get sample rotation matrix
-    Z = calc_Z(phi=xtal['phi'],chi=xtal['chi'],eta=xtal['eta'],mu=xtal['mu'])
+    # get sample angles
+    phi = xtal.get('phi')
+    if phi == None: phi = 0.0
+    chi = xtal.get('chi')
+    if chi == None: chi = 0.0
+    eta = xtal.get('eta')
+    if eta == None: eta = 0.0
+    mu = xtal.get('mu')
+    if mu == None: mu = 0.0
+    
+    # calc sample rotation matrix
+    Z = calc_Z(phi=phi,chi=chi,eta=eta,mu=mu)
     Zinv = num.linalg.inv(Z)
 
     polygon_phi = []
@@ -302,13 +353,13 @@ def get_sample_polygon(xtal):
     if len(polygon) < 3:
         print "Sample polygon must be 3 or more points"
         return None
-    
     # If p's have anly two components then we assume they are xy pairs
     # therefore we can add a third value of zero for z
     # Then since p's are defined in lab frame at given set of angles
     # we need to unrotate to get back to phi frame vectors
     for p in polygon:
-        if len(p) == 2: p = p.resize((3,))
+        p = num.array(p)
+        if len(p) == 2: p.resize((3,))
         p_phi = num.dot(Zinv,p)
         polygon_phi.append(p_phi)
         
@@ -387,7 +438,6 @@ def surface_intercept_bounds(k,v,diameter):
 ##########################################################################
 ##########################################################################
 def test1():
-    from matplotlib import pyplot
     r = 0.5
     k = [0., 1., -0.1]
     v = [.2, 0.,  1.]
@@ -398,10 +448,21 @@ def test1():
     plot_points(v1,v2)
     pyplot.grid()
 
+def test2():
+    import gonio_psic
+    psic = gonio_psic.test_psic_2()
+    slits ={'wb':1.0,'hb':.50,'wd':1.0,'hd':3.0}
+    sam_poly = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[0.,.5],[1.,-1.]]
+    #xtal = {'phi':178.1354,'chi':-0.1344,'polygon':sam_poly}
+    xtal = 1.5
+    psic.set_angles(phi=42.,chi=33.,eta=20.,
+                    mu=15.,nu=75.,delta=20.)
+    print active_area(psic,slits=slits,xtal=xtal,plot=True)
+
 ##########################################################################
 if __name__ == "__main__":
     """
     test 
     """
-    test1()
-
+    #test1()
+    test2()

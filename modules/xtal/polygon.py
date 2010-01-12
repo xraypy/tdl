@@ -10,13 +10,18 @@ Modifications:
 """
 Notes
 
- - Make sure this handles polygons with centers off the
-   origin, ie correclty handle arbitrary origin shifts
+Make sure this handles polygons with centers off the
+origin, ie correclty handle arbitrary origin shifts
+
+Add some more polygon calcs
+  - compute center
+  - determine type (simple, complex etc)
 
 """
 ##########################################################################
 
 import numpy as num
+from matplotlib import pyplot
 
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
@@ -282,7 +287,7 @@ def segment_area(p1,p2):
     return a
 
 ##################################################################
-def poly_area_num(polygon,diameter=None,num_int=100,plt=False):
+def poly_area_num(polygon,diameter=None,num_int=100,plot=False):
     """
     Numerically compute the area of a polygon
     
@@ -303,7 +308,7 @@ def poly_area_num(polygon,diameter=None,num_int=100,plt=False):
     x  = num.arange(min_x-0.5*dx, max_x+1.5*dx, dx)
     # loop through all x-vals and compute segment area
     A   = 0.0
-    if plt: pline = [[],[]]
+    if plot: pline = [[],[]]
     for xx in x:
         # find polygon lines that contain x
         lines = []
@@ -357,13 +362,12 @@ def poly_area_num(polygon,diameter=None,num_int=100,plt=False):
                         ybot = 0.0
                 dy = ytop - ybot
                 A = A + dy*dx
-                if plt:
+                if plot:
                     pline[0].append([xx,xx])
                     pline[1].append([ybot,ytop])
                 j = j+2
     # make plot of integration lines for debugging
-    if plt== True:
-        from matplotlib import pyplot
+    if plot== True:
         for j in range(len(pline[0])):
             pyplot.plot(pline[0][j],pline[1][j],'k-')
     return A
@@ -406,11 +410,14 @@ def plot_polygon(polygon,**kw):
     """
     plot the lines around a polygon
     """
-    from matplotlib import pyplot
     try:
         fmt = kw.pop('fmt')
     except:
         fmt='k'
+    try:
+        label = kw.pop('label')
+    except:
+        label = None
     (points,angles) = sort_points(*polygon)
     npts = len(points)
     if npts < 3: return
@@ -420,49 +427,61 @@ def plot_polygon(polygon,**kw):
             p2 = points[0]
         else:
             p2 = points[j+1]
-        pyplot.plot([p1[0],p2[0]],[p1[1],p2[1]],fmt,**kw)
+        if j < npts - 1:
+            pyplot.plot([p1[0],p2[0]],[p1[1],p2[1]],fmt,**kw)
+        else:
+            pyplot.plot([p1[0],p2[0]],[p1[1],p2[1]],fmt,label=label,**kw)
 
 ##########################################################################
-def plot_points(*pts,**kw):
+def plot_points(points,**kw):
     """
     plot a bunch of in-plane ([x,y]) points
+    points is a list or tupe of [x,y] pairs
     """
-    from matplotlib import pyplot
     try:
         fmt = kw.pop('fmt')
     except:
         fmt='k'
-    npts = len(pts)
+    try:
+        label = kw.pop('label')
+    except:
+        label = None
+    npts = len(points)
     if npts == 0: return
     xy = num.zeros((npts,2))
     for j in range(npts):
-        v = pts[j]
+        v = points[j]
         xy[j,0] = v[0]
         xy[j,1] = v[1]
     idx = num.argsort(xy[:,0])
     xy  = xy[idx]
     for j in range(len(xy)):
-        pyplot.plot([0.,xy[j,0]],[0,xy[j,1]],fmt,**kw)
+        if j < npts - 1:
+            pyplot.plot([0.,xy[j,0]],[0,xy[j,1]],fmt,**kw)
+        else:
+            pyplot.plot([0.,xy[j,0]],[0,xy[j,1]],fmt,label=label,**kw)
 
 ##################################################################
 def plot_circle(r,**kw):
     """
     plot a circle of given radius
     """
-    from matplotlib import pyplot
     try:
         fmt = kw.pop('fmt')
     except:
         fmt='k'
+    try:
+        label = kw.pop('label')
+    except:
+        label = None
     x = num.arange(-r,r+0.01,0.01)
     y = num.sqrt(num.fabs(r**2. - x**2.))
     pyplot.plot(x,y,fmt,**kw)
-    pyplot.plot(x,-y,fmt,**kw)
+    pyplot.plot(x,-y,fmt,label=label,**kw)
 
 ##########################################################################
 ##########################################################################
 def test():
-    from matplotlib import pyplot
     pyplot.clf()
     pyplot.grid()
     #
@@ -481,17 +500,13 @@ def test():
     print 'poly1 area = %6.3f, num=%6.3f' % (poly_area(poly1), poly_area_num(poly1,num_int=n))
     print 'poly2 area = %6.3f, num=%6.3f' % (poly_area(poly2), poly_area_num(poly2,num_int=n))
     print 'inner area = %6.3f, num=%6.3f' % (poly_area(inner),
-                                             poly_area_num(inner,num_int=n,diameter=diameter,plt=True))
+                                             poly_area_num(inner,num_int=n,
+                                             diameter=diameter,plot=True))
     #
-    #plot_points(*poly1,**{'fmt':'ro-'})
-    plot_polygon(poly1,**{'fmt':'ro-'})
-    #
-    #plot_points(*poly2,**{'fmt':'ko-'})
-    plot_polygon(poly2,**{'fmt':'ko-'})
-    #
-    plot_points(*inner,**{'fmt':'go-'})
+    plot_polygon(poly1,fmt='ro-')
+    plot_polygon(poly2,fmt='ko-')
+    plot_points(inner,fmt='go-')
     plot_polygon(inner,fmt='g--',linewidth=4)
-    #
     plot_circle(diameter/2.)
 
 ##########################################################################

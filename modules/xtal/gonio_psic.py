@@ -179,6 +179,7 @@ def spec_angles(angles,calc_kappa=False):
         return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
                 'delta':delta,'nu':nu}
     
+##########################################################################
 def spec_psic_G(G):
     """
     Parse essential lattice and OR data
@@ -235,6 +236,7 @@ def calc_Z(phi=0.0,chi=0.0,eta=0.0,mu=0.0):
     Z = num.dot(num.dot(num.dot(M,H),X),P)
     return Z
 
+##########################################################################
 def calc_Q(nu=0.0,delta=0.0,lam=1.0):
     """
     Calculate psic Q in the cartesian lab frame.
@@ -244,6 +246,7 @@ def calc_Q(nu=0.0,delta=0.0,lam=1.0):
     Q = kr - ki
     return Q
 
+##########################################################################
 def calc_kvecs(nu=0.0,delta=0.0,lam=1.0):
     """
     Calculate psic ki, kr in the cartesian lab frame.
@@ -256,7 +259,7 @@ def calc_kvecs(nu=0.0,delta=0.0,lam=1.0):
                         sind(nu)*cosd(delta)],dtype=float)
     return (ki,kr)
 
-
+##########################################################################
 def calc_D(nu=0.0,delta=0.0):
     """
     Calculate the detector rotation matrix.
@@ -866,6 +869,7 @@ def test_psic_1():
     
     return psic
 
+##########################################################################
 def test_psic_2():
     """
     G parsing from specfile.py
@@ -904,6 +908,7 @@ def test_psic_2():
     psic.set_angles(phi=178.1354,chi=-0.1344,eta=0.0002,
                     mu=24.4195,nu=48.2695,delta=-0.0003)
 
+    print "#########################################"
     print "h calc is:", psic.h
     print "should be: [-0.000113467 0.000280176 5.94001]"
     print "alpha calc is:", psic.pangles['alpha']
@@ -926,10 +931,10 @@ def test_psic_2():
     print "should be:", G[75]
     print "tau_az calc is:", psic.pangles['tau_az']
     print "should be:", G[76]
+    print "#########################################"
 
     return psic
     
-##########################################################################
 ##########################################################################
 if __name__ == "__main__":
     """
