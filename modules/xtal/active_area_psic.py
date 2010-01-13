@@ -1,6 +1,7 @@
 ##########################################################################
 """
 Tom Trainor (tptrainor@alaska.edu)
+Active area calculations
 
 Modifications:
 --------------
@@ -10,7 +11,7 @@ Modifications:
 """
 Notes
 
-We assume here completley geometric projections.  ie we assume
+These area are based completley geometric projections.  ie we assume
 that the beam is perfectly parrallel (no divergence)
 
 Note would be interesting if we could set the detector polygon from an 
@@ -27,157 +28,102 @@ from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
 from mathutil import cartesian_mag, cartesian_angle
 
-from gonio_psic import calc_Z, calc_D
 from polygon import poly_area, poly_area_num, inner_polygon
 from polygon import plot_polygon, plot_points, plot_circle
 
 ##########################################################################
-def active_area(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
-                xtal=1.,plot=False):
+def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
+                beam=[],det=None,sample=1.,plot=False):
     """
     Calc the area of overlap of beam, sample and detector
-    surface polygon projections
+    surface polygon projections.  Return:
         A_beam = total area of the beam projection into the surface plane
         A_int = area of sample illuminated within the detector projection 
     Use to correct scattering data for area effects, including spilloff, i.e.
         A_ratio = A_int/A_beam 
         Ic = I/A_ratio,   I = Idet/Io
 
-    gonio is a gonio instance which includes the lattice parameters
+    nm is the surface normal vector, defined in the laboratory frame.
 
-    The slit settings (all in same units, eg mm):
-     slits['wb'] = beam horz width 
-     slits['hb'] = beam vert hieght
-     slits['wd'] = detector horz width
-     slits['hd'] = detector vert hieght
+    ki and kr are vectors defined in the lab frame parallel to the
+    incident beam and diffracted beam directions respectively
+    (magnitudes are arbitrary)
 
-    If xtal is a single number we take it as the diamter of a round sample
+    beam, det and sample are lists that hold the the lab-frame (3D) 
+    vectors defining the beam apperature, detector apperature
+    and sample shape 
+    
+    If det = None then we ignore it and just compute spill-off correction
+
+    If sample is a single number we take it as the diamter of a round sample
     mounted flat.
 
-    If xtal == None, then we assume the sample is infinite in size    
+    If sample == None, then we assume the sample is infinite in size    
     
-    Otherwise use the following structure for a general polygon shape:
-    xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
-             'polygon':[[],[],[],[]]}
-    polygon is a list of vectors that describe the shape of
-    the xtal.  They should be given in general lab frame coordinates.
-    The angle settings are the instrument angles at the time the sample
-    polygon vectors were determined.
-
     The lab frame coordinate systems is defined such that:
         x is vertical (perpendicular, pointing to the ceiling of the hutch)
         y is directed along the incident beam path
         z make the system right handed and lies in the horizontal scattering plane
           (i.e. z is parallel to the phi axis)
+    The center (0,0,0) of the lab frame is the rotation center of the instrument.
 
-    The center (0,0,0) of the lab frame is the rotation center of the instrument.  
-
-    If the sample polygon is described at the flat phi and chi values and with
-    the correct sample hieght (Z) so the sample is on the rotation center, then
-    the z values of the polygon vectors will be zero.  If 2D vectors are passed
-    we therefore assume these are [x,y,0]
-    
-    The easiest way to determine the sample coordinate vectors is to take a picture
-    of the sample with a camera mounted such that is looks directly down the omega
-    axis and the gonio angles set at the sample flat phi and chi values and eta = mu = 0.
-    Then find the sample rotation center and measure the position of each corner (in mm)
-    with up being the +x direction, and downstream being the +y direction.  
-
-    If plt = True then makes plot
+    If plot = True then makes plot
 
     """
-    ######################
-    if gonio.calc_psuedo == False:
-        gonio._update_psuedo()
-
-    alpha = gonio.pangles['alpha']
-    beta = gonio.pangles['beta']
-
-    print 'alpha = ', alpha, ', beta = ', beta
-    if alpha < 0.0:
-      print 'alpha is less than 0.0'
-      A_ratio = 0
-      return None
-    elif beta < 0.0:
-      print 'beta is less than 0.0'
-      A_ratio = 0
-      return None
-
     # Calc surf system transformation matrix
-    M = calc_surf_transform(gonio.nm)
+    M = calc_surf_transform(nm)
 
-    #################################################################
-    # transform slit vectors from lab to surface frame  
-    #################################################################
-
-    # build beam vectors, [x,y,z], in lab frame
-    bh = num.array([0.,     0., 0.5*slits['wb']])
-    bv = num.array([0.5*slits['hb'], 0.,  0.   ])
-
-    # build detector vectors, [x,y,z] in lab frame
-    dh = num.array([   0.,          0.,  0.5*slits['wd']])
-    dv = num.array([0.5*slits['hd'],0.,        0.       ])
-    # note that these assume no rotations - need to transform
-    # get the rot matrix for the detector. 
-    D = calc_D(nu=gonio.angles['nu'],delta=gonio.angles['delta'])
-    dh = num.dot(D,dh)
-    dv = num.dot(D,dv)
-
-    # calc vectors in xs,ys,zs (i.e. surf frame)
-    bh_s = num.dot(M,bh)
-    bv_s = num.dot(M,bv)
-    dh_s = num.dot(M,dh)
-    dv_s = num.dot(M,dv)
-
-    # create unit vectors parrallel to ki and kr 
-    # and transform to surface frame.
-    ki   = num.array([0.,1.,0.])
+    # calc k vectors in the surf frame (i.e. [xs,ys,zs])
     ki_s = num.dot(M,ki)
-    kr   = num.array([0.,1.,0.])
-    kr   = num.dot(D,kr)
     kr_s = num.dot(M,kr)
 
     #################################################################
-    # get the beam and detector polygons
-    # calc the vector intercepts with the surface plane
-    # each of the below is a vector with x_s and y_s vals 
+    # Get the beam, detector and surface polygons.
+    # Convert vectors to surface frame.
+    # Then for beam and det project the vectors onto
+    # the surface along the k vectors.  ie. calc the vector
+    # intercepts with the surface plane
+    # Each of the below polygons is a list of 2D vectors
+    # ie in-plane [x_s, y_s] points 
     #################################################################
-    # surface intercepts of the corners of incident beam slit 
-    a = surface_intercept(ki_s,  bv_s + bh_s)
-    b = surface_intercept(ki_s,  bv_s - bh_s)
-    c = surface_intercept(ki_s, -bv_s - bh_s)
-    d = surface_intercept(ki_s, -bv_s + bh_s)
-    beam_poly = [a,b,c,d]
-
-    # surface intercepts of the corners of the detector slit 
-    e = surface_intercept(kr_s,  dv_s + dh_s)
-    f = surface_intercept(kr_s,  dv_s - dh_s)
-    g = surface_intercept(kr_s, -dv_s - dh_s)
-    h = surface_intercept(kr_s, -dv_s + dh_s)
-    det_poly = [e,f,g,h]
-
-    #################################################################
-    # get the sample position vectors
-    #################################################################
-    if type(xtal) == types.DictType:
-        if len(xtal) < 3:
-            print "Error in xtal description"
+    # beam 
+    if type(beam) == types.ListType:
+        beam_poly = []
+        if len(beam) < 3:
+            print "Error in beam description"
             return None
-        # get sample polygon, note these are phi frame 3D vectors
-        tmp = get_sample_polygon(xtal)
-        sam_poly = []
-        # now rotate the vectors based on the current gonio settings
-        # then compute values in the surface-frame
-        # Note the sample vectors SHOULD have z=0 in the surface
-        # frame if they are defined correctly 
-        for p_phi in tmp:
-            p_m = num.dot(gonio.Z,p_phi)
-            p_s = num.dot(M,p_m)
-            if num.fabs(p_s[2]) > 0.01:
-                print "Warning sample hieght problem"
-            sam_poly.append(p_s[:2])
-        sample_shape = True
+        for v in beam:
+            vs  = num.dot(M,v)
+            int = surface_intercept(ki_s, vs)
+            beam_poly.append(int)
     else:
+        beam_poly=None
+    # det 
+    if type(det) == types.ListType:
+        det_poly  = []
+        if len(det) < 3:
+            print "Error in det description"
+            return None
+        for v in det:
+            vs  = num.dot(M,v)
+            int = surface_intercept(kr_s, vs)
+            det_poly.append(int)
+    else:
+        det_poly=None
+    # sample 
+    if type(sample) == types.ListType:
+        sam_poly  = []
+        if len(sample) < 3:
+            print "Error in sample description"
+            return None
+        for v in sample:
+            vs  = num.dot(M,v)
+            if num.fabs(vs[2]) > 0.01:
+                print "Warning sample hieght problem"
+            sam_poly.append(vs[:2])
+        sample_shape=True
+    else:
+        sam_poly = None
         sample_shape = False
 
     #####################################################################
@@ -187,10 +133,9 @@ def active_area(gonio,slits={'wb':1.0,'hb':1.0,'wd':1.0,'hd':1.0},
     # of 2D surface frame vectors (ie in plane vectors)
     #####################################################################
     if sample_shape == False:
-        (A_beam,A_int) = _area_round(beam_poly,det_poly,diameter=xtal,plot=plot)
+        (A_beam,A_int) = _area_round(beam_poly,det_poly,diameter=sample,plot=plot)
     else:
         (A_beam,A_int) = _area_polygon(beam_poly,det_poly,sam_poly,plot=plot)
-
     return (A_beam,A_int)
 
 #########################################################################
@@ -203,11 +148,14 @@ def _area_round(beam_poly,det_poly,diameter=None,plot=False):
     if plot: pyplot.clf()
     A_beam = poly_area(beam_poly)
     if det_poly != None:
-        #A_det  = poly_area(det_poly)
         inner_poly = inner_polygon(beam_poly,det_poly)
-        A_int = poly_area_num(inner_poly,diameter=diameter,plot=plot)
+    else:
+        inner_poly = beam_poly
+    if diameter == None:
+        A_int = poly_area(inner_poly)
     else:
         A_int = poly_area_num(beam_poly,diameter=diameter,plot=plot)
+
     # make plots
     if plot:
         plot_polygon(beam_poly,fmt='ro-',label='Beam')
@@ -217,14 +165,14 @@ def _area_round(beam_poly,det_poly,diameter=None,plot=False):
             plot_polygon(inner_poly,fmt='g--',linewidth=4,label='Intersection')
         if diameter!= None:
             plot_circle(diameter/2.,fmt='b-',label='Sample')
-        #
         pyplot.xlabel('Xs')
         pyplot.ylabel('Ys')
-        ll = round(num.sqrt(3.*A_int))
+        ll = round(num.sqrt(4.*A_int))
         pyplot.xlim(-ll,ll)
         pyplot.ylim(-ll,ll)
         pyplot.grid()
         pyplot.legend()
+
     return (A_beam,A_int)
 
 #########################################################################
@@ -236,28 +184,31 @@ def _area_polygon(beam_poly,det_poly,sam_poly,plot=False):
     """
     if plot: pyplot.clf()
     A_beam = poly_area(beam_poly)
-    #A_sam  = poly_area(sam_poly)
-    inner_poly = inner_polygon(beam_poly,sam_poly)
+    if sam_poly == None:
+        inner_poly = beam_poly
+    else:
+        inner_poly = inner_polygon(beam_poly,sam_poly)
     if det_poly != None:
-        #A_det  = poly_area(det_poly)
         inner_poly = inner_polygon(inner_poly,det_poly)
     A_int = poly_area(inner_poly)
+    
     # make plots
     if plot:
         plot_polygon(beam_poly,fmt='ro-',label='Beam')
-        plot_polygon(sam_poly,fmt='bo-',label='Sample')
+        if sam_poly != None:
+            plot_polygon(sam_poly,fmt='bo-',label='Sample')
         if det_poly != None:
             plot_polygon(det_poly,fmt='ko-',label='Detector')
         plot_points(inner_poly,fmt='go-')
         plot_polygon(inner_poly,fmt='g--',linewidth=4,label='Intersection')
-        #
         pyplot.xlabel('Xs')
         pyplot.ylabel('Ys')
-        ll = round(num.sqrt(3.*A_int))
+        ll = round(num.sqrt(4.*A_int))
         pyplot.xlim(-ll,ll)
         pyplot.ylim(-ll,ll)
         pyplot.grid()
         pyplot.legend()
+
     return (A_beam,A_int)
 
 ##########################################################################
@@ -271,10 +222,10 @@ def calc_surf_transform(nm):
         xs is defined to make it a right handed orthonormal set
            (and is therefore in the surface plane)
 
-    Note that nm is the surface normal (unit vector), defined
-    in the laboratory m-frame (i.e. pointing in an arbitrary
-    direction for a particular gonio setting) - see gonio_psic.py
-    for more details.
+    nm is the surface normal vector, defined in the 
+    laboratory m-frame (i.e. pointing in an arbitrary
+    direction for a particular gonio setting)
+    - see gonio_psic.py for more details.
 
     The surface transform is defined as follows:
         |e_xs|      |e_x|              |vx|     
@@ -293,7 +244,7 @@ def calc_surf_transform(nm):
     Note see lattice.py for more notes on general transforms, and see
     gonio_psic.py for notes on calc of the surface normal vector.  
     """
-    v_z = nm
+    v_z = nm / cartesian_mag(nm)
 
     v   = num.array([0.,-1.,0.])
     v_y = v - (num.dot(v,v_z) * v_z) / (cartesian_mag(v_z)**2.) 
@@ -306,64 +257,6 @@ def calc_surf_transform(nm):
     M = num.linalg.inv(F.transpose())
 
     return M
-
-##########################################################################
-def get_sample_polygon(xtal):
-    """
-    xtal = {'phi':0.,'chi':0.,'eta':0.,'mu':0.,
-             'polygon':'[[],[],[],[]]'}
-    polygon is a list of vectors that describe the shape of
-    the xtal.  They should be given in general lab frame coordinates.
-    The angle settings are the instrument angles at the time the sample
-    polygon vectors were determined.
-    
-    The lab frame coordinate systems is defined such that:
-        x is vertical (perpendicular, pointing to the ceiling of the hutch)
-        y is directed along the incident beam path
-        z make the system right handed and lies in the horizontal scattering plane
-          (i.e. z is parallel to the phi axis)
-
-    The center (0,0,0) of the lab frame is the rotation center of the instrument.
-
-    If the sample polygon is described at the flat phi and chi values and with
-    the correct sample hieght (Z) so the sample is on the rotation center, then
-    the z values of the polygon vectors will be zero.  If 2D vectors are passed
-    we therefore assume these are [x,y,0]
-
-    Note that the sample_poly that is returned is a list of 3D vectors
-    defined in the lab phi frame.  These will need to be rotated to the
-    M-frame for an arbitrary gonio setting
-    """
-    # get sample angles
-    phi = xtal.get('phi')
-    if phi == None: phi = 0.0
-    chi = xtal.get('chi')
-    if chi == None: chi = 0.0
-    eta = xtal.get('eta')
-    if eta == None: eta = 0.0
-    mu = xtal.get('mu')
-    if mu == None: mu = 0.0
-    
-    # calc sample rotation matrix
-    Z = calc_Z(phi=phi,chi=chi,eta=eta,mu=mu)
-    Zinv = num.linalg.inv(Z)
-
-    polygon_phi = []
-    polygon = xtal['polygon']
-    if len(polygon) < 3:
-        print "Sample polygon must be 3 or more points"
-        return None
-    # If p's have anly two components then we assume they are xy pairs
-    # therefore we can add a third value of zero for z
-    # Then since p's are defined in lab frame at given set of angles
-    # we need to unrotate to get back to phi frame vectors
-    for p in polygon:
-        p = num.array(p)
-        if len(p) == 2: p.resize((3,))
-        p_phi = num.dot(Zinv,p)
-        polygon_phi.append(p_phi)
-        
-    return polygon_phi
 
 ##################################################################
 def surface_intercept(k,v):
@@ -445,19 +338,30 @@ def test1():
     v2 = surface_intercept_bounds(k,v,2*r)
     print v1,v2
     plot_circle(r)
-    plot_points(v1,v2)
+    plot_points([v1,v2])
     pyplot.grid()
 
 def test2():
     import gonio_psic
-    psic = gonio_psic.test_psic_2()
-    slits ={'wb':1.0,'hb':.50,'wd':1.0,'hd':3.0}
-    sam_poly = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[0.,.5],[1.,-1.]]
-    #xtal = {'phi':178.1354,'chi':-0.1344,'polygon':sam_poly}
-    xtal = 1.5
-    psic.set_angles(phi=42.,chi=33.,eta=20.,
+    psic = gonio_psic.test2(show=False)
+    psic.set_angles(phi=42.,chi=33,eta=20.,
                     mu=15.,nu=75.,delta=20.)
-    print active_area(psic,slits=slits,xtal=xtal,plot=True)
+    # get kvecs and normalize to unit vectors
+    (ki,kr)=gonio_psic.calc_kvecs(nu=psic.angles['nu'],
+                                  delta=psic.angles['delta'])
+    # get beam and detector vectors
+    beam = gonio_psic.beam_vectors(w=1.3,h=0.1)
+    det  = gonio_psic.det_vectors(w=2.0,h=1.5,
+                                  nu=psic.angles['nu'],
+                                  delta=psic.angles['delta'])
+    # get sample vectors
+    sample = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[0.,.5],[1.,-1.]]
+    angles = {'phi':108.0007,'chi':0.4831}
+    sample = gonio_psic.sample_vectors(sample,angles=angles,gonio=psic)
+    #sample = 1.5
+    # compute active_area
+    print active_area(psic.nm,ki=ki,kr=kr,beam=beam,
+                      det=det,sample=sample,plot=True)
 
 ##########################################################################
 if __name__ == "__main__":

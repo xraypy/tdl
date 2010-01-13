@@ -12,7 +12,10 @@ Modifications:
 ##########################################################################
 """
 Todo
-- Test
+- Test.
+- Rename this module to 'geom_psic' ?
+- Psic should store ki and kr since area calcs use these
+  (no need to recalc)
 
 """
 ##########################################################################
@@ -21,7 +24,9 @@ Notes
 ------
 The following describes the calculations used to define the orientation
 matrix of a xtal mounted on a goniometer and to convert between
-motor angles and hkl and visa-versa
+motor angles and hkl and visa-versa.  Additional functions are also
+provided for computing beam and detector slit aperature vectors
+and sample position vectors etc..  
 
 Define the matrix B which which transforms the indicies of the 
 reciprocal lattice vector, h=[h,k,l], to a cartesian basis,
@@ -120,174 +125,6 @@ from mathutil import arccosd, arcsind, arctand
 from mathutil import cartesian_mag, cartesian_angle
 
 from lattice import Lattice
-
-##########################################################################
-def spec_angles(angles,calc_kappa=False):
-    """
-    Angles defined by spec for the OR's.
-    See specfile.py
-
-    Assume the following.
-    
-    If parsing angles from the P array:
-    (generally shouldnt need this since angles
-    are tagged with motor labels on read)
-    angles = P
-    if psic:
-       angles = angles[0:5]
-    elif kappa fourc
-       angles = [angles[0:3], angles[8], angles[7]]
-
-    If parsing angles from the G array:
-      angles = G[x:y]
-    where x:y depend on whether you are
-    parsing out or0 or or1.
-    See spec_G below
-
-    We then assume the following:
-      del = angles[0]
-      eta = angles[1]
-      chi = angles[2]
-      phi = angles[3]
-      nu  = angles[4]
-      mu  = angles[5]
-
-    Note: calc kappa, keta and kphi
-    kap_alp = 50.031;
-    keta    = eta - asin(-tan(chi/2)/tan(kap_alp))
-    kphi    = phi - asin(-tan(chi/2)/tan(kap_alp))
-    kappa   = asin(sin(chi/2)/sin(kap_alp))
-    """
-    # angles from spec
-    delta = angles[0]
-    eta   = angles[1]
-    chi   = angles[2]
-    phi   = angles[3]
-    nu    = angles[4]
-    mu    = angles[5]
-
-    # kappa angles
-    if calc_kappa:
-        kap_alp = 50.031;
-        keta    = eta - arcsind(-tand(chi/2.)/tand(kap_alp))
-        kphi    = phi - arcsind(-tand(chi/2.)/tand(kap_alp))
-        kappa   = asind(sind(chi/2.)/sind(kap_alp))
-        return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
-                'delta':delta,'nu':nu,
-                'keta':keta,'kphi':kphi,'kappa':kappa}
-    else:
-        return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
-                'delta':delta,'nu':nu}
-    
-##########################################################################
-def spec_psic_G(G):
-    """
-    Parse essential lattice and OR data
-    from the spec G array for psic geometry
-    See specfile.py for details.
-    
-    """
-    #azimuthal reference vector, n (hkl)
-    n = num.array(G[3:6],dtype=float)
-
-    #lattice params a,b,c,alp,bet,gam
-    cell = G[22:28]
-    # add lambda to end of cell
-    cell.append(G[66])
-    cell = num.array(cell,dtype=float)
-
-    # or0
-    or0 = {}
-    or0['h']   = num.array(G[34:37],dtype=float)
-    or0.update(spec_angles(num.array(G[40:46],dtype=float)))
-    or0['lam'] = float(G[52])
-
-    # or1
-    or1 = {}
-    or1['h']   = num.array(G[37:40],dtype=float)
-    or1.update(spec_angles(num.array(G[46:52],dtype=float)))
-    or1['lam'] = float(G[53])
-
-    return (cell,or0,or1,n)
-
-##########################################################################
-def calc_Z(phi=0.0,chi=0.0,eta=0.0,mu=0.0):
-    """
-    Calculate the psic goniometer rotation matrix Z
-    for the 4 sample angles. Angles are in degrees
-
-    Z is the matrix that rotates a vector defined in the phi frame
-    ie a vector defined with all angles zero => vphi.  After rotation
-    the lab frame coordinates of the vector => vm are given by:
-         vm = Z*vphi
-    """
-    P = num.array([[ cosd(phi), sind(phi), 0.],
-                   [-sind(phi), cosd(phi), 0.],
-                   [  0.,          0.,     1.]],float)
-    X = num.array([[ cosd(chi), 0., sind(chi)],
-                   [   0.,      1.,    0.],
-                   [-sind(chi), 0., cosd(chi)]],float)
-    H = num.array([[ cosd(eta), sind(eta), 0.],
-                   [-sind(eta), cosd(eta), 0.],
-                   [   0.,         0.,     1.]],float)
-    M  = num.array([[  1.,         0.,     0.      ],
-                    [  0.,      cosd(mu), -sind(mu)],
-                    [  0.,      sind(mu), cosd(mu)]],float)
-    Z = num.dot(num.dot(num.dot(M,H),X),P)
-    return Z
-
-##########################################################################
-def calc_Q(nu=0.0,delta=0.0,lam=1.0):
-    """
-    Calculate psic Q in the cartesian lab frame.
-    nu and delta are in degrees, lam is in angstroms
-    """
-    (ki,kr) = calc_kvecs(nu=nu,delta=delta,lam=lam)
-    Q = kr - ki
-    return Q
-
-##########################################################################
-def calc_kvecs(nu=0.0,delta=0.0,lam=1.0):
-    """
-    Calculate psic ki, kr in the cartesian lab frame.
-    nu and delta are in degrees, lam is in angstroms
-    """
-    k  = (2.* num.pi / lam)
-    ki = k * num.array([0.,1.,0.],dtype=float)
-    kr = k * num.array([sind(delta),
-                        cosd(nu)*cosd(delta),
-                        sind(nu)*cosd(delta)],dtype=float)
-    return (ki,kr)
-
-##########################################################################
-def calc_D(nu=0.0,delta=0.0):
-    """
-    Calculate the detector rotation matrix.
-    Angles are in degrees
-
-    D is the matrix that rotates a vector defined in the phi frame
-    ie a vector defined with all angles zero => vphi.  After rotation
-    the lab frame coordinates of the vector => vm are given by:
-         vm = D*vphi
-    For example 
-                            |0|   
-         kr_phi = (2pi/lam) |1|
-                            |0|
-    Since kr is defined by the detector rotation, the lab frame 
-    coordinates of the kr vector after detector rotation are
-         kr_m = D*kr_phi
-    
-    """
-    D1 = num.array([[cosd(delta),  sind(delta),  0.], 
-                    [-sind(delta), cosd(delta),  0.],
-                    [     0.     ,     0.     ,  1.]])
-          
-    D2 = num.array([[    1.,     0.   ,      0.  ],
-                    [    0.,  cosd(nu), -sind(nu)], 
-                    [    0.,  sind(nu),  cosd(nu)]])
-          
-    D = num.dot(D2,D1)
-    return (D)
 
 ##########################################################################
 class Psic:
@@ -569,7 +406,7 @@ class Psic:
     ###################################################
     def set_n(self,n=[0,0,1]):
         """
-        Set n the reference vector used for psuedo angles
+        Set n, the reference vector used for psuedo angles.
         The n vector is given in hkl values.  see calc_n
         to determine n from chi and phi settings
         """
@@ -632,9 +469,9 @@ class Psic:
         """
         Compute psuedo angles
         Note use this to compute psuedo angles rather than
-        individual calls.  ie some puseo angles depend on others
+        individual calls.  ie some psuedo angles depend on others
         so its important that the calc are executed in the correct
-        order.  Also important is the _calc_h is called before this...
+        order.  Also important is that _calc_h is called before this...
         """
         if self.calc_psuedo == True:
             self._calc_tth()
@@ -649,7 +486,7 @@ class Psic:
             self._calc_qaz()
             self._calc_omega()
         else:
-            self.psuedo = {}
+            self.pangles = {}
     
     def _calc_tth(self):
         """
@@ -703,7 +540,8 @@ class Psic:
 
     def _calc_tau_az(self):
         """
-        tau_az = angle between the projection of n in the xy-plane and the x-axis
+        tau_az = angle between the projection of n in the
+        xy-plane and the x-axis
 
         The reference vector is given in recip lattice indicies (hkl) 
         """
@@ -832,8 +670,316 @@ class Psic:
         self.pangles['omega'] = omega
 
 ##########################################################################
+def psic_from_spec(G,angles={}):
+    """
+    pass spec G array and dictionary of angles
+    returns a psic instance
+    """
+    gonio = Psic()
+    if G != None: gonio.set_spec_G(G)
+    gonio.set_angles(**angles)
+    return gonio
+
 ##########################################################################
-def test_psic_1():
+def spec_psic_G(G):
+    """
+    Parse essential lattice and OR data
+    from the spec G array for psic geometry
+    See specfile.py for details.
+    
+    """
+    #azimuthal reference vector, n (hkl)
+    n = num.array(G[3:6],dtype=float)
+
+    #lattice params a,b,c,alp,bet,gam
+    cell = G[22:28]
+    # add lambda to end of cell
+    cell.append(G[66])
+    cell = num.array(cell,dtype=float)
+
+    # or0
+    or0 = {}
+    or0['h']   = num.array(G[34:37],dtype=float)
+    or0.update(_spec_or_angles(num.array(G[40:46],dtype=float)))
+    or0['lam'] = float(G[52])
+
+    # or1
+    or1 = {}
+    or1['h']   = num.array(G[37:40],dtype=float)
+    or1.update(_spec_or_angles(num.array(G[46:52],dtype=float)))
+    or1['lam'] = float(G[53])
+
+    return (cell,or0,or1,n)
+
+##########################################################################
+def _spec_or_angles(angles,calc_kappa=False):
+    """
+    Angles defined by spec for the OR's.
+    See specfile.py
+
+    Assume the following.
+    
+    If parsing angles from the P array:
+    (generally shouldnt need this since angles
+    are tagged with motor labels on read)
+    angles = P
+    if psic:
+       angles = angles[0:5]
+    elif kappa fourc
+       angles = [angles[0:3], angles[8], angles[7]]
+
+    If parsing angles from the G array:
+      angles = G[x:y]
+    where x:y depend on whether you are
+    parsing out or0 or or1.
+    See spec_G below
+
+    We then assume the following:
+      del = angles[0]
+      eta = angles[1]
+      chi = angles[2]
+      phi = angles[3]
+      nu  = angles[4]
+      mu  = angles[5]
+
+    Note: calc kappa, keta and kphi
+    kap_alp = 50.031;
+    keta    = eta - asin(-tan(chi/2)/tan(kap_alp))
+    kphi    = phi - asin(-tan(chi/2)/tan(kap_alp))
+    kappa   = asin(sin(chi/2)/sin(kap_alp))
+    """
+    # angles from spec
+    delta = angles[0]
+    eta   = angles[1]
+    chi   = angles[2]
+    phi   = angles[3]
+    nu    = angles[4]
+    mu    = angles[5]
+
+    # kappa angles
+    if calc_kappa:
+        kap_alp = 50.031;
+        keta    = eta - arcsind(-tand(chi/2.)/tand(kap_alp))
+        kphi    = phi - arcsind(-tand(chi/2.)/tand(kap_alp))
+        kappa   = asind(sind(chi/2.)/sind(kap_alp))
+        return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
+                'delta':delta,'nu':nu,
+                'keta':keta,'kphi':kphi,'kappa':kappa}
+    else:
+        return {'phi':phi,'chi':chi,'eta':eta,'mu':mu,
+                'delta':delta,'nu':nu}
+
+##########################################################################
+def calc_Z(phi=0.0,chi=0.0,eta=0.0,mu=0.0):
+    """
+    Calculate the psic goniometer rotation matrix Z
+    for the 4 sample angles. Angles are in degrees
+
+    Z is the matrix that rotates a vector defined in the phi frame
+    ie a vector defined with all angles zero => vphi.  After rotation
+    the lab frame coordinates of the vector => vm are given by:
+         vm = Z*vphi
+    """
+    P = num.array([[ cosd(phi), sind(phi), 0.],
+                   [-sind(phi), cosd(phi), 0.],
+                   [  0.,          0.,     1.]],float)
+    X = num.array([[ cosd(chi), 0., sind(chi)],
+                   [   0.,      1.,    0.],
+                   [-sind(chi), 0., cosd(chi)]],float)
+    H = num.array([[ cosd(eta), sind(eta), 0.],
+                   [-sind(eta), cosd(eta), 0.],
+                   [   0.,         0.,     1.]],float)
+    M  = num.array([[  1.,         0.,     0.      ],
+                    [  0.,      cosd(mu), -sind(mu)],
+                    [  0.,      sind(mu), cosd(mu)]],float)
+    Z = num.dot(num.dot(num.dot(M,H),X),P)
+    return Z
+
+##########################################################################
+def calc_Q(nu=0.0,delta=0.0,lam=1.0):
+    """
+    Calculate psic Q in the cartesian lab frame.
+    nu and delta are in degrees, lam is in angstroms
+    """
+    (ki,kr) = calc_kvecs(nu=nu,delta=delta,lam=lam)
+    Q = kr - ki
+    return Q
+
+##########################################################################
+def calc_kvecs(nu=0.0,delta=0.0,lam=1.0):
+    """
+    Calculate psic ki, kr in the cartesian lab frame.
+    nu and delta are in degrees, lam is in angstroms
+    """
+    k  = (2.* num.pi / lam)
+    ki = k * num.array([0.,1.,0.],dtype=float)
+    kr = k * num.array([sind(delta),
+                        cosd(nu)*cosd(delta),
+                        sind(nu)*cosd(delta)],dtype=float)
+    return (ki,kr)
+
+##########################################################################
+def calc_D(nu=0.0,delta=0.0):
+    """
+    Calculate the detector rotation matrix.
+    Angles are in degrees
+
+    D is the matrix that rotates a vector defined in the phi frame
+    ie a vector defined with all angles zero => vphi.  After rotation
+    the lab frame coordinates of the vector => vm are given by:
+         vm = D*vphi
+    For example 
+                            |0|   
+         kr_phi = (2pi/lam) |1|
+                            |0|
+    Since kr is defined by the detector rotation, the lab frame 
+    coordinates of the kr vector after detector rotation are
+         kr_m = D*kr_phi
+    
+    """
+    D1 = num.array([[cosd(delta),  sind(delta),  0.], 
+                    [-sind(delta), cosd(delta),  0.],
+                    [     0.     ,     0.     ,  1.]])
+          
+    D2 = num.array([[    1.,     0.   ,      0.  ],
+                    [    0.,  cosd(nu), -sind(nu)], 
+                    [    0.,  sind(nu),  cosd(nu)]])
+          
+    D = num.dot(D2,D1)
+    return (D)
+
+##########################################################################
+def beam_vectors(w=1.0,h=1.0):
+    """
+    Compute the beam apperature vectors in lab frame
+    
+    The slit settings:
+       w = beam horz width (total slit width in lab-z)
+       h = beam vert hieght (total slit width in lab-x)
+
+    Assume these are centered on the origin
+    """
+    # beam vectors, [x,y,z], in lab frame
+    bh = num.array([   0.,  0., 0.5*w])
+    bv = num.array([0.5*h,  0.,    0.])
+
+    # corners of beam apperature
+    a =  bv + bh
+    b =  bv - bh
+    c = -bv - bh
+    d = -bv + bh
+    beam = [a,b,c,d]
+
+    return beam
+
+##########################################################################
+def det_vectors(w=1.0,h=1.0,nu=0.0,delta=0.0):
+    """
+    Compute detector apperature vectors in lab frame
+    
+    The slit settings (all in same units, eg mm):
+      w = detector horz width (total slit width in lab-z)
+      h = detector vert hieght (total slit width in lab-x)
+
+    Assume these are centered on the origin
+
+    """
+    # detector vectors, [x,y,z] in lab frame
+    # note rotation of the vectors...
+    dh = num.array([   0.,  0.,  0.5*w])
+    dv = num.array([0.5*h,  0.,  0.   ]) 
+    D  = calc_D(nu=nu,delta=delta)
+    dh = num.dot(D,dh)
+    dv = num.dot(D,dv)
+
+    # corners of detector apperature 
+    e =  dv + dh
+    f =  dv - dh
+    g = -dv - dh
+    h = -dv + dh
+    det = [e,f,g,h]
+
+    return det
+
+##########################################################################
+def sample_vectors(sample,angles={},gonio=None):
+    """
+    sample = [[x,y,z],[x,y,z],[x,y,z],....]
+             is a list of vectors that describe the shape of
+             the sample.  They should be given in general lab
+             frame coordinates.
+
+    angles = {'phi':0.,'chi':0.,'eta':0.,'mu':0.}
+             are the instrument angles at which the sample
+             vectors were determined.
+    
+    The lab frame coordinate systems is defined such that:
+        x is vertical (perpendicular, pointing to the ceiling of the hutch)
+        y is directed along the incident beam path
+        z make the system right handed and lies in the horizontal scattering plane
+          (i.e. z is parallel to the phi axis)
+
+    The center (0,0,0) of the lab frame is the rotation center of the instrument.
+
+    If the sample vectors are given at the flat phi and chi values and with
+    the correct sample hieght (sample Z set so the sample surface is on the
+    rotation center), then the z values of the sample vectors will be zero.
+    If 2D vectors are passed we therefore assume these are [x,y,0].  If this
+    is the case then make sure:
+        angles = {'phi':flatphi,'chi':flatchi,'eta':0.,'mu':0.}
+
+    Note that the sample_poly that is returned is a list of 3D vectors.
+    If gonio == None these are defined in the lab phi frame.
+    If a gonio instance is passed then they will be rotated to the m-frame
+
+    The easiest way to determine the sample coordinate vectors is to take a picture
+    of the sample with a camera mounted such that is looks directly down the omega
+    axis and the gonio angles set at the sample flat phi and chi values and
+    eta = mu = 0. Then find the sample rotation center and measure the position
+    of each corner (in mm) with up being the +x direction, and downstream
+    being the +y direction.  
+
+    """
+    if len(sample) < 3:
+        print "Sample polygon must be 3 or more points"
+        return None
+    # If angles are provided then we need to compute the phi
+    # frame vectors first. i.e. assume p's are defined in lab
+    # frame at the given set of angles. therefore we need to 
+    # unrotate to get back to phi frame vectors
+    # Otherwise we assume the vectors passed are phi frame
+    # (in that case they should be 3D vectors)
+    if angles == None: angles = {}
+    if len(angles) > 0:
+        # calc sample rotation matrix
+        Z = calc_Z(**angles)
+        Zinv = num.linalg.inv(Z)
+        polygon_phi = []
+        # If p's have anly two components then we assume they are 
+        # xy pairs therefore we can add a third value of zero for z
+        for p in sample:
+            if len(p) == 2: p = [p[0],p[1],0.]
+            p_phi = num.dot(Zinv,p)
+            polygon_phi.append(p_phi)
+    else:
+        polygon_phi = sample
+
+    # If gonio is passed then rotate the
+    # vectors into the m-frame.  Otherwise
+    # just return the phi frame vectors
+    polygon = []
+    if gonio != None:
+        for p in polygon_phi:
+            p_m = num.dot(gonio.Z,p)
+            polygon.append(p_m)
+    else:
+        polygon = polygon_phi
+
+    return polygon
+
+##########################################################################
+##########################################################################
+def test1():
     # create a new psic instance
     psic = Psic(5.6,5.6,13,90,90,120,lam=1.3756)
 
@@ -870,7 +1016,7 @@ def test_psic_1():
     return psic
 
 ##########################################################################
-def test_psic_2():
+def test2(show=True):
     """
     G parsing from specfile.py
     --------------------------
@@ -908,30 +1054,41 @@ def test_psic_2():
     psic.set_angles(phi=178.1354,chi=-0.1344,eta=0.0002,
                     mu=24.4195,nu=48.2695,delta=-0.0003)
 
-    print "#########################################"
-    print "h calc is:", psic.h
-    print "should be: [-0.000113467 0.000280176 5.94001]"
-    print "alpha calc is:", psic.pangles['alpha']
-    print "should be:", G[67]
-    print "beta calc is:", psic.pangles['beta']
-    print "should be:", G[68]
-    print "omega calc is:", psic.pangles['omega']
-    print "should be:", G[69]
-    print "tth calc is:", psic.pangles['tth']
-    print "should be:", G[70]
-    print "psi calc is:", psic.pangles['psi']
-    print "should be:", G[71]
-    print "tau calc is:", psic.pangles['tau']
-    print "should be:", G[72]
-    print "qaz calc is:", psic.pangles['qaz']
-    print "should be:", G[73]
-    print "naz calc is:", psic.pangles['naz']
-    print "should be:", G[74]
-    print "sigma_az calc is:", psic.pangles['sigma_az']
-    print "should be:", G[75]
-    print "tau_az calc is:", psic.pangles['tau_az']
-    print "should be:", G[76]
-    print "#########################################"
+    if show:
+        print "#########################################"
+        print "h calc is:", psic.h
+        print "should be: [-0.000113467 0.000280176 5.94001]"
+        print "----"
+        print "alpha calc is:", psic.pangles['alpha']
+        print "should be:", G[67]
+        print "----"
+        print "beta calc is:", psic.pangles['beta']
+        print "should be:", G[68]
+        print "----"
+        print "omega calc is:", psic.pangles['omega']
+        print "should be:", G[69]
+        print "----"
+        print "tth calc is:", psic.pangles['tth']
+        print "should be:", G[70]
+        print "----"
+        print "psi calc is:", psic.pangles['psi']
+        print "should be:", G[71]
+        print "----"
+        print "tau calc is:", psic.pangles['tau']
+        print "should be:", G[72]
+        print "----"
+        print "qaz calc is:", psic.pangles['qaz']
+        print "should be:", G[73]
+        print "----"
+        print "naz calc is:", psic.pangles['naz']
+        print "should be:", G[74]
+        print "----"
+        print "sigma_az calc is:", psic.pangles['sigma_az']
+        print "should be:", G[75]
+        print "----"
+        print "tau_az calc is:", psic.pangles['tau_az']
+        print "should be:", G[76]
+        print "#########################################"
 
     return psic
     
@@ -940,7 +1097,7 @@ if __name__ == "__main__":
     """
     test 
     """
-    psic = test_psic_1()
-    psic = test_psic_2()
+    psic = test1()
+    psic = test2()
     
 

@@ -13,21 +13,17 @@ Todo
 - Test!
 - sorting and specify HK for plots
 - averaging/merging and merge statistics
-- corrections for rocking scans
+- corrections for image and rocking scans
 """
 #############################################################################
 
 import types
 from matplotlib import pyplot
 import numpy as num
-from xtal.active_area import active_area
 
-##############################################################################
-def append_ctr(scans,ctr=None,I_lbl='I_c',Ierr_lbl='Ierr_c',AAparams=[]):
-    if ctr == None:
-        return CtrData(scans=scans,I_lbl=I_lbl,Ierr_lbl=Ierr_lbl,AAparams=AAparams)
-    else:
-        return ctr.append_data(scans)
+from xtal.active_area import active_area
+import gonio_psic 
+import active_area_psic
 
 ##############################################################################
 class CtrData:
@@ -135,3 +131,106 @@ class CtrData:
                                                                   self.Ferr[i])
                 f.write(line)
         f.close()
+
+##############################################################################
+def append_ctr(scans,ctr=None,I_lbl='I_c',Ierr_lbl='Ierr_c',AAparams=[]):
+    if ctr == None:
+        return CtrData(scans=scans,I_lbl=I_lbl,Ierr_lbl=Ierr_lbl,AAparams=AAparams)
+    else:
+        return ctr.append_data(scans)
+
+##############################################################################
+##############################################################################
+class CtrCorrection:
+    """
+    data point operations / corrections
+    """
+    def __init__(self,gonio=None,beam_slits={},det_slits={},sample={}):
+        self.gonio = gonio
+        self.beam_slits=beam_slits
+        self.det_slits=det_slits
+        self.sample=sample
+
+    ##########################################################################
+    def active_area(self,plot=False):
+        """
+        Compute active area correction (ca = A_beam/A_int)
+        Use to correct scattering data for area effects,
+        including spilloff, i.e.
+           Ic = ca*I = I/A_ratio 
+           A_ratio = A_int/A_beam 
+        Where
+           A_int = intersection area (area of beam on sample viewed by detector)
+           A_beam = total beam area
+           I = Idet/Io = uncorrected intensity
+        """
+        if self.gonio.calc_psuedo == False:
+            self.gonio._update_psuedo()
+        alpha = self.gonio.pangles['alpha']
+        beta  = self.gonio.pangles['beta']
+        print 'alpha = ', alpha, ', beta = ', beta
+        if alpha < 0.0:
+            print 'alpha is less than 0.0'
+            return 0.0
+        elif beta < 0.0:
+            print 'beta is less than 0.0'
+            return 0.0
+        # get kvecs and normalize to unit vectors
+        (ki,kr)=gonio_psic.calc_kvecs(nu=self.gonio.angles['nu'],
+                                      delta=self.gonio.angles['delta'])
+        # get beam vectors
+        bw = self.beam_slits['w']
+        bh = self.beam_slits['h']
+        beam = gonio_psic.beam_vectors(w=bw,h=bh)
+        # get det vectors
+        dw = self.det_slits['w']
+        dh = self.det_slits['h']
+        det  = gonio_psic.det_vectors(w=dw,h=dh,
+                                      nu=self.gonio.angles['nu'],
+                                      delta=self.gonio.angles['delta'])
+        # get sample poly
+        if type(self.sample) == types.DictType:
+            sample_vecs = self.sample['polygon']
+            sample_angles = self.sample['angles']
+            sample = gonio_psic.sample_vectors(sample_vecs,
+                                               angles=sample_angles,
+                                               gonio=self.gonio)
+        else:
+            sample = self.sample
+        # compute active_area
+        (A_beam,A_int) = active_area_psic. active_area(self.gonio.nm,ki=ki,kr=kr,
+                                                       beam=beam,det=det,
+                                                       sample=sample,plot=plot)
+        if A_int == 0.:
+            return 0.
+        else:
+            return A_beam/A_int
+
+##############################################################################
+##############################################################################
+def test1():
+    import gonio_psic
+    #psic = psic_from_spec(G,angles={})
+    psic = gonio_psic.test2(show=False)
+    psic.set_angles(phi=92.,chi=20,eta=20.,
+                    mu=15.,nu=75.,delta=20.)
+    #
+    beam_slits = {'w':.6,'h':.8}
+    det_slits = {'w':20.0,'h':10.5}
+    sample = {}
+    sample['polygon'] = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[0.,.5],[1.,-1.]]
+    sample['angles']  = {'phi':108.0007,'chi':0.4831}
+    #
+    cor = CtrCorrection(gonio=psic,beam_slits=beam_slits,
+                        det_slits=det_slits,sample=sample)
+    print cor.active_area(plot=True)
+
+##########################################################################
+if __name__ == "__main__":
+    """
+    test 
+    """
+    test1()
+    #test2()
+
+

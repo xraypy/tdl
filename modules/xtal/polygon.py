@@ -497,8 +497,10 @@ def test():
     #
     n = 100
     diameter=1.3
-    print 'poly1 area = %6.3f, num=%6.3f' % (poly_area(poly1), poly_area_num(poly1,num_int=n))
-    print 'poly2 area = %6.3f, num=%6.3f' % (poly_area(poly2), poly_area_num(poly2,num_int=n))
+    print 'poly1 area = %6.3f, num=%6.3f' % (poly_area(poly1),
+                                             poly_area_num(poly1,num_int=n))
+    print 'poly2 area = %6.3f, num=%6.3f' % (poly_area(poly2),
+                                             poly_area_num(poly2,num_int=n))
     print 'inner area = %6.3f, num=%6.3f' % (poly_area(inner),
                                              poly_area_num(inner,num_int=n,
                                              diameter=diameter,plot=True))
