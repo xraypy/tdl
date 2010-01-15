@@ -13,9 +13,6 @@ Modifications:
 """
 Todo
 - Test.
-- Rename this module to 'geom_psic' ?
-- Psic should store ki and kr since area calcs use these
-  (no need to recalc)
 
 """
 ##########################################################################
@@ -162,8 +159,10 @@ class Psic:
         self.n = num.array([0.,0.,1.],dtype=float)
         
         # Z and calc h
-        self.Z = []
-        self.Q = []
+        self.Z  = []
+        self.Q  = []
+        self.ki = []
+        self.kr = []
         self.h = [0.,0.,0.]
 
         # dummy primary reflection
@@ -326,7 +325,8 @@ class Psic:
         Q2 = calc_Q(self.or1['nu'],self.or1['delta'],self.or1['lam'])
 
         # calc the phi frame coords for diffraction vectors
-        # note divide out 2pi since the diffraction is 2pi*h = Q
+        # note divide out 2pi since the diffraction condition
+        # is 2pi*h = Q
         vphi_1 = num.dot(num.linalg.inv(Z1), (Q1/(2.*num.pi)))
         vphi_2 = num.dot(num.linalg.inv(Z2), (Q2/(2.*num.pi)))
         
@@ -340,7 +340,7 @@ class Psic:
         # and we could use these relations to solve for U.
         # But U solved directly from above is likely not to be orthogonal
         # since the angles btwn (vphi_1 and vphi_2) and (hc_1 and hc_2) are 
-        # not exactly the same due to exp errors.....
+        # not exactly the same due to expt errors.....
         # Therefore, get an orthogonal solution for U from the below treatment
         
         #define the following normalized vectors from hc vectors 
@@ -397,7 +397,12 @@ class Psic:
         """
         self.Z = calc_Z(phi=self.angles['phi'],chi=self.angles['chi'],
                         eta=self.angles['eta'],mu=self.angles['mu'])
-        self.Q = calc_Q(self.angles['nu'],self.angles['delta'],self.lattice.lam)
+        (Q,ki,kr) = calc_Q(self.angles['nu'],
+                           self.angles['delta'],
+                           self.lattice.lam,ret_k=True)
+        self.Q=Q
+        self.ki=ki
+        self.kr=kr
         
         hphi = num.dot(num.linalg.inv(self.Z),self.Q) / (2.*num.pi) 
         h    = num.dot(num.linalg.inv(self.UB),hphi)
@@ -446,14 +451,14 @@ class Psic:
         # this is a unit vector!
         n_phi = num.array([ sind(sig_az)*cosd(tau_az),
                            -sind(sig_az)*sind(tau_az), 
-                                  cosd(sig_az)        ], dtype=float)
+                                  cosd(sig_az)        ])
         # n in HKL
         n_hkl = num.dot(num.linalg.inv(self.UB),n_phi)
         n_hkl = n_hkl/ num.max(num.abs(n_hkl))
         
         # note if l-component is negative, then its
         # pointing into the surface (ie assume positive L
-        # is the positive direction away from the surface
+        # is the positive direction away from the surface)
         # careful here!!
         if n_hkl[2] < 0.:
             n_hkl = -1.*n_hkl
@@ -473,6 +478,7 @@ class Psic:
         so its important that the calc are executed in the correct
         order.  Also important is that _calc_h is called before this...
         """
+        self.pangles = {}
         if self.calc_psuedo == True:
             self._calc_tth()
             self._calc_nm()
@@ -485,15 +491,13 @@ class Psic:
             self._calc_psi()
             self._calc_qaz()
             self._calc_omega()
-        else:
-            self.pangles = {}
     
     def _calc_tth(self):
         """
         Calculate 2Theta, the scattering angle
         
         This should be the same as:
-          (ki,kr) = self._calc_kvecs()
+          (ki,kr) = calc_kvecs(nu,delta,lambda)
            tth = cartesian_angle(ki,kr)
 
         You can also get this given h, the reciprocal lattice
@@ -509,7 +513,8 @@ class Psic:
     def _calc_nm(self):
         """
         Calculate the rotated cartesian lab indicies
-        of the reference vector n
+        of the reference vector n = nm.  Note nm is
+        normalized.  
 
         The reference vector n is given in recip
         lattice indicies (hkl)
@@ -524,9 +529,8 @@ class Psic:
     
     def _calc_sigma_az(self):
         """
-        sigma_az = angle between the z-axis and n in the phi frame
-        
-        The reference vector is given in recip lattice indicies (hkl) 
+        sigma_az = angle between the z-axis and n
+        in the phi frame
         """
         # calc n in the lab frame (unrotated) and make a unit vector
         n_phi = num.dot(self.UB,self.n)
@@ -541,12 +545,12 @@ class Psic:
     def _calc_tau_az(self):
         """
         tau_az = angle between the projection of n in the
-        xy-plane and the x-axis
-
-        The reference vector is given in recip lattice indicies (hkl) 
+        xy-plane and the x-axis in the phi frame
         """
+        # calc n in the lab frame (unrotated) and make a unit vector
         n_phi = num.dot(self.UB,self.n)
         n_phi = n_phi/cartesian_mag(n_phi)
+
         tau_az = num.arctan2(-n_phi[1], n_phi[0])
         tau_az = tau_az*180./num.pi
         self.pangles['tau_az'] = tau_az
@@ -555,8 +559,6 @@ class Psic:
         """
         calc naz, this is the angle btwn the reference vector n 
         and the yz plane at the given angle settings
-
-        The reference vector is given in recip lattice indicies (hkl) 
         """
         # get norm reference vector in cartesian lab frame
         nm  = self.nm
@@ -567,33 +569,30 @@ class Psic:
     def _calc_alpha(self):
         """
         Calc alpha, ie incidence angle or angle btwn 
-        k_in (which is along y) and the plane perp to
-        the reference vector n.
-
-        The reference vector is given in recip lattice indicies (hkl) 
+        -1*k_in (which is parallel to lab-y) and the
+        plane perp to the reference vector n.
         """
-        # get norm reference vector in cartesian lab frame
         nm = self.nm
-        # note the neg sign
-        ki = num.array([0.,-1.,0.],dtype=float)
+        ki = num.array([0.,-1.,0.])
         alpha = arcsind(num.dot(nm,ki))
         self.pangles['alpha'] = alpha
 
     def _calc_beta(self):
         """
         Calc beta, ie exit angle, or angle btwn k_r and the
-        # plane perp to the reference vector n
+        plane perp to the reference vector n
+
+        beta = arcsind(2*sind(tth/2)*cosd(tau)-sind(alpha))
         """
-        # get norm reference vector in cartesian lab frame
-        nm = self.nm
         # calc normalized kr
-        delta = self.angles['delta']
-        nu    = self.angles['nu']
-        kr = num.array([sind(delta),
-                        cosd(nu)*cosd(delta),
-                        sind(nu)*cosd(delta)],dtype=float)
+        #delta = self.angles['delta']
+        #nu    = self.angles['nu']
+        #kr = num.array([sind(delta),
+        #                cosd(nu)*cosd(delta),
+        #                sind(nu)*cosd(delta)])
+        nm = self.nm
+        kr = self.kr / cartesian_mag(self.kr)
         beta = arcsind(num.dot(nm, kr))
-        # beta = arcsind( 2*sind(tth/2)*cosd(tau) - sind(alpha) )
         self.pangles['beta'] = beta
 
     def _calc_tau(self):
@@ -605,9 +604,7 @@ class Psic:
          tau = acos( cosd(alpha) * cosd(tth/2) * cosd(naz - qaz) ...
                     + sind(alpha) * sind(tth/2) ) 
         """
-        # get norm reference vector in cartesian lab frame
-        nm  = self.nm
-        tau = cartesian_angle(self.Q,nm)
+        tau = cartesian_angle(self.Q,self.nm)
         self.pangles['tau'] = tau
 
     def _calc_psi(self):
@@ -796,14 +793,19 @@ def calc_Z(phi=0.0,chi=0.0,eta=0.0,mu=0.0):
     return Z
 
 ##########################################################################
-def calc_Q(nu=0.0,delta=0.0,lam=1.0):
+def calc_Q(nu=0.0,delta=0.0,lam=1.0,ret_k=False):
     """
     Calculate psic Q in the cartesian lab frame.
     nu and delta are in degrees, lam is in angstroms
+
+    if ret_k == True return tuple -> (Q,ki,kr)
     """
     (ki,kr) = calc_kvecs(nu=nu,delta=delta,lam=lam)
     Q = kr - ki
-    return Q
+    if ret_k == True:
+        return (Q,ki,kr)
+    else:
+        return Q
 
 ##########################################################################
 def calc_kvecs(nu=0.0,delta=0.0,lam=1.0):
@@ -849,19 +851,21 @@ def calc_D(nu=0.0,delta=0.0):
     return (D)
 
 ##########################################################################
-def beam_vectors(w=1.0,h=1.0):
+def beam_vectors(h=1.0,v=1.0):
     """
     Compute the beam apperature vectors in lab frame
     
-    The slit settings:
-       w = beam horz width (total slit width in lab-z)
-       h = beam vert hieght (total slit width in lab-x)
+    The slit settings, defined wrt psic phi-frame:
+       h = beam horz width (total slit width in lab-z,
+           or the horizontal scattering plane)
+       v = beam vert hieght (total slit width in lab-x,
+           or the vertical scattering plane)
 
     Assume these are centered on the origin
     """
     # beam vectors, [x,y,z], in lab frame
-    bh = num.array([   0.,  0., 0.5*w])
-    bv = num.array([0.5*h,  0.,    0.])
+    bh = num.array([   0.,  0., 0.5*h])
+    bv = num.array([0.5*v,  0.,    0.])
 
     # corners of beam apperature
     a =  bv + bh
@@ -873,21 +877,24 @@ def beam_vectors(w=1.0,h=1.0):
     return beam
 
 ##########################################################################
-def det_vectors(w=1.0,h=1.0,nu=0.0,delta=0.0):
+def det_vectors(h=1.0,v=1.0,nu=0.0,delta=0.0):
     """
     Compute detector apperature vectors in lab frame
     
-    The slit settings (all in same units, eg mm):
-      w = detector horz width (total slit width in lab-z)
-      h = detector vert hieght (total slit width in lab-x)
+    The slit settings, defined wrt psic phi-frame:
+       h = detector horz width (total slit width in lab-z,
+           or the horizontal scattering plane)
+       v = detector vert hieght (total slit width in lab-x,
+           or the vertical scattering plane)
 
-    Assume these are centered on the origin
+    Assume these are centered on the origin, then rotated
+    by del and nu
 
     """
     # detector vectors, [x,y,z] in lab frame
     # note rotation of the vectors...
-    dh = num.array([   0.,  0.,  0.5*w])
-    dv = num.array([0.5*h,  0.,  0.   ]) 
+    dh = num.array([   0.,  0.,  0.5*h])
+    dv = num.array([0.5*v,  0.,  0.   ]) 
     D  = calc_D(nu=nu,delta=delta)
     dh = num.dot(D,dh)
     dv = num.dot(D,dv)

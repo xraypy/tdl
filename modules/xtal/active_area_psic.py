@@ -74,6 +74,9 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
     M = calc_surf_transform(nm)
 
     # calc k vectors in the surf frame (i.e. [xs,ys,zs])
+    # first make them unit vectors, even though no real need to..
+    ki = ki/cartesian_mag(ki)
+    kr = kr/cartesian_mag(kr)
     ki_s = num.dot(M,ki)
     kr_s = num.dot(M,kr)
 
@@ -335,7 +338,7 @@ def test1():
     k = [0., 1., -0.1]
     v = [.2, 0.,  1.]
     v1 = surface_intercept(k,v)
-    v2 = surface_intercept_bounds(k,v,2*r)
+    v2 = surface_intercept_bounds(k,v,2.*r)
     print v1,v2
     plot_circle(r)
     plot_points([v1,v2])
@@ -346,12 +349,9 @@ def test2():
     psic = gonio_psic.test2(show=False)
     psic.set_angles(phi=42.,chi=33,eta=20.,
                     mu=15.,nu=75.,delta=20.)
-    # get kvecs and normalize to unit vectors
-    (ki,kr)=gonio_psic.calc_kvecs(nu=psic.angles['nu'],
-                                  delta=psic.angles['delta'])
     # get beam and detector vectors
-    beam = gonio_psic.beam_vectors(w=1.3,h=0.1)
-    det  = gonio_psic.det_vectors(w=2.0,h=1.5,
+    beam = gonio_psic.beam_vectors(h=1.3,v=0.1)
+    det  = gonio_psic.det_vectors(h=2.0,v=1.5,
                                   nu=psic.angles['nu'],
                                   delta=psic.angles['delta'])
     # get sample vectors
@@ -360,7 +360,7 @@ def test2():
     sample = gonio_psic.sample_vectors(sample,angles=angles,gonio=psic)
     #sample = 1.5
     # compute active_area
-    print active_area(psic.nm,ki=ki,kr=kr,beam=beam,
+    print active_area(psic.nm,ki=psic.ki,kr=psic.kr,beam=beam,
                       det=det,sample=sample,plot=True)
 
 ##########################################################################
