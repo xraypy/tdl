@@ -219,7 +219,15 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
                       tangent=False):
     """
     Calc the integral after image is summed down 'c'olumns
-    or across 'r'ows.  
+    or across 'r'ows.
+    
+    This returns (I,Ierr,Ibgr):
+      I = the integrated background subtracted intensity
+      Ierr = the standard deviation (std_dev) of I.  
+             Assume that the errors follow counting statistics:
+                err = std_dev = sqrt(variance) = sqrt(signal)
+      Ibgr = the background intensity
+    
     """
     # get line sum
     (data, data_idx, bgr) = line_sum(image,sumflag=sumflag,nbgr=nbgr,width=width,
@@ -398,7 +406,8 @@ class ImageAna:
         """
         Integrate image.
 
-        Note approx error by assuming data and bgr std deviation are:
+        Note approx error by assuming data and bgr std
+        deviation (sig) are:
            sig_i = sqrt(I_i)
            
         Therefore:

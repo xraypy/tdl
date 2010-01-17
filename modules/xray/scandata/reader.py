@@ -29,17 +29,29 @@ import xrf_ops
 ########################################################################
 def spec_scan(spec,sc_num):
     """
-    return scan data from a specfile instance
+    return scan data from a specfile (instance or string for file name)
     """
+    # Define these to make sure we get things sorted
+    # correclty. These may be instrument/geometry specific!!
+    PSIC_POSITIONER_KEYS = ['phi','chi','eta','mu','nu','del']
+
+    # get the spec scan data
     if type(spec) == types.StringType:
         spec = SpecFile(spec)
         if spec == None: return None
-    
     d = spec.scan_dict(sc_num)
+
+    # parse positioner and scaler vals
+    # note if a positioner or scaler was list in the data
+    # array then we append the array to the positioners/scalers
+    # otherwise the positioner value will be what was given
+    # in d['P'] which should be a single value
     scalers = {}
     positioners = copy.copy(d['P'])
     for key in d['data'].keys():
         if key in positioners.keys():
+            positioners[key] = num.array(d['data'][key])
+        elif key in PSIC_POSITIONER_KEYS:
             positioners[key] = num.array(d['data'][key])
         else:
             scalers[key] = num.array(d['data'][key])
@@ -54,20 +66,23 @@ def spec_scan(spec,sc_num):
     # We need a switch here based on the identification
     # of the beamline and instrument...
     A = {}
-    A['delta'] = d['P'].get('TwoTheta')
-    A['eta']   = d['P'].get('theta')
-    A['chi']   = d['P'].get('chi')
-    A['phi']   = d['P'].get('phi')
-    A['nu']    = d['P'].get('Nu')
-    A['mu']    = d['P'].get('Psi')
-    A['keta']  = d['P'].get('Omega')
-    A['kap']   = d['P'].get('Kappa')
-    A['kphi']  = d['P'].get('Phi')
-    
+    try:
+        A['delta'] = d['P'].get('TwoTheta')
+        A['eta']   = d['P'].get('theta')
+        A['chi']   = d['P'].get('chi')
+        A['phi']   = d['P'].get('phi')
+        A['nu']    = d['P'].get('Nu')
+        A['mu']    = d['P'].get('Psi')
+        A['keta']  = d['P'].get('Omega')
+        A['kap']   = d['P'].get('Kappa')
+        A['kphi']  = d['P'].get('Phi')
+    except:
+        pass
     state = {'G':d.get('G'),'Q':d.get('Q'),'A':A,
              'ATTEN':d.get('ATTEN'), 'ENERGY':d.get('ENERGY')}
 
-    sd = ScanData(name=name,dims=[dims],scalers = scalers,
+    # create scan data object
+    sd = ScanData(name=name,dims=[dims],scalers=scalers,
                   positioners=positioners,primary_axis=[paxis],
                   primary_det=pdet,state=state)
     return sd
