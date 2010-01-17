@@ -24,7 +24,7 @@ Todo
 - sorting and HK panel plots
 - averaging/merging and merge statistics
 - corrections for rocking scans
-- editing / re-integrating points.
+- editing / re-integrating select points (select from plot).
 """
 ##############################################################################
 
@@ -34,6 +34,7 @@ from matplotlib import pyplot
 
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
+
 from xtal.active_area import active_area
 import gonio_psic 
 
