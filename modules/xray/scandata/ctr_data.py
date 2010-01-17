@@ -36,7 +36,6 @@ from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
 from xtal.active_area import active_area
 import gonio_psic 
-import active_area_psic
 
 ##############################################################################
 def ctr_data(scans,ctr=None,I=None,Inorm=None,Ierr=None,
@@ -538,11 +537,9 @@ class CtrCorrectionPsic:
         else:
             sample = self.sample
         # compute active_area
-        (A_beam,A_int) = active_area_psic.active_area(self.gonio.nm,
-                                                      ki=self.gonio.ki,
-                                                      kr=self.gonio.kr,
-                                                      beam=beam,det=det,
-                                                      sample=sample,plot=plot)
+        (A_beam,A_int) = active_area(self.gonio.nm,ki=self.gonio.ki,
+                                     kr=self.gonio.kr,beam=beam,det=det,
+                                     sample=sample,plot=plot)
         if A_int == 0.:
             ca = 0.
         else:
