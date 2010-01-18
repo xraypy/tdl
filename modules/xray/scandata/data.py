@@ -23,7 +23,7 @@ import numpy as num
 
 from   specfile import SpecFile
 import image_data
-import xrf_ops
+import xrf_data
 
 
 ########################################################################
@@ -232,7 +232,7 @@ class ScanData:
         """
         convert med objects to xrf objects
         """
-        xrf = xrf_ops.med2xrf(self.med,xrf_params=xrf_params,
+        xrf = xrf_data.med2xrf(self.med,xrf_params=xrf_params,
                               lines = self.xrf_lines,
                               det_idx=det_idx,emin=emin,emax=emax)
         if xrf: self.xrf = xrf
@@ -278,7 +278,7 @@ class ScanData:
         """
         fit xrf
         """
-        xrf_ops.fit(self.xrf,xrf_params=xrf_params,use_prev_fit=use_prev_fit,
+        xrf_data.fit(self.xrf,xrf_params=xrf_params,use_prev_fit=use_prev_fit,
                     fit_init=fit_init,guess=guess,verbose=verbose)
         self.update_xrf_peaks()
 
@@ -292,7 +292,7 @@ class ScanData:
             lines.append(pk.label)
         self.xrf_lines = lines
         for l in lines:
-            p = xrf_ops.peak_areas(self.xrf,l)
+            p = xrf_data.peak_areas(self.xrf,l)
             self.xrf_peaks[l] = p
 
 ###

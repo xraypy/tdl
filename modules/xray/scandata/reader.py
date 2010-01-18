@@ -24,7 +24,7 @@ import numpy as num
 from   specfile import SpecFile
 from   data import ScanData
 import image_data
-import xrf_ops
+import xrf_data
 
 ########################################################################
 def spec_scan(spec,sc_num):
@@ -369,13 +369,13 @@ class Reader:
                 else:
                     print "No files found"
                     return None
-            spectra = xrf_ops.read_files(fname,start=start,end=end,nfmt=nfmt,
+            spectra = xrf_data.read_files(fname,start=start,end=end,nfmt=nfmt,
                                          bad_mca_idx=bad,total=total,align=align,
                                          correct=correct,tau=tau,det_idx=det_idx,
                                          emin=emin,emax=emax,fmt=fmt,
                                          xrf_params=xrf_params,lines=xrf_lines)
         else:
-            spectra = xrf_ops.read_file(fname,bad_mca_idx=bad,total=total,align=align,
+            spectra = xrf_data.read_file(fname,bad_mca_idx=bad,total=total,align=align,
                                         correct=correct,tau=tau,det_idx=det_idx,
                                         emin=emin,emax=emax,fmt=fmt,
                                         xrf_params=xrf_params,lines=xrf_lines)

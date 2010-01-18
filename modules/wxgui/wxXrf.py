@@ -17,7 +17,7 @@ import numpy as num
 
 from   wxUtil import wxUtil
 import xrf_lookup
-import xrf_ops
+import xrf_data
 
 #########################################################################
 
@@ -834,7 +834,7 @@ class wxXrf(model.Background, wxUtil):
         m        = self.get_data(name)
         if type(m) != types.ListType:
             raise "Variable must be a list"
-        xrf_ops.fit(m,xrf_params=params,use_prev_fit=use_prev,
+        xrf_data.fit(m,xrf_params=params,use_prev_fit=use_prev,
                     fit_init=fit_init,guess=guess)
 
         # turn off guess after a fit!
@@ -882,7 +882,7 @@ class wxXrf(model.Background, wxUtil):
         xrf_name = self.get_xrf_var_name(ignore_idx=True)
         xrf = self.get_data(xrf_name)
         
-        results = xrf_ops.peak_areas(xrf,line)
+        results = xrf_data.peak_areas(xrf,line)
 
         self.set_data(res_name,results)
 
@@ -941,7 +941,7 @@ class wxXrf(model.Background, wxUtil):
         # build cmd
         xrf_name = self.get_xrf_var_name()
         xrf = self.get_data(xrf_name)
-        xrf_ops.xrf_plot(xrf,d=data_str,f=fit_str,p=pk_str,
+        xrf_data.xrf_plot(xrf,d=data_str,f=fit_str,p=pk_str,
                          ylog=ylog,xlog=xlog,hold=hold) 
 
         return

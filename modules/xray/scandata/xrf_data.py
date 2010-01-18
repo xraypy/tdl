@@ -9,6 +9,14 @@ Modifications:
 """
 ########################################################################
 """
+read       = xrf_data.read
+read_files = xrf_data.read_files
+med2xrf    = xrf_data.med2xrf
+fit        = xrf_data.fit
+xrf_plot   = xrf_data.xrf_plot
+peak_areas = xrf_data.peak_areas
+
+
 Todo
 
 - Improve documentation
