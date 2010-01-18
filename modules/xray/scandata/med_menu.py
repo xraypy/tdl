@@ -15,7 +15,7 @@ from matplotlib import pyplot
 import med_data
 
 ########################################################################
-def med_inspect(data):
+def med_menu(data):
     """
     Interactively inspect med's
     """
