@@ -202,6 +202,7 @@ class ScanData:
             label = self.primary_axis[0]
         return self.positioners.get(label)
 
+###
     ################################################################
     def med_ocr(self):
         """
@@ -236,6 +237,7 @@ class ScanData:
                               det_idx=det_idx,emin=emin,emax=emax)
         if xrf: self.xrf = xrf
 
+###
     ################################################################
     ################################################################
     def get_xrf(self,pnt=0):
@@ -293,6 +295,7 @@ class ScanData:
             p = xrf_ops.peak_areas(self.xrf,l)
             self.xrf_peaks[l] = p
 
+###
     ################################################################
     ################################################################
     def integrate_image(self,idx=[],roi=[],rotangle=[],
