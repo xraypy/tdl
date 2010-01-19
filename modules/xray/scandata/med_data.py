@@ -18,11 +18,20 @@ import deadtime
 ########################################################################
 def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
     """
-    do a deadtime fit to data
+    Do a deadtime fit to data
 
-    Note problem - we arent normalizing Io by time
-    but ocr from the med is cps
-    Also in correction plot, need yarr_corr/time etc
+      x = linear axis.  ie this should be proportional
+          to the real input count.  default = 'io'
+      y = 'Med'
+      norm='Seconds'
+      offset=True
+      display=True
+
+    returns the deadtime tau values.  
+
+    Note make sure normalization is checked carefully
+    e.g. ocr from the med is cps, to compare vs io should
+    normalize io/count_time
     
     """
     if norm != None:
@@ -144,4 +153,49 @@ def med_plot(data,scan_pnt=0,hold=False,ylog=True):
         pyplot.ylim(ymin=1.)
 
 ########################################################################
+class ImageScan:
+    """
+    Class to hold a collection of meds associated with a scan
+    ie one med per scan point
+    """
+    def __init__(self,med=[]):
+        self.med = med
 
+    ################################################################
+    def med_ocr(self):
+        """
+        return outgoing count rate (ocr) values from meds
+        """
+        ndet = self.med[0].n_detectors
+        npnt = len(self.med)
+        ocr  = num.zeros((npnt,ndet))
+        for j in range(npnt):
+            for k in range(ndet):
+                tot = self.med[j].mca[k].total_counts
+                lt  = self.med[j].mca[k].live_time
+                ocr[j][k] = float(tot)/float(lt)
+        return num.transpose(ocr)
+
+    ################################################################
+    def med_update_tau(self,tau):
+        """
+        update med tau factors
+        """
+        npnt = len(self.med)
+        for j in range(npnt):
+            self.med[j].update_correction(tau)
+        
+    ################################################################
+    def med2xrf(self,xrf_params={},det_idx=0,emin=-1.,emax=-1.):
+        """
+        convert med objects to xrf objects
+        """
+        xrf = xrf_data.med2xrf(self.med,xrf_params=xrf_params,
+                              lines = self.xrf_lines,
+                              det_idx=det_idx,emin=emin,emax=emax)
+        if xrf: self.xrf = xrf
+
+########################################################################
+########################################################################
+if __name__ == '__main__':
+    pass

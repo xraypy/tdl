@@ -314,6 +314,70 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
     pyplot.xlabel('keV')
     pyplot.ylabel('counts')
 
+##############################################################################
+class XrfScan:
+    def __init__(xrf=[],lines=None):
+        """
+        Class to hold a collection of xrf's associated with a scan
+        ie one xrf spectrum per scan point
+        """
+        self.xrf = xrf
+
+    ################################################################
+    def get_xrf(self,pnt=0):
+        """
+        get xrf
+        """
+        pnt = int(pnt)
+        if self.xrf == []:
+            return None
+        if pnt not in range(self.dims[0]):
+            return None
+        return self.xrf[pnt]
+
+    ################################################################
+    def init_xrf_lines(self,lines=None):
+        """
+        init xrf lines
+        """
+        if lines == None:
+            lines = self.xrf_lines
+        if type(lines) != types.ListType:
+            lines = [lines]
+        for x in self.xrf:
+            x.init_lines(lines)
+
+    ################################################################
+    def xrf_calc(self):
+        """
+        calc xrf
+        """
+        for x in self.xrf:
+            x.calc()
+        self.update_xrf_peaks()
+
+    ################################################################
+    def xrf_fit(self,xrf_params={},use_prev_fit=False,fit_init=-1,
+                guess=False,verbose=True):
+        """
+        fit xrf
+        """
+        xrf_data.fit(self.xrf,xrf_params=xrf_params,use_prev_fit=use_prev_fit,
+                    fit_init=fit_init,guess=guess,verbose=verbose)
+        self.update_xrf_peaks()
+
+    ################################################################
+    def update_xrf_peaks(self,):
+        """
+        update xrf peaks
+        """
+        lines = []
+        for pk in self.xrf[0].peaks:
+            lines.append(pk.label)
+        self.xrf_lines = lines
+        for l in lines:
+            p = xrf_data.peak_areas(self.xrf,l)
+            self.xrf_peaks[l] = p
 
 ##############################################################################
 ##############################################################################

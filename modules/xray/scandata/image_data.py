@@ -49,6 +49,11 @@ from scipy import ndimage
 from mpcutils.mathutil import LinReg
 from background import background
 
+########################################################################
+IMG_BGR_PARAMS = {'bgrflag':0,
+                  'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
+                  'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
+
 #######################################################################
 def read_files(file_prefix,start=0,end=100,nfmt=3):
     """
@@ -580,6 +585,161 @@ class ImageAna:
         pyplot.xticks(rotation=-45)
         pyplot.legend()
 
+
+
+##############################################################################
+class ImageScan:
+    """
+    Class to hold a collection of images associated with a scan
+    ie one image per scan point
+    """
+    def __init__(image=[],rois=[],rotangle=[]):
+        
+        self.image  = image
+        self.rois   = rois
+        self.rotangle = []
+        self.bgrpar = []
+        self.peaks  = {}
+
+
+    ################################################################
+    def integrate_image(self,idx=[],roi=[],rotangle=[],
+                        bgr_params=[],plot=True,fig=None):
+        """
+        integrate images
+        roi  = [x1,y1,x2,y2]
+        """
+        # make sure arrays exist:
+        init = False
+        if len(self.image_peaks) > 0:
+            if len(self.image_peaks['I']) != len(self.image):
+                init = True
+        else:
+            init = True
+        if init:
+            self._init_image()
+
+        # idx of images to integrate
+        if len(idx) == 0:
+            idx = num.arange(len(self.image))
+        
+        # update roi
+        if len(roi) == 4:
+            for j in idx:
+                self.image_rois[j] = roi
+        elif len(roi) == len(idx):
+            for j in idx:
+                self.image_rois[j] = roi[j]
+
+        # update rot angles
+        if len(rotangle) == 1:
+            for j in idx:
+                self.image_rotangle[j] = rotangle
+        elif len(rotangle) == len(idx):
+            for j in idx:
+                self.image_rotangle[j] = rotangle[j]
+
+        # update bgr
+        if type(bgr_params) == types.DictType:
+            for j in idx:
+                self.image_bgrpar[j] = bgr_params
+        elif len(bgr_params) == len(idx):
+            for j in idx:
+                self.image_bgrpar[j] = bgr_params[j]
+
+        # do integrations
+        for j in idx:
+            if j not in self.bad_points:
+                self._integrate_image(idx=j,plot=plot,fig=fig)
+            else:
+                self.image_peaks['I'][j]      = 0.
+                self.image_peaks['Ierr'][j]   = 0.
+                self.image_peaks['Ibgr'][j]   = 0.
+                #
+                self.image_peaks['I_c'][j]    = 0.
+                self.image_peaks['Ierr_c'][j] = 0.
+                self.image_peaks['Ibgr_c'][j] = 0.
+                #
+                self.image_peaks['I_r'][j]    = 0.
+                self.image_peaks['Ierr_r'][j] = 0.
+                self.image_peaks['Ibgr_r'][j] = 0.
+    
+    ################################################################
+    def _init_image(self):
+        npts = len(self.image)
+        # init arrays
+        if npts == 0:
+            self.image_rois     = []
+            self.image_rotangle = []
+            self.image_bgrpar   = []
+            self.image_peaks    = {}
+
+        if self.image_rois == None:
+            self.image_rois = []
+        if self.image_bgrpar == None:
+            self.image_bgrpar = []
+
+        # init rois
+        if len(self.image_rois) != npts:
+            self.image_rois = []
+            for j in range(npts):
+                self.image_rois.append([])
+        
+        # init rotangle
+        if len(self.image_rotangle) != npts:
+            self.image_rotangle = []
+            for j in range(npts):
+                self.image_rotangle.append(0.0)
+
+        # init bgr
+        if len(self.image_bgrpar) != npts:
+            self.image_bgrpar = []
+            for j in range(npts):
+                self.image_bgrpar.append(IMG_BGR_PARAMS)
+                
+        # should we init all these or set based on an integrate flag?
+        self.image_peaks  = {}
+        self.image_peaks['I']      = num.zeros(npts,dtype=float)
+        self.image_peaks['Ierr']   = num.zeros(npts,dtype=float)
+        self.image_peaks['Ibgr']   = num.zeros(npts,dtype=float)
+        #
+        self.image_peaks['I_c']    = num.zeros(npts,dtype=float)
+        self.image_peaks['Ierr_c'] = num.zeros(npts,dtype=float)
+        self.image_peaks['Ibgr_c'] = num.zeros(npts,dtype=float)
+        #
+        self.image_peaks['I_r']    = num.zeros(npts,dtype=float)
+        self.image_peaks['Ierr_r'] = num.zeros(npts,dtype=float)
+        self.image_peaks['Ibgr_r'] = num.zeros(npts,dtype=float)
+        
+    ################################################################
+    def _integrate_image(self,idx=0,plot=True,fig=None):
+        """
+        integrate an image
+        """
+        if idx < 0 or idx > len(self.image): return None
+        #
+        figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
+        roi        = self.image_rois[idx]
+        rotangle   = self.image_rotangle[idx]
+        bgr_params = self.image_bgrpar[idx]
+
+        img_ana = image_data.ImageAna(self.image[idx],roi=roi,rotangle=rotangle,
+                                      plot=plot,fig=fig,figtitle=figtitle,
+                                      **bgr_params)
+
+        # results into image_peaks dictionary
+        self.image_peaks['I'][idx]      = img_ana.I
+        self.image_peaks['Ierr'][idx]   = img_ana.Ierr
+        self.image_peaks['Ibgr'][idx]   = img_ana.Ibgr
+        #
+        self.image_peaks['I_c'][idx]    = img_ana.I_c
+        self.image_peaks['Ierr_c'][idx] = img_ana.Ierr_c
+        self.image_peaks['Ibgr_c'][idx] = img_ana.Ibgr_c
+        #
+        self.image_peaks['I_r'][idx]    = img_ana.I_r
+        self.image_peaks['Ierr_r'][idx] = img_ana.Ierr_r
+        self.image_peaks['Ibgr_r'][idx] = img_ana.Ibgr_r
+        
 ################################################################################
 ################################################################################
 if __name__ == '__main__':
