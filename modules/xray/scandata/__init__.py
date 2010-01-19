@@ -1,7 +1,7 @@
 ##
-from data         import ScanData, append, merge
 from reader       import Reader
-from med_data     import fit_deadtime, med_plot
+from data         import ScanData, append, merge, fit_deadtime
+from med_data     import med_plot
 from image_data   import image_plot
 from ctr_data     import ctr_data
 #

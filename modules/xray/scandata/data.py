@@ -1,6 +1,6 @@
 #######################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
+Tom Trainor (tptrainor@alaska.edu)
 Class to store and operate on generic 'scan data'
 
 Modifications:
@@ -9,16 +9,13 @@ Modifications:
 """
 #######################################################################
 """
-Todo
-- include a flag to control image integration?
-- set individual image background parameters for each scan point
-- use the bad_points list in image_integrate
+Notes
+
 """
 ########################################################################
 
 import types
-from   glob import glob
-import os, copy
+import copy
 import numpy as num
 
 import image_data
@@ -39,10 +36,12 @@ class ScanData:
                                     or same size as scalers
     primary_axis = ['E']         -> if multi-dim, list of outer, inner
     primary_det  = 'i1'          -> use for default plotting
-    med = []                     -> array has dims = dims or is [] for No med
-    xrf = []                     -> array has dims = dims or is [] for No xrf
-    images = []                  -> array has dims = dims or is [] for No images
     state = {}                   -> dictionary of additional state information
+
+    If read in the object may also have the following:    
+      med = MedScan object, holds one med instance per point
+      xrf = XrfScan object, holds one xrf instance per point
+      image = ImageScan object, holds one image instance per point
     """
     ################################################################
     def __init__(self,name='',dims=[],scalers={},positioners={},
@@ -57,27 +56,20 @@ class ScanData:
         self.scalers      = scalers
         self.positioners  = positioners
         self.state        = state
+        self.bad_points   = []
         #
         if len(med)>0:
             self.med = med_data.MedScan(med)
         else:
             self.med = []
-        #
         if len(xrf)>0:
             self.xrf = xrf_data.XrfScan(xrf,xrf_lines)
         else:
             self.xrf = []
-        #
-        #self.xrf          = xrf
-        #self.xrf_lines    = xrf_lines
-        #self.xrf_peaks    = {}
-        #
         if len(image)>0:
-            self.image = image_data.ImageScan(image,image_rois)
+            self.image = image_data.ImageScan(image=image,rois=image_rois)
         else:
             self.image = []
-        #
-        self.bad_points   = []
 
     ########################################################################
     """
@@ -85,6 +77,8 @@ class ScanData:
         # note this currenlty craps for sub arrays.
         # ie x[0][0].  In such a case arg is a tuple
         # first is the name, the rest are the subscripts
+        # but it could work using x['a',10]=100 etc...
+        
         #print arg, type(arg)
         #print val, type(val)
         if type(arg) == types.StringType:
@@ -105,20 +99,15 @@ class ScanData:
             #if arg.startswith("_"):
             #    raise TypeError, "Private attribute"
             #return getattr(self,arg)
-            if arg == 'med':
-                return self.med
-            if arg == 'xrf':
-                return self.xrf
-            if arg == 'image':
-                return self.image
+            if self.xrf:
+                for key in self.xrf.peaks.keys():
+                    if key == arg:
+                        return self.xrf.peaks[key]
             #
-            for key in self.xrf_peaks.keys():
-                if key == arg:
-                    return self.xrf_peaks[key]
-            #
-            for key in self.image_peaks.keys():
-                if key == arg:
-                    return self.image_peaks[key]
+            if self.image:
+                for key in self.image.peaks.keys():
+                    if key == arg:
+                        return self.image.peaks[key]
             #
             for key in self.scalers.keys():
                 if key == arg:
@@ -129,6 +118,17 @@ class ScanData:
             for key in self.state.keys():
                 if key == arg:
                     return self.state[key]
+        elif type(arg) == types.TupleType:
+            # handle data['med',2] etc...
+            if len(arg) == 2:
+                a,idx = arg
+                idx = int(idx)
+            if a == 'med':
+                return self.med.med[idx]
+            if a == 'xrf':
+                return self.xrf.xrf[idx]
+            if a == 'image':
+                return self.image.image[idx]
         return None
 
     ########################################################################
@@ -144,7 +144,6 @@ class ScanData:
             if ct > 7:
                 lout = lout + '\n'
                 ct = 0
-
         lout = lout + "\n* Positioners:\n"
         ct = 0
         for p in self.positioners.keys():
@@ -153,7 +152,6 @@ class ScanData:
             if ct > 7:
                 lout = lout + '\n'
                 ct = 0
-
         if len(self.state) > 0:
             lout = lout + "\n* Additional State Variables:\n"  
             ct = 0
@@ -163,11 +161,9 @@ class ScanData:
                 if ct > 7:
                     lout = lout + '\n'
                     ct = 0
-
         lout = lout + "\n* Primary scan axis = %s\n"  % str(self.primary_axis)
         lout = lout + "* Primary detector  = %s\n"  % self.primary_det
-
-        spectra = False
+        #
         if self.med != []:
             spectra = True
             lout = lout + "* Scan includes %i med spectra\n" % len(self.med)
@@ -176,13 +172,8 @@ class ScanData:
             lout = lout + "* Scan includes %i xrf spectra\n" % len(self.xrf)
             if self.xrf_lines != None:
                 lout = lout + "  -> Xrf lines = %s\n" % str(self.xrf_lines)
-        if spectra == False:
-            lout = lout + "* Scan does not include spectra\n"
-
         if self.image != []:
             lout = lout + "* Scan includes %i images\n" % len(self.image)
-        else:
-            lout = lout + "* Scan does not include images\n"
         
         return lout
     
@@ -387,7 +378,7 @@ def merge(data=[],average=True,align=False,fast=True):
                 s = num.array(data[j].scalers[key])
                 if align and (len(s) == npts):
                     oldx = data[j][paxis]
-                    s = spline_interpolate(oldx,s,newx,fast=fast)
+                    s = _spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
             tmp = num.sum(tmp,0)
@@ -407,7 +398,7 @@ def merge(data=[],average=True,align=False,fast=True):
                 if align and (len(s) == npts):
                     # does this work for positioners?
                     oldx = data[j][paxis]
-                    s = spline_interpolate(oldx,s,newx,fast=fast)
+                    s = _spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
             tmp = num.sum(tmp,0)
@@ -444,7 +435,7 @@ def merge(data=[],average=True,align=False,fast=True):
                 s = num.array(data[j].xrf_peaks[key])
                 if align and (len(s) == npts):
                     oldx = data[j][paxis]
-                    s = spline_interpolate(oldx,s,newx,fast=fast)
+                    s = _spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
             tmp = num.sum(tmp,0)
@@ -461,7 +452,7 @@ def merge(data=[],average=True,align=False,fast=True):
                 s = num.array(data[j].image_peaks[key])
                 if align and (len(s) == npts):
                     oldx = data[j][paxis]
-                    s = spline_interpolate(oldx,s,newx,fast=fast)
+                    s = _spline_interpolate(oldx,s,newx,fast=fast)
                 tmp.append(s)
         if len(tmp[0]) == npts:
             tmp = num.sum(tmp,0)
@@ -472,17 +463,12 @@ def merge(data=[],average=True,align=False,fast=True):
     return data_m
 
 ################################################################################
-################################################################################
-"""
-cubic splines for axis alignment using
-scipy.signal and/or scipy.interpolate
-"""
-from scipy.interpolate import splrep, splev
-from scipy.signal import cspline1d, cspline1d_eval
-
-def spline_interpolate(oldx, oldy, newx, smoothing=0.001,fast=True, **kw):
+def _spline_interpolate(oldx, oldy, newx, smoothing=0.001,fast=True, **kw):
     """
-    newy = spline_interpolate(oldx, oldy, newx, fast=True)
+    cubic splines for axis alignment using
+    scipy.signal and/or scipy.interpolate
+
+    newy = _spline_interpolate(oldx, oldy, newx, fast=True)
     if fast = True
        1-dimensional cubic spline for cases where
        oldx and newx are on a uniform grid.
@@ -490,11 +476,129 @@ def spline_interpolate(oldx, oldy, newx, smoothing=0.001,fast=True, **kw):
        handles multi-dimensional data, non-uniform x-grids, but is
        much slower for 1d cubic splines
     """
+    from scipy.interpolate import splrep, splev
+    from scipy.signal import cspline1d, cspline1d_eval
     if fast:
         return cspline1d_eval(cspline1d(oldy), newx, dx=oldx[1]-oldx[0],x0=oldx[0])
     else:
         rep = splrep(oldx,oldy,s=smoothing,full_output=False,**kw)
         return splev(newx, rep)
 
-################################################################################
+########################################################################
+def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
+    """
+    Do a deadtime fit to data
+
+      x = linear axis.  ie this should be proportional
+          to the real input count.  default = 'io'
+      y = 'Med'
+      norm='Seconds'
+      offset=True
+      display=True
+
+    returns the deadtime tau values.  
+
+    Note make sure normalization is checked carefully
+    e.g. ocr from the med is cps, to compare vs io should
+    normalize io/count_time
+    
+    """
+    if norm != None:
+        norm = data[norm].astype(float)
+        norm = 1./norm
+
+    xfit = data[x]
+    if norm != None:
+        xfit = xfit * norm
+    
+    if y == 'Med':
+        # this is cps, therefore dont apply norm
+        yfit_arr = data.med_ocr()
+    else:
+        yfit_arr = data[y]
+        if norm != None:
+            yfit_arr = yfit_arr * norm
+        yfit_arr = [yfit_arr]
+
+    # do the fits
+    tau = []
+    a   = []
+    if offset: off = []
+    else: off = None
+    for yfit in yfit_arr:
+        params = deadtime.fit(xfit,yfit,offset=offset)
+        tau.append(params[0])
+        a.append(params[1])
+        if offset:
+            off.append(params[2])
+        if display:  print params
+
+    # update med taus...
+    if y == 'Med':
+        data.med_update_tau(tau)
+    else:
+        # for scaler calc correction
+        # and post as y_c
+        pass
+
+    # show fits if wanted
+    if display:
+        (ndet,npts) = yfit_arr.shape
+        ycorr_arr   = num.zeros((ndet,npts))
+        if y == 'Med':
+            for j in range(npts):
+                for k in range(ndet):
+                    cts = data.med[j].mca[k].get_data(correct=True)
+                    ycorr_arr[k][j] = cts.sum()
+            if norm != None:
+                for k in range(ndet):
+                    ycorr_arr[k] = ycorr_arr[k] * norm
+        else:
+            # need to apply correction to scaler above,
+            # then get it here to plot
+            pass
+        
+        _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off)
+        
+    return tau
+
+def _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off):
+    """
+    plot x,y
+    plot fits to x,y
+    compute a corrected y and plot
+    (for med compute by summing corrected data )
+    """
+    pyplot.clf()
+    pyplot.subplot(2,1,1)
+
+    # data
+    for yfit in yfit_arr:
+        pyplot.plot(xfit,yfit,'k.')
+        
+    # plot fit
+    for j in range(len(tau)):
+        if off != None:
+            params = (tau[j],a[j],off[j])
+            offset = True
+        else:
+            params = (tau[j],a[j])
+            offset = False
+        ycal = deadtime.calc_ocr(params,xfit,offset)
+        pyplot.plot(xfit,ycal,'r-')
+        
+    # plot corrected data
+    pyplot.subplot(2,1,2)
+    for j in range(len(yfit_arr)):
+        pyplot.plot(xfit,yfit_arr[j],'k.')
+        pyplot.plot(xfit,ycorr_arr[j],'r-')
+        if offset:
+            pyplot.plot(xfit,a[j]*xfit+off[j],'k--')
+        else:
+            pyplot.plot(xfit,a[j]*xfit,'k--')
+    
+########################################################################
+########################################################################
+if __name__ == '__main__':
+    pass
 

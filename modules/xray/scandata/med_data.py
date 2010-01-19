@@ -13,120 +13,55 @@ Modifications:
 import types
 import numpy as num
 from matplotlib import pyplot
+
 import deadtime
+import xrf_data
 
-########################################################################
-def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
+##############################################################################
+def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
+         det_idx=0,emin=-1.0,emax=-1.0,fmt='CARS'):
     """
-    Do a deadtime fit to data
-
-      x = linear axis.  ie this should be proportional
-          to the real input count.  default = 'io'
-      y = 'Med'
-      norm='Seconds'
-      offset=True
-      display=True
-
-    returns the deadtime tau values.  
-
-    Note make sure normalization is checked carefully
-    e.g. ocr from the med is cps, to compare vs io should
-    normalize io/count_time
-    
+    Read detector files
+    >>m = med.read(file="file_name",bad_mca_idx=[],
+                   total=True,align=True,tau=None)
     """
-    if norm != None:
-        norm = data[norm].astype(float)
-        norm = 1./norm
-
-    xfit = data[x]
-    if norm != None:
-        xfit = xfit * norm
-    
-    if y == 'Med':
-        # this is cps, therefore dont apply norm
-        yfit_arr = data.med_ocr()
+    if fmt == 'CARS':
+        rd = medfile_cars.read_med
+    elif fmt == 'EMSA':
+        rd = medfile_emsa.read_med
     else:
-        yfit_arr = data[y]
-        if norm != None:
-            yfit_arr = yfit_arr * norm
-        yfit_arr = [yfit_arr]
-
-    # do the fits
-    tau = []
-    a   = []
-    if offset: off = []
-    else: off = None
-    for yfit in yfit_arr:
-        params = deadtime.fit(xfit,yfit,offset=offset)
-        tau.append(params[0])
-        a.append(params[1])
-        if offset:
-            off.append(params[2])
-        if display:  print params
-
-    # update med taus...
-    if y == 'Med':
-        data.med_update_tau(tau)
+        return
+    if type(file) == types.StringType:
+        med = rd(file=file,bad_mca_idx=bad_mca_idx,
+                 total=total,align=align,correct=correct,tau=tau)
+    elif type(file) == types.ListType:
+        med = []
+        for f in file:
+            tmp = rd(file=f, bad_mca_idx=bad_mca_idx,
+                     total=total,align=align,correct=correct,tau=tau)
+            med.append(tmp)
     else:
-        # for scaler calc correction
-        # and post as y_c
-        pass
+        return None
+    return med
 
-    # show fits if wanted
-    if display:
-        (ndet,npts) = yfit_arr.shape
-        ycorr_arr   = num.zeros((ndet,npts))
-        if y == 'Med':
-            for j in range(npts):
-                for k in range(ndet):
-                    cts = data.med[j].mca[k].get_data(correct=True)
-                    ycorr_arr[k][j] = cts.sum()
-            if norm != None:
-                for k in range(ndet):
-                    ycorr_arr[k] = ycorr_arr[k] * norm
-        else:
-            # need to apply correction to scaler above,
-            # then get it here to plot
-            pass
-        
-        _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off)
-        
-    return tau
-
-def _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off):
+##############################################################################
+def read_files(prefix,start=0,end=100,nfmt=3,bad_mca_idx=[],
+               total=True,align=True,correct=True,tau=None,det_idx=0,
+               emin=-1.0,emax=-1.0,fmt='CARS'):
     """
-    plot x,y
-    plot fits to x,y
-    compute a corrected y and plot
-    (for med compute by summing corrected data )
+    Read multiple files
+    returns a list of med objects
     """
-    pyplot.clf()
-    pyplot.subplot(2,1,1)
-
-    # data
-    for yfit in yfit_arr:
-        pyplot.plot(xfit,yfit,'k.')
-        
-    # plot fit
-    for j in range(len(tau)):
-        if off != None:
-            params = (tau[j],a[j],off[j])
-            offset = True
-        else:
-            params = (tau[j],a[j])
-            offset = False
-        ycal = deadtime.calc_ocr(params,xfit,offset)
-        pyplot.plot(xfit,ycal,'r-')
-        
-    # plot corrected data
-    pyplot.subplot(2,1,2)
-    for j in range(len(yfit_arr)):
-        pyplot.plot(xfit,yfit_arr[j],'k.')
-        pyplot.plot(xfit,ycorr_arr[j],'r-')
-        if offset:
-            pyplot.plot(xfit,a[j]*xfit+off[j],'k--')
-        else:
-            pyplot.plot(xfit,a[j]*xfit,'k--')
+    if fmt == 'CARS':
+        rd = medfile_cars.read_med_files
+    elif fmt == 'EMSA':
+        rd = medfile_emsa.read_med_files
+    else:
+        return
+    med = rd(prefix,start=start,end=end,nfmt=nfmt,
+             bad_mca_idx=bad_mca_idx,total=total,
+             align=align,correct=correct,tau=tau)
+    return med
 
 ########################################################################
 def med_plot(data,scan_pnt=0,hold=False,ylog=True):
@@ -153,7 +88,7 @@ def med_plot(data,scan_pnt=0,hold=False,ylog=True):
         pyplot.ylim(ymin=1.)
 
 ########################################################################
-class ImageScan:
+class MedScan:
     """
     Class to hold a collection of meds associated with a scan
     ie one med per scan point
@@ -162,7 +97,7 @@ class ImageScan:
         self.med = med
 
     ################################################################
-    def med_ocr(self):
+    def ocr(self):
         """
         return outgoing count rate (ocr) values from meds
         """
@@ -177,14 +112,24 @@ class ImageScan:
         return num.transpose(ocr)
 
     ################################################################
-    def med_update_tau(self,tau):
+    def update_tau(self,tau):
         """
         update med tau factors
         """
         npnt = len(self.med)
         for j in range(npnt):
             self.med[j].update_correction(tau)
-        
+
+    def get_tau(self):
+        """
+        return tau values
+        """
+        ndet = self.med[0].n_detectors
+        tau = num.zeros(ndet)
+        for j in range(ndet):
+            tau[j] = self.med[0].mca[j].tau
+        return tau
+
     ################################################################
     def med2xrf(self,xrf_params={},det_idx=0,emin=-1.,emax=-1.):
         """
@@ -193,7 +138,8 @@ class ImageScan:
         xrf = xrf_data.med2xrf(self.med,xrf_params=xrf_params,
                               lines = self.xrf_lines,
                               det_idx=det_idx,emin=emin,emax=emax)
-        if xrf: self.xrf = xrf
+        #return xrf
+        return xrf_data.XrfScan(xrf)
 
 ########################################################################
 ########################################################################

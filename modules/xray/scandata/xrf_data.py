@@ -9,14 +9,6 @@ Modifications:
 """
 ########################################################################
 """
-read       = xrf_data.read
-read_files = xrf_data.read_files
-med2xrf    = xrf_data.med2xrf
-fit        = xrf_data.fit
-xrf_plot   = xrf_data.xrf_plot
-peak_areas = xrf_data.peak_areas
-
-
 Todo
 
 - Improve documentation
@@ -34,6 +26,8 @@ import numpy as num
 from  detector import medfile_cars
 from  detector import medfile_emsa
 from  detector import mca_calib as calib
+from  med_data import read as med_read
+from  med_data import read_files as med_read_files
 from  xrf_model import Xrf
 
 ##############################################################################
@@ -48,32 +42,13 @@ def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
     otherwise: returns a list of xrf objects (default)
 
     """
-    if fmt == 'CARS':
-        rd = medfile_cars.read_med
-    elif fmt == 'EMSA':
-        rd = medfile_emsa.read_med
-    else:
-        return
-
-    if type(file) == types.StringType:
-        med = rd(file=file,bad_mca_idx=bad_mca_idx,
-                 total=total,align=align,correct=correct,tau=tau)
-    elif type(file) == types.ListType:
-        med = []
-        for f in file:
-            tmp = rd(file=f, bad_mca_idx=bad_mca_idx,
-                     total=total,align=align,correct=correct,tau=tau)
-            med.append(tmp)
-    else:
-        return None
-
-    if xrf_params == None:
-        return med
-    else:
-        # generate xrf from med 
-        xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
-                      det_idx=det_idx,emin=emin,emax=emax)
-        return xrf
+    med = med_read(file,bad_mca_idx=bad_mca_idx,total=total,align=align,
+                   correct=correct,tau=tau,det_idx=det_idx,
+                   emin=emin,emax=emax,fmt=fmt)
+    if med == None: return None
+    xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
+                  det_idx=det_idx,emin=emin,emax=emax)
+    return xrf
 
 ##############################################################################
 def read_files(prefix,start=0,end=100,nfmt=3,bad_mca_idx=[],
@@ -84,23 +59,15 @@ def read_files(prefix,start=0,end=100,nfmt=3,bad_mca_idx=[],
     if xrf_params == None: returns a list of med objects
     otherwise: returns a list of xrf objects (default)
     """
-    if fmt == 'CARS':
-        rd = medfile_cars.read_med_files
-    elif fmt == 'EMSA':
-        rd = medfile_emsa.read_med_files
-    else:
-        return
-    med = rd(prefix,start=start,end=end,nfmt=nfmt,
-             bad_mca_idx=bad_mca_idx,total=total,
-             align=align,correct=correct,tau=tau)
-
-    if xrf_params == None:
-        return med
-    else:
-        # generate xrf from med 
-        xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
-                      det_idx=det_idx,emin=emin,emax=emax)
-        return xrf
+    med = med_read_files(prefix,start=start,end=end,nfmt=nfmt,
+                         bad_mca_idx=bad_mca_idx,total=total,align=align,
+                         correct=correct,tau=tau,det_idx=det_idx,
+                         emin=emin,emax=emax,fmt=fmt)
+    if med == None: return None
+    
+    xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
+                  det_idx=det_idx,emin=emin,emax=emax)
+    return xrf
 
 ##############################################################################
 def med2xrf(med,xrf_params={},lines=None,det_idx=0,emin=-1.,emax=-1.):
@@ -209,22 +176,6 @@ def fit(xrf,xrf_params={},use_prev_fit=False,fit_init=-1,guess=False,verbose=Tru
     return
 
 #################################################################################
-def fit_scan_files(prefix='xrf',start=0,end=100,nfmt=3,
-                   bad_mca_idx=[],total=True,align=True,tau=None,
-                   det_idx=0,emin=-1.0,emax=-1.0,fmt='CARS',xrf_params={},
-                   use_prev_fit=False,fit_init=-1):
-    """
-    Fit a bunch of files.  Dont really need this...
-    """
-    xrf = read_files(prefix=prefix,start=start,end=end,nfmt=nfmt,
-                     bad_mca_idx=bad_mca_idx,total=total,align=align,tau=tau,
-                     det_idx=det_idx,emin=emin,emax=emax,fmt=fmt,
-                     xrf_params=xrf_params)
-    
-    fit(xrf,xrf_params=xrf_params,use_prev_fit=use_prev_fit,fit_init=fit_init)
-    return xrf
-
-#################################################################################
 def peak_areas(xrf,line):
     """
     get peak areas for given line
@@ -302,7 +253,6 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
                 pyplot.plot(en,pk_fit[j]+bgr,label=lbls[j])
             else:
                 pyplot.plot(en,pk_fit[j],label=lbls[j])
-
     if ylog:
         pyplot.semilogy()
         pyplot.ylim(ymin=1.)
@@ -321,7 +271,9 @@ class XrfScan:
         Class to hold a collection of xrf's associated with a scan
         ie one xrf spectrum per scan point
         """
-        self.xrf = xrf
+        self.xrf   = xrf
+        self.lines = lines
+        self.peaks = {}
 
     ################################################################
     def get_xrf(self,pnt=0):
@@ -331,53 +283,53 @@ class XrfScan:
         pnt = int(pnt)
         if self.xrf == []:
             return None
-        if pnt not in range(self.dims[0]):
+        if pnt not in range(len(self.xrf)):
             return None
         return self.xrf[pnt]
 
     ################################################################
-    def init_xrf_lines(self,lines=None):
+    def init_lines(self,lines=None):
         """
         init xrf lines
         """
         if lines == None:
-            lines = self.xrf_lines
+            lines = self.lines
         if type(lines) != types.ListType:
             lines = [lines]
         for x in self.xrf:
             x.init_lines(lines)
 
     ################################################################
-    def xrf_calc(self):
+    def calc(self):
         """
         calc xrf
         """
         for x in self.xrf:
             x.calc()
-        self.update_xrf_peaks()
+        self._update_peaks()
 
     ################################################################
-    def xrf_fit(self,xrf_params={},use_prev_fit=False,fit_init=-1,
+    def fit(self,xrf_params={},use_prev_fit=False,fit_init=-1,
                 guess=False,verbose=True):
         """
         fit xrf
         """
-        xrf_data.fit(self.xrf,xrf_params=xrf_params,use_prev_fit=use_prev_fit,
-                    fit_init=fit_init,guess=guess,verbose=verbose)
-        self.update_xrf_peaks()
+        fit(self.xrf,xrf_params=xrf_params,use_prev_fit=use_prev_fit,
+            fit_init=fit_init,guess=guess,verbose=verbose)
+        self._update_peaks()
 
     ################################################################
-    def update_xrf_peaks(self,):
+    def _update_peaks(self,):
         """
         update xrf peaks
         """
         lines = []
         for pk in self.xrf[0].peaks:
             lines.append(pk.label)
-        self.xrf_lines = lines
+        self.lines = lines
         for l in lines:
-            p = xrf_data.peak_areas(self.xrf,l)
-            self.xrf_peaks[l] = p
+            p = peak_areas(self.xrf,l)
+            self.peaks[l] = p
 
 ##############################################################################
 ##############################################################################
@@ -407,4 +359,3 @@ if __name__ == "__main__":
     print xrf
     pyplot.semilogy()
     pyplot.show()
-    

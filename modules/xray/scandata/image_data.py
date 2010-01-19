@@ -19,13 +19,18 @@ Todo
  - Improve image background determination
  - In ImageAna.plot should we plot row and column sums
    after bgr subtraction?
-   
-"""
-#######################################################################
-"""
+
+In ImageScan
+- include a flag to control image integration?
+- set individual image background parameters for each scan point
+- use the bad_points list in image_integrate
+
+
+
+###
 Note issue with organization of PIL/Image modules when
 try to build exe.  Therefore, just do import of Image
-inside function that needs it (read_file)
+inside the functions that need it (read_file)
 
 Also, note in older versions of PIL:
  To read the pilatus, you must add this line:
@@ -55,20 +60,7 @@ IMG_BGR_PARAMS = {'bgrflag':0,
                   'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
 
 #######################################################################
-def read_files(file_prefix,start=0,end=100,nfmt=3):
-    """
-    read files
-    """
-    images  = []
-    format = '%' + str(nfmt) + '.' + str(nfmt) + 'd'
-    for j in range(start,end+1):
-        ext  = format % j
-        file = file_prefix + '_' + ext + '.tif'
-        arr  = read_file(file)
-        images.append(arr)
-    return images
-
-def read_file(tiff_file):
+def read(tiff_file):
     """
     read file
     """
@@ -85,6 +77,20 @@ def read_file(tiff_file):
     arr.shape = im.size[1],im.size[0]
     #return arr.transpose()
     return arr
+
+#######################################################################
+def read_files(file_prefix,start=0,end=100,nfmt=3):
+    """
+    read files
+    """
+    images  = []
+    format = '%' + str(nfmt) + '.' + str(nfmt) + 'd'
+    for j in range(start,end+1):
+        ext  = format % j
+        file = file_prefix + '_' + ext + '.tif'
+        arr  = read_file(file)
+        images.append(arr)
+    return images
 
 ############################################################################
 def clip_image(image,roi=[],rotangle=0.0,cp=False):
@@ -593,124 +599,115 @@ class ImageScan:
     Class to hold a collection of images associated with a scan
     ie one image per scan point
     """
-    def __init__(image=[],rois=[],rotangle=[]):
-        
+    def __init__(self,image=[],rois=[],rotangle=[],bgrpar=[]):
         self.image  = image
         self.rois   = rois
-        self.rotangle = []
-        self.bgrpar = []
+        self.rotangle = rotangle
+        self.bgrpar = bgrpar
         self.peaks  = {}
+        self.im_max = []
+        self._init_image()
 
+    ################################################################
+    def _init_image(self):
+        npts = len(self.image)
+        # init arrays
+        if npts == 0:
+            self.rois     = []
+            self.rotangle = []
+            self.bgrpar   = []
+            self.peaks    = {}
+        if self.rois == None:
+            self.rois = []
+        if self.bgrpar == None:
+            self.bgrpar = []
+        # init rois
+        if len(self.rois) != npts:
+            self.rois = []
+            for j in range(npts):
+                self.rois.append([])
+        # init rotangle
+        if len(self.rotangle) != npts:
+            self.rotangle = []
+            for j in range(npts):
+                self.rotangle.append(0.0)
+        # init bgr
+        if len(self.bgrpar) != npts:
+            self.bgrpar = []
+            for j in range(npts):
+                self.bgrpar.append(IMG_BGR_PARAMS)
+        # should we init all these or set based on an integrate flag?
+        self.peaks  = {}
+        self.peaks['I']      = num.zeros(npts,dtype=float)
+        self.peaks['Ierr']   = num.zeros(npts,dtype=float)
+        self.peaks['Ibgr']   = num.zeros(npts,dtype=float)
+        #
+        self.peaks['I_c']    = num.zeros(npts,dtype=float)
+        self.peaks['Ierr_c'] = num.zeros(npts,dtype=float)
+        self.peaks['Ibgr_c'] = num.zeros(npts,dtype=float)
+        #
+        self.peaks['I_r']    = num.zeros(npts,dtype=float)
+        self.peaks['Ierr_r'] = num.zeros(npts,dtype=float)
+        self.peaks['Ibgr_r'] = num.zeros(npts,dtype=float)
 
     ################################################################
     def integrate_image(self,idx=[],roi=[],rotangle=[],
-                        bgr_params=[],plot=True,fig=None):
+                        bgr_params=[],bad_points=[],
+                        plot=True,fig=None):
         """
         integrate images
         roi  = [x1,y1,x2,y2]
         """
         # make sure arrays exist:
         init = False
-        if len(self.image_peaks) > 0:
-            if len(self.image_peaks['I']) != len(self.image):
+        if len(self.peaks) > 0:
+            if len(self.peaks['I']) != len(self.image):
                 init = True
         else:
             init = True
         if init:
             self._init_image()
-
         # idx of images to integrate
         if len(idx) == 0:
             idx = num.arange(len(self.image))
-        
         # update roi
         if len(roi) == 4:
             for j in idx:
-                self.image_rois[j] = roi
+                self.rois[j] = roi
         elif len(roi) == len(idx):
             for j in idx:
-                self.image_rois[j] = roi[j]
-
+                self.rois[j] = roi[j]
         # update rot angles
         if len(rotangle) == 1:
             for j in idx:
-                self.image_rotangle[j] = rotangle
+                self.rotangle[j] = rotangle
         elif len(rotangle) == len(idx):
             for j in idx:
-                self.image_rotangle[j] = rotangle[j]
-
+                self.rotangle[j] = rotangle[j]
         # update bgr
         if type(bgr_params) == types.DictType:
             for j in idx:
-                self.image_bgrpar[j] = bgr_params
+                self.bgrpar[j] = bgr_params
         elif len(bgr_params) == len(idx):
             for j in idx:
-                self.image_bgrpar[j] = bgr_params[j]
-
+                self.bgrpar[j] = bgr_params[j]
         # do integrations
         for j in idx:
-            if j not in self.bad_points:
+            if j not in bad_points:
                 self._integrate_image(idx=j,plot=plot,fig=fig)
             else:
-                self.image_peaks['I'][j]      = 0.
-                self.image_peaks['Ierr'][j]   = 0.
-                self.image_peaks['Ibgr'][j]   = 0.
+                self.peaks['I'][j]      = 0.
+                self.peaks['Ierr'][j]   = 0.
+                self.peaks['Ibgr'][j]   = 0.
                 #
-                self.image_peaks['I_c'][j]    = 0.
-                self.image_peaks['Ierr_c'][j] = 0.
-                self.image_peaks['Ibgr_c'][j] = 0.
+                self.peaks['I_c'][j]    = 0.
+                self.peaks['Ierr_c'][j] = 0.
+                self.peaks['Ibgr_c'][j] = 0.
                 #
-                self.image_peaks['I_r'][j]    = 0.
-                self.image_peaks['Ierr_r'][j] = 0.
-                self.image_peaks['Ibgr_r'][j] = 0.
+                self.peaks['I_r'][j]    = 0.
+                self.peaks['Ierr_r'][j] = 0.
+                self.peaks['Ibgr_r'][j] = 0.
     
-    ################################################################
-    def _init_image(self):
-        npts = len(self.image)
-        # init arrays
-        if npts == 0:
-            self.image_rois     = []
-            self.image_rotangle = []
-            self.image_bgrpar   = []
-            self.image_peaks    = {}
-
-        if self.image_rois == None:
-            self.image_rois = []
-        if self.image_bgrpar == None:
-            self.image_bgrpar = []
-
-        # init rois
-        if len(self.image_rois) != npts:
-            self.image_rois = []
-            for j in range(npts):
-                self.image_rois.append([])
-        
-        # init rotangle
-        if len(self.image_rotangle) != npts:
-            self.image_rotangle = []
-            for j in range(npts):
-                self.image_rotangle.append(0.0)
-
-        # init bgr
-        if len(self.image_bgrpar) != npts:
-            self.image_bgrpar = []
-            for j in range(npts):
-                self.image_bgrpar.append(IMG_BGR_PARAMS)
-                
-        # should we init all these or set based on an integrate flag?
-        self.image_peaks  = {}
-        self.image_peaks['I']      = num.zeros(npts,dtype=float)
-        self.image_peaks['Ierr']   = num.zeros(npts,dtype=float)
-        self.image_peaks['Ibgr']   = num.zeros(npts,dtype=float)
-        #
-        self.image_peaks['I_c']    = num.zeros(npts,dtype=float)
-        self.image_peaks['Ierr_c'] = num.zeros(npts,dtype=float)
-        self.image_peaks['Ibgr_c'] = num.zeros(npts,dtype=float)
-        #
-        self.image_peaks['I_r']    = num.zeros(npts,dtype=float)
-        self.image_peaks['Ierr_r'] = num.zeros(npts,dtype=float)
-        self.image_peaks['Ibgr_r'] = num.zeros(npts,dtype=float)
-        
     ################################################################
     def _integrate_image(self,idx=0,plot=True,fig=None):
         """
@@ -719,26 +716,26 @@ class ImageScan:
         if idx < 0 or idx > len(self.image): return None
         #
         figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
-        roi        = self.image_rois[idx]
-        rotangle   = self.image_rotangle[idx]
-        bgr_params = self.image_bgrpar[idx]
+        roi        = self.rois[idx]
+        rotangle   = self.rotangle[idx]
+        bgr_params = self.bgrpar[idx]
 
         img_ana = image_data.ImageAna(self.image[idx],roi=roi,rotangle=rotangle,
                                       plot=plot,fig=fig,figtitle=figtitle,
                                       **bgr_params)
 
         # results into image_peaks dictionary
-        self.image_peaks['I'][idx]      = img_ana.I
-        self.image_peaks['Ierr'][idx]   = img_ana.Ierr
-        self.image_peaks['Ibgr'][idx]   = img_ana.Ibgr
+        self.peaks['I'][idx]      = img_ana.I
+        self.peaks['Ierr'][idx]   = img_ana.Ierr
+        self.peaks['Ibgr'][idx]   = img_ana.Ibgr
         #
-        self.image_peaks['I_c'][idx]    = img_ana.I_c
-        self.image_peaks['Ierr_c'][idx] = img_ana.Ierr_c
-        self.image_peaks['Ibgr_c'][idx] = img_ana.Ibgr_c
+        self.peaks['I_c'][idx]    = img_ana.I_c
+        self.peaks['Ierr_c'][idx] = img_ana.Ierr_c
+        self.peaks['Ibgr_c'][idx] = img_ana.Ibgr_c
         #
-        self.image_peaks['I_r'][idx]    = img_ana.I_r
-        self.image_peaks['Ierr_r'][idx] = img_ana.Ierr_r
-        self.image_peaks['Ibgr_r'][idx] = img_ana.Ibgr_r
+        self.peaks['I_r'][idx]    = img_ana.I_r
+        self.peaks['Ierr_r'][idx] = img_ana.Ierr_r
+        self.peaks['Ibgr_r'][idx] = img_ana.Ibgr_r
         
 ################################################################################
 ################################################################################
@@ -752,6 +749,4 @@ if __name__ == '__main__':
     a = read_file(fname)
     image_show(a)
     
- 
-    
-    
+

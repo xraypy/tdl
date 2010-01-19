@@ -1,6 +1,6 @@
 #######################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
+Tom Trainor (tptrainor@alaska.edu)
 Class to read in generic 'scan data'
 
 Modifications:
@@ -25,6 +25,7 @@ from   specfile import SpecFile
 from   data import ScanData
 import image_data
 import xrf_data
+import med_data
 
 ########################################################################
 def spec_scan(spec,sc_num):
@@ -87,6 +88,23 @@ def spec_scan(spec,sc_num):
                   primary_det=pdet,state=state)
     return sd
 
+def med_scan(med):
+    """
+    return scan data instance from a list of med's
+    """
+    pass
+
+def xrf_scan(med):
+    """
+    return scan data instance from a list of med's
+    """
+    pass
+
+def image_scan(med):
+    """
+    return scan data instance from a list of med's
+    """
+    pass
 
 ########################################################################
 ########################################################################
@@ -105,20 +123,20 @@ class Reader:
      * other (ie ssrl files, old spec and super etc..)
 
     Arguments for initialization:
-     * spec = spec files. string or list of strings
+     * spec = spec files, string or list of strings
      * spec_path = string path for spec file locations
      * escan_path = string path for escan file locations
-     * med_path = string path for escan file locations
-     * image_path = string path for escan file locations
+     * spectra_path = string path for med or xrf file locations
+     * image_path = string path for image file locations
 
     Examples:
      >>r = scandata.Reader(spec='spec_file.spc')
-     >>s1 = r.spec_scan(1,img=True)
+     >>s1 = r.spec_scan(1,image=True)
 
     """
     ########################################################################
     def __init__(self,spec=None,spec_path=None,escan_path=None,
-                 med_path=None,image_path=None):
+                 spectra_path=None,image_path=None):
         # Spec
         self.spec_path       = spec_path
         self.spec_files      = []
@@ -128,19 +146,19 @@ class Reader:
         self.escan_files      = []
 
         # med/xrf parameters
-        self.med_path       = med_path
         self.med            = False
+        self.xrf            = False
+        self.spectra_path   = spectra_path
         self.med_params     = {'bad_mca_idx':[],'total':True,'align':True,
                                'correct':True,'tau':None,'det_idx':0,
                                'emin':-1.0,'emax':-1.0,
                                'fmt':'CARS','nfmt':3}
-        self.xrf            = False
         self.xrf_params     = {}
         self.xrf_lines      = None
 
         # image parameters
+        self.image          = False
         self.image_path     = image_path
-        self.img            = False
         self.image_params   = {'type':'TIFF','nfmt':3}
         self.image_rois     = None
 
@@ -153,17 +171,16 @@ class Reader:
         for s in self.spec_files:
             lout = "%s\n  %s, first=%i, last=%i" % (lout,s.fname,s.min_scan,s.max_scan)
         lout = "%s\nRead med   = %s, Read xrf = %s" % (lout,self.med,self.xrf)
-        lout = "%s\nRead image = %s"   % (lout,self.img)
+        lout = "%s\nRead image = %s"   % (lout,self.image)
         lout = "%s\nPaths:"            % (lout)
         lout = "%s\n  Spec Path  = %s" % (lout,self.spec_path)
-        lout = "%s\n  Med Path   = %s" % (lout,self.med_path)
+        lout = "%s\n  Med Path   = %s" % (lout,self.spectra_path)
         lout = "%s\n  Image Path = %s" % (lout,self.image_path)
         lout = "%s\n  Escan Path = %s" % (lout,self.escan_path)
         if self.xrf_lines:
             lout = "%s\n  Xrf Lines = %s" % (lout,str(self.xrf_lines))
         if self.image_rois:
             lout = "%s\n  Image Rois = %s" % (lout,str(self.image_rois))
-            
         return lout
 
     ########################################################################
@@ -193,14 +210,14 @@ class Reader:
             return sc_list
     
     ########################################################################
-    def spec_scan(self,scan,file=None,med=None,xrf=None,img=None):
+    def spec_scan(self,scan,file=None,med=None,xrf=None,image=None):
         """
         get data from a spec scan
         """
         # keywords
         if med!=None: self.med = med
         if xrf!=None: self.xrf = xrf
-        if img!=None: self.img = img
+        if image!=None: self.image = image
 
         # file
         spec = self._spec(file=file)
@@ -211,16 +228,18 @@ class Reader:
         if not data: return None
 
         # set more parameters from reader
-        data.xrf_lines  = self.xrf_lines
-        data.image_rois = self.image_rois
+        #data.xrf_lines  = self.xrf_lines
+        #data.image_rois = self.image_rois
         
         # Spectra
         # spec_path/xrf_files/spec_file/nnn/spec_file.spc_nnn.yyy
+        #  - or -
+        # spectra_path/spec_file.spc_nnn.yyy
         if self.med or self.xrf:
             fmt_scan_num = '%03d' % int(scan)
             med_pfx = spec.fname
             med_pfx = "%s_%s" % (med_pfx, fmt_scan_num)
-            if self.med_path == None:
+            if self.spectra_path == None:
                 spec_pfx = spec.fname.rsplit('.',1)[0]
                 #path = os.path.join(spec.path,spec_pfx)
                 path = os.path.join(spec.path,'xrf_files',spec_pfx)
@@ -256,7 +275,9 @@ class Reader:
 
         # Images
         # spec_path/images/spec_file/Snnn/spec_file.spc_Snnn_yyy.tif
-        if self.img:
+        #  - or -
+        # image_path/spec_file.spc_Snnn_yyy.tif
+        if self.image:
             fmt_scan_num = '%03d' % int(scan)
             #image_pfx = spec.fname.rsplit('.',1)[0]
             #image_pfx = "%s_%s" % (image_pfx, fmt_scan_num)
@@ -304,18 +325,22 @@ class Reader:
     def read_med(self,fname,start=-1,end=-1,path=None):
         """
         read med files
+
+        note makes a dummy axis:
+           x = num.arange(len(med))
         """
-        if path: self.med_path = path
-            
+        if path: self.spectra_path = path
+        
         med = self._read_spectra(fname,start=start,end=end,xrf=False)
         if med == None: return None
+        npts = len(med)
+        x = num.arange(float(npts))
         data = ScanData(name=fname,
                         dims = [len(med)],
-                        primary_axis = 'med',
+                        positioners={'x':x},
+                        primary_axis = 'x',
                         primary_det = 'med',
-                        med=med,
-                        xrf_lines = self.xrf_lines,
-                        image_rois = self.image_rois)
+                        med=med)
         return data
         
     ########################################################################
@@ -323,17 +348,19 @@ class Reader:
         """
         read xrf files
         """
-        if path: self.med_path = path
+        if path: self.spectra_path = path
             
         xrf = self._read_spectra(fname,start=start,end=end,xrf=True)
         if xrf == None: return None
+        npts = len(med)
+        x = num.arange(float(npts))
         data = ScanData(name=fname,
                         dims = [len(xrf)],
-                        primary_axis = 'xrf',
+                        positioners={'x':x},
+                        primary_axis = 'x',
                         primary_det = 'xrf',
                         xrf=xrf,
-                        xrf_lines = self.xrf_lines,
-                        image_rois = self.image_rois)
+                        xrf_lines = self.xrf_lines)
         return data
 
     ########################################################################
@@ -351,16 +378,10 @@ class Reader:
         emax       = self.med_params['emax']
         fmt        = self.med_params['fmt']
         nfmt       = self.med_params['nfmt']
-        if xrf:
-            xrf_params = self.xrf_params
-            xrf_lines = self.xrf_lines
-        else:
-            xrf_params = None
-            xrf_lines = None
 
-        if self.med_path != None:
-            fname = os.path.join(self.med_path,fname)
-            
+        if self.spectra_path != None:
+            fname = os.path.join(self.spectra_path,fname)
+        
         if start > -1:
             if end == -1:
                 ret = self._spectra_range(fname)  
@@ -369,16 +390,28 @@ class Reader:
                 else:
                     print "No files found"
                     return None
-            spectra = xrf_data.read_files(fname,start=start,end=end,nfmt=nfmt,
-                                         bad_mca_idx=bad,total=total,align=align,
-                                         correct=correct,tau=tau,det_idx=det_idx,
-                                         emin=emin,emax=emax,fmt=fmt,
-                                         xrf_params=xrf_params,lines=xrf_lines)
+            if xrf:
+                spectra = xrf_data.read_files(fname,start=start,end=end,nfmt=nfmt,
+                                              bad_mca_idx=bad,total=total,align=align,
+                                              correct=correct,tau=tau,det_idx=det_idx,
+                                              emin=emin,emax=emax,fmt=fmt,
+                                              xrf_params=xrf_params,lines=xrf_lines)
+            else:
+                spectra = med_data.read_files(fname,start=start,end=end,nfmt=nfmt,
+                                              bad_mca_idx=bad,total=total,align=align,
+                                              correct=correct,tau=tau,det_idx=det_idx,
+                                              emin=emin,emax=emax,fmt=fmt)
         else:
-            spectra = xrf_data.read_file(fname,bad_mca_idx=bad,total=total,align=align,
-                                        correct=correct,tau=tau,det_idx=det_idx,
-                                        emin=emin,emax=emax,fmt=fmt,
-                                        xrf_params=xrf_params,lines=xrf_lines)
+            if xrf:
+                spectra = xrf_data.read_file(fname,bad_mca_idx=bad,total=total,align=align,
+                                             correct=correct,tau=tau,det_idx=det_idx,
+                                             emin=emin,emax=emax,fmt=fmt,
+                                             xrf_params=xrf_params,lines=xrf_lines)
+            else:
+                spectra = med_data.read_file(fname,bad_mca_idx=bad,total=total,align=align,
+                                             correct=correct,tau=tau,det_idx=det_idx,
+                                             emin=emin,emax=emax,fmt=fmt)
+                
         return spectra
 
     ########################################################################
@@ -467,4 +500,7 @@ class Reader:
     def read_column(self,scan):
         pass
 
-########################################################################
+############################################################################
+############################################################################
+if __name__ == '__main__':
+    pass
