@@ -591,21 +591,20 @@ class ImageAna:
         pyplot.xticks(rotation=-45)
         pyplot.legend()
 
-
-
 ##############################################################################
 class ImageScan:
     """
     Class to hold a collection of images associated with a scan
     ie one image per scan point
     """
-    def __init__(self,image=[],rois=[],rotangle=[],bgrpar=[]):
-        self.image  = image
-        self.rois   = rois
+    def __init__(self,image=[],rois=None,rotangle=None,bgrpar=None):
+        if type(image) != types.ListType: image = [image]
+        self.image    = image
+        self.rois     = rois
         self.rotangle = rotangle
-        self.bgrpar = bgrpar
-        self.peaks  = {}
-        self.im_max = []
+        self.bgrpar   = bgrpar
+        self.im_max   = []
+        self.peaks    = {}
         self._init_image()
 
     ################################################################
@@ -619,6 +618,8 @@ class ImageScan:
             self.peaks    = {}
         if self.rois == None:
             self.rois = []
+        if self.rotangle == None:
+            self.rotangle = []
         if self.bgrpar == None:
             self.bgrpar = []
         # init rois
@@ -631,6 +632,11 @@ class ImageScan:
             self.rotangle = []
             for j in range(npts):
                 self.rotangle.append(0.0)
+        # init im_max
+        if len(self.im_max) != npts:
+            self.im_max = []
+            for j in range(npts):
+                self.im_max.append(None)
         # init bgr
         if len(self.bgrpar) != npts:
             self.bgrpar = []

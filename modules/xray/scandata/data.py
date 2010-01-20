@@ -42,12 +42,27 @@ class ScanData:
       med = MedScan object, holds one med instance per point
       xrf = XrfScan object, holds one xrf instance per point
       image = ImageScan object, holds one image instance per point
+
+
+    On initialization pass
+       name='',
+       dims=[],
+       scalers={},
+       positioners={},
+       primary_axis=[],
+       primary_det=None,
+       state={},
+       med=[], list of med objects
+       xrf=[], list of xrf objects
+       xrf_lines=None, list of lines
+       image=[], list of images
+       image_rois=None, list of rois
     """
     ################################################################
     def __init__(self,name='',dims=[],scalers={},positioners={},
                  primary_axis=[],primary_det=None,state={},
-                 med=[],xrf=[],xrf_lines=None,
-                 image=[],image_rois=[]):
+                 med=None,xrf=None,xrf_lines=None,
+                 image=None,image_rois=None):
         
         self.name         = name
         self.dims         = dims
@@ -58,18 +73,12 @@ class ScanData:
         self.state        = state
         self.bad_points   = []
         #
-        if len(med)>0:
+        if med != None:
             self.med = med_data.MedScan(med)
-        else:
-            self.med = []
-        if len(xrf)>0:
-            self.xrf = xrf_data.XrfScan(xrf,xrf_lines)
-        else:
-            self.xrf = []
-        if len(image)>0:
+        if xrf != None:
+            self.xrf = xrf_data.XrfScan(xrf=xrf,lines=xrf_lines)
+        if image !=None:
             self.image = image_data.ImageScan(image=image,rois=image_rois)
-        else:
-            self.image = []
 
     ########################################################################
     """
@@ -99,12 +108,12 @@ class ScanData:
             #if arg.startswith("_"):
             #    raise TypeError, "Private attribute"
             #return getattr(self,arg)
-            if self.xrf:
+            if hasattr(self,'xrf'):
                 for key in self.xrf.peaks.keys():
                     if key == arg:
                         return self.xrf.peaks[key]
             #
-            if self.image:
+            if hassattr(self,'image'):
                 for key in self.image.peaks.keys():
                     if key == arg:
                         return self.image.peaks[key]
@@ -125,9 +134,9 @@ class ScanData:
                 idx = int(idx)
             if a == 'med':
                 return self.med.med[idx]
-            if a == 'xrf':
+            elif a == 'xrf':
                 return self.xrf.xrf[idx]
-            if a == 'image':
+            elif a == 'image':
                 return self.image.image[idx]
         return None
 
@@ -164,17 +173,15 @@ class ScanData:
         lout = lout + "\n* Primary scan axis = %s\n"  % str(self.primary_axis)
         lout = lout + "* Primary detector  = %s\n"  % self.primary_det
         #
-        if self.med != []:
-            spectra = True
-            lout = lout + "* Scan includes %i med spectra\n" % len(self.med)
-        if self.xrf != []:
-            spectra = True
-            lout = lout + "* Scan includes %i xrf spectra\n" % len(self.xrf)
-            if self.xrf_lines != None:
-                lout = lout + "  -> Xrf lines = %s\n" % str(self.xrf_lines)
-        if self.image != []:
-            lout = lout + "* Scan includes %i images\n" % len(self.image)
-        
+        if hasattr(self,'med'):
+            lout = lout + "* Scan includes %i med spectra\n" % len(self.med.med)
+        if hasattr(self,'xrf'):
+            lout = lout + "* Scan includes %i xrf spectra\n" % len(self.xrf.xrf)
+            if self.xrf.lines != None:
+                lout = lout + "  -> Xrf lines = %s\n" % str(self.xrf.lines)
+        if hasattr(self,'image'):
+            lout = lout + "* Scan includes %i images\n" % len(self.image.image)
+        #
         return lout
     
     ################################################################

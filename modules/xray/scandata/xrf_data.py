@@ -26,9 +26,8 @@ import numpy as num
 from  detector import medfile_cars
 from  detector import medfile_emsa
 from  detector import mca_calib as calib
-from  med_data import read as med_read
-from  med_data import read_files as med_read_files
 from  xrf_model import Xrf
+import  med_data 
 
 ##############################################################################
 def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
@@ -42,9 +41,9 @@ def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
     otherwise: returns a list of xrf objects (default)
 
     """
-    med = med_read(file,bad_mca_idx=bad_mca_idx,total=total,align=align,
-                   correct=correct,tau=tau,det_idx=det_idx,
-                   emin=emin,emax=emax,fmt=fmt)
+    med = med_data.read(file,bad_mca_idx=bad_mca_idx,total=total,align=align,
+                        correct=correct,tau=tau,det_idx=det_idx,
+                        emin=emin,emax=emax,fmt=fmt)
     if med == None: return None
     xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
                   det_idx=det_idx,emin=emin,emax=emax)
@@ -59,10 +58,10 @@ def read_files(prefix,start=0,end=100,nfmt=3,bad_mca_idx=[],
     if xrf_params == None: returns a list of med objects
     otherwise: returns a list of xrf objects (default)
     """
-    med = med_read_files(prefix,start=start,end=end,nfmt=nfmt,
-                         bad_mca_idx=bad_mca_idx,total=total,align=align,
-                         correct=correct,tau=tau,det_idx=det_idx,
-                         emin=emin,emax=emax,fmt=fmt)
+    med = med_data.read_files(prefix,start=start,end=end,nfmt=nfmt,
+                              bad_mca_idx=bad_mca_idx,total=total,align=align,
+                              correct=correct,tau=tau,det_idx=det_idx,
+                              emin=emin,emax=emax,fmt=fmt)
     if med == None: return None
     
     xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
@@ -271,9 +270,12 @@ class XrfScan:
         Class to hold a collection of xrf's associated with a scan
         ie one xrf spectrum per scan point
         """
+        if type(xrf) != types.ListType: xrf = [xrf]
         self.xrf   = xrf
-        self.lines = lines
+        self.lines = None
         self.peaks = {}
+        if lines != None:
+            self.init_lines(lines)
 
     ################################################################
     def get_xrf(self,pnt=0):
@@ -293,9 +295,12 @@ class XrfScan:
         init xrf lines
         """
         if lines == None:
-            lines = self.lines
-        if type(lines) != types.ListType:
+            lines = []
+            for pk in self.xrf[0].peaks:
+                lines.append(pk.label)
+        elif type(lines) != types.ListType:
             lines = [lines]
+        self.lines = lines
         for x in self.xrf:
             x.init_lines(lines)
 
@@ -327,6 +332,7 @@ class XrfScan:
         for pk in self.xrf[0].peaks:
             lines.append(pk.label)
         self.lines = lines
+        self.peaks = {}
         for l in lines:
             p = peak_areas(self.xrf,l)
             self.peaks[l] = p

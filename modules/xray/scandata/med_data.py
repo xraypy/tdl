@@ -94,6 +94,7 @@ class MedScan:
     ie one med per scan point
     """
     def __init__(self,med=[]):
+        if type(med) != types.ListType: med = [med]
         self.med = med
 
     ################################################################
@@ -120,6 +121,7 @@ class MedScan:
         for j in range(npnt):
             self.med[j].update_correction(tau)
 
+    ################################################################
     def get_tau(self):
         """
         return tau values
@@ -133,11 +135,12 @@ class MedScan:
     ################################################################
     def med2xrf(self,xrf_params={},det_idx=0,emin=-1.,emax=-1.):
         """
-        convert med objects to xrf objects
+        convert med objects to xrf objects.
+        returns an XrfScan object
         """
         xrf = xrf_data.med2xrf(self.med,xrf_params=xrf_params,
-                              lines = self.xrf_lines,
-                              det_idx=det_idx,emin=emin,emax=emax)
+                               lines = self.xrf_lines,
+                               det_idx=det_idx,emin=emin,emax=emax)
         #return xrf
         return xrf_data.XrfScan(xrf)
 
