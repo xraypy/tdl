@@ -60,23 +60,36 @@ IMG_BGR_PARAMS = {'bgrflag':0,
                   'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
 
 #######################################################################
-def read(tiff_file):
+def read(file):
     """
-    read file
+    read file or list of files
     """
     try:
-        #from Image import open as imopen
-        #im  = imopen(tiff_file)
-        #import Image
         from PIL import Image
-        im  = Image.open(tiff_file)
+        imopen  = Image.open
     except:
-        print "Error reading file: %s" % tiff_file
-        return num.array([[0]])
-    arr = num.fromstring(im.tostring(), dtype='int32')
-    arr.shape = im.size[1],im.size[0]
-    #return arr.transpose()
-    return arr
+        print "Error importing Image.open"
+    def rd(file):
+        try:
+            im  = imopen(file)
+            arr = num.fromstring(im.tostring(), dtype='int32')
+            arr.shape = (im.size[1],im.size[0])
+            #return arr.transpose()
+            return arr
+        except:
+            print "Error reading file: %s" % file
+            return num.array([[0]])
+    if type(file) == types.StringType:
+        image = rd(file)
+        return image
+    elif type(file) == types.ListType:
+        image = []
+        for f in file:
+            tmp = rd(file)
+            image.append(tmp)
+    else:
+        return None
+    return image
 
 #######################################################################
 def read_files(file_prefix,start=0,end=100,nfmt=3):
@@ -752,7 +765,7 @@ if __name__ == '__main__':
     except:
         print 'read_pilatus  tiff file'
         sys.exit()
-    a = read_file(fname)
+    a = read(fname)
     image_show(a)
     
 

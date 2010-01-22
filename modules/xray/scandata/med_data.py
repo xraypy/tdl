@@ -1,4 +1,4 @@
-#######################################################################
+##############################################################################
 """
 T. Trainor (fftpt@uaf.edu)
 Functions for operating on / working with
@@ -8,7 +8,7 @@ Modifications:
 --------------
 
 """
-#######################################################################
+##############################################################################
 
 import types
 import numpy as num
@@ -18,8 +18,8 @@ import deadtime
 import xrf_data
 
 ##############################################################################
-def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
-         det_idx=0,emin=-1.0,emax=-1.0,fmt='CARS'):
+def read(file,bad_mca_idx=[],total=True,align=True,
+         correct=True,tau=None,fmt='CARS'):
     """
     Read detector files
     >>m = med.read(file="file_name",bad_mca_idx=[],
@@ -37,7 +37,7 @@ def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
     elif type(file) == types.ListType:
         med = []
         for f in file:
-            tmp = rd(file=f, bad_mca_idx=bad_mca_idx,
+            tmp = rd(file=f,bad_mca_idx=bad_mca_idx,
                      total=total,align=align,correct=correct,tau=tau)
             med.append(tmp)
     else:
@@ -46,8 +46,8 @@ def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
 
 ##############################################################################
 def read_files(prefix,start=0,end=100,nfmt=3,bad_mca_idx=[],
-               total=True,align=True,correct=True,tau=None,det_idx=0,
-               emin=-1.0,emax=-1.0,fmt='CARS'):
+               total=True,align=True,correct=True,tau=None,
+               fmt='CARS'):
     """
     Read multiple files
     returns a list of med objects
@@ -92,10 +92,66 @@ class MedScan:
     """
     Class to hold a collection of meds associated with a scan
     ie one med per scan point
+
+    Keywords:
+    bad_mca_idx: A list of bad mca's, data will be zeros.  An empty
+               list (default) means all the detectors are ok.
+               Note detector indexing starts at zero!
+
+    total: Set this keyword to return the sum of the spectra from all
+           of the Mcas as a 1-D numeric array.
+        
+    align: Set this keyword to return spectra which have been shifted and
+           and stretched to match the energy calibration parameters of the
+           first (good) detector.  This permits doing arithmetic on a
+           "channel-by-channel" basis. This keyword can be used alone
+           or together with the TOTAL keyword, in which case the data
+           are aligned before summing.
+           
+    correct:
+        True means to apply deadtime correction, false ignores it
+
+    tau:  mca deadtime tau values
+           None --> recompute correction factor
+           []   --> Turn off correction, ie set taus to -1
+           single value (or single valued list) --> assign to all mcas
+           list (or array) --> assign to individual mcas
+    
     """
-    def __init__(self,med=[]):
+    ########################################################################
+    def __init__(self,med=[],**kws):
         if type(med) != types.ListType: med = [med]
         self.med = med
+        self.init_params(params=kws)
+
+    ########################################################################
+    def init_params(self,params={}):
+        """
+        (Re)initialize all the med params to those given
+        """
+        if len(params) > 0:
+            for m in self.med:
+                m.init_params(params)
+
+    ################################################################
+    def update_tau(self,tau):
+        """
+        update med tau factors
+        """
+        npnt = len(self.med)
+        for j in range(npnt):
+            self.med[j].update_correction(tau)
+
+    ################################################################
+    def get_tau(self):
+        """
+        return tau values
+        """
+        return self.med[0].get_tau()
+        tau = num.zeros(ndet)
+        for j in range(ndet):
+            tau[j] = self.med[0].mca[j].tau
+        return tau
 
     ################################################################
     def ocr(self):
@@ -113,34 +169,14 @@ class MedScan:
         return num.transpose(ocr)
 
     ################################################################
-    def update_tau(self,tau):
-        """
-        update med tau factors
-        """
-        npnt = len(self.med)
-        for j in range(npnt):
-            self.med[j].update_correction(tau)
-
-    ################################################################
-    def get_tau(self):
-        """
-        return tau values
-        """
-        ndet = self.med[0].n_detectors
-        tau = num.zeros(ndet)
-        for j in range(ndet):
-            tau[j] = self.med[0].mca[j].tau
-        return tau
-
-    ################################################################
-    def med2xrf(self,xrf_params={},det_idx=0,emin=-1.,emax=-1.):
+    def med2xrf(self,xrf_params={},lines=None,det_idx=0,emin=-1.,emax=-1.):
         """
         convert med objects to xrf objects.
         returns an XrfScan object
         """
         xrf = xrf_data.med2xrf(self.med,xrf_params=xrf_params,
-                               lines = self.xrf_lines,
-                               det_idx=det_idx,emin=emin,emax=emax)
+                               lines = lines,det_idx=det_idx,
+                               emin=emin,emax=emax)
         #return xrf
         return xrf_data.XrfScan(xrf)
 

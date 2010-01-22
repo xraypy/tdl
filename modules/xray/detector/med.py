@@ -52,6 +52,13 @@ class Med:
            
     correct:
         True means to apply deadtime correction, false ignores it
+
+    tau:  mca deadtime tau values
+           None --> recompute correction factor
+           []   --> Turn off correction, ie set taus to -1
+           single value (or single valued list) --> assign to all mcas
+           list (or array) --> assign to individual mcas
+
     """
     ########################################################################
     def __repr__(self):
@@ -106,7 +113,10 @@ class Med:
         set/reset parameters based on key word arguments
         """
         for key in params.keys():
-            setattr(self,key,params[key])
+            if key == 'tau':
+                self.update_correction(tau=params['tau'])
+            else:
+                setattr(self,key,params[key])
 
     ########################################################################
     def get_params(self,):
@@ -116,8 +126,19 @@ class Med:
         params = {'bad_mca_idx':self.bad_mca_idx,
                   'total':self.total,
                   'align':self.align,
-                  'correct':self.correct}
+                  'correct':self.correct,
+                  'tau':self.get_tau()}
         return params
+
+    ################################################################
+    def get_tau(self):
+        """
+        return tau values
+        """
+        tau = []
+        for j in range(self.n_detectors):
+            tau[j] = self.mca[j].tau
+        return tau
 
     ########################################################################
     def init_mca_params(self, det_idx=0, mca_params={}):

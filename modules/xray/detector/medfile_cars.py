@@ -88,12 +88,8 @@ def read_med(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None):
 
     # build the med object
     med = Med(name=fname, mca=r['mca'], bad_mca_idx=bad_mca_idx,
-              total=total, align=align, correct=correct)
+              total=total, align=align, correct=correct, tau=tau)
 
-    # correct data
-    if tau != None:
-        med.update_correction(tau=tau)
-        
     # below are set only if defined in file    
     if r['max_rois'] > 0:
         rois = r['rois']

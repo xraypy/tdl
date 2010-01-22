@@ -43,7 +43,6 @@ class ScanData:
       xrf = XrfScan object, holds one xrf instance per point
       image = ImageScan object, holds one image instance per point
 
-
     On initialization pass
        name='',
        dims=[],
@@ -74,11 +73,20 @@ class ScanData:
         self.bad_points   = []
         #
         if med != None:
-            self.med = med_data.MedScan(med)
+            if isinstance(med,med_data.MedScan):
+                self.med = med
+            else:
+                self.med = med_data.MedScan(med)
         if xrf != None:
-            self.xrf = xrf_data.XrfScan(xrf=xrf,lines=xrf_lines)
+            if isinstance(med,xrf_data.XrfScan):
+                self.xrf = xrf
+            else:
+                self.xrf = xrf_data.XrfScan(xrf=xrf,lines=xrf_lines)
         if image !=None:
-            self.image = image_data.ImageScan(image=image,rois=image_rois)
+            if isinstance(image,image_data.ImageScan):
+                self.image = image
+            else:
+                self.image = image_data.ImageScan(image=image,rois=image_rois)
 
     ########################################################################
     """

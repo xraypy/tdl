@@ -175,7 +175,7 @@ class PdsBuiltins:
         for l in src.split('\n'): print l
 
     #################################################################
-    def interrogate(self,item):
+    def info(self,item):
         """
         Print useful information about item.
         """

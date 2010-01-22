@@ -30,8 +30,9 @@ from  xrf_model import Xrf
 import  med_data 
 
 ##############################################################################
-def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
-         det_idx=0,emin=-1.0,emax=-1.0,fmt='CARS',xrf_params={},lines=None):
+def read(file,bad_mca_idx=[],total=True,align=True,correct=True,
+         tau=None,det_idx=0,emin=-1.0,emax=-1.0,
+         xrf_params={},lines=None,fmt='CARS'):
     """
     Read detector files
     >>m = xrf.read(file="file_name",bad_mca_idx=[],
@@ -41,9 +42,8 @@ def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
     otherwise: returns a list of xrf objects (default)
 
     """
-    med = med_data.read(file,bad_mca_idx=bad_mca_idx,total=total,align=align,
-                        correct=correct,tau=tau,det_idx=det_idx,
-                        emin=emin,emax=emax,fmt=fmt)
+    med = med_data.read(file,bad_mca_idx=bad_mca_idx,total=total,
+                        align=align,correct=correct,tau=tau,fmt=fmt)
     if med == None: return None
     xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
                   det_idx=det_idx,emin=emin,emax=emax)
@@ -52,16 +52,15 @@ def read(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None,
 ##############################################################################
 def read_files(prefix,start=0,end=100,nfmt=3,bad_mca_idx=[],
                total=True,align=True,correct=True,tau=None,det_idx=0,
-               emin=-1.0,emax=-1.0,fmt='CARS',xrf_params={},lines=None):
+               emin=-1.0,emax=-1.0,xrf_params={},lines=None,fmt='CARS'):
     """
     Read multiple files
     if xrf_params == None: returns a list of med objects
     otherwise: returns a list of xrf objects (default)
     """
     med = med_data.read_files(prefix,start=start,end=end,nfmt=nfmt,
-                              bad_mca_idx=bad_mca_idx,total=total,align=align,
-                              correct=correct,tau=tau,det_idx=det_idx,
-                              emin=emin,emax=emax,fmt=fmt)
+                              bad_mca_idx=bad_mca_idx,total=total,
+                              align=align,correct=correct,tau=tau,fmt=fmt)
     if med == None: return None
     
     xrf = med2xrf(med,xrf_params=xrf_params,lines=lines,
@@ -94,18 +93,15 @@ def _med2xrf(med,xrf_params={},lines=None,det_idx=0,emin=-1.,emax=-1.):
         det_idx=0
     if (det_idx < 0) or (det_idx > med.n_detectors -1):
         det_idx=0
-    
     # med will always ret data, energy and cal as arrays
     data = med.get_data()[det_idx]
     en   = med.get_energy()[det_idx]
     cal  = med.get_calib_params()[det_idx]
-    
     # if energy range specified, truncate
     if ((emin + emax) > 0.) and (emin != emax):
         idx  = calib.energy_idx(en,emin=emin,emax=emax)
         data = data[idx]
         en   = en[idx]
-    
     # Make sure we have energy calib params.
     # use those passed in if given, otherwise
     # use those from med.  
@@ -119,22 +115,19 @@ def _med2xrf(med,xrf_params={},lines=None,det_idx=0,emin=-1.,emax=-1.):
         xrf_params['fit']['energy_slope'] = cal['slope']
 
     # convert energy back to chans
-    chans = calib.energy_to_channel(en,offset=xrf_params['fit']['energy_offset'],
+    chans = calib.energy_to_channel(en,
+                                    offset=xrf_params['fit']['energy_offset'],
                                     slope=xrf_params['fit']['energy_slope'])
-    
     # Create an XrfSpectrum object
     x =  Xrf(data=data,chans=chans,params=xrf_params)
-
     #Add bgr    
     if xrf_params.has_key('bgr'):
         x.init_bgr(params=xrf_params['bgr'])
     else:
         x.init_bgr()
-
     # if lines add lines
     if lines:
         x.init_lines(lines)
-
     return x
 
 #################################################################################
