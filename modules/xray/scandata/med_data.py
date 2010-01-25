@@ -14,7 +14,9 @@ import types
 import numpy as num
 from matplotlib import pyplot
 
-import deadtime
+from detector import deadtime
+from detector import medfile_cars
+from detector import medfile_emsa
 import xrf_data
 
 ##############################################################################

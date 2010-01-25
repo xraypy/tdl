@@ -137,7 +137,7 @@ class Med:
         """
         tau = []
         for j in range(self.n_detectors):
-            tau[j] = self.mca[j].tau
+            tau.append(self.mca[j].tau)
         return tau
 
     ########################################################################

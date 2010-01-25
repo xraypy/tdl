@@ -258,18 +258,20 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
 
 ##############################################################################
 class XrfScan:
-    def __init__(xrf=[],lines=None):
+    def __init__(self,xrf=[],lines=None):
         """
         Class to hold a collection of xrf's associated with a scan
         ie one xrf spectrum per scan point
         """
         if type(xrf) != types.ListType: xrf = [xrf]
         self.xrf   = xrf
-        self.lines = None
+        self.lines = []
         self.peaks = {}
-        if lines != None:
+        if lines == None:
+            self._update_lines()
+        else:
             self.init_lines(lines)
-
+            
     ################################################################
     def get_xrf(self,pnt=0):
         """
@@ -288,14 +290,23 @@ class XrfScan:
         init xrf lines
         """
         if lines == None:
-            lines = []
-            for pk in self.xrf[0].peaks:
-                lines.append(pk.label)
+            self._update_lines()
         elif type(lines) != types.ListType:
-            lines = [lines]
-        self.lines = lines
+            self.lines = [lines]
+            self.lines = lines
+        else:
+            self.lines = lines
         for x in self.xrf:
-            x.init_lines(lines)
+            x.init_lines(self.lines)
+
+    def _update_lines(self):
+        """
+        update self.lines from peaks
+        """
+        lines = []
+        for pk in self.xrf[0].peaks:
+            lines.append(pk.label)
+        self.lines = lines
 
     ################################################################
     def calc(self):

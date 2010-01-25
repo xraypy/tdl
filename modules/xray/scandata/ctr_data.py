@@ -24,7 +24,8 @@ Todo
 - sorting and HK panel plots
 - averaging/merging and merge statistics
 - corrections for rocking scans
-- editing / re-integrating select points (select from plot).
+- editing / re-integrating select points:
+  - select from plot and give type (image/scan)
 """
 ##############################################################################
 

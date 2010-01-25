@@ -12,7 +12,7 @@ Modifications:
 Notes
 
 """
-########################################################################
+#######################################################################
 
 import types
 import copy
@@ -22,7 +22,7 @@ import image_data
 import med_data
 import xrf_data
 
-########################################################################
+#######################################################################
 class ScanData:
     """
     ScanData Class holds:
@@ -121,7 +121,7 @@ class ScanData:
                     if key == arg:
                         return self.xrf.peaks[key]
             #
-            if hassattr(self,'image'):
+            if hasattr(self,'image'):
                 for key in self.image.peaks.keys():
                     if key == arg:
                         return self.image.peaks[key]

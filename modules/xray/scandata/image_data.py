@@ -1,6 +1,6 @@
 #######################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
+Tom Trainor (tptrainor@alaska.edu)
 Frank Heberling (Frank.Heberling@ine.fzk.de)
 Matt Newville (newville@cars.uchicago.edu)
 
@@ -69,6 +69,7 @@ def read(file):
         imopen  = Image.open
     except:
         print "Error importing Image.open"
+        return None
     def rd(file):
         try:
             im  = imopen(file)
@@ -78,7 +79,8 @@ def read(file):
             return arr
         except:
             print "Error reading file: %s" % file
-            return num.array([[0]])
+            #return num.array([[0]])
+            return None
     if type(file) == types.StringType:
         image = rd(file)
         return image
@@ -101,7 +103,7 @@ def read_files(file_prefix,start=0,end=100,nfmt=3):
     for j in range(start,end+1):
         ext  = format % j
         file = file_prefix + '_' + ext + '.tif'
-        arr  = read_file(file)
+        arr  = read(file)
         images.append(arr)
     return images
 
@@ -171,14 +173,14 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
     # rotate
     if rotangle != 0:
         img = ndimage.rotate(img,rotangle)
-
-    # pyplot.imshow(img, cmap = pyplot.cm.hot)
     if cmap != None:
         if type(cmap) == types.StringType:
             if cmap in pyplot.cm.cmapnames:
                 cmap = getattr(pyplot.cm,cmap)
             else:
                 cmap = None
+    if im_max != None:
+        if im_max < 1: im_max = None
     pyplot.imshow(img,cmap=cmap, vmax = im_max)
     pyplot.colorbar(orientation='horizontal')
 
@@ -618,6 +620,7 @@ class ImageScan:
         self.bgrpar   = bgrpar
         self.im_max   = []
         self.peaks    = {}
+        self.bad_points = []
         self._init_image()
 
     ################################################################
@@ -649,7 +652,7 @@ class ImageScan:
         if len(self.im_max) != npts:
             self.im_max = []
             for j in range(npts):
-                self.im_max.append(None)
+                self.im_max.append(-1)
         # init bgr
         if len(self.bgrpar) != npts:
             self.bgrpar = []
@@ -670,9 +673,8 @@ class ImageScan:
         self.peaks['Ibgr_r'] = num.zeros(npts,dtype=float)
 
     ################################################################
-    def integrate_image(self,idx=[],roi=[],rotangle=[],
-                        bgr_params=[],bad_points=[],
-                        plot=True,fig=None):
+    def integrate(self,idx=[],roi=[],rotangle=[], bgr_params=[],
+                  bad_points=[],plot=True,fig=None):
         """
         integrate images
         roi  = [x1,y1,x2,y2]
@@ -713,7 +715,7 @@ class ImageScan:
         # do integrations
         for j in idx:
             if j not in bad_points:
-                self._integrate_image(idx=j,plot=plot,fig=fig)
+                self._integrate(idx=j,plot=plot,fig=fig)
             else:
                 self.peaks['I'][j]      = 0.
                 self.peaks['Ierr'][j]   = 0.
@@ -728,20 +730,20 @@ class ImageScan:
                 self.peaks['Ibgr_r'][j] = 0.
     
     ################################################################
-    def _integrate_image(self,idx=0,plot=True,fig=None):
+    def _integrate(self,idx=0,plot=True,fig=None):
         """
         integrate an image
         """
         if idx < 0 or idx > len(self.image): return None
         #
-        figtitle = "Scan Point = %i, L = %6.3f" % (idx,self.scalers['L'][idx])
+        figtitle = "Scan Point = %i" % (idx)
         roi        = self.rois[idx]
         rotangle   = self.rotangle[idx]
         bgr_params = self.bgrpar[idx]
 
-        img_ana = image_data.ImageAna(self.image[idx],roi=roi,rotangle=rotangle,
-                                      plot=plot,fig=fig,figtitle=figtitle,
-                                      **bgr_params)
+        img_ana = ImageAna(self.image[idx],roi=roi,rotangle=rotangle,
+                           plot=plot,fig=fig,figtitle=figtitle,
+                           **bgr_params)
 
         # results into image_peaks dictionary
         self.peaks['I'][idx]      = img_ana.I
@@ -768,4 +770,3 @@ if __name__ == '__main__':
     a = read(fname)
     image_show(a)
     
-

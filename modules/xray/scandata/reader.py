@@ -13,7 +13,7 @@ Todo
 - add escan files, ascii_scan files ....
 
 """
-########################################################################
+#######################################################################
 
 import types
 from   glob import glob
@@ -132,8 +132,8 @@ def spectra_scan(spectra,**kw):
     """
     if kw.has_key('sd'): sd = kw.pop('sd')
     else: sd = True
-    med = kw.get('med') or True
-    xrf = kw.get('xrf') or False
+    med = kw.get('med',True)
+    xrf = kw.get('xrf',False)
     if med == False and xrf == False: return None
 
     # make sure we only read the files once!
@@ -155,11 +155,11 @@ def spectra_scan(spectra,**kw):
     if med == True and xrf == True:
         primary_det = 'xrf'
         med_spectra = spectra
-        xrf_params  = kw.get('xrf_params') or {}
-        lines       = kw.get('lines')      or None
-        det_idx     = kw.get('det_idx')    or 0
-        emin        = kw.get('emin')       or -1.
-        emax        = kw.get('emax')       or -1.
+        xrf_params  = kw.get('xrf_params',{})
+        lines       = kw.get('lines')     
+        det_idx     = kw.get('det_idx',0)
+        emin        = kw.get('emin',-1.)
+        emax        = kw.get('emax',-1.)
         xrf_spectra = xrf_data.med2xrf(med_spectra,xrf_params=xrf_params,
                                        lines=lines,det_idx=det_idx,
                                        emin=emin,emax=emax)
@@ -189,23 +189,23 @@ def _read_spectra(fname,**kw):
     """
     read spectra files and return a list of med or xrf objects
     """
-    start   = kw.get('start')       or -1
-    end     = kw.get('end')         or -1
-    nfmt    = kw.get('nfmt')        or 3
-    fmt     = kw.get('fmt')         or 'CARS'
+    start   = kw.get('start',-1)
+    end     = kw.get('end',-1)
+    nfmt    = kw.get('nfmt',3)
+    fmt     = kw.get('fmt','CARS')
     #
-    bad     = kw.get('bad_mca_idx') or []
-    total   = kw.get('total')       or True
-    align   = kw.get('align')       or True
-    correct = kw.get('correct')     or True
-    tau     = kw.get('tau')         or None
+    bad     = kw.get('bad_mca_idx',[])
+    total   = kw.get('total',True)
+    align   = kw.get('align',True)
+    correct = kw.get('correct',True)
+    tau     = kw.get('tau',None)
     #
-    xrf     = kw.get('xrf')         or False
-    det_idx = kw.get('det_idx')     or 0
-    emin    = kw.get('emin')        or -1.
-    emax    = kw.get('emax')        or -1.
-    xrf_params = kw.get('xrf_params') or {}
-    lines      = kw.get('lines')     or None
+    xrf     = kw.get('xrf',False)
+    det_idx = kw.get('det_idx',0)
+    emin    = kw.get('emin',-1.)
+    emax    = kw.get('emax',-1.)
+    xrf_params = kw.get('xrf_params',{})
+    lines      = kw.get('lines',None)
         
     if start > -1:
         if end == -1:
@@ -289,15 +289,8 @@ def image_scan(image,**kw):
     >>s = image_scan('Image_file_pfx',start=0,end=5)
         
     """
-    if kw.has_key('sd'):
-        sd = kw.pop('sd')
-    else:
-        sd = True
-    if kw.has_key('rois'):
-        rois = kw.pop('rois')
-    else:
-        rois = None
-    #
+    sd   = kw.pop('sd',True)
+    rois = kw.pop('rois',None)
     if type(image) == types.StringType:
         name  = os.path.split(image)[1].split('.')[0]
         image = _read_image(image,**kw)
@@ -325,10 +318,10 @@ def _read_image(fname,**kw):
     """
     read image files and return as a list of images
     """
-    start = kw.get('start') or -1
-    end   = kw.get('end')   or -1
-    nfmt  = kw.get('nfmt')  or 3
-    fmt   = kw.get('fmt')   or 'tif'
+    start = kw.get('start',-1)
+    end   = kw.get('end',-1)
+    nfmt  = kw.get('nfmt',3)
+    fmt   = kw.get('fmt','tif')
     #
     if start > -1:
         if end == -1:
@@ -360,12 +353,9 @@ def _image_range(fname):
         st = st.split('.')[0]
         en = files[n-1].split('_')[-1]
         en = en.split('.')[0]
-        #try:
         st = int(st)
         en = int(en)
         return (st,en)
-        #except:
-        #    return None
     else:
         return None
 
@@ -427,8 +417,9 @@ class Reader:
         lout = "Spec Files:"
         for s in self.spec_files:
             lout = "%s\n  %s, first=%i, last=%i" % (lout,s.fname,s.min_scan,s.max_scan)
-        lout = "%s\nRead med   = %s, Read xrf = %s" % (lout,self.med,self.xrf)
-        lout = "%s\nRead image = %s"   % (lout,self.image)
+        lout = "%s\nRead spec med   = %s, Read spec xrf = %s" % \
+               (lout,self.spec_params['med'],self.spec_params['xrf'])
+        lout = "%s\nRead spec image = %s" % (lout,self.spec_params['image'])
         lout = "%s\nPaths:"            % (lout)
         lout = "%s\n  Spec Path  = %s" % (lout,self.spec_path)
         lout = "%s\n  Med Path   = %s" % (lout,self.spectra_path)
@@ -546,14 +537,21 @@ class Reader:
     ########################################################################
     def spec_scan(self,scan,file=None,med=None,xrf=None,image=None):
         """
-        get data from a spec scan
+        Get data from a spec scan
+
+        Arguments:
+            scan  = spec scan number
+            file  = spec file name (default = current file)
+            med   = read med files, True/False (default False)
+            xrf   = read xrf files, True/False (default False)
+            image = read image files, True/False (default False)
         """
         if med!=None: self.spec_params['med'] = med
         if xrf!=None: self.spec_params['xrf'] = xrf
         if image!=None: self.spec_params['image'] = image
         med = self.spec_params['med']
         xrf = self.spec_params['xrf']
-        image = self.spec_params['image']
+        img = self.spec_params['image']
 
         # File
         spec = self._spec(file=file)
@@ -583,7 +581,7 @@ class Reader:
                                    lines=self.spectra_params['lines'])
             if spectra == None:
                 print "Warning, med files not read"
-            if med == True and xrf == True:
+            elif med == True and xrf == True:
                 (data.xrf,data.med) = spectra
                 if len(data.xrf.xrf) != data.dims[0] or \
                    len(data.med.med) != data.dims[0]:
@@ -597,19 +595,21 @@ class Reader:
                 if len(data.xrf.xrf) != data.dims[0]:
                     print "Warning, number of spectra dont match scan"
         # Images
-        if self.image:
+        if img:
             image_pfx = self._spec_image_path(spec,scan)
             start = 0
             end   = data.dims[0] - 1
-            #image = self._read_image(image_pfx,start=start,end=end)
-            data = image_scan(image_pfx,sd=False,
-                              start=start,end=end,
-                              nfmt=self.image_params['nfmt'],
-                              fmt=self.image_params['fmt'],
-                              rois=self.image_params['rois'])
-            data.image = image
-            if len(data.image.image) != data.dims[0]:
-                print "Warning, number of images dont match scan"
+            image = image_scan(image_pfx,sd=False,
+                               start=start,end=end,
+                               nfmt=self.image_params['nfmt'],
+                               fmt=self.image_params['fmt'],
+                               rois=self.image_params['rois'])
+            if image == None:
+                print "Warning, image files not read"
+            else:
+                data.image = image
+                if len(data.image.image) != data.dims[0]:
+                    print "Warning, number of images dont match scan"
         
         return data
 
