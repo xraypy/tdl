@@ -46,6 +46,7 @@ Also, note in older versions of PIL:
 #######################################################################
 
 import types
+import os
 import copy
 import numpy as num
 from matplotlib import pyplot
@@ -611,10 +612,21 @@ class ImageScan:
     """
     Class to hold a collection of images associated with a scan
     ie one image per scan point
+
+    Should creat an _archive() and _unarchive() methods...   
     """
-    def __init__(self,image=[],rois=None,rotangle=None,bgrpar=None):
+    def __init__(self,image=[],rois=None,rotangle=None,bgrpar=None,
+                 archive=None):
         if type(image) != types.ListType: image = [image]
-        self.image    = image
+        if archive != None:
+            file    = archive.get('file','images.h5')
+            path    = archive.get('path')
+            setname = archive.get('setname','S1')
+            descr   = archive.get('descr','Scan Data Archive')
+            self.image = _ImageList(image,file=file,path=path,
+                                    setname=setname,descr=descr)
+        else:
+            self.image = image
         self.rois     = rois
         self.rotangle = rotangle
         self.bgrpar   = bgrpar
@@ -622,6 +634,10 @@ class ImageScan:
         self.peaks    = {}
         self.bad_points = []
         self._init_image()
+
+    def __repr__(self,):
+        lout = 'Number of images = %i' % (len(self.image))
+        return lout
 
     ################################################################
     def _init_image(self):
@@ -757,7 +773,107 @@ class ImageScan:
         self.peaks['I_r'][idx]    = img_ana.I_r
         self.peaks['Ierr_r'][idx] = img_ana.Ierr_r
         self.peaks['Ibgr_r'][idx] = img_ana.Ibgr_r
+
+################################################################
+class _ImageList:
+    """
+    Keep images in a hdf file using pytables
+    
+    Note an alternative is to use:
+       num.savez(fname,image)
+       im = num.read(fname)
+    """
+    
+    def __init__(self,images,file='images.h5',path=None,
+                 setname='S1',descr='Scan data images'):
+        self.path = path
+        self.file = file
+        self.setname = setname
+        if images != None:
+            self.nimages = len(images)
+            try:
+                self._write_image_tables(images,setname,descr)
+            except:
+                print "Unable to write to hdf"
+                self._cleanup()
+    
+    ################################################################
+    def _cleanup(self):
+        try:
+            import tables
+            tables.file.close_open_files()
+        except:
+            pass
+
+    ################################################################
+    def __len__(self):
+        return self.nimages
+
+    ################################################################
+    def __getitem__(self,arg):
+        """
+        Get item.  
+        """
+        images = self._read_image_tables()
+        #return copy.copy(images[arg])
+        return images[arg]
+
+    ################################################################
+    def __setitem__(self,arg):
+        """
+        Set item.  
+        """
+        print "Cannot set item"
+        return
+    
+    ################################################################
+    def _write_image_tables(self,images,setname,descr):
+        """
+        Write images to file
+        """
+        import tables
+
+        images = num.array(images)
+        if self.path != None:
+            fname = os.path.join(self.path,self.file)
+            fname = os.path.abspath(fname)
+        else:
+            fname = os.path.abspath(self.file)
+        if os.path.exists(fname):
+            h    = tables.openFile(fname,mode="a")
+            if not hasattr(h.root,'images'):
+                h.createGroup(h.root,'images',"Image Data")
+        else:
+            h    = tables.openFile(fname,mode="w",title="ScanData Archive")
+            root = h.createGroup(h.root, "images", "Image Data")
+        # if setname == None:
+        #   look under '/images for 'SXX'
+        # find the highest one and
+        # auto generate set name as next in the sequence 
+        if hasattr(h.root.images,setname):
+            print "Setname %s already exists" % setname
+        else:
+            h.createArray('/images',setname,images,descr)
+        h.close()
+
+    ################################################################
+    def _read_image_tables(self,):
+        import tables
         
+        if self.path != None:
+            fname = os.path.join(self.path,self.file)
+            fname = os.path.abspath(fname)
+        else:
+            fname = os.path.abspath(self.file)
+        if not os.path.exists(fname):
+            print "Archive file not found:", fname
+            return None
+        h  = tables.openFile(fname,mode="r")
+        n  = h.getNode('/images',self.setname)
+        im = n.read()
+        h.close()
+        return im
+
 ################################################################################
 ################################################################################
 if __name__ == '__main__':

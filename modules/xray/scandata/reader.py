@@ -289,8 +289,10 @@ def image_scan(image,**kw):
     >>s = image_scan('Image_file_pfx',start=0,end=5)
         
     """
-    sd   = kw.pop('sd',True)
-    rois = kw.pop('rois',None)
+    sd      = kw.pop('sd',True)
+    rois    = kw.pop('rois',None)
+    archive = kw.pop('archive',None)
+    
     if type(image) == types.StringType:
         name  = os.path.split(image)[1].split('.')[0]
         image = _read_image(image,**kw)
@@ -302,7 +304,7 @@ def image_scan(image,**kw):
         return None
     if image == None: return None
     npts = len(image)
-    image = image_data.ImageScan(image,rois=rois)
+    image = image_data.ImageScan(image,rois=rois,archive=archive)
     if sd == False: return image
     x = num.arange(float(npts))
     data = ScanData(name=name,
@@ -407,7 +409,8 @@ class Reader:
 
         # image parameters
         self.image_path     = image_path
-        self.image_params   = {'rois':None,'fmt':'tif','nfmt':3}
+        self.image_params   = {'rois':None,'fmt':'tif','nfmt':3,
+                               'archive':None}
 
         # load spec file(s) if passed
         if spec: self.read_spec(spec)
@@ -429,6 +432,8 @@ class Reader:
             lout = "%s\n  Xrf Lines = %s" % (lout,str(self.spectra_params['lines']))
         if self.image_params['rois'] != None:
             lout = "%s\n  Image Rois = %s" % (lout,str(self.image_params['rois']))
+        if self.image_params['archive'] != None:
+            lout = "%s\n  Image archive = %s" % (lout,str(self.image_params['archive']))
         return lout
 
     ########################################################################
@@ -496,7 +501,8 @@ class Reader:
                           start=start,end=end,
                           nfmt=self.image_params['nfmt'],
                           fmt=self.image_params['fmt'],
-                          rois=self.image_params['rois'])
+                          rois=self.image_params['rois'],
+                          archive=self.image_params['archive'])
         return data
 
     ########################################################################
@@ -599,11 +605,17 @@ class Reader:
             image_pfx = self._spec_image_path(spec,scan)
             start = 0
             end   = data.dims[0] - 1
+            if self.image_params['archive'] != None:
+                if self.image_params.has_key('file') == False:
+                    imfile = spec.fname + '_images.h5'
+                    self.image_params['file'] = imfile
+                self.image_params['setname'] = 'S%03d' % int(scan)
             image = image_scan(image_pfx,sd=False,
                                start=start,end=end,
                                nfmt=self.image_params['nfmt'],
                                fmt=self.image_params['fmt'],
-                               rois=self.image_params['rois'])
+                               rois=self.image_params['rois'],
+                               archive=self.image_params['archive'])
             if image == None:
                 print "Warning, image files not read"
             else:
