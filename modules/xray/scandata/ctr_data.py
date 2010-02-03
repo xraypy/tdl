@@ -14,9 +14,8 @@ Notes
 ------
 
 References:
-Vlieg 1997
-Schlepuetz 2005
-
+E. Vlieg, J. Appl. Cryst. (1997). 30, 532-543
+C. Schlepuetz et al, Acta Cryst. (2005). A61, 418-425
 
 Todo
 ----
@@ -43,20 +42,20 @@ import gonio_psic
 def ctr_data(scans,ctr=None,I=None,Inorm=None,Ierr=None,
              corr_params=None,scan_type=None):
     """
-    creat a ctr instance or add scan data to an existing instance
+    create a ctr instance or add scan data to an existing instance
     """
     if ctr == None:
         # check for defaults
         if I==None: I ='I_c'
         if Inorm==None: Inorm='Io'
         if Ierr==None: Inorm='Ierr_c',
-        if corr_params==None: corr_params=[]
+        if corr_params==None: corr_params={}
         if scan_type==None:scan_type='image'
         return CtrData(scans=scans,I=I,Inorm=Inorm,Ierr=Ierr,
                        corr_params=corr_params,scan_type=scan_type)
     else:
-        ctr.append_data(scans,I=I,Inorm=Inorm,Ierr=Ierr,
-                        corr_params=corr_params,scan_type=scan_type)
+        ctr.append_scans(scans,I=I,Inorm=Inorm,Ierr=Ierr,
+                         corr_params=corr_params,scan_type=scan_type)
     
 ##############################################################################
 class CtrData:
@@ -75,6 +74,7 @@ class CtrData:
     Ierr = string label corresponding to the intensity error array, ie
         y_err = scan[Ierr].  We assume these are standard deviations 
         of the intensities (y).
+        
       Note when the data are normalized we assume the statistics of norm 
         go as norm_err = sqrt(norm).  Therefore the error of normalized
         data is
@@ -93,13 +93,19 @@ class CtrData:
                                     {'horz':.6,'vert':.8}
         corr_params['sample'] = either dimater of round sample, or dictionary
                                 describing the sample shape.
+        corr_params['scale'] = scale factor to multiply by all the intensity
+                               values. e.g.  if Io ~ 1million cps
+                               then using 1e6 as the scale makes the normalized
+                               intensity close to cps.  ie y = scale*y/norm
+
         See the Correction class for more info...
 
     scan_type = Type of scans (e.g. 'image', 'phi', etc..)
     
     """
-    def __init__(self,scans=[],I='I_c',Inorm='Io',Ierr='Ierr_c',
-                 corr_params=[],scan_type='image'):
+    ##########################################################################
+    def __init__(self,scans=[],I='I_c',Inorm='io',Ierr='Ierr_c',
+                 corr_params={},scan_type='image'):
         #
         self.scan_data   = []
         self.scan_index  = []
@@ -118,35 +124,45 @@ class CtrData:
         self.F     = num.array([],dtype=float)
         self.Ferr  = num.array([],dtype=float)
         #
-        self.append_data(scans,I=I,Inorm=Inorm,Ierr=Ierr,
-                         corr_params=corr_params,
-                         scan_type=scan_type)
+        self.append_scans(scans,I=I,Inorm=Inorm,Ierr=Ierr,
+                          corr_params=corr_params,
+                          scan_type=scan_type)
 
     ##########################################################################
-    def append_data(self,scans,I=None,Inorm=None,Ierr=None,
-                    corr_params=None,scan_type=None):
+    def __repr__(self,):
+        lout = "CTR DATA\n"
+        lout = "%sNumber of scans = %i\n" % (lout,len(self.scan_data))
+        lout = "%sNumber of structure factors = %i\n" % (lout,len(self.L))
+        return lout
+
+    ##########################################################################
+    def append_scans(self,scans,I=None,Inorm=None,Ierr=None,
+                     corr_params=None,scan_type=None):
         """
-        scans is a list of scan data objects.  The rest of the arguments
-        should be the same for each scan in the list or we use previous vals...
+        scans is a list of scan data objects.
+
+        The rest of the arguments (defined above)
+        should be the same for each scan in the list.
+
+        For any argument with None passed we use previous vals...
         """
         if type(scans) != types.ListType:
             scans = [scans]
         
         # if None passed use the last values
-        if I == None: I = self.labels['I'][-1]
-        if Inorm == None: Inorm = self.labels['Inorm'][-1]
-        if Ierr == None: Ierr = self.labels['Ierr'][-1]
+        if I == None:           I = self.labels['I'][-1]
+        if Inorm == None:       Inorm = self.labels['Inorm'][-1]
+        if Ierr == None:        Ierr = self.labels['Ierr'][-1]
         if corr_params == None: corr_params = self.corr_params[-1]
-        if scan_type == None: scan_type = self.scan_type[-1]
+        if scan_type == None:   scan_type = self.scan_type[-1]
 
         # get all the data parsed out of each scan and append
         for scan in scans:
-            data = _get_data(scan,I,Inorm,Ierr,corr_params,scan_type)
+            data = self._scan_data(scan,I,Inorm,Ierr,corr_params,scan_type)
             if data == None: return
 
-            # note we need to put images into hdf file to store..
-            #self.scan_data.append(scan)
-            self.scan_data.append([])
+            #self.scan_data.append([])
+            self.scan_data.append(scan)
             #
             self.scan_index.extend(data['scan_index'])
             self.labels['I'].extend(data['I_lbl'])
@@ -166,7 +182,7 @@ class CtrData:
             self.Ferr  = num.append(self.Ferr,data['Ferr'])
 
     ##########################################################################
-    def _get_data(self,scan,I_lbl,Ierr_lbl,Inorm_lbl,corr_params,scan_type):
+    def _scan_data(self,scan,I,Inorm,Ierr,corr_params,scan_type):
         """
         parse scan into data...
         """
@@ -180,12 +196,14 @@ class CtrData:
         
         # image scan -> each scan point is a unique HKL
         if scan_type == 'image':
+            if scan.image._is_integrated == False:
+                scan.image.integrate()
             npts = int(scan.dims[0])
             for j in range(npts):
                 data['scan_index'].append((scan_idx,j))
-                data['I_lbl'].append(I_lbl)
-                data['Inorm_lbl'].append(Inorm_lbl)
-                data['Ierr_lbl'].append(Ierr_lbl)
+                data['I_lbl'].append(I)
+                data['Inorm_lbl'].append(Inorm)
+                data['Ierr_lbl'].append(Ierr)
                 data['corr_params'].append(corr_params)
                 data['scan_type'].append(scan_type)
                 #
@@ -193,49 +211,87 @@ class CtrData:
                 data['K'].append(scan['K'][j])
                 data['L'].append(scan['L'][j])
                 # get F
-                (I,Inorm,Ierr,ctot,F,Ferr) = _image_point_F(scan,point,I_lbl,
-                                                            Inorm_lbl,Ierr_lbl,
-                                                            corr_params)
-                data['I'].append(I)
-                data['Inorm'].append(Inorm)
-                data['Ierr'].append(Ierr)
-                data['ctot'].append(ctot)
-                data['F'].append(F)
-                data['Ferr'].append(Ferr)
-    
-    ##########################################################################
-    def _image_point_F(self,scan,point,I,Inorm,Ierr,corr_params):
-        """
-        compute F for a single scan point in an image scan
-        """
-        y     = scan[I][point]
-        norm  = scan[Inorm][point]
-        y_err = scan[Ierr][point]
-        if corr_params == None:
-            ctot = 1.0
-        else:
-            # compute correction factors
-            geom   = corr_params.get('geom')
-            if geom == None: geom='psic'
-            beam   = corr_params.get('beam_slits')
-            det    = corr_params.get('det_slits')
-            sample = corr_params.get('sample')
-            # get gonio instance for corrections
-            if geom == 'psic':
-                gonio = gonio_psic.psic_from_spec(scan['G'])
-                update_psic_angles(gonio,scan,point)
-                corr  = CtrCorrectionPsic(gonio=gonio,beam_slits=beam,
-                                          det_slits=det,sample=sample)
-            # else another geom or an error...
-            ctot  = corr.ctot_stationary()
-        # compute F
-        yn     = y/norm
-        yn_err = yn * num.sqrt( (y_err/y)**2. + 1./norm )
+                d = image_point_F(scan,j,I=I,Inorm=Inorm,
+                                  Ierr=Ierr,corr_params=corr_params)
+                data['I'].append(d['I'])
+                data['Inorm'].append(d['Inorm'])
+                data['Ierr'].append(d['Ierr'])
+                data['ctot'].append(d['ctot'])
+                data['F'].append(d['F'])
+                data['Ferr'].append(d['Ferr'])
+        return data
 
-        F    = num.sqrt(ctot*yn)
-        Ferr = num.sqrt(ctot*yn_err)
+    ##########################################################################
+    def integrate_point(self,idx,**kw):
+        """
+        (Re)-integrate an individual structure factor point
+        idx is the index number of the point
+
+        If scan type is image use the following kw arguments
+        (if the argument is not passed the existing value is used,
+        ie just use these to update parameters)
+
+        roi
+        rotangle
+        bgr_params
+        plot
+        fig
+        bad:  True/False
+        # 
+        I
+        Inorm
+        Ierr
+        corr_params
         
-        return (y,norm,yn_err,ctot,F,Ferr)
+        """
+        if idx not in range(len(self.L)): return
+
+        if self.scan_type[idx]=="image":
+            (scan_idx,point) = self.scan_index(idx)
+            scan = self.scan_data[scan_idx]
+            if scan.image._is_init() == False:
+                scan.image._init_image()
+            # parse integration parameters
+            roi        = kw.get('roi')
+            rotangle   = kw.get('rotangle')
+            bgr_params = kw.get('bgr_params')
+            bad_points = kw.get('bad')
+            plot       = kw.get('plot',False)
+            fig        = kw.get('fig')
+            if bad != None:
+                if bad == True:
+                    if point not in scan.image.bad_points:
+                        scan.image.bad_points.append(point)
+                elif bad == False:
+                    if point in scan.image.bad_points:
+                        scan.image.bad_points.remove(point)
+                else:
+                    print "Warning: bad should be True/False"
+            # integrate the scan.  note changes should stick...
+            scan.integrate(idx=[point],roi=roi,rotangle=rotangle,
+                           brg_params=bgr_params,plot=plot,fig=fig)
+            # parse all the correction info and re-compute 
+            I       = kw.get('I',self.labels['I'][idx])
+            Inorm   = kw.get('Inorm',self.labels['Inorm'][idx])
+            Ierr    = kw.get('Ierr', self.labels['Ierr'][idx])
+            corr_params = kw.get('corr_params',self.corr_params[idx])
+            d = image_point_F(scan,point,I=I,Inorm=Inorm,
+                              Ierr=Ierr,corr_params=corr_params)
+            # store results
+            self.labels['I'][idx]     = I_lbl
+            self.labels['Inorm'][idx] = Inorm_lbl
+            self.labels['Ierr'][idx]  = Ierr_lbl
+            self.corr_params[idx]     = corr_params
+            self.H[idx]               = scan['H'][point]
+            self.K[idx]               = scan['K'][point]
+            self.L[idx]               = scan['L'][point]
+            self.I[idx]               = d['I']
+            self.Inorm[idx]           = d['Inorm']
+            self.Ierr[idx]            = d['Ierr']
+            self.ctot[idx]            = d['ctot']
+            self.F[idx]               = d['F']
+            self.Ferr[idx]            = d['Ferr']
+        return 
 
     ##########################################################################
     def plot(self):
@@ -247,23 +303,66 @@ class CtrData:
         pyplot.plot(self.L, self.F,'b')
         pyplot.errorbar(self.L,self.F,self.Ferr, fmt ='o')
         pyplot.semilogy()
-        pyplot.show()
 
     ##########################################################################
-    def write_HKL(self,fname = 'ctr.hkl'):
-        #write data file for row data
+    def write_HKL(self,fname = 'ctr.lst'):
+        """
+        dump data file
+        """
         f = open(fname, 'w')
-        f.write('#idx        H            K            L            F           F_err \n')
+        header = "#idx  %5s %5s %5s %7s %7s\n" % ('H','K','L','F','Ferr')
+        f.write(header)
         for i in range(len(self.L)):
             if self.I[i] > 0:
-                line = "%i    %i    %i    %6.3f    %6.6g    %6.6g\n" % (i,
-                                                                  round(self.H[i]),
-                                                                  round(self.K[i]),
-                                                                  self.L[i],
-                                                                  self.F[i],
-                                                                  self.Ferr[i])
+                line = "%4i %3i %3i %6.3f %6.6g %6.6g\n" % (i,round(self.H[i]),
+                                                            round(self.K[i]),
+                                                            self.L[i],self.F[i],
+                                                            self.Ferr[i])
                 f.write(line)
         f.close()
+
+##############################################################################
+def image_point_F(scan,point,I='I_c',Inorm='Io',Ierr='Ierr_c',corr_params={}):
+    """
+    compute F for a single scan point in an image scan
+    """
+    d = {'I':0.0,'Inorm':0.0,'Ierr':0.0,'ctot':1.0,'F':0.0,'Ferr':0.0}
+    d['I']     = scan[I][point]
+    d['Inorm'] = scan[Inorm][point]
+    d['Ierr']  = scan[Ierr][point]
+    if corr_params == None:
+        d['ctot'] = 1.0
+        scale = 1.0
+    else:
+        # compute correction factors
+        geom   = corr_params.get('geom')
+        if geom == None: geom='psic'
+        beam   = corr_params.get('beam_slits',{})
+        det    = corr_params.get('det_slits')
+        sample = corr_params.get('sample')
+        scale  = corr_params.get('scale',1.0)
+        scale  = float(scale)
+        # get gonio instance for corrections
+        if geom == 'psic':
+            gonio = gonio_psic.psic_from_spec(scan['G'])
+            _update_psic_angles(gonio,scan,point)
+            corr  = CtrCorrectionPsic(gonio=gonio,beam_slits=beam,
+                                      det_slits=det,sample=sample)
+            d['ctot']  = corr.ctot_stationary()
+        else:
+            print "Geometry %s not implemented" % geom
+            ctot = 1.0
+    # compute F
+    if d['I'] <= 0.0 or d['Inorm'] <= 0.:
+        d['F']    = 0.0
+        d['Ferr'] = 0.0
+    else:
+        yn     = scale*d['I']/d['Inorm']
+        yn_err = yn * num.sqrt( (d['Ierr']/d['I'])**2. + 1./d['Inorm'] )
+        d['F']    = num.sqrt(d['ctot']*yn)
+        d['Ferr'] = num.sqrt(d['ctot']*yn_err)
+    
+    return d
 
 ##############################################################################
 def _update_psic_angles(gonio,scan,point):
@@ -383,7 +482,7 @@ class CtrCorrectionPsic:
     Note need to add attenuation parameters.  
     
     """
-    def __init__(self,gonio=None,beam_slits={},det_slits={},sample={}):
+    def __init__(self,gonio=None,beam_slits={},det_slits=None,sample=None):
         self.gonio      = gonio
         if self.gonio.calc_psuedo == False:
             self.gonio.calc_psuedo = True
@@ -393,11 +492,6 @@ class CtrCorrectionPsic:
         self.sample     = sample
         # fraction horz polarization
         self.fh         = 1.0
-        # arbitrary scale factor.
-        # Note if Io = 1million cps
-        # the using this scale makes the normalized intensity
-        # close to cps
-        self.scale      = 1.0e6
 
     ##########################################################################
     def ctot_stationary(self,plot=False):
@@ -407,12 +501,11 @@ class CtrCorrectionPsic:
         cp = self.polarization()
         cl = self.lorentz_stationary()
         ca = self.active_area(plot=plot)
-        ct = (self.scale)*(cp)*(cl)*(ca)
+        ct = (cp)*(cl)*(ca)
         if plot == True:
             print "Polarization=%f" % cp
             print "Lorentz=%f" % cl
             print "Area=%f" % ca
-            print "Scale=%f" % self.scale
             print "Total=%f" % ct
         return ct
 
@@ -508,6 +601,9 @@ class CtrCorrectionPsic:
                    viewed by detector)
            A_beam = total beam area
         """
+        if self.beam_slits == {}:
+            print "Warning beam slits not specified"
+            return 1.0
         alpha = self.gonio.pangles['alpha']
         beta  = self.gonio.pangles['beta']
         if plot == True:
@@ -518,17 +614,21 @@ class CtrCorrectionPsic:
         elif beta < 0.0:
             print 'beta is less than 0.0'
             return 0.0
-        
+
         # get beam vectors
         bh = self.beam_slits['horz']
         bv = self.beam_slits['vert']
         beam = gonio_psic.beam_vectors(h=bh,v=bv)
+
         # get det vectors
-        dh = self.det_slits['horz']
-        dv = self.det_slits['vert']
-        det  = gonio_psic.det_vectors(h=dh,v=dv,
-                                      nu=self.gonio.angles['nu'],
-                                      delta=self.gonio.angles['delta'])
+        if self.det_slits == None:
+            det = None
+        else:
+            dh = self.det_slits['horz']
+            dv = self.det_slits['vert']
+            det  = gonio_psic.det_vectors(h=dh,v=dv,
+                                          nu=self.gonio.angles['nu'],
+                                          delta=self.gonio.angles['delta'])
         # get sample poly
         if type(self.sample) == types.DictType:
             sample_vecs = self.sample['polygon']
@@ -538,6 +638,7 @@ class CtrCorrectionPsic:
                                                gonio=self.gonio)
         else:
             sample = self.sample
+
         # compute active_area
         (A_beam,A_int) = active_area(self.gonio.nm,ki=self.gonio.ki,
                                      kr=self.gonio.kr,beam=beam,det=det,

@@ -606,10 +606,10 @@ class Reader:
             start = 0
             end   = data.dims[0] - 1
             if self.image_params['archive'] != None:
-                if self.image_params.has_key('file') == False:
+                if self.image_params['archive'].has_key('file') == False:
                     imfile = spec.fname + '_images.h5'
-                    self.image_params['file'] = imfile
-                self.image_params['setname'] = 'S%03d' % int(scan)
+                    self.image_params['archive']['file'] = imfile
+                self.image_params['archive']['setname'] = 'S%03d' % int(scan)
             image = image_scan(image_pfx,sd=False,
                                start=start,end=end,
                                nfmt=self.image_params['nfmt'],

@@ -79,7 +79,7 @@ def image_menu(imdata):
                               figtitle=figtitle,im_max=im_max,rotangle=rotangle)
 
     # check init and plot first
-    if len(imdata.peaks) != npts:
+    if imdata._is_init() == False:
         imdata._init_image()
     _implot(imdata,scan_pnt)
     

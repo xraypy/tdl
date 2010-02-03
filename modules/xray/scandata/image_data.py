@@ -20,13 +20,6 @@ Todo
  - In ImageAna.plot should we plot row and column sums
    after bgr subtraction?
 
-In ImageScan
-- include a flag to control image integration?
-- set individual image background parameters for each scan point
-- use the bad_points list in image_integrate
-
-
-
 ###
 Note issue with organization of PIL/Image modules when
 try to build exe.  Therefore, just do import of Image
@@ -56,7 +49,7 @@ from mpcutils.mathutil import LinReg
 from background import background
 
 ########################################################################
-IMG_BGR_PARAMS = {'bgrflag':0,
+IMG_BGR_PARAMS = {'bgrflag':2,
                   'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
                   'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
 
@@ -368,7 +361,7 @@ class ImageAna:
           (see background.background)
               
         * c/rwidth should correspond roughly to the actual peak
-          widths. The background funciton should fit
+          widths. The background function should fit
           features that are in general broader than these values
           Note estimate cwidth using width of peak in row sum
           and rwidth using the width of the peak in the col sum.
@@ -613,9 +606,9 @@ class ImageScan:
     Class to hold a collection of images associated with a scan
     ie one image per scan point
 
-    Should creat an _archive() and _unarchive() methods...   
+    Should create an _archive() and _unarchive() methods...   
     """
-    def __init__(self,image=[],rois=None,rotangle=None,bgrpar=None,
+    def __init__(self,image=[],rois=None,rotangle=None,bgr_params=None,
                  archive=None):
         if type(image) != types.ListType: image = [image]
         if archive != None:
@@ -627,14 +620,46 @@ class ImageScan:
                                     setname=setname,descr=descr)
         else:
             self.image = image
-        self.rois     = rois
-        self.rotangle = rotangle
-        self.bgrpar   = bgrpar
+        self.rois     = None
+        self.rotangle = None
+        self.bgrpar   = None
         self.im_max   = []
         self.peaks    = {}
         self.bad_points = []
+        self._is_integrated = False
         self._init_image()
+        #
+        npts = len(self.image)
+        # update roi
+        if rois!=None:
+            if len(rois) == 4:
+                if type(rois[0]) == types.ListType and npts == 4:
+                    for j in range(npts):
+                        self.rois[j] = rois[j]
+                else:
+                    for j in range(npts):
+                        self.rois[j] = rois
+            elif len(rois) == len(npts):
+                for j in range(npts):
+                    self.rois[j] = rois[j]
+        # update rot angles
+        if rotangle!=None:
+            if len(rotangle) == 1:
+                for j in range(npts):
+                    self.rotangle[j] = rotangle
+            elif len(rotangle) == npts:
+                for j in range(npts):
+                    self.rotangle[j] = rotangle[j]
+        # update bgr
+        if bgr_params!=None:
+            if type(bgr_params) == types.DictType:
+                for j in range(npts):
+                    self.bgrpar[j] = bgr_params
+            elif len(bgr_params) == npts:
+                for j in range(npts):
+                    self.bgrpar[j] = bgr_params[j]
 
+    ################################################################
     def __repr__(self,):
         lout = 'Number of images = %i' % (len(self.image))
         return lout
@@ -658,7 +683,8 @@ class ImageScan:
         if len(self.rois) != npts:
             self.rois = []
             for j in range(npts):
-                self.rois.append([])
+                self.rois.append([0,0,self.image[j].shape[1],
+                                  self.image[j].shape[0]])
         # init rotangle
         if len(self.rotangle) != npts:
             self.rotangle = []
@@ -687,50 +713,69 @@ class ImageScan:
         self.peaks['I_r']    = num.zeros(npts,dtype=float)
         self.peaks['Ierr_r'] = num.zeros(npts,dtype=float)
         self.peaks['Ibgr_r'] = num.zeros(npts,dtype=float)
+        #
+        self._is_integrated = False
 
     ################################################################
-    def integrate(self,idx=[],roi=[],rotangle=[], bgr_params=[],
-                  bad_points=[],plot=True,fig=None):
+    def _is_init(self):
+        if len(self.peaks) > 0:
+            if len(self.peaks['I']) == len(self.image):
+                init = True
+        else:
+            init = False
+        return init
+
+    ################################################################
+    def integrate(self,idx=[],roi=None,rotangle=None,bgr_params=None,
+                  bad_points=None,plot=False,fig=None):
         """
         integrate images
         roi  = [x1,y1,x2,y2]
         """
         # make sure arrays exist:
-        init = False
-        if len(self.peaks) > 0:
-            if len(self.peaks['I']) != len(self.image):
-                init = True
-        else:
-            init = True
-        if init:
+        if self._is_init()==False:
             self._init_image()
         # idx of images to integrate
         if len(idx) == 0:
             idx = num.arange(len(self.image))
         # update roi
-        if len(roi) == 4:
-            for j in idx:
-                self.rois[j] = roi
-        elif len(roi) == len(idx):
-            for j in idx:
-                self.rois[j] = roi[j]
+        if roi!=None:
+            if len(roi) == 4:
+                if type(roi[0]) == types.ListType:
+                    for j in idx:
+                        self.rois[j] = roi[j]
+                else:
+                    for j in idx:
+                        self.rois[j] = roi
+            elif len(roi) == len(idx):
+                for j in idx:
+                    self.rois[j] = roi[j]
         # update rot angles
-        if len(rotangle) == 1:
-            for j in idx:
-                self.rotangle[j] = rotangle
-        elif len(rotangle) == len(idx):
-            for j in idx:
-                self.rotangle[j] = rotangle[j]
+        if rotangle!=None:
+            if len(rotangle) == 1:
+                for j in idx:
+                    self.rotangle[j] = rotangle
+            elif len(rotangle) == len(idx):
+                for j in idx:
+                    self.rotangle[j] = rotangle[j]
         # update bgr
-        if type(bgr_params) == types.DictType:
-            for j in idx:
-                self.bgrpar[j] = bgr_params
-        elif len(bgr_params) == len(idx):
-            for j in idx:
-                self.bgrpar[j] = bgr_params[j]
+        if bgr_params!=None:
+            if type(bgr_params) == types.DictType:
+                for j in idx:
+                    self.bgrpar[j] = bgr_params
+            elif len(bgr_params) == len(idx):
+                for j in idx:
+                    self.bgrpar[j] = bgr_params[j]
+        # update bad points
+        if bad_points!=None:
+            if type(bad_points)!=types.ListType:
+                bad_points = [bad_points]
+            for p in bad_points:
+                if p not in self.bad_points:
+                    self.bad_points.append(p)
         # do integrations
         for j in idx:
-            if j not in bad_points:
+            if j not in self.bad_points:
                 self._integrate(idx=j,plot=plot,fig=fig)
             else:
                 self.peaks['I'][j]      = 0.
@@ -744,6 +789,8 @@ class ImageScan:
                 self.peaks['I_r'][j]    = 0.
                 self.peaks['Ierr_r'][j] = 0.
                 self.peaks['Ibgr_r'][j] = 0.
+
+        self._is_integrated = True
     
     ################################################################
     def _integrate(self,idx=0,plot=True,fig=None):
