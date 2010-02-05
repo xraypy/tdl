@@ -841,7 +841,7 @@ class _ImageList:
             try:
                 self._write_image_tables(images,setname,descr)
             except:
-                print "Unable to write to hdf"
+                print "Unable to write to image to hdf file"
                 self._cleanup()
     
     ################################################################
@@ -898,7 +898,7 @@ class _ImageList:
         # find the highest one and
         # auto generate set name as next in the sequence 
         if hasattr(h.root.images,setname):
-            print "Setname %s already exists" % setname
+            print "   Image Archive File %s: Setname %s already exists" % (fname,setname)
         else:
             h.createArray('/images',setname,images,descr)
         h.close()

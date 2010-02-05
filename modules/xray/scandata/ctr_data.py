@@ -28,7 +28,7 @@ Todo
 """
 ##############################################################################
 
-import types
+import types, copy
 import numpy as num
 from matplotlib import pyplot
 
@@ -107,7 +107,7 @@ class CtrData:
     def __init__(self,scans=[],I='I_c',Inorm='io',Ierr='Ierr_c',
                  corr_params={},scan_type='image'):
         #
-        self.scan_data   = []
+        self.scan   = []
         self.scan_index  = []
         #
         self.labels      = {'I':[],'Inorm':[],'Ierr':[]}
@@ -131,7 +131,7 @@ class CtrData:
     ##########################################################################
     def __repr__(self,):
         lout = "CTR DATA\n"
-        lout = "%sNumber of scans = %i\n" % (lout,len(self.scan_data))
+        lout = "%sNumber of scans = %i\n" % (lout,len(self.scan))
         lout = "%sNumber of structure factors = %i\n" % (lout,len(self.L))
         return lout
 
@@ -161,8 +161,8 @@ class CtrData:
             data = self._scan_data(scan,I,Inorm,Ierr,corr_params,scan_type)
             if data == None: return
 
-            #self.scan_data.append([])
-            self.scan_data.append(scan)
+            #self.scan.append([])
+            self.scan.append(scan)
             #
             self.scan_index.extend(data['scan_index'])
             self.labels['I'].extend(data['I_lbl'])
@@ -192,7 +192,7 @@ class CtrData:
                 'ctot':[],'F':[],'Ferr':[]}
 
         # compute a scan index
-        scan_idx = len(self.scan_data)
+        scan_idx = len(self.scan)
         
         # image scan -> each scan point is a unique HKL
         if scan_type == 'image':
@@ -248,7 +248,7 @@ class CtrData:
 
         if self.scan_type[idx]=="image":
             (scan_idx,point) = self.scan_index(idx)
-            scan = self.scan_data[scan_idx]
+            scan = self.scan[scan_idx]
             if scan.image._is_init() == False:
                 scan.image._init_image()
             # parse integration parameters
@@ -294,15 +294,37 @@ class CtrData:
         return 
 
     ##########################################################################
-    def plot(self):
+    def plot(self,fig=None,num_col=2):
         """
         plot the rod.
         Need multi panel plot 
         """
-        pyplot.figure()
-        pyplot.plot(self.L, self.F,'b')
-        pyplot.errorbar(self.L,self.F,self.Ferr, fmt ='o')
-        pyplot.semilogy()
+        hksets  = sort_data(self)
+        nset    = len(hksets)
+        num_col = float(num_col)
+        num_row = num.ceil(nset/num_col)
+        pyplot.figure(fig)
+        pyplot.clf()
+        for j in range(nset):
+            pyplot.subplot(num_row,num_col,j+1)
+            d = hksets[j]
+            title = 'H=%2.3f,K=%2.3f' % (d['H'][0],d['K'][0])
+            pyplot.title(title, fontsize = 12)
+            pyplot.plot(d['L'],d['F'],'b.-')
+            pyplot.errorbar(d['L'],d['F'],d['Ferr'], fmt ='o')
+            pyplot.semilogy()
+            #
+            min_L = num.floor(num.min(d['L']))
+            max_L = num.ceil(num.max(d['L']))
+            idx   = num.where(d['F'] > 0.)
+            min_F = num.min(d['F'][idx])
+            min_F = 10.**(num.round(num.log10(min_F)) - 1)
+            max_F = num.max(d['F'][idx])
+            max_F = 10.**(num.round(num.log10(max_F)) + 1)
+            pyplot.axis([min_L,max_L,min_F,max_F])
+            #
+            pyplot.xlabel('L')
+            pyplot.ylabel('|F|')
 
     ##########################################################################
     def write_HKL(self,fname = 'ctr.lst'):
@@ -320,6 +342,73 @@ class CtrData:
                                                             self.Ferr[i])
                 f.write(line)
         f.close()
+
+##########################################################################
+#def sort_data(H,K,L,F,Ferr,idx,hkdecimal=3):
+def sort_data(ctr,hkdecimal=3):
+    """
+    return a dict of sorted data
+
+    Assume H,K define a set with a range of L values
+    All arrays should be of len npts. 
+
+    """
+    # round H and K to sepcified precision
+    H = num.around(ctr.H,decimals=hkdecimal)
+    K = num.around(ctr.K,decimals=hkdecimal)
+    L = ctr.L
+    F = ctr.F
+    Ferr = ctr.Ferr
+    idx  = ctr.scan_index
+    npts = len(F)
+
+    #find all unique sets
+    hkvals = []
+    for j in range(npts):
+        s = (H[j],K[j]) 
+        if s not in hkvals:
+            hkvals.append(s)
+
+    # sort the hkvals
+    # and stick data in correct set
+    hkvals.sort()
+    nsets = len(hkvals)
+    #d = {'H':[],'K':[],'L':[],'F':[],'Ferr':[],'idx':[]}
+    #hkset  = [copy.copy(d) for j in range(nsets)]
+    hkset = []
+    for j in range(nsets):
+        hkset.append({'H':[],'K':[],'L':[],'F':[],'Ferr':[],'idx':[]})
+
+    for j in range(npts):
+        s      = (H[j],K[j])
+        setidx = hkvals.index(s)
+        hkset[setidx]['H'].append(H[j])
+        hkset[setidx]['K'].append(K[j])
+        hkset[setidx]['L'].append(L[j])
+        hkset[setidx]['F'].append(F[j])
+        hkset[setidx]['Ferr'].append(Ferr[j])
+        hkset[setidx]['idx'].append(idx[j])
+
+    # make arrays num arrays
+    for j in range(nsets):
+        hkset[j]['H'] = num.array(hkset[j]['H'])
+        hkset[j]['K'] = num.array(hkset[j]['K'])
+        hkset[j]['L'] = num.array(hkset[j]['L'])
+        hkset[j]['F'] = num.array(hkset[j]['F'])
+        hkset[j]['Ferr'] = num.array(hkset[j]['Ferr'])
+        hkset[j]['idx']  = num.array(hkset[j]['idx'])
+
+    # now sort each set by L
+    for j in range(nsets):
+        lidx = num.argsort(hkset[j]['L'])
+        hkset[j]['H'] = hkset[j]['H'][lidx]
+        hkset[j]['K'] = hkset[j]['K'][lidx]
+        hkset[j]['L'] = hkset[j]['L'][lidx]
+        hkset[j]['F'] = hkset[j]['F'][lidx]
+        hkset[j]['Ferr'] = hkset[j]['Ferr'][lidx]
+        hkset[j]['idx'] = hkset[j]['idx'][lidx]
+
+    return hkset
 
 ##############################################################################
 def image_point_F(scan,point,I='I_c',Inorm='Io',Ierr='Ierr_c',corr_params={}):

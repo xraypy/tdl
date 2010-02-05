@@ -133,6 +133,7 @@ class PlotClick:
         self.x = 0.
         self.y = 0.
         self.clicked = False
+        self.subplot=-1
         if fig == None:
             self.fig = pyplot.figure()
         else:
@@ -147,11 +148,22 @@ class PlotClick:
         (x, y) = (event.x, event.y)
         if event.button==1:
             if event.inaxes is not None:
-                if self.verbose:
-                    print 'X=', event.xdata, 'Y=', event.ydata
                 self.x = event.xdata
                 self.y = event.ydata
                 self.clicked = True
+                #self.axes = event.inaxes
+                self.subplot = self._subplot_num(event.inaxes)
+                if self.verbose:
+                    #print 'X=', event.xdata, 'Y=', event.ydata
+                    print 'X=', self.x, 'Y=', self.y, 'Subplot=', self.subplot
+
+    def _subplot_num(self,axes):
+        a = self.fig.get_axes()
+        n = len(a)
+        for j in range(n):
+            if axes == a[j]:
+                return j+1
+        return -1
 
     def get_click(self,msg="Click a point"):
         """
