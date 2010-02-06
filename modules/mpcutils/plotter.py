@@ -15,8 +15,6 @@ import types
 import time
 import numpy as num
 
-from   shellutil import PrintExceptErr
-
 ################################################################################
 def newplotter(*arg,**kw):
     """
@@ -94,24 +92,24 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1.,yscale=1.,
         try:
             pyplot.errorbar(x_plot,y_plot,xerr=xerr_plot,yerr=yerr_plot,fmt=fmt,**kw)
         except:
-            PrintExceptErr('Error bar plot failed')
+            print 'Error bar plot failed'
     else:
         try:
             pyplot.plot(x_plot,y_plot,fmt,**kw)
         except:
-            PrintExceptErr('Plot failed')
+            print 'Plot failed'
 
     # check logs
     if xlog:
         try:
             pyplot.semilogx()
         except:
-            PrintExceptErr('X log failed')
+            print 'X log failed'
     if ylog:
         try:
             pyplot.semilogy()
         except:
-            PrintExceptErr('X log failed')
+            print 'X log failed'
     
     return
 
@@ -130,9 +128,9 @@ class PlotClick:
             self.GUI = None
         #
         self.verbose = verbose
+        self.clicked = False
         self.x = 0.
         self.y = 0.
-        self.clicked = False
         self.subplot=-1
         if fig == None:
             self.fig = pyplot.figure()
@@ -148,9 +146,9 @@ class PlotClick:
         (x, y) = (event.x, event.y)
         if event.button==1:
             if event.inaxes is not None:
+                self.clicked = True
                 self.x = event.xdata
                 self.y = event.ydata
-                self.clicked = True
                 #self.axes = event.inaxes
                 self.subplot = self._subplot_num(event.inaxes)
                 if self.verbose:
@@ -162,7 +160,7 @@ class PlotClick:
         n = len(a)
         for j in range(n):
             if axes == a[j]:
-                return j+1
+                return j
         return -1
 
     def get_click(self,msg="Click a point"):

@@ -20,11 +20,8 @@ C. Schlepuetz et al, Acta Cryst. (2005). A61, 418-425
 Todo
 ----
 - Test!
-- sorting and HK panel plots
 - averaging/merging and merge statistics
 - corrections for rocking scans
-- editing / re-integrating select points:
-  - select from plot and give type (image/scan)
 """
 ##############################################################################
 
@@ -32,6 +29,7 @@ import types, copy
 import numpy as num
 from matplotlib import pyplot
 
+import plotter
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
 
@@ -107,6 +105,8 @@ class CtrData:
     def __init__(self,scans=[],I='I_c',Inorm='io',Ierr='Ierr_c',
                  corr_params={},scan_type='image'):
         #
+        self.fig    = None
+        self.cursor = None
         self.scan   = []
         self.scan_index  = []
         #
@@ -294,10 +294,9 @@ class CtrData:
         return 
 
     ##########################################################################
-    def plot(self,fig=None,num_col=2):
+    def plot(self,fig=None,num_col=2,cursor=True,verbose=True):
         """
-        plot the rod.
-        Need multi panel plot 
+        plot the raw structure factor data
         """
         hksets  = sort_data(self)
         nset    = len(hksets)
@@ -325,18 +324,49 @@ class CtrData:
             #
             pyplot.xlabel('L')
             pyplot.ylabel('|F|')
+        fig = pyplot.gcf()
+        self.fig = fig.number
+        self.cursor = None
+        if cursor == True:
+            self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
 
+    ##########################################################################
+    def get_idx(self):
+        """
+        get point index from plot selection
+        """
+        if self.cursor == None:
+            return None
+        if self.cursor.clicked == False:
+            return None
+        L = self.cursor.x
+        subplot = self.cursor.subplot
+        if subplot < 0:
+            return None
+        hksets  = sort_data(self)
+        idx = self._get_idx(subplot,L,hksets)
+        return idx
+    
+    def _get_idx(self,subplot,L,hksets):
+        d   = hksets[subplot]
+        tmp = num.fabs(d['L']-L)
+        idx = num.where(tmp==min(tmp))
+        if len(idx) > 0:
+            idx = idx[0]
+        idx = tuple(d['idx'][idx][0])
+        return idx
+    
     ##########################################################################
     def write_HKL(self,fname = 'ctr.lst'):
         """
         dump data file
         """
         f = open(fname, 'w')
-        header = "#idx  %5s %5s %5s %7s %7s\n" % ('H','K','L','F','Ferr')
+        header = "#idx %5s %5s %5s %7s %7s\n" % ('H','K','L','F','Ferr')
         f.write(header)
         for i in range(len(self.L)):
             if self.I[i] > 0:
-                line = "%4i %3i %3i %6.3f %6.6g %6.6g\n" % (i,round(self.H[i]),
+                line = "%4i %3.2f %3.2f %6.3f %6.6g %6.6g\n" % (i,round(self.H[i]),
                                                             round(self.K[i]),
                                                             self.L[i],self.F[i],
                                                             self.Ferr[i])

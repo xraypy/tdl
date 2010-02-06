@@ -12,7 +12,7 @@ Modifications:
 import numpy as num
 
 ##########################################################################
-def read_col_data(fname): 
+def read_column(fname): 
     f = open(fname)
     lines = f.readlines()
     f.close()

@@ -15,7 +15,7 @@
 import scandata
 
 ## Read column files
-from fmtfiles.read_fmt import read_col_data as read_dat
+import fmtfiles as files
 
 ##################################################
 ## Make sure help is defined
