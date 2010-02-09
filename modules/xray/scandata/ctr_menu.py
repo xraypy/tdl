@@ -26,69 +26,97 @@ import data
 
 ########################################################################
 IMG_HEADER = """
-Number of points  = %s
-Current point     = %s
+Number of points       = %s
+New/selected points    = %s
+Current selected point = %s
+-----
+Scan Type = '%s'
+I='%s', Inorm='%s',Ierr='%s'
+-----
+Geom='%s'
+Beam slits = %s
+Det slits = %s
+Sample  = %s
+Scale = %s
+------
+Add some HKL, I F etc...
 """
 
-IMG_LABELS = ['display','imax','rotangle','setroi','plotsums',
-              'selectroi','bgr','copyall','integrate','intall',
-              'point','next','previous','flag','help','quit']
-IMG_DESCR = ["Display image",
-             "Set max image intensity value",
-             "Set image rotation angle (deg ccw)",
-             "Set roi from image zoom (Figure 1)",
-             "Plot row/column sums (Figure 2)",
-             "Select roi from sum plots (Figure 2)",
-             "Set background parameters",
-             "Apply current roi and background params to all images",
-             "Integrate current image",
-             "Integrate all images",
-             "Select scan point",
+IMG_LABELS = ['plot','pointselect','zoomselect','labels','correction',
+              'cplot','setint','integrate','intselected','intall',
+              'point','next','previous','help','quit']
+IMG_DESCR = ["Plot all structure factors",
+             "Select scan point from plot (Fig 0)",
+             "Select scan set from plot zoom (Fig 0)",
+             "Set Intensity labels", # --> sub menu apply to current, set, all
+             "Set Correction Params", # "" 
+             "Plot correction",
+             "Set integration parameters", # "", also set bgr and flag bad
+             "Integrate current point",
+             "Integrate selected points",
+             "Integrate all points",
+             "Select scan point(s)",
              "Select next point ",
              "Select previous point", 
-             "Flag as bad point",
              "Show options",
              "Quit / All Done"]
 
-"""
-NEED:
-- append new stuff if passed and find idx range of new stuff.
-- integrate:
-   - a point (idx)
-   - range of points (idx or new)
-   - selection from plot (single or range)
-   (note in integrate menu operate on range of points...)
-- modify params I, Inorm, corr_params etc... (apply to point, all, new)
-- plot correction (e.g. area)
-"""
-
 ########################################################################
-def ctr_menu(ctr,scans=[],I='I_c',Inorm='io',Ierr='Ierr_c',
-             corr_params={},scan_type='image'):
+def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
+             corr_params=None,scan_type=None):
     """
     Interactively inspect/integrate CtrData 
     """
-    if not isinstance(ctr,ctr_data.CtrData):
-        print "Error CtrData object required"
-        return
+    #if not isinstance(ctr,ctr_data.CtrData):
+    #    print "Error CtrData object required"
+    #    return
     prompt   = 'Select option >'
-    npts     = len(ctr.L)
-    scan_pnt = 0
     ret      = ''
+    point    = 0
+    set      = []
+    npts     = len(ctr.L)
 
+    # append new data
+    if scans!=None:
+        ctr.append_scans(self,scans,I=I,Inorm=Inorm,Ierr=Ierr,
+                         corr_params=corr_params,scan_type=scan_type)
+        set   = [npts,len(ctr.L)]
+        point = npts
+        npts  = len(ctr.L)
+        
     # make menu
     m = Menu(labels=IMG_LABELS,descr=IMG_DESCR,sort=False,matchidx=True)
     
     # loop
     while ret != 'quit':
-        header   = IMG_HEADER % (str(npts),str(scan_pnt))
+        header   = IMG_HEADER % (str(npts),str(set),str(point),
+                                 str(ctr.scan_type[point]),
+                                 str(ctr.labels['I'][point]),
+                                 str(ctr.labels['Inorm'][point]),
+                                 str(ctr.labels['Ierr'][point]),
+                                 str(ctr.corr_params[point].get('geom')),
+                                 str(ctr.corr_params[point].get('beam_slits')),
+                                 str(ctr.corr_params[point].get('det_slits')),
+                                 str(ctr.corr_params[point].get('sample')),
+                                 str(ctr.corr_params[point].get('scale')),
+                                 )
         m.header = header
         ret      = m.prompt(prompt)
 
-        if ret == 'display':
-            ctr.plot()
+        if ret == 'plot':
+            ctr.plot(fig=0)
+        elif ret == 'point':
+            point = get_int(prompt='Enter point',
+                            default=point,min=0,max = npts-1)
+        elif ret == 'next':
+            if point + 1 < npts: 
+                point = point + 1
+        elif ret == 'previous':
+            if point - 1 > -1: 
+                point = point - 1
         else:
             pass
+
 
 ################################################################################
 

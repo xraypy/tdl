@@ -21,6 +21,7 @@ Todo
 ----
 - Test!
 - averaging/merging and merge statistics
+- keep track of Ibgr, allow plotting I and Ibgr
 - corrections for rocking scans
 """
 ##############################################################################
