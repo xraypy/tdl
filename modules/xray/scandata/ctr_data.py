@@ -30,10 +30,11 @@ import numpy as num
 from matplotlib import pyplot
 
 import plotter
-from mathutil import cosd, sind, tand
-from mathutil import arccosd, arcsind, arctand
+from   mathutil import cosd, sind, tand
+from   mathutil import arccosd, arcsind, arctand
 
-from xtal.active_area import active_area
+import image_data
+from   xtal.active_area import active_area
 import gonio_psic 
 
 ##############################################################################
@@ -356,6 +357,29 @@ class CtrData:
         idx = tuple(d['idx'][idx][0])
         return idx
     
+    ##########################################################################
+    def plot_point(self,idx=None,fig=None):
+        """
+        plot the raw data for a selected point
+
+        idx = point index.  if idx = None, then uses last cursor click
+        fig = fig number
+        """
+        if idx == None:
+            idx = self.get_idx()
+            if idx == None: return None
+        if len(idx) > 1:
+            point = idx[1]
+            idx = idx[0]
+        else:
+            point = 0
+        data = self.scan[idx]
+        if self.scan_type[idx] == 'image':
+            self.scan[idx].image.plot(idx=point,fig=fig)
+        else:
+            # plot scan data
+            pass
+        
     ##########################################################################
     def write_HKL(self,fname = 'ctr.lst'):
         """

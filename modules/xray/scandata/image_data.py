@@ -726,6 +726,16 @@ class ImageScan:
         return init
 
     ################################################################
+    def plot(self,idx=0,fig=None,figtitle='',cmap=None,verbose=False):
+        """
+        Make a plot of image
+        """
+        image_plot(self.image[idx],fig=fig,figtitle=figtitle,
+                   cmap=cmap,verbose=verbose,
+                   im_max=self.im_max[idx],
+                   rotangle=self.rotangle[idx])
+               
+    ################################################################
     def integrate(self,idx=[],roi=None,rotangle=None,bgr_params=None,
                   bad_points=None,plot=False,fig=None):
         """
