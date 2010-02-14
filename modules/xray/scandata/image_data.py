@@ -263,7 +263,11 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
     
     ### compute errors
     #Ierr = (data.sum() + bgr.sum())**(0.5)
-    Ierr = (Itot + Ibgr)**(0.5)
+    Ierr = (Itot + Ibgr)
+    if Ierr > 0.:
+        Ierr = num.sqrt(Ierr)
+    else:
+        Ierr = 0.0
     
     return(I,Ierr,Ibgr)
 

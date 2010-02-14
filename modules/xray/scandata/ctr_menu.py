@@ -18,20 +18,20 @@ import numpy as num
 from   matplotlib import pyplot
 
 from   pds.shellutil import Menu, show_more 
-from   pds.shellutil import get_tf, get_yn, get_int, get_flt
-from   plotter import cursor
+from   pds.shellutil import get_str, get_tf, get_yn, get_int, get_flt,get_flt_list 
 import ctr_data
 import image_data
 import data
 
 ########################################################################
-IMG_HEADER = """
+CTR_HEADER = """
+##########################################
 Number of points       = %s
 New/selected points    = %s
 Current selected point = %s
 -----
 Scan Type = '%s'
-I='%s', Inorm='%s',Ierr='%s'
+Labels: I='%s', Inorm='%s',Ierr='%s'
 -----
 Geom='%s'
 Beam slits = %s
@@ -39,22 +39,23 @@ Det slits = %s
 Sample  = %s
 Scale = %s
 ------
-Add some HKL, I F etc...
+H=%3.2f, K=%3.2f, L=%6.5f
+I=%6.5g, Ierr=%6.5g, ctot=%6.5f
+F=%6.5g, Ferr=%6.5g
+------
 """
 
-IMG_LABELS = ['plot','pointselect','zoomselect','labels','correction',
-              'cplot','setint','integrate','intselected','intall',
+CTR_LABELS = ['plot','pointselect','zoomselect','labels','correction',
+              'cplot','setint','integrate',
               'point','next','previous','help','quit']
-IMG_DESCR = ["Plot all structure factors",
+CTR_DESCR = ["Plot all structure factors",
              "Select scan point from plot (Fig 0)",
              "Select scan set from plot zoom (Fig 0)",
-             "Set Intensity labels", # --> sub menu apply to current, set, all
-             "Set Correction Params", # "" 
+             "Set Intensity labels", 
+             "Set Correction Params", 
              "Plot correction",
              "Set integration parameters", # "", also set bgr and flag bad
-             "Integrate current point",
-             "Integrate selected points",
-             "Integrate all points",
+             "Integrate data",
              "Select scan point(s)",
              "Select next point ",
              "Select previous point", 
@@ -78,18 +79,26 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
 
     # append new data
     if scans!=None:
-        ctr.append_scans(self,scans,I=I,Inorm=Inorm,Ierr=Ierr,
+        ctr.append_scans(scans,I=I,Inorm=Inorm,Ierr=Ierr,
                          corr_params=corr_params,scan_type=scan_type)
-        set   = [npts,len(ctr.L)]
+        set   = range(npts,len(ctr.L))
         point = npts
         npts  = len(ctr.L)
         
     # make menu
-    m = Menu(labels=IMG_LABELS,descr=IMG_DESCR,sort=False,matchidx=True)
+    m = Menu(labels=CTR_LABELS,descr=CTR_DESCR,sort=False,matchidx=True)
+
+    # make a plot
+    def _ctr_plot(ctr):
+        #pyplot.close(0)
+        pyplot.figure(0)
+        pyplot.clf()
+        ctr.plot(fig=0)
+    _ctr_plot(ctr)
     
     # loop
     while ret != 'quit':
-        header   = IMG_HEADER % (str(npts),str(set),str(point),
+        header   = CTR_HEADER % (str(npts),str(set),str(point),
                                  str(ctr.scan_type[point]),
                                  str(ctr.labels['I'][point]),
                                  str(ctr.labels['Inorm'][point]),
@@ -99,12 +108,164 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                                  str(ctr.corr_params[point].get('det_slits')),
                                  str(ctr.corr_params[point].get('sample')),
                                  str(ctr.corr_params[point].get('scale')),
-                                 )
+                                 ctr.H[point],ctr.K[point],ctr.L[point],
+                                 ctr.I[point],ctr.Ierr[point],ctr.ctot[point],
+                                 ctr.F[point],ctr.Ferr[point])
         m.header = header
         ret      = m.prompt(prompt)
-
+        #
         if ret == 'plot':
-            ctr.plot(fig=0)
+            _ctr_plot(ctr)
+        elif ret == 'pointselect':
+            idx = ctr.get_idx()
+            point = idx[0]
+        elif ret == 'zoomselect':
+            set = ctr.get_points()
+            point = set[0]
+        elif ret == 'labels':
+            (scan,spnt) = ctr.get_scan(point)
+            lbls = scan.scalers.keys()
+            if scan.image:
+                lbls.extend(scan.image.peaks.keys())
+            print "Labels: \n", lbls 
+            Ilbl = get_str(prompt='Enter Intensity lbl',
+                           default=ctr.labels['I'][point],valid=lbls)
+            Ierrlbl = get_str(prompt='Enter Intensity error lbl',
+                              default=ctr.labels['Ierr'][point],valid=lbls)
+            Inormlbl = get_str(prompt='Enter Intensity norm lbl',
+                               default=ctr.labels['Inorm'][point],valid=lbls)
+            app = get_str(prompt="Apply to 'p' current point, 's' to set, 'a' to all,'n' for none",
+                          default='p',valid=['p','a','s','n'])
+            if app == 'p':
+                ctr.labels['I'][point] = Ilbl
+                ctr.labels['Ierr'][point] = Ierrlbl
+                ctr.labels['Inorm'][point] = Inormlbl
+                ctr.integrate_point(point)
+            elif app == 's':
+                for j in set:
+                    ctr.labels['I'][j] = Ilbl
+                    ctr.labels['Ierr'][j] = Ierrlbl
+                    ctr.labels['Inorm'][j] = Inormlbl
+                    ctr.integrate_point(j)
+            elif app == 'a':
+                for j in range(npts):
+                    ctr.labels['I'][j] = Ilbl
+                    ctr.labels['Ierr'][j] = Ierrlbl
+                    ctr.labels['Inorm'][j] = Inormlbl
+                    ctr.integrate_point(j)
+            elif app == 'n':
+                print "Ignoring updates"
+            _ctr_plot(ctr)
+        elif ret == 'correction':
+            corr_params = {}
+            #
+            check = get_yn(prompt='Edit geometry',default='y')
+            if check=='yes':
+                geom = get_str(prompt='Enter geometry',
+                               default=ctr.corr_params[point]['geom'],
+                               valid=['psic'])
+                corr_params['geom'] = geom
+            #
+            check = get_yn(prompt='Edit beam slits',default='y')
+            if check=='yes':
+                beam_slits = ctr.corr_params[point]['beam_slits']
+                if beam_slits == None: beam_slits = {'horz':1.,'vert':1.}
+                print "Horizontal = total slit width in lab-z,or horizontal scatt plane"
+                beam_slits['horz'] = get_flt('Beam horizontal slit (mm)',
+                                             default=beam_slits['horz'])
+                print "Vertical = total slit width in lab-x,or vertical scatt plane"
+                beam_slits['vert'] = get_flt('Beam vertical slit (mm)',default=beam_slits['vert'])
+                corr_params['beam_slits'] = beam_slits
+            #
+            check = get_yn(prompt='Edit detector slits',default='y')
+            if check=='yes':
+                det_slits = ctr.corr_params[point]['det_slits']
+                if det_slits == None: det_slits = {'horz':1.,'vert':1.}
+                print "Horizontal = total slit width in lab-z,or horizontal scatt plane"
+                det_slits['horz'] = get_flt('Det horizontal slit (mm)',
+                                            default=det_slits['horz'])
+                print "Vertical = total slit width in lab-x,or vertical scatt plane"
+                det_slits['vert'] = get_flt('Det vertical slit (mm)',
+                                            default=det_slits['vert'])
+                corr_params['det_slits'] = det_slits
+            #
+            check = get_yn(prompt='Edit sample shape/size',default='y')
+            if check=='yes':
+                sample = ctr.corr_params[point]['sample']
+                check2 = get_str(prompt="Sample described by diameter 'd' or polygon 'p'?",
+                                 default='d',valid=['d','p'])
+                if check2 == 'd':
+                    if type(sample) == types.DictType: sample = 1.
+                    sample = get_flt('Sample diameter (mm)',default=sample)
+                elif check2 == 'p':
+                    xx = "Sample is described by a polygon which is a collection \n"
+                    xx = xx + "of [x,y,(z)] points (minimum of three points);\n"
+                    xx = xx + "x is lab frame vertical, y is along ki, z is horizontal.\n"
+                    xx = xx + "These points need to be specified along with the set of\n"
+                    xx = xx + "gonio angles at the time of the polygon determination.\n"
+                    xx = xx + "If phi and chi are at the 'flat' values, and the sample is\n"
+                    xx = xx + "on the beam center, then z = 0 (and only [x,y] points are needed).\n"
+                    print xx
+                    sample = {'polygon':[],'angles':{'phi':0.0,'chi':0.0}}
+                    while 1:
+                        xx = "Enter a sample polygon point, '[]' to end"
+                        sp = get_flt_list(prompt=xx,default=[])
+                        if sp == []:
+                            break
+                        else:
+                            sample['polygon'].append(sp)
+                    xx = "Enter gonio angles"
+                    sample['angles']['phi'] = get_flt('phi',default=sample['angles']['phi'])
+                    sample['angles']['chi'] = get_flt('chi',default=sample['angles']['chi'])
+                    print 'Sample: ', sample
+                corr_params['sample'] = sample
+            #
+            check = get_yn(prompt='Edit scale',default='y')
+            if check=='yes':
+                scale = get_flt(prompt='Enter scale factor',default=ctr.corr_params[point]['scale'])
+                corr_params['scale'] = scale
+            #
+            app = get_str(prompt="Apply to 'p' current point, 's' to set, 'a' to all, 'n' for none",
+                          default='p',valid=['p','a','s','n'])
+            if app == 'p':
+                ctr.corr_params[point].update(corr_params)
+                ctr.integrate_point(point)
+            elif app == 's':
+                for j in set:
+                    ctr.corr_params[j].update(corr_params)
+                    ctr.integrate_point(j)
+            elif app == 'a':
+                for j in range(npts):
+                    ctr.corr_params[j].update(corr_params)
+                    ctr.integrate_point(j)
+            elif app == 'n':
+                print "Ignoring updates"
+            #
+            _ctr_plot(ctr)
+        elif ret == 'cplot':
+            (scan,spnt) = ctr.get_scan(point)
+            corr_params = ctr.corr_params[point]
+            corr = ctr_data._get_corr(scan,spnt,corr_params)
+            if ctr.scan_type[point] == 'image':
+                corr.ctot_stationary(plot=True,fig=-1)
+        elif ret == 'setint':
+            pass
+        elif ret == 'integrate':
+            #
+            app = get_str(prompt="Apply to 'p' current point, 's' to set, 'a' to all, 'n' for none",
+                          default='p',valid=['p','a','s','n'])
+            if app == 'p':
+                ctr.integrate_point(point)
+            elif app == 's':
+                for j in set:
+                    ctr.integrate_point(j)
+            elif app == 'a':
+                for j in range(npts):
+                    ctr.integrate_point(j)
+            elif app == 'n':
+                print "Ignoring updates"
+            #
+            _ctr_plot(ctr)
         elif ret == 'point':
             point = get_int(prompt='Enter point',
                             default=point,min=0,max = npts-1)
@@ -116,7 +277,6 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                 point = point - 1
         else:
             pass
-
 
 ################################################################################
 

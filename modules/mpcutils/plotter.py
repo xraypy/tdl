@@ -115,6 +115,10 @@ def plotter(x,y=None,fmt='k-',xerr=None,yerr=None,xscale=1.,yscale=1.,
 
 ################################################################################
 class PlotClick:
+    """
+    Handle plot click's 
+    """
+    ##########################################################################
     def __init__(self,fig=None,verbose=False):
         from matplotlib import pyplot
         self.backend = pyplot.get_backend()
@@ -132,16 +136,23 @@ class PlotClick:
         self.x = 0.
         self.y = 0.
         self.subplot=-1
+        self.zoom=[]
         if fig == None:
             self.fig = pyplot.figure()
         else:
             self.fig = pyplot.figure(fig)
-        self.fig.canvas.mpl_connect('button_press_event', self.on_click)
+        self.cid = self.fig.canvas.mpl_connect('button_press_event', self.on_click)
 
+    ##########################################################################
+    def _disconnect(self):
+        self.fig.canvas.mpl_disconnect(self.cid)
+
+    ##########################################################################
     def __repr__(self):
         l = 'X=%g, Y=%g' % (self.x, self.y)
         return l
 
+    ##########################################################################
     def on_click(self,event):
         (x, y) = (event.x, event.y)
         if event.button==1:
@@ -150,19 +161,48 @@ class PlotClick:
                 self.x = event.xdata
                 self.y = event.ydata
                 #self.axes = event.inaxes
-                self.subplot = self._subplot_num(event.inaxes)
+                self._subplot(event.inaxes)
+                self._zoom()
                 if self.verbose:
+                    a = self.fig.gca()
+                    xlbl = a.xaxis.label.get_text()
+                    if len(xlbl) == 0: xlbl = 'X'
+                    ylbl = a.yaxis.label.get_text()
+                    if len(ylbl) == 0: ylbl = 'Y'
                     #print 'X=', event.xdata, 'Y=', event.ydata
-                    print 'X=', self.x, 'Y=', self.y, 'Subplot=', self.subplot
-
-    def _subplot_num(self,axes):
+                    #print 'X=', self.x, 'Y=', self.y
+                    #print 'Subplot=', self.subplot, ', Zoom=',self.zoom
+                    print "%s=%s, %s=%s" % (xlbl,str(self.x),ylbl,str(self.y))
+                    
+    ##########################################################################
+    def _subplot(self,axes):
         a = self.fig.get_axes()
         n = len(a)
         for j in range(n):
             if axes == a[j]:
-                return j
-        return -1
+                self.fig.sca(a[j])
+                self.subplot = j
+                return
+        self.subplot = 0
+        #self.fig.sca(a[0])
+        return
 
+    ##########################################################################
+    def _zoom(self):
+        """
+        get ((x1,y1),(x2,y2))
+        http://matplotlib.sourceforge.net/examples/event_handling/lasso_demo.html
+        Note could also just use zoom and then...
+        #z = pyplot.axis()
+        #z = [x1,x2,y1,y2]
+        """
+        a = self.fig.gca()
+        x = a.get_xlim()
+        y = a.get_ylim()
+        self.zoom = [(x[0],y[0]),(x[1],y[1])]
+        return
+    
+    ##########################################################################
     def get_click(self,msg="Click a point"):
         """
         get the x and y coords
@@ -180,15 +220,6 @@ class PlotClick:
                 print "Sorry dont know how to deal with this backend"
                 return
         return (self.x,self.y)
-
-    def get_lasso(self):
-        """
-        get ((x1,y1),(x2,y2)) lasso
-        http://matplotlib.sourceforge.net/examples/event_handling/lasso_demo.html
-        Note could also just use zoom and then...
-        [x1,x2,y1,y2] = pyplot.axis()
-        """
-        pass
         
 ################################################################################
 def cursor(fig=None,verbose=False):
@@ -202,6 +233,4 @@ def cursor(fig=None,verbose=False):
     return click
 
 ################################################################################
-
-
 

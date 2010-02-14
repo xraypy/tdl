@@ -232,7 +232,7 @@ class CtrData:
         If scan type is image use the following kw arguments
         (if the argument is not passed the existing value is used,
         ie just use these to update parameters)
-
+        #
         roi
         rotangle
         bgr_params
@@ -249,7 +249,7 @@ class CtrData:
         if idx not in range(len(self.L)): return
 
         if self.scan_type[idx]=="image":
-            (scan_idx,point) = self.scan_index(idx)
+            (scan_idx,point) = self.scan_index[idx]
             scan = self.scan[scan_idx]
             if scan.image._is_init() == False:
                 scan.image._init_image()
@@ -260,6 +260,7 @@ class CtrData:
             bad_points = kw.get('bad')
             plot       = kw.get('plot',False)
             fig        = kw.get('fig')
+            bad        = kw.get('bad',False)
             if bad != None:
                 if bad == True:
                     if point not in scan.image.bad_points:
@@ -270,8 +271,8 @@ class CtrData:
                 else:
                     print "Warning: bad should be True/False"
             # integrate the scan.  note changes should stick...
-            scan.integrate(idx=[point],roi=roi,rotangle=rotangle,
-                           brg_params=bgr_params,plot=plot,fig=fig)
+            scan.image.integrate(idx=[point],roi=roi,rotangle=rotangle,
+                                 bgr_params=bgr_params,plot=plot,fig=fig)
             # parse all the correction info and re-compute 
             I       = kw.get('I',self.labels['I'][idx])
             Inorm   = kw.get('Inorm',self.labels['Inorm'][idx])
@@ -280,9 +281,9 @@ class CtrData:
             d = image_point_F(scan,point,I=I,Inorm=Inorm,
                               Ierr=Ierr,corr_params=corr_params)
             # store results
-            self.labels['I'][idx]     = I_lbl
-            self.labels['Inorm'][idx] = Inorm_lbl
-            self.labels['Ierr'][idx]  = Ierr_lbl
+            self.labels['I'][idx]     = I
+            self.labels['Inorm'][idx] = Inorm
+            self.labels['Ierr'][idx]  = Ierr
             self.corr_params[idx]     = corr_params
             self.H[idx]               = scan['H'][point]
             self.K[idx]               = scan['K'][point]
@@ -328,7 +329,10 @@ class CtrData:
             pyplot.ylabel('|F|')
         fig = pyplot.gcf()
         self.fig = fig.number
-        self.cursor = None
+        if self.cursor != None:
+            self.cursor._disconnect()
+            del self.cursor
+            self.cursor = None
         if cursor == True:
             self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
 
@@ -336,18 +340,20 @@ class CtrData:
     def get_idx(self):
         """
         get point index from plot selection
+        ie  L = ctr.L[point_idx]
+        etc.
         """
         if self.cursor == None:
             return None
         if self.cursor.clicked == False:
-            return None
+            #return None
+            self.cursor.get_click(msg="Select a data point")
         L = self.cursor.x
         subplot = self.cursor.subplot
         if subplot < 0:
             return None
         hksets  = sort_data(self)
-        idx = self._get_idx(subplot,L,hksets)
-        return idx
+        return self._get_idx(subplot,L,hksets)
     
     def _get_idx(self,subplot,L,hksets):
         d   = hksets[subplot]
@@ -355,26 +361,71 @@ class CtrData:
         idx = num.where(tmp==min(tmp))
         if len(idx) > 0:
             idx = idx[0]
-        idx = tuple(d['idx'][idx][0])
-        return idx
+        point_idx = d['point_idx'][idx]
+        return point_idx
+
+    ##########################################################################
+    def get_scan(self,idx=None):
+        """
+        get scan from point index
+        """
+        if idx == None:
+            idx = self.get_idx()
+            if idx == None: return None
+        scan_idx = self.scan_index[idx]
+        if len(scan_idx) > 1:
+            point = scan_idx[1]
+            idx = scan_idx[0]
+        else:
+            idx = scan_idx
+            point = 0
+        scan = self.scan[idx]
+        return (scan,point)
+    
+    ##########################################################################
+    def get_points(self,fig=None):
+        """
+        get index value of points from plot
+        """
+        if self.cursor == None:
+            return None
+        if self.cursor.clicked == False:
+            #return None
+            self.cursor.get_click(msg="Zoom on plot")
+        self.cursor._zoom()
+        z = self.cursor.zoom
+        z = (z[0][0],z[1][0])
+        Lmin = min(z)
+        Lmax = max(z)
+        subplot = self.cursor.subplot
+        if subplot < 0:
+            return None
+        hksets  = sort_data(self)
+        return self._get_idx_range(subplot,Lmin,Lmax,hksets)
+        
+    def _get_idx_range(self,subplot,Lmin,Lmax,hksets):
+        d    = hksets[subplot]
+        tmp  = d['L']
+        idx1 = num.where(tmp<Lmin)
+        idx2 = num.where(tmp>Lmax)
+        tmp  = num.fabs(tmp)
+        tmp[idx1] = 0.0
+        tmp[idx2] = 0.0
+        idx = num.where(tmp > 0 )
+        point_idx = d['point_idx'][idx]
+        
+        return (point_idx)
     
     ##########################################################################
     def plot_point(self,idx=None,fig=None):
         """
         plot the raw data for a selected point
 
-        idx = point index.  if idx = None, then uses last cursor click
+        idx = point index.
+        if idx = None, then uses last cursor click
         fig = fig number
         """
-        if idx == None:
-            idx = self.get_idx()
-            if idx == None: return None
-        if len(idx) > 1:
-            point = idx[1]
-            idx = idx[0]
-        else:
-            point = 0
-        data = self.scan[idx]
+        (scan,point) = self.get_point(idx=idx)
         if self.scan_type[idx] == 'image':
             self.scan[idx].image.plot(idx=point,fig=fig)
         else:
@@ -399,7 +450,6 @@ class CtrData:
         f.close()
 
 ##########################################################################
-#def sort_data(H,K,L,F,Ferr,idx,hkdecimal=3):
 def sort_data(ctr,hkdecimal=3):
     """
     return a dict of sorted data
@@ -414,7 +464,7 @@ def sort_data(ctr,hkdecimal=3):
     L = ctr.L
     F = ctr.F
     Ferr = ctr.Ferr
-    idx  = ctr.scan_index
+    scan_idx = ctr.scan_index
     npts = len(F)
 
     #find all unique sets
@@ -432,7 +482,8 @@ def sort_data(ctr,hkdecimal=3):
     #hkset  = [copy.copy(d) for j in range(nsets)]
     hkset = []
     for j in range(nsets):
-        hkset.append({'H':[],'K':[],'L':[],'F':[],'Ferr':[],'idx':[]})
+        hkset.append({'H':[],'K':[],'L':[],'F':[],'Ferr':[],
+                      'point_idx':[],'scan_idx':[]})
 
     for j in range(npts):
         s      = (H[j],K[j])
@@ -442,7 +493,8 @@ def sort_data(ctr,hkdecimal=3):
         hkset[setidx]['L'].append(L[j])
         hkset[setidx]['F'].append(F[j])
         hkset[setidx]['Ferr'].append(Ferr[j])
-        hkset[setidx]['idx'].append(idx[j])
+        hkset[setidx]['point_idx'].append(j)
+        hkset[setidx]['scan_idx'].append(scan_idx[j])
 
     # make arrays num arrays
     for j in range(nsets):
@@ -451,7 +503,8 @@ def sort_data(ctr,hkdecimal=3):
         hkset[j]['L'] = num.array(hkset[j]['L'])
         hkset[j]['F'] = num.array(hkset[j]['F'])
         hkset[j]['Ferr'] = num.array(hkset[j]['Ferr'])
-        hkset[j]['idx']  = num.array(hkset[j]['idx'])
+        hkset[j]['point_idx']  = num.array(hkset[j]['point_idx'])
+        hkset[j]['scan_idx']  = num.array(hkset[j]['scan_idx'])
 
     # now sort each set by L
     for j in range(nsets):
@@ -461,7 +514,8 @@ def sort_data(ctr,hkdecimal=3):
         hkset[j]['L'] = hkset[j]['L'][lidx]
         hkset[j]['F'] = hkset[j]['F'][lidx]
         hkset[j]['Ferr'] = hkset[j]['Ferr'][lidx]
-        hkset[j]['idx'] = hkset[j]['idx'][lidx]
+        hkset[j]['point_idx'] = hkset[j]['point_idx'][lidx]
+        hkset[j]['scan_idx'] = hkset[j]['scan_idx'][lidx]
 
     return hkset
 
@@ -479,23 +533,13 @@ def image_point_F(scan,point,I='I_c',Inorm='Io',Ierr='Ierr_c',corr_params={}):
         scale = 1.0
     else:
         # compute correction factors
-        geom   = corr_params.get('geom')
-        if geom == None: geom='psic'
-        beam   = corr_params.get('beam_slits',{})
-        det    = corr_params.get('det_slits')
-        sample = corr_params.get('sample')
         scale  = corr_params.get('scale',1.0)
         scale  = float(scale)
-        # get gonio instance for corrections
-        if geom == 'psic':
-            gonio = gonio_psic.psic_from_spec(scan['G'])
-            _update_psic_angles(gonio,scan,point)
-            corr  = CtrCorrectionPsic(gonio=gonio,beam_slits=beam,
-                                      det_slits=det,sample=sample)
-            d['ctot']  = corr.ctot_stationary()
+        corr = _get_corr(scan,point,corr_params)
+        if corr == None:
+            d['ctot'] = 1.0
         else:
-            print "Geometry %s not implemented" % geom
-            ctot = 1.0
+            d['ctot'] = corr.ctot_stationary()
     # compute F
     if d['I'] <= 0.0 or d['Inorm'] <= 0.:
         d['F']    = 0.0
@@ -507,6 +551,27 @@ def image_point_F(scan,point,I='I_c',Inorm='Io',Ierr='Ierr_c',corr_params={}):
         d['Ferr'] = num.sqrt(d['ctot']*yn_err)
     
     return d
+
+##############################################################################
+def _get_corr(scan,point,corr_params):
+    """
+    get CtrCorrection instance
+    """
+    geom   = corr_params.get('geom')
+    if geom == None: geom='psic'
+    beam   = corr_params.get('beam_slits',{})
+    det    = corr_params.get('det_slits')
+    sample = corr_params.get('sample')
+    # get gonio instance for corrections
+    if geom == 'psic':
+        gonio = gonio_psic.psic_from_spec(scan['G'])
+        _update_psic_angles(gonio,scan,point)
+        corr  = CtrCorrectionPsic(gonio=gonio,beam_slits=beam,
+                                  det_slits=det,sample=sample)
+    else:
+        print "Geometry %s not implemented" % geom
+        corr = None
+    return corr
 
 ##############################################################################
 def _update_psic_angles(gonio,scan,point):
@@ -638,19 +703,20 @@ class CtrCorrectionPsic:
         self.fh         = 1.0
 
     ##########################################################################
-    def ctot_stationary(self,plot=False):
+    def ctot_stationary(self,plot=False,fig=None):
         """
         correction factors for stationary measurements (e.g. images)
         """
         cp = self.polarization()
         cl = self.lorentz_stationary()
-        ca = self.active_area(plot=plot)
+        ca = self.active_area(plot=plot,fig=fig)
         ct = (cp)*(cl)*(ca)
         if plot == True:
-            print "Polarization=%f" % cp
-            print "Lorentz=%f" % cl
-            print "Area=%f" % ca
-            print "Total=%f" % ct
+            print "Correction factors (mult by I)" 
+            print "   Polarization=%f" % cp
+            print "   Lorentz=%f" % cl
+            print "   Area=%f" % ca
+            print "   Total=%f" % ct
         return ct
 
     ##########################################################################
@@ -733,7 +799,7 @@ class CtrCorrectionPsic:
         return cp
 
     ##########################################################################
-    def active_area(self,plot=False):
+    def active_area(self,plot=False,fig=None):
         """
         Compute active area correction (c_a = A_beam/A_int)
         Use to correct scattering data for area effects,
@@ -751,7 +817,7 @@ class CtrCorrectionPsic:
         alpha = self.gonio.pangles['alpha']
         beta  = self.gonio.pangles['beta']
         if plot == True:
-            print 'alpha = ', alpha, ', beta = ', beta
+            print 'Alpha = ', alpha, ', Beta = ', beta
         if alpha < 0.0:
             print 'alpha is less than 0.0'
             return 0.0
@@ -786,7 +852,7 @@ class CtrCorrectionPsic:
         # compute active_area
         (A_beam,A_int) = active_area(self.gonio.nm,ki=self.gonio.ki,
                                      kr=self.gonio.kr,beam=beam,det=det,
-                                     sample=sample,plot=plot)
+                                     sample=sample,plot=plot,fig=fig)
         if A_int == 0.:
             ca = 0.
         else:

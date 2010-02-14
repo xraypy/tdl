@@ -83,30 +83,25 @@ def list2array(s):
 ##########################################################################
 def str2list(s,conv=float):
     """
-    convert a srtring to a list
+    convert a string to a list
     """
     if s == None: return []
     if s == 'None': return []
     if type(s) == types.StringType:
         s = s.strip()
         if s[0] != '[': s = '[' + s
-        if s[:] != ']': s = ']' + s
-        s = eval()
-    else:
-        s = list(s)
-
+        if s[-1] != ']': s = s + ']'
+    s = eval(s)
     if len(s) == 0: return []
 
-    # we probably need to loop
-    # and do explicit instead of use map?
-    #return map(conv, lst)
+    #return map(conv, s)
     v = []
-    for l in lst:
+    for l in s:
         if conv == float:
-            n = float(eval(l))
+            n = float(l)
             v.append(n)
         elif conv == int:
-            n = int(eval(l))
+            n = int(l)
             v.append(n)
     return v
 
@@ -842,6 +837,36 @@ def _gtline(prompt='',default=None,pterm='>>',rettype=None,valid=None):
     return (ret) 
 
 ##########################################################################
+def get_str(prompt=None,default=None,valid=None,nlprompt=True):
+    if prompt == None:
+        prompt = ""
+    if default != None:
+        if valid == None:
+            prompt = "%s (%s)" % (prompt,default)
+        elif default in valid:
+            prompt = "%s (%s)" % (prompt,default)
+        else:
+            default = None
+    prompt = prompt + ">>"
+    if nlprompt==True: prompt = prompt + "\n"
+    while 1:
+        try:
+            ret = raw_input(prompt)
+            ret = ret.strip()
+            if len(ret) == 0 and default != None:
+                return default
+            elif valid != None:
+                if ret in valid:
+                    return ret
+                else:
+                    print 'Please enter a valid response'
+                    print '-->', valid
+            else:
+                return ret
+        except:
+            pass
+    
+##########################################################################
 def get_yn(prompt=None,default=None,nlprompt=True):
     ylbl=['yes','y','1']
     nlbl=['no','n','0']
@@ -863,7 +888,10 @@ def get_yn(prompt=None,default=None,nlprompt=True):
             elif ret.lower() in nlbl:
                 return 'no'
             elif len(ret.strip()) == 0 and default != None:
-                return default
+                if default in ylbl:
+                    return 'yes'
+                elif default in nlbl:
+                    return 'no'
             else:
                 print 'Please enter Yes (%s) or No (%s)' % (str(ylbl),
                                                             str(nlbl))
@@ -968,6 +996,27 @@ def get_flt(prompt=None,default=None,min=None,max=None,nlprompt=True):
                     print "Enter float less than %g " % max
                     ok = False
             if ok == True:
+                return ret
+        except:
+            pass
+
+##########################################################################
+def get_flt_list(prompt=None,default=None,nlprompt=True):
+    if prompt == None:
+        prompt = "Enter a list of floats"
+    if default != None:
+        prompt = "%s (%s)" % (prompt,str(default))
+    prompt = prompt + ">>"
+    if nlprompt==True: prompt = prompt + "\n"
+    while 1:
+        try:
+            ret = raw_input(prompt)
+            ret = ret.strip()
+            if len(ret) == 0:
+                if default != None:
+                    return default
+            else:
+                ret = str2list(ret)
                 return ret
         except:
             pass

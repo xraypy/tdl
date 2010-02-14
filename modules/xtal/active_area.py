@@ -33,7 +33,7 @@ from polygon import plot_polygon, plot_points, plot_circle
 
 ##########################################################################
 def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
-                beam=[],det=None,sample=1.,plot=False):
+                beam=[],det=None,sample=1.,plot=False,fig=None):
     """
     Calc the area of overlap of beam, sample and detector
     surface polygon projections.  Return:
@@ -136,19 +136,21 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
     # of 2D surface frame vectors (ie in plane vectors)
     #####################################################################
     if sample_shape == False:
-        (A_beam,A_int) = _area_round(beam_poly,det_poly,diameter=sample,plot=plot)
+        (A_beam,A_int) = _area_round(beam_poly,det_poly,diameter=sample,plot=plot,fig=fig)
     else:
-        (A_beam,A_int) = _area_polygon(beam_poly,det_poly,sam_poly,plot=plot)
+        (A_beam,A_int) = _area_polygon(beam_poly,det_poly,sam_poly,plot=plot,fig=fig)
     return (A_beam,A_int)
 
 #########################################################################
-def _area_round(beam_poly,det_poly,diameter=None,plot=False):
+def _area_round(beam_poly,det_poly,diameter=None,plot=False,fig=None):
     """
     compute areas for round sample of fixed diameter
     if det_poly = None, then just compute the beam and
     sample overlap ie A_int/A_beam = spill fraction
     """
-    if plot: pyplot.clf()
+    if plot:
+        if fig != None: pyplot.figure(fig)
+        pyplot.clf()
     A_beam = poly_area(beam_poly)
     if det_poly != None:
         inner_poly = inner_polygon(beam_poly,det_poly)
@@ -179,13 +181,15 @@ def _area_round(beam_poly,det_poly,diameter=None,plot=False):
     return (A_beam,A_int)
 
 #########################################################################
-def _area_polygon(beam_poly,det_poly,sam_poly,plot=False):
+def _area_polygon(beam_poly,det_poly,sam_poly,plot=False,fig=None):
     """
     compute areas for polgon sample
     if det_poly = None, then just compute the beam and
     sample overlap ie A_int/A_beam = spill fraction
     """
-    if plot: pyplot.clf()
+    if plot:
+        if fig != None: pyplot.figure(fig)
+        pyplot.clf()
     A_beam = poly_area(beam_poly)
     if sam_poly == None:
         inner_poly = beam_poly
