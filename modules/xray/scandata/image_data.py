@@ -844,7 +844,7 @@ class _ImageList:
        num.savez(fname,image)
        im = num.read(fname)
     """
-    
+    ################################################################
     def __init__(self,images,file='images.h5',path=None,
                  setname='S1',descr='Scan data images'):
         self.path = path
