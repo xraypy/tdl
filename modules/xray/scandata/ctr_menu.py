@@ -18,10 +18,11 @@ import numpy as num
 from   matplotlib import pyplot
 
 from   pds.shellutil import Menu, show_more 
-from   pds.shellutil import get_str, get_tf, get_yn, get_int, get_flt,get_flt_list 
+from   pds.shellutil import get_str, get_tf, get_yn 
+from   pds.shellutil import get_int, get_flt, get_flt_list 
 import ctr_data
 import image_data
-import data
+import image_menu
 
 ########################################################################
 CTR_HEADER = """
@@ -32,31 +33,32 @@ Current selected point = %s
 -----
 Scan Type = '%s'
 Labels: I='%s', Inorm='%s',Ierr='%s'
------
 Geom='%s'
 Beam slits = %s
 Det slits = %s
 Sample  = %s
 Scale = %s
-------
 H=%3.2f, K=%3.2f, L=%6.5f
 I=%6.5g, Ierr=%6.5g, ctot=%6.5f
 F=%6.5g, Ferr=%6.5g
 ------
 """
 
-CTR_LABELS = ['plot','pointselect','zoomselect','labels','correction',
-              'cplot','setint','integrate',
-              'point','next','previous','help','quit']
-CTR_DESCR = ["Plot all structure factors",
-             "Select scan point from plot (Fig 0)",
-             "Select scan set from plot zoom (Fig 0)",
+CTR_LABELS = ['plot','iplot','labels',
+              'correction','cplot','integrate','copyint',
+              'pointselect','pplot','zoomselect','selpoint',
+              'next','previous','help','quit']
+CTR_DESCR = ["Plot structure factors",
+             "Plot intensities",
              "Set Intensity labels", 
              "Set Correction Params", 
              "Plot correction",
-             "Set integration parameters", # "", also set bgr and flag bad
-             "Integrate data",
-             "Select scan point(s)",
+             "Set integration parameters / integrate",
+             "Copy integration parameters",
+             "Set 'selected point' from last plot click (Fig 0)",
+             "Set 'selected point' and plot scan/image from last plot click (Fig 0)",
+             "Set 'selected points' from last plot zoom (Fig 0)",
+             "Select specific point number",
              "Select next point ",
              "Select previous point", 
              "Show options",
@@ -89,11 +91,14 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
     m = Menu(labels=CTR_LABELS,descr=CTR_DESCR,sort=False,matchidx=True)
 
     # make a plot
-    def _ctr_plot(ctr):
+    def _ctr_plot(ctr,I=False):
         #pyplot.close(0)
         pyplot.figure(0)
         pyplot.clf()
-        ctr.plot(fig=0)
+        if I == False:
+            ctr.plot(fig=0)
+        else:
+            ctr.plot_I(fig=0)
     _ctr_plot(ctr)
     
     # loop
@@ -116,12 +121,8 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
         #
         if ret == 'plot':
             _ctr_plot(ctr)
-        elif ret == 'pointselect':
-            idx = ctr.get_idx()
-            point = idx[0]
-        elif ret == 'zoomselect':
-            set = ctr.get_points()
-            point = set[0]
+        elif ret == 'iplot':
+            _ctr_plot(ctr,I=True)
         elif ret == 'labels':
             (scan,spnt) = ctr.get_scan(point)
             lbls = scan.scalers.keys()
@@ -134,24 +135,34 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                               default=ctr.labels['Ierr'][point],valid=lbls)
             Inormlbl = get_str(prompt='Enter Intensity norm lbl',
                                default=ctr.labels['Inorm'][point],valid=lbls)
-            app = get_str(prompt="Apply to 'p' current point, 's' to set, 'a' to all,'n' for none",
-                          default='p',valid=['p','a','s','n'])
+            Ibgrlbl = get_str(prompt='Enter Intensity background lbl',
+                               default=ctr.labels['Ibgr'][point],valid=lbls)
+            pp = "Apply to 'p' current point, 's' to set, "
+            pp = pp + "'a' to all, 'n' for none"
+            app = get_str(prompt=pp,default='p',
+                          valid=['p','a','s','n'])
             if app == 'p':
-                ctr.labels['I'][point] = Ilbl
-                ctr.labels['Ierr'][point] = Ierrlbl
+                ctr.labels['I'][point]     = Ilbl
+                ctr.labels['Ierr'][point]  = Ierrlbl
                 ctr.labels['Inorm'][point] = Inormlbl
+                ctr.labels['Ibgr'][point]  = Ibgrlbl
+                print "Integrate point index %i" % point
                 ctr.integrate_point(point)
             elif app == 's':
                 for j in set:
-                    ctr.labels['I'][j] = Ilbl
-                    ctr.labels['Ierr'][j] = Ierrlbl
+                    ctr.labels['I'][j]     = Ilbl
+                    ctr.labels['Ierr'][j]  = Ierrlbl
                     ctr.labels['Inorm'][j] = Inormlbl
+                    ctr.labels['Ibgr'][j]  = Ibgrlbl
+                    print "Integrate point index %i" % j
                     ctr.integrate_point(j)
             elif app == 'a':
                 for j in range(npts):
-                    ctr.labels['I'][j] = Ilbl
-                    ctr.labels['Ierr'][j] = Ierrlbl
+                    ctr.labels['I'][j]     = Ilbl
+                    ctr.labels['Ierr'][j]  = Ierrlbl
                     ctr.labels['Inorm'][j] = Inormlbl
+                    ctr.labels['Ibgr'][j]  = Ibgrlbl
+                    print "Integrate point index %i" % j
                     ctr.integrate_point(j)
             elif app == 'n':
                 print "Ignoring updates"
@@ -225,8 +236,9 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                 scale = get_flt(prompt='Enter scale factor',default=ctr.corr_params[point]['scale'])
                 corr_params['scale'] = scale
             #
-            app = get_str(prompt="Apply to 'p' current point, 's' to set, 'a' to all, 'n' for none",
-                          default='p',valid=['p','a','s','n'])
+            pp = "Apply to 'p' current point, 's' to set, 'a' to all, 'n' for none"
+            app = get_str(prompt=pp, default='p',
+                          valid=['p','a','s','n'])
             if app == 'p':
                 ctr.corr_params[point].update(corr_params)
                 ctr.integrate_point(point)
@@ -247,26 +259,75 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
             corr_params = ctr.corr_params[point]
             corr = ctr_data._get_corr(scan,spnt,corr_params)
             if ctr.scan_type[point] == 'image':
-                corr.ctot_stationary(plot=True,fig=-1)
-        elif ret == 'setint':
-            pass
+                corr.ctot_stationary(plot=True,fig=2)
         elif ret == 'integrate':
-            #
-            app = get_str(prompt="Apply to 'p' current point, 's' to set, 'a' to all, 'n' for none",
-                          default='p',valid=['p','a','s','n'])
-            if app == 'p':
-                ctr.integrate_point(point)
-            elif app == 's':
-                for j in set:
-                    ctr.integrate_point(j)
-            elif app == 'a':
-                for j in range(npts):
-                    ctr.integrate_point(j)
-            elif app == 'n':
-                print "Ignoring updates"
-            #
+            if ctr.scan_type[point] == 'image':
+                (sc_idx,scan_pnt) = ctr.scan_index[point]
+                scan = ctr.scan[sc_idx]
+                image_menu.image_menu(scan,scan_pnt)
+                #
+                pp = "Apply / copy integration parameters to\n"
+                pp = pp + "(note image max and bad flags not copied)\n"
+                pp = pp + "'p' current point only, 's' to set, 'a' to all"
+                app = get_str(prompt=pp,
+                              default='p',valid=['p','a','s'])
+                if app == 'p':
+                    print "Integrate point index %i" % point
+                    ctr.integrate_point(point)
+                elif app == 's':
+                    roi      = scan.image.rois[scan_pnt]
+                    rotangle = scan.image.rotangle[scan_pnt]
+                    bgrpar   = scan.image.bgrpar[scan_pnt]
+                    for j in set:
+                        print "Integrate point index %i" % j
+                        ctr.integrate_point(j,roi=roi,rotangle=rotangle,bgrpar=bgrpar)
+                elif app == 'a':
+                    roi      = scan.image.rois[scan_pnt]
+                    rotangle = scan.image.rotangle[scan_pnt]
+                    bgrpar   = scan.image.bgrpar[scan_pnt]
+                    for j in range(npts):
+                        print "Integrate point index %i" % j
+                        ctr.integrate_point(j,roi=roi,rotangle=rotangle,bgrpar=bgrpar)
             _ctr_plot(ctr)
-        elif ret == 'point':
+        elif ret == 'copyint':
+            idx = get_int(prompt='Enter point index to copy FROM',
+                          default=point,min=0,max = npts-1)
+            if ctr.scan_type[idx] == 'image':
+                (sc_idx,scan_pnt) = ctr.scan_index[idx]
+                scan = ctr.scan[sc_idx]
+                #
+                roi      = scan.image.rois[scan_pnt]
+                rotangle = scan.image.rotangle[scan_pnt]
+                bgrpar   = scan.image.bgrpar[scan_pnt]
+                #
+                pp = "Apply / copy integration parameters to\n"
+                pp = pp + "(note image max and bad flags not copied)\n"
+                pp = pp + "'p' current point only, 's' to set, 'a' to all"
+                app = get_str(prompt=pp,
+                              default='p',valid=['p','a','s'])
+                if app == 'p':
+                    print "Integrate point index %i" % point
+                    ctr.integrate_point(point,roi=roi,rotangle=rotangle,bgrpar=bgrpar)
+                elif app == 's':
+                    for j in set:
+                        print "Integrate point index %i" % j
+                        ctr.integrate_point(j,roi=roi,rotangle=rotangle,bgrpar=bgrpar)
+                elif app == 'a':
+                    for j in range(npts):
+                        print "Integrate point index %i" % j
+                        ctr.integrate_point(j,roi=roi,rotangle=rotangle,bgrpar=bgrpar)
+            _ctr_plot(ctr)
+        elif ret == 'pointselect':
+            idx = ctr.get_idx()
+            point = idx[0]
+        elif ret == 'pplot':
+            idx = ctr.get_idx()
+            point = idx[0]
+            ctr.plot_point(idx=point,fig=3,show_int=True)
+        elif ret == 'zoomselect':
+            set = ctr.get_points()
+            point = set[0]
+        elif ret == 'selpoint':
             point = get_int(prompt='Enter point',
                             default=point,min=0,max = npts-1)
         elif ret == 'next':
@@ -279,4 +340,3 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
             pass
 
 ################################################################################
-

@@ -1,6 +1,6 @@
 #######################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
+Tom Trainor (tptrainor@alaska.edu)
 
 Menu function to handle interactive
 image processing
@@ -25,6 +25,7 @@ import data
 
 ########################################################################
 IMG_HEADER = """
+##########################################
 Number of images  = %s
 Current image     = %s
 Current image roi = %s
@@ -32,8 +33,8 @@ Current image rotation angle = %s
 """
 
 IMG_LABELS = ['display','imax','rotangle','setroi','plotsums',
-              'selectroi','bgr','copyall','integrate','intall',
-              'point','next','previous','flag','help','quit']
+              'selectroi','background','copyall','integrate','intall',
+              'flag','point','next','previous','help','quit']
 IMG_DESCR = ["Display image",
              "Set max image intensity value",
              "Set image rotation angle (deg ccw)",
@@ -42,17 +43,38 @@ IMG_DESCR = ["Display image",
              "Select roi from sum plots (Figure 2)",
              "Set background parameters",
              "Apply current roi and background params to all images",
-             "Integrate current image",
+             "Integrate current image / show integration plot",
              "Integrate all images",
+             "Flag current selected point as 'bad'",
              "Select scan point",
              "Select next point ",
              "Select previous point", 
-             "Flag as bad point",
              "Show options",
              "Quit / All Done"]
 
+IMG_HEADER_SHORT = """
+##########################################
+Current image roi = %s
+Current image rotation angle = %s
+"""
+
+IMG_LABELS_SHORT = ['display','imax','rotangle','setroi','plotsums',
+                    'selectroi','background','integrate','flag',
+                    'help','quit']
+IMG_DESCR_SHORT = ["Display image",
+                   "Set max image intensity value",
+                   "Set image rotation angle (deg ccw)",
+                   "Set roi from image zoom (Figure 1)",
+                   "Plot row/column sums (Figure 2)",
+                   "Select roi from sum plots (Figure 2)",
+                   "Set background parameters",
+                   "Integrate current image / show integration plot",
+                   "Flag as bad point",
+                   "Show options",
+                   "Quit / All Done"]
+
 ########################################################################
-def image_menu(imdata):
+def image_menu(imdata,scan_pnt=None):
     """
     Interactively inspect/integrate images in ScanData or a
     ImageScan object
@@ -64,12 +86,26 @@ def image_menu(imdata):
     else:
         print "Invalid image data"
     prompt   = 'Select option >'
-    npts     = len(imdata.image)
-    scan_pnt = 0
-    roi      = []
     ret      = ''
+    roi      = []
     im_max   = None
 
+    # make menu
+    if scan_pnt == None:
+        short    = False
+        npts     = len(imdata.image)
+        scan_pnt = 0
+        m = Menu(labels=IMG_LABELS,
+                 descr=IMG_DESCR,
+                 sort=False,matchidx=True)
+    else:
+        short    = True
+        npts     = 1
+        scan_pnt = int(scan_pnt)
+        m = Menu(labels=IMG_LABELS_SHORT,
+                 descr=IMG_DESCR_SHORT,
+                 sort=False,matchidx=True)
+        
     # local plot fun
     def _implot(imdata,scan_pnt):
         rotangle = imdata.rotangle[scan_pnt]
@@ -83,14 +119,15 @@ def image_menu(imdata):
         imdata._init_image()
     _implot(imdata,scan_pnt)
     
-    # make menu
-    m = Menu(labels=IMG_LABELS,descr=IMG_DESCR,sort=False,matchidx=True)
-    
     # loop
     while ret != 'quit':
         roi      = imdata.rois[scan_pnt]
         rotangle = imdata.rotangle[scan_pnt]
-        header   = IMG_HEADER % (str(npts),str(scan_pnt),str(roi),str(rotangle))
+        if short:
+            header   = IMG_HEADER_SHORT % (str(roi),str(rotangle))
+        else:
+            header   = IMG_HEADER % (str(npts),str(scan_pnt),
+                                     str(roi),str(rotangle))
         m.header = header
         ret      = m.prompt(prompt)
 
@@ -131,7 +168,7 @@ def image_menu(imdata):
             (r2,y) = c.get_click(msg="Select right row sum")
             roi = [int(c1),int(r1),int(c2),int(r2)]
             imdata.rois[scan_pnt] = roi
-        elif ret == 'bgr':
+        elif ret == 'background':
             bgr_par = imdata.bgrpar[scan_pnt]
             bgr_par = bgr_menu(bgr_par)
             imdata.bgrpar[scan_pnt] = bgr_par
@@ -150,7 +187,7 @@ def image_menu(imdata):
                 imdata.bgrpar.append(copy.copy(bgr_par))
         elif ret == 'integrate':
             imdata.integrate(idx=[scan_pnt],
-                                   plot=True,fig=3)
+                             plot=True,fig=3)
         elif ret == 'intall':
             yn = get_tf("Plot all images",default=False)
             imdata.integrate(plot=yn)
@@ -172,6 +209,13 @@ def image_menu(imdata):
             pyplot.legend(loc = 9)
             pyplot.xlabel('Point')
             pyplot.ylabel('Integrated Intensity')
+        elif ret == 'flag':
+            if int(scan_pnt) in imdata.bad_points:
+                imdata.bad_points.remove(scan_pnt)
+                print "Data point removed from bad list"
+            else:
+                imdata.bad_points.append(int(scan_pnt))
+                print "Data point added to bad list"
         elif ret == 'point':
             scan_pnt = get_int(prompt='Enter scan point',
                                default=scan_pnt,min=0,max = npts-1)
@@ -184,19 +228,12 @@ def image_menu(imdata):
             if scan_pnt - 1 > -1: 
                 scan_pnt = scan_pnt - 1
                 _implot(imdata,scan_pnt)
-        elif ret == 'flag':
-            if int(scan_pnt) in imdata.bad_points:
-                imdata.bad_points.remove(scan_pnt)
-                print "Data point removed from bad list"
-            else:
-                imdata.bad_points.append(int(scan_pnt))
-                print "Data point added to bad list"
         else:
             pass
 
 ########################################################################
 BGR_INFO = """
-################################################
+##########################################
 * bgrflag is flag for how to do backgrounds:
    = 0 determine row and column backgrounds after summation
    = 1 determine 2D background using fits to the 'c'olumn direction 
@@ -221,22 +258,22 @@ BGR_INFO = """
   
 * c/rtangent is a flag to indicate if local slope of the data should be fitted 
   (see background.background)
-################################################
+##########################################
 """
 
 BGR_HEADER = """
+##########################################
 * bgrflag=%i,
 * cnbgr=%i, cwidth=%g,cpow=%g,ctan=%s
 * rnbgr=%i, rwidth=%g,rpow=%g,rtan=%s
 """
 
-BGR_LABELS = ['help','info','bgrflag',
+BGR_LABELS = ['bgrflag',
               'cnbgr','cwidth','cpow','ctan',
               'rnbgr','rwidth','rpow','rtan',
-              'quit']
+              'help','info','quit']
 
-BGR_DESCR = ["Show options","Get more info on parameter defintions",
-             "Set background flag",
+BGR_DESCR = ["Set background flag",
              "Set num bgr for linear background - column direction",
              "Set peak width for non-linear background - column direction",
              "Set polynomial power for non-linear background - column direction",
@@ -245,6 +282,8 @@ BGR_DESCR = ["Show options","Get more info on parameter defintions",
              "Set peak width for non-linear background - row direction",
              "Set polynomial power for non-linear background - row direction",
              "Set tangent flag (True or False) - row direction",
+             "Show options",
+             "Get more info on parameter defintions",
              "Quit / All done"]
 
 IMG_BGR_PARAMS = {'bgrflag':0,
@@ -313,6 +352,5 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
             get_yn(prompt="Continue",default='y')
     return bgr_params
     
-
 ################################################################################
 

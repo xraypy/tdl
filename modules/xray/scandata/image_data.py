@@ -49,7 +49,7 @@ from mpcutils.mathutil import LinReg
 from background import background
 
 ########################################################################
-IMG_BGR_PARAMS = {'bgrflag':2,
+IMG_BGR_PARAMS = {'bgrflag':1,
                   'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
                   'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
 
@@ -154,12 +154,12 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
        
     """
     if verbose:
-        print '###################'
+        print '-----'
         print 'Some statistics for plotted image'
         print 'Image total= ', img.sum()
         print 'Max value = ',  img.max()
         print 'Min value = ',  img.min()
-        print '###################'
+        print '-----'
     if fig != None:
         pyplot.figure(fig)
         pyplot.clf()
@@ -336,7 +336,7 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
 ################################################################################
 class ImageAna:
     def __init__(self,image,roi=[],rotangle=0.0,
-                 bgrflag=2,
+                 bgrflag=1,
                  cnbgr=5,cwidth=0,cpow=2.,ctan=False,
                  rnbgr=5,rwidth=0,rpow=2.,rtan=False,
                  plot=True,fig=None,figtitle=''):
@@ -766,7 +766,7 @@ class ImageScan:
                     self.rois[j] = roi[j]
         # update rot angles
         if rotangle!=None:
-            if len(rotangle) == 1:
+            if type(rotangle) == types.FloatType:
                 for j in idx:
                     self.rotangle[j] = rotangle
             elif len(rotangle) == len(idx):

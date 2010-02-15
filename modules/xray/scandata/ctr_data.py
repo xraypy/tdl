@@ -39,22 +39,23 @@ from   xtal.active_area import active_area
 import gonio_psic 
 
 ##############################################################################
-def ctr_data(scans,ctr=None,I=None,Inorm=None,Ierr=None,
+def ctr_data(scans,ctr=None,I=None,Inorm=None,Ierr=None,Ibgr=None,
              corr_params=None,scan_type=None):
     """
     create a ctr instance or add scan data to an existing instance
     """
     if ctr == None:
         # check for defaults
-        if I==None: I ='I_c'
-        if Inorm==None: Inorm='Io'
-        if Ierr==None: Inorm='Ierr_c',
+        if I==None: I ='I'
+        if Inorm==None: Inorm='io'
+        if Ierr==None: Inorm='Ierr',
+        if Ibgr==None: Ibgr='Ibgr',
         if corr_params==None: corr_params={}
         if scan_type==None:scan_type='image'
-        return CtrData(scans=scans,I=I,Inorm=Inorm,Ierr=Ierr,
+        return CtrData(scans=scans,I=I,Inorm=Inorm,Ierr=Ierr,Ibgr=Ibgr,
                        corr_params=corr_params,scan_type=scan_type)
     else:
-        ctr.append_scans(scans,I=I,Inorm=Inorm,Ierr=Ierr,
+        ctr.append_scans(scans,I=I,Inorm=Inorm,Ierr=Ierr,Ibgr=Ibgr,
                          corr_params=corr_params,scan_type=scan_type)
     
 ##############################################################################
@@ -84,6 +85,8 @@ class CtrData:
         simplified futher, but we wont make that assumption since there
         may be other factors that determine how yerr was calculated.  
 
+    Ibgr = string label corresponding to background intensity array
+
     corr_params = a dictionary containing the necessary information for
                   data corrections.
         corr_params['geom'] = Type of goniometer geometry ('psic' is default)
@@ -104,15 +107,15 @@ class CtrData:
     
     """
     ##########################################################################
-    def __init__(self,scans=[],I='I_c',Inorm='io',Ierr='Ierr_c',
-                 corr_params={},scan_type='image'):
+    def __init__(self,scans=[],I='I',Inorm='io',Ierr='Ierr',
+                 Ibgr='Ibgr',corr_params={},scan_type='image'):
         #
         self.fig    = None
         self.cursor = None
         self.scan   = []
         self.scan_index  = []
         #
-        self.labels      = {'I':[],'Inorm':[],'Ierr':[]}
+        self.labels      = {'I':[],'Inorm':[],'Ierr':[],'Ibgr':[]}
         self.corr_params = []
         self.scan_type   = []
         #
@@ -122,11 +125,12 @@ class CtrData:
         self.I     = num.array([],dtype=float)
         self.Inorm = num.array([],dtype=float)
         self.Ierr  = num.array([],dtype=float)
+        self.Ibgr  = num.array([],dtype=float)
         self.ctot  = num.array([],dtype=float)
         self.F     = num.array([],dtype=float)
         self.Ferr  = num.array([],dtype=float)
         #
-        self.append_scans(scans,I=I,Inorm=Inorm,Ierr=Ierr,
+        self.append_scans(scans,I=I,Inorm=Inorm,Ierr=Ierr,Ibgr=Ibgr,
                           corr_params=corr_params,
                           scan_type=scan_type)
 
@@ -138,7 +142,7 @@ class CtrData:
         return lout
 
     ##########################################################################
-    def append_scans(self,scans,I=None,Inorm=None,Ierr=None,
+    def append_scans(self,scans,I=None,Inorm=None,Ierr=None,Ibgr=None,
                      corr_params=None,scan_type=None):
         """
         scans is a list of scan data objects.
@@ -155,12 +159,13 @@ class CtrData:
         if I == None:           I = self.labels['I'][-1]
         if Inorm == None:       Inorm = self.labels['Inorm'][-1]
         if Ierr == None:        Ierr = self.labels['Ierr'][-1]
+        if Ibgr == None:        Ibgr = self.labels['Ibgr'][-1]
         if corr_params == None: corr_params = self.corr_params[-1]
         if scan_type == None:   scan_type = self.scan_type[-1]
 
         # get all the data parsed out of each scan and append
         for scan in scans:
-            data = self._scan_data(scan,I,Inorm,Ierr,corr_params,scan_type)
+            data = self._scan_data(scan,I,Inorm,Ierr,Ibgr,corr_params,scan_type)
             if data == None: return
 
             #self.scan.append([])
@@ -170,6 +175,7 @@ class CtrData:
             self.labels['I'].extend(data['I_lbl'])
             self.labels['Inorm'].extend(data['Inorm_lbl'])
             self.labels['Ierr'].extend(data['Ierr_lbl'])
+            self.labels['Ibgr'].extend(data['Ibgr_lbl'])
             self.corr_params.extend(data['corr_params'])
             self.scan_type.extend(data['scan_type'])
             #
@@ -179,18 +185,19 @@ class CtrData:
             self.I     = num.append(self.I,data['I'])
             self.Inorm = num.append(self.Inorm,data['Inorm'])
             self.Ierr  = num.append(self.Ierr,data['Ierr'])
+            self.Ibgr  = num.append(self.Ibgr,data['Ibgr'])
             self.ctot  = num.append(self.ctot,data['ctot'])
             self.F     = num.append(self.F,data['F'])
             self.Ferr  = num.append(self.Ferr,data['Ferr'])
 
     ##########################################################################
-    def _scan_data(self,scan,I,Inorm,Ierr,corr_params,scan_type):
+    def _scan_data(self,scan,I,Inorm,Ierr,Ibgr,corr_params,scan_type):
         """
         parse scan into data...
         """
         data = {'scan_index':[],'I_lbl':[],'Inorm_lbl':[],
-                'Ierr_lbl':[],'corr_params':[],'scan_type':[],
-                'H':[],'K':[],'L':[],'I':[],'Inorm':[],'Ierr':[],
+                'Ierr_lbl':[],'Ibgr_lbl':[],'corr_params':[],'scan_type':[],
+                'H':[],'K':[],'L':[],'I':[],'Inorm':[],'Ierr':[],'Ibgr':[],
                 'ctot':[],'F':[],'Ferr':[]}
 
         # compute a scan index
@@ -206,6 +213,7 @@ class CtrData:
                 data['I_lbl'].append(I)
                 data['Inorm_lbl'].append(Inorm)
                 data['Ierr_lbl'].append(Ierr)
+                data['Ibgr_lbl'].append(Ibgr)
                 data['corr_params'].append(corr_params)
                 data['scan_type'].append(scan_type)
                 #
@@ -214,10 +222,12 @@ class CtrData:
                 data['L'].append(scan['L'][j])
                 # get F
                 d = image_point_F(scan,j,I=I,Inorm=Inorm,
-                                  Ierr=Ierr,corr_params=corr_params)
+                                  Ierr=Ierr,Ibgr=Ibgr,
+                                  corr_params=corr_params)
                 data['I'].append(d['I'])
                 data['Inorm'].append(d['Inorm'])
                 data['Ierr'].append(d['Ierr'])
+                data['Ibgr'].append(d['Ibgr'])
                 data['ctot'].append(d['ctot'])
                 data['F'].append(d['F'])
                 data['Ferr'].append(d['Ferr'])
@@ -233,17 +243,18 @@ class CtrData:
         (if the argument is not passed the existing value is used,
         ie just use these to update parameters)
         #
-        roi
-        rotangle
-        bgr_params
-        plot
-        fig
-        bad:  True/False
+        roi        = image roi
+        rotangle   = image rotation angle
+        bgr_params = image background parameters
+        plot       = True/False to show integration plot 
+        fig        = Fig number for plot
+        bad        = True/False flag data point
         # 
-        I
-        Inorm
-        Ierr
-        corr_params
+        I          = Intensity label
+        Inorm      = Intensity norm label
+        Ierr       = Intensity error label
+        Ibgr       = Intensity background label
+        corr_params = CTR correction parameters
         
         """
         if idx not in range(len(self.L)): return
@@ -253,11 +264,12 @@ class CtrData:
             scan = self.scan[scan_idx]
             if scan.image._is_init() == False:
                 scan.image._init_image()
+            
             # parse integration parameters
             roi        = kw.get('roi')
             rotangle   = kw.get('rotangle')
             bgr_params = kw.get('bgr_params')
-            bad_points = kw.get('bad')
+            #
             plot       = kw.get('plot',False)
             fig        = kw.get('fig')
             bad        = kw.get('bad',False)
@@ -270,16 +282,21 @@ class CtrData:
                         scan.image.bad_points.remove(point)
                 else:
                     print "Warning: bad should be True/False"
-            # integrate the scan.  note changes should stick...
+            
+            # integrate the scan.  
             scan.image.integrate(idx=[point],roi=roi,rotangle=rotangle,
                                  bgr_params=bgr_params,plot=plot,fig=fig)
+            
             # parse all the correction info and re-compute 
-            I       = kw.get('I',self.labels['I'][idx])
-            Inorm   = kw.get('Inorm',self.labels['Inorm'][idx])
-            Ierr    = kw.get('Ierr', self.labels['Ierr'][idx])
+            I           = kw.get('I',self.labels['I'][idx])
+            Inorm       = kw.get('Inorm',self.labels['Inorm'][idx])
+            Ierr        = kw.get('Ierr', self.labels['Ierr'][idx])
+            Ibgr        = kw.get('Ibgr', self.labels['Ibgr'][idx])
             corr_params = kw.get('corr_params',self.corr_params[idx])
             d = image_point_F(scan,point,I=I,Inorm=Inorm,
-                              Ierr=Ierr,corr_params=corr_params)
+                              Ierr=Ierr,Ibgr=Ibgr,
+                              corr_params=corr_params)
+            
             # store results
             self.labels['I'][idx]     = I
             self.labels['Inorm'][idx] = Inorm
@@ -291,6 +308,7 @@ class CtrData:
             self.I[idx]               = d['I']
             self.Inorm[idx]           = d['Inorm']
             self.Ierr[idx]            = d['Ierr']
+            self.Ibgr[idx]            = d['Ibgr']
             self.ctot[idx]            = d['ctot']
             self.F[idx]               = d['F']
             self.Ferr[idx]            = d['Ferr']
@@ -335,6 +353,85 @@ class CtrData:
             self.cursor = None
         if cursor == True:
             self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
+
+    ##########################################################################
+    def plot_I(self,fig=None,num_col=2,cursor=True,verbose=True):
+        """
+        plot the raw intensities
+        """
+        hksets  = sort_data(self)
+        nset    = len(hksets)
+        num_col = float(num_col)
+        num_row = num.ceil(nset/num_col)
+        pyplot.figure(fig)
+        pyplot.clf()
+        for j in range(nset):
+            pyplot.subplot(num_row,num_col,j+1)
+            d = hksets[j]
+            title = 'H=%2.3f,K=%2.3f' % (d['H'][0],d['K'][0])
+            pyplot.title(title, fontsize = 12)
+            I = d['I']
+            In = d['Inorm']
+            Ib = d['Ibgr']
+            Ie = d['Ierr']
+            y  = I/In
+            yb = Ib/In
+            ye = Ie/In
+            #
+            pyplot.plot(d['L'],y,'b.-',label='Norm Int')
+            pyplot.errorbar(d['L'],y,ye, fmt ='o')
+            pyplot.plot(d['L'],yb,'r.-',label='Norm bgr')
+            pyplot.semilogy()
+            #
+            min_L = num.floor(num.min(d['L']))
+            max_L = num.ceil(num.max(d['L']))
+            #
+            idx   = num.where(y > 0.)
+            min_I = num.min(y[idx])
+            min_I = 10.**(num.round(num.log10(min_I)) - 1)
+            min_Ibgr = num.min(yb[idx])
+            min_Ibgr = 10.**(num.round(num.log10(min_Ibgr)) - 1)
+            min_I = min(min_I,min_Ibgr)
+            #
+            max_I = num.max(y[idx])
+            max_I = 10.**(num.round(num.log10(max_I)) + 1)
+            max_Ibgr = num.max(yb[idx])
+            max_Ibgr = 10.**(num.round(num.log10(max_Ibgr)) + 1)
+            max_I = max(max_I,max_Ibgr)
+            pyplot.axis([min_L,max_L,min_I,max_I])
+            #
+            pyplot.xlabel('L')
+            pyplot.ylabel('Intensity')
+            pyplot.legend()
+        fig = pyplot.gcf()
+        self.fig = fig.number
+        if self.cursor != None:
+            self.cursor._disconnect()
+            del self.cursor
+            self.cursor = None
+        if cursor == True:
+            self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
+
+    ##########################################################################
+    def plot_point(self,idx=None,fig=None,show_int=False):
+        """
+        plot the raw data for a selected point
+
+        idx = point index.
+        if idx = None, then uses last cursor click
+        fig = fig number
+        """
+        if idx == None:
+            idx = self.get_idx()
+        if self.scan_type[idx] == 'image':
+            if show_int:
+                self.integrate_point(idx,plot=True,fig=fig)
+            else:
+                (scan_idx,point) = self.scan_index(idx)
+                self.scan[scan_idx].image.plot(idx=point,fig=fig)
+        else:
+            # plot scan data
+            pass
 
     ##########################################################################
     def get_idx(self):
@@ -413,25 +510,8 @@ class CtrData:
         tmp[idx2] = 0.0
         idx = num.where(tmp > 0 )
         point_idx = d['point_idx'][idx]
-        
         return (point_idx)
     
-    ##########################################################################
-    def plot_point(self,idx=None,fig=None):
-        """
-        plot the raw data for a selected point
-
-        idx = point index.
-        if idx = None, then uses last cursor click
-        fig = fig number
-        """
-        (scan,point) = self.get_point(idx=idx)
-        if self.scan_type[idx] == 'image':
-            self.scan[idx].image.plot(idx=point,fig=fig)
-        else:
-            # plot scan data
-            pass
-        
     ##########################################################################
     def write_HKL(self,fname = 'ctr.lst'):
         """
@@ -443,9 +523,9 @@ class CtrData:
         for i in range(len(self.L)):
             if self.I[i] > 0:
                 line = "%4i %3.2f %3.2f %6.3f %6.6g %6.6g\n" % (i,round(self.H[i]),
-                                                            round(self.K[i]),
-                                                            self.L[i],self.F[i],
-                                                            self.Ferr[i])
+                                                                round(self.K[i]),
+                                                                self.L[i],self.F[i],
+                                                                self.Ferr[i])
                 f.write(line)
         f.close()
 
@@ -464,6 +544,12 @@ def sort_data(ctr,hkdecimal=3):
     L = ctr.L
     F = ctr.F
     Ferr = ctr.Ferr
+    #
+    I     = ctr.I
+    Inorm = ctr.Inorm
+    Ierr  = ctr.Ierr
+    Ibgr  = ctr.Ibgr
+    #
     scan_idx = ctr.scan_index
     npts = len(F)
 
@@ -483,6 +569,7 @@ def sort_data(ctr,hkdecimal=3):
     hkset = []
     for j in range(nsets):
         hkset.append({'H':[],'K':[],'L':[],'F':[],'Ferr':[],
+                      'I':[],'Inorm':[],'Ierr':[],'Ibgr':[],
                       'point_idx':[],'scan_idx':[]})
 
     for j in range(npts):
@@ -493,6 +580,10 @@ def sort_data(ctr,hkdecimal=3):
         hkset[setidx]['L'].append(L[j])
         hkset[setidx]['F'].append(F[j])
         hkset[setidx]['Ferr'].append(Ferr[j])
+        hkset[setidx]['I'].append(I[j])
+        hkset[setidx]['Inorm'].append(Inorm[j])
+        hkset[setidx]['Ierr'].append(Ierr[j])
+        hkset[setidx]['Ibgr'].append(Ibgr[j])
         hkset[setidx]['point_idx'].append(j)
         hkset[setidx]['scan_idx'].append(scan_idx[j])
 
@@ -503,6 +594,10 @@ def sort_data(ctr,hkdecimal=3):
         hkset[j]['L'] = num.array(hkset[j]['L'])
         hkset[j]['F'] = num.array(hkset[j]['F'])
         hkset[j]['Ferr'] = num.array(hkset[j]['Ferr'])
+        hkset[j]['I']     = num.array(hkset[j]['I'])
+        hkset[j]['Inorm'] = num.array(hkset[j]['Inorm'])
+        hkset[j]['Ierr']  = num.array(hkset[j]['Ierr'])
+        hkset[j]['Ibgr']  = num.array(hkset[j]['Ibgr'])
         hkset[j]['point_idx']  = num.array(hkset[j]['point_idx'])
         hkset[j]['scan_idx']  = num.array(hkset[j]['scan_idx'])
 
@@ -514,20 +609,26 @@ def sort_data(ctr,hkdecimal=3):
         hkset[j]['L'] = hkset[j]['L'][lidx]
         hkset[j]['F'] = hkset[j]['F'][lidx]
         hkset[j]['Ferr'] = hkset[j]['Ferr'][lidx]
+        hkset[j]['I'] = hkset[j]['I'][lidx]
+        hkset[j]['Inorm'] = hkset[j]['Inorm'][lidx]
+        hkset[j]['Ierr'] = hkset[j]['Ierr'][lidx]
+        hkset[j]['Ibgr'] = hkset[j]['Ibgr'][lidx]
         hkset[j]['point_idx'] = hkset[j]['point_idx'][lidx]
         hkset[j]['scan_idx'] = hkset[j]['scan_idx'][lidx]
 
     return hkset
 
 ##############################################################################
-def image_point_F(scan,point,I='I_c',Inorm='Io',Ierr='Ierr_c',corr_params={}):
+def image_point_F(scan,point,I='I',Inorm='io',Ierr='Ierr',Ibgr='Ibgr',
+                  corr_params={}):
     """
     compute F for a single scan point in an image scan
     """
-    d = {'I':0.0,'Inorm':0.0,'Ierr':0.0,'ctot':1.0,'F':0.0,'Ferr':0.0}
+    d = {'I':0.0,'Inorm':0.0,'Ierr':0.0,'Ibgr':0.0,'ctot':1.0,'F':0.0,'Ferr':0.0}
     d['I']     = scan[I][point]
     d['Inorm'] = scan[Inorm][point]
     d['Ierr']  = scan[Ierr][point]
+    d['Ibgr']  = scan[Ibgr][point]
     if corr_params == None:
         d['ctot'] = 1.0
         scale = 1.0
@@ -867,14 +968,11 @@ def test1():
     psic = gonio_psic.test2(show=False)
     psic.set_angles(phi=12.,chi=30.,eta=20.,
                     mu=25.,nu=75.,delta=20.)
-    #print psic
-    #
     beam_slits = {'horz':.6,'vert':.8}
     det_slits = {'horz':20.0,'vert':10.5}
     sample = {}
     sample['polygon'] = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[0.,.5],[1.,-1.]]
     sample['angles']  = {'phi':108.0007,'chi':0.4831}
-    #
     cor = CtrCorrectionPsic(gonio=psic,beam_slits=beam_slits,
                             det_slits=det_slits,sample=sample)
     ct = cor.ctot_stationary(plot=True)
@@ -885,6 +983,6 @@ if __name__ == "__main__":
     test 
     """
     test1()
-    #test2()
+
 
 
