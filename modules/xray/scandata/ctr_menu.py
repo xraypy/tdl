@@ -47,7 +47,7 @@ F=%6.5g, Ferr=%6.5g
 CTR_LABELS = ['plot','iplot','labels',
               'correction','cplot','integrate','copyint',
               'pointselect','pplot','zoomselect','selpoint',
-              'next','previous','help','quit']
+              'next','previous','help','done']
 CTR_DESCR = ["Plot structure factors",
              "Plot intensities",
              "Set Intensity labels", 
@@ -62,7 +62,7 @@ CTR_DESCR = ["Plot structure factors",
              "Select next point ",
              "Select previous point", 
              "Show options",
-             "Quit / All Done"]
+             "All Done"]
 
 ########################################################################
 def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
@@ -102,7 +102,7 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
     _ctr_plot(ctr)
     
     # loop
-    while ret != 'quit':
+    while ret != 'done':
         header   = CTR_HEADER % (str(npts),str(set),str(point),
                                  str(ctr.scan_type[point]),
                                  str(ctr.labels['I'][point]),

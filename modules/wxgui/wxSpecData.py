@@ -19,8 +19,8 @@ import time
 import numpy as num
 from matplotlib import pyplot
 
-from   wxUtil import wxUtil
-import scandata
+from wxUtil import wxUtil
+import scandata 
 
 ############################################################################
 
@@ -172,13 +172,15 @@ class wxSpecData(model.Background, wxUtil):
         try:
             name = self.get_ReaderName()
             r    = self.get_data(name)
-            if type(r) == types.InstanceType:
-                if hasattr(r,'read_spec'):
-                    self.post_message("Valid reader object: %s" % name)
-                    return True
-                else:
-                    self.post_message("Invalid reader object: %s" % name)
-                    return False
+            #if type(r) == types.InstanceType:
+            #    if hasattr(r,'read_spec'):
+            #        self.post_message("Valid reader object: %s" % name)
+            #        return True
+            #    else:
+            #        self.post_message("Invalid reader object: %s" % name)
+            #        return False
+            if isinstance(r,scandata.Reader):
+                return True
             else:
                 self.post_message("Invalid reader object")
                 return False
@@ -423,8 +425,10 @@ class wxSpecData(model.Background, wxUtil):
         scalers = data.scalers.keys()
         scalers.sort()
         scalers.insert(0,'')
-        xrf_lines = data.xrf_lines
-        if xrf_lines == None: xrf_lines = []
+        if hasattr(data,'xrf'):
+            xrf_lines = data.xrf.lines
+        else:
+            xrf_lines = []
         ####
         # scaler default
         default = self.components.DefaultScalerAxes.checked
@@ -468,9 +472,10 @@ class wxSpecData(model.Background, wxUtil):
         # check bad_idx
         tmp = str(self.components.BadMcas.text).strip()
         #print tmp
-        if (len(tmp) == 0) and (len(data.med)>0):
-            if (len(data.med[0].bad_mca_idx) > 0):
-                self.components.BadMcas.text = repr(data.med[0].bad_mca_idx)
+        if hasattr(data,'med'):
+            if (len(tmp) == 0) and (len(data.med.med)>0):
+                if (len(data.med.med[0].bad_mca_idx) > 0):
+                    self.components.BadMcas.text = repr(data.med.med[0].bad_mca_idx)
      
     ######################################################
 
@@ -526,21 +531,21 @@ class wxSpecData(model.Background, wxUtil):
         """
         update the GUI from reader
         """
-        tmp = reader.med_path
+        tmp = reader.spectra_path
         if tmp == None:
             self.components.MedPath.text = ''
         else:
             self.components.MedPath.text = str(tmp)
-        self.components.ReadMed.checked = reader.med
-        self.components.ReadXrf.checked = reader.xrf
-        self.components.XrfLines.stringSelection = repr(reader.xrf_lines)
-        self.components.BadMcas.stringSelection = repr(reader.med_params['bad_mca_idx'])
-        self.components.McaTaus.stringSelection = repr(reader.med_params['tau'])
-        self.components.Emin.text = repr(reader.med_params['emin'])
-        self.components.Emax.text = repr(reader.med_params['emax'])
-        self.components.Total.checked = reader.med_params['total']
-        self.components.Align.checked = reader.med_params['align'] 
-        self.components.CorrectData.checked = reader.med_params['correct']
+        self.components.ReadMed.checked = reader.spec_params['med']
+        self.components.ReadXrf.checked = reader.spec_params['xrf']
+        self.components.XrfLines.stringSelection = repr(reader.spectra_params['lines'])
+        self.components.BadMcas.stringSelection = repr(reader.spectra_params['bad_mca_idx'])
+        self.components.McaTaus.stringSelection = repr(reader.spectra_params['tau'])
+        self.components.Emin.text = repr(reader.spectra_params['emin'])
+        self.components.Emax.text = repr(reader.spectra_params['emax'])
+        self.components.Total.checked = reader.spectra_params['total']
+        self.components.Align.checked = reader.spectra_params['align'] 
+        self.components.CorrectData.checked = reader.spectra_params['correct']
         # missing fields for det_idx and nfmt       
         #
         tmp = reader.image_path
@@ -548,7 +553,7 @@ class wxSpecData(model.Background, wxUtil):
             self.components.ImagePath.text = ''
         else:
             self.components.ImagePath.text = str(tmp)
-        self.components.ReadImg.checked = reader.img
+        self.components.ReadImg.checked = reader.spec_params['image']
         
     def UpdateReaderMedImgPar(self):
         """
@@ -563,42 +568,42 @@ class wxSpecData(model.Background, wxUtil):
         else:
             reader.med_path=None
         #
-        reader.med = self.components.ReadMed.checked
-        reader.xrf = self.components.ReadXrf.checked
+        reader.spec_params['med'] = self.components.ReadMed.checked
+        reader.spec_params['xrf'] = self.components.ReadXrf.checked
         #
         xrf_lines = str(self.components.XrfLines.stringSelection).strip()
         if len(xrf_lines) > 0:
-            reader.xrf_lines = self.eval_line(xrf_lines)
+            reader.spectra_params['lines'] = self.eval_line(xrf_lines)
         else:
-            reader.xrf_lines = None
+            reader.spectra_params['lines'] = None
         #
         #bad_mcas  = str(self.components.BadMcas.stringSelection).strip()
         bad_mcas  = str(self.components.BadMcas.text).strip()
         if len(bad_mcas) > 0:
-            reader.med_params['bad_mca_idx'] = self.eval_line(bad_mcas)
+            reader.spectra_params['bad_mca_idx'] = self.eval_line(bad_mcas)
         else:
-            reader.med_params['bad_mca_idx'] = []
+            reader.spectra_params['bad_mca_idx'] = []
         #
         mca_taus  = str(self.components.McaTaus.stringSelection).strip()
         if len(mca_taus) > 0:
-            reader.med_params['tau'] = self.eval_line(mca_taus)
+            reader.spectra_params['tau'] = self.eval_line(mca_taus)
         else:
-            reader.med_params['tau'] = None
+            reader.spectra_params['tau'] = None
         #
         emin = str(self.components.Emin.text).strip()
         if len(emin) > 0:
-            reader.med_params['emin'] = self.eval_line(emin)
+            reader.spectra_params['emin'] = self.eval_line(emin)
         else:
-            reader.med_params['emin'] = -1.
+            reader.spectra_params['emin'] = -1.
         emax = str(self.components.Emax.text).strip()
         if len(emax) > 0:
-            reader.med_params['emax'] = self.eval_line(emax)
+            reader.spectra_params['emax'] = self.eval_line(emax)
         else:
-            reader.med_params['emax'] = -1.
+            reader.spectra_params['emax'] = -1.
         #
-        reader.med_params['total'] = self.components.Total.checked
-        reader.med_params['align'] = self.components.Align.checked
-        reader.med_params['correct'] = self.components.CorrectData.checked
+        reader.spectra_params['total'] = self.components.Total.checked
+        reader.spectra_params['align'] = self.components.Align.checked
+        reader.spectra_params['correct'] = self.components.CorrectData.checked
         # missing fields for det_idx and nfmt       
         #
         image_path = str(self.components.ImagePath.text).strip()
@@ -606,7 +611,7 @@ class wxSpecData(model.Background, wxUtil):
             reader.image_path=image_path
         else:
             reader.image_path=None
-        reader.img = self.components.ReadImg.checked
+        reader.spec_params['image'] = self.components.ReadImg.checked
 
     def on_FitDeadtime_mouseClick(self,event):
         #reader_name = self.get_ReaderName()
@@ -616,7 +621,7 @@ class wxSpecData(model.Background, wxUtil):
         var_name = self.components.ScanVar.text
         x = str(self.components.DTX.stringSelection)
         norm = str(self.components.DTNorm.stringSelection)
-        #s = "%s.med_params['tau'] = scandata.fit_deadtime(%s,"
+        #s = "%s.spectra_params['tau'] = scandata.fit_deadtime(%s,"
         #s = s % (reader_name, var_name)
         #s = s + "x='io',y='Med',norm='Seconds')"
         s = "%s = scandata.fit_deadtime(%s,"  % (tau_name, var_name)
@@ -694,16 +699,16 @@ class wxSpecData(model.Background, wxUtil):
     def _plot_med(self,var_name):
         data = self.get_data(var_name)
         if data == None: return
-        if len(data.med) == 0: return
+        if len(data.med.med) == 0: return
         from matplotlib import pyplot
         pyplot.figure(2)
         hold = str(self.components.MedHold.checked)
         ylog = str(self.components.MedYlog.checked)
         pnt = int(self.components.ScanPnt.stringSelection)
-        s = "scandata.med_plot(%s,scan_pnt=%s,hold=%s,ylog=%s)" % (var_name,
-                                                                   str(pnt),
-                                                                   hold,
-                                                                   ylog)
+        s = "scandata.med_data.med_plot(%s.med,scan_pnt=%s,hold=%s,ylog=%s)" % (var_name,
+                                                                                str(pnt),
+                                                                                hold,
+                                                                                ylog)
         #print s
         self.exec_line(s)
 
@@ -711,12 +716,12 @@ class wxSpecData(model.Background, wxUtil):
     def _plot_img(self,var_name):
         data = self.get_data(var_name)
         if data == None: return
-        if len(data.image) == 0: return
+        if len(data.image.image) == 0: return
         from matplotlib import pyplot
         pyplot.figure(3)
         pyplot.clf()
         pnt = int(self.components.ScanPnt.stringSelection)
-        s = "scandata.image_plot(%s.image[%s]" % (var_name,str(pnt))
+        s = "scandata.image_data.image_plot(%s.image.image[%s]" % (var_name,str(pnt))
         if self.components.ColorMap.stringSelection.strip()!='':
             cmap = self.components.ColorMap.stringSelection.strip()
             s = "%s,cmap='%s'" % (s,cmap)

@@ -177,7 +177,7 @@ class MedScan:
         returns an XrfScan object
         """
         xrf = xrf_data.med2xrf(self.med,xrf_params=xrf_params,
-                               lines = lines,det_idx=det_idx,
+                               lines=lines,det_idx=det_idx,
                                emin=emin,emax=emax)
         #return xrf
         return xrf_data.XrfScan(xrf)

@@ -34,7 +34,7 @@ Current image rotation angle = %s
 
 IMG_LABELS = ['display','imax','rotangle','setroi','plotsums',
               'selectroi','background','copyall','integrate','intall',
-              'flag','point','next','previous','help','quit']
+              'flag','point','next','previous','help','done']
 IMG_DESCR = ["Display image",
              "Set max image intensity value",
              "Set image rotation angle (deg ccw)",
@@ -50,7 +50,7 @@ IMG_DESCR = ["Display image",
              "Select next point ",
              "Select previous point", 
              "Show options",
-             "Quit / All Done"]
+             "All Done"]
 
 IMG_HEADER_SHORT = """
 ##########################################
@@ -60,7 +60,7 @@ Current image rotation angle = %s
 
 IMG_LABELS_SHORT = ['display','imax','rotangle','setroi','plotsums',
                     'selectroi','background','integrate','flag',
-                    'help','quit']
+                    'help','done']
 IMG_DESCR_SHORT = ["Display image",
                    "Set max image intensity value",
                    "Set image rotation angle (deg ccw)",
@@ -71,7 +71,7 @@ IMG_DESCR_SHORT = ["Display image",
                    "Integrate current image / show integration plot",
                    "Flag as bad point",
                    "Show options",
-                   "Quit / All Done"]
+                   "All Done"]
 
 ########################################################################
 def image_menu(imdata,scan_pnt=None):
@@ -120,7 +120,7 @@ def image_menu(imdata,scan_pnt=None):
     _implot(imdata,scan_pnt)
     
     # loop
-    while ret != 'quit':
+    while ret != 'done':
         roi      = imdata.rois[scan_pnt]
         rotangle = imdata.rotangle[scan_pnt]
         if short:
@@ -271,7 +271,7 @@ BGR_HEADER = """
 BGR_LABELS = ['bgrflag',
               'cnbgr','cwidth','cpow','ctan',
               'rnbgr','rwidth','rpow','rtan',
-              'help','info','quit']
+              'help','info','done']
 
 BGR_DESCR = ["Set background flag",
              "Set num bgr for linear background - column direction",
@@ -284,7 +284,7 @@ BGR_DESCR = ["Set background flag",
              "Set tangent flag (True or False) - row direction",
              "Show options",
              "Get more info on parameter defintions",
-             "Quit / All done"]
+             "All done"]
 
 IMG_BGR_PARAMS = {'bgrflag':0,
                   'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
@@ -300,7 +300,7 @@ def bgr_menu(bgr_params=IMG_BGR_PARAMS):
     m   = Menu(labels=BGR_LABELS,descr=BGR_DESCR,sort=False,matchidx=True)
     ret = ''
     
-    while ret != 'quit':
+    while ret != 'done':
         header = BGR_HEADER % (bgr_params['bgrflag'],
                                bgr_params['cnbgr'],bgr_params['cwidth'],
                                bgr_params['cpow'],str(bgr_params['ctan']),

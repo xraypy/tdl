@@ -32,6 +32,7 @@ class wxXrf(model.Background, wxUtil):
         # self.setupSizers()
         self.components.PkParams._autoresize = 0
         self.is_scan        = False
+        self.scan_data      = None
         self.init_xrf_lines = True
         self.startup        = True
         self.dir            = '.'
@@ -40,8 +41,8 @@ class wxXrf(model.Background, wxUtil):
         self.shell = None
         self.init_shell()
 
-        # Make sure Xrf is loaded
-        self.exec_line("import xrf")
+        # Make sure scandata is loaded
+        self.exec_line("import scandata")
 
         # init all the menus
         self.init_shell_list_items()
@@ -109,7 +110,7 @@ class wxXrf(model.Background, wxUtil):
         self.exec_line(line)
         for path in result.paths:
             path = path.replace("\\","\\\\")
-            line = '__temp__ = xrf.read("%s")' % (path)
+            line = '__temp__ = scandata.xrf_data.read("%s")' % (path)
             self.exec_line(line)
             line = "%s.append(__temp__)" % (var_name)
             self.exec_line(line)
@@ -178,12 +179,14 @@ class wxXrf(model.Background, wxUtil):
 
     def check_xrf_var(self):
         try:
+            self.scan_data = False
             name = self.get_xrf_var_name(ignore_idx=True)
             m    = self.get_data(name)
             if hasattr(m,'xrf'):
-                node = self.components.Node.text + '.xrf'
+                node = self.components.Node.text + '.xrf.xrf'
                 self.components.Node.text = node
-                m = m.xrf
+                m = m.xrf.xrf
+            
             if type(m) in (types.ListType, num.ndarray):
                 self.is_scan = True
                 idx  = self.get_scan_idx()
@@ -208,6 +211,12 @@ class wxXrf(model.Background, wxUtil):
                 # get given scan
                 name = self.get_xrf_var_name(ignore_idx=False)
                 m    = self.get_data(name)
+
+                # see if scan data obj and get name
+                if name.find('.xrf.xrf') > -1:
+                    self.scan_data = self.components.Node.text[0:-4]
+                else:
+                    self.scan_data = None
             else:
                 self.is_scan = False
             self.ScanParamsToggle()
@@ -645,6 +654,13 @@ class wxXrf(model.Background, wxUtil):
         return
 
     def update_gui_from_xrf(self):
+        # if parent scan data object, make sure its updated
+        if self.scan_data != None:
+            m = self.get_data(self.scan_data)
+            try:
+                m._update_peaks()
+            except:
+                print "Scan update failed?"
         xrf = self.get_xrf()
         if xrf == None:
             self.post_message("No XRF variable")
