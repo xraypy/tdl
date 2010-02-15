@@ -32,7 +32,7 @@ New/selected points    = %s
 Current selected point = %s
 -----
 Scan Type = '%s'
-Labels: I='%s', Inorm='%s',Ierr='%s'
+Labels: I='%s', Inorm='%s', Ierr='%s',Ibgr='%s'
 Geom='%s'
 Beam slits = %s
 Det slits = %s
@@ -56,7 +56,7 @@ CTR_DESCR = ["Plot structure factors",
              "Set integration parameters / integrate",
              "Copy integration parameters",
              "Set 'selected point' from last plot click (Fig 0)",
-             "Set 'selected point' and plot scan/image from last plot click (Fig 0)",
+             "Set+plot 'selected point' from last plot click (Fig 0)",
              "Set 'selected points' from last plot zoom (Fig 0)",
              "Select specific point number",
              "Select next point ",
@@ -108,6 +108,7 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                                  str(ctr.labels['I'][point]),
                                  str(ctr.labels['Inorm'][point]),
                                  str(ctr.labels['Ierr'][point]),
+                                 str(ctr.labels['Ibgr'][point]),
                                  str(ctr.corr_params[point].get('geom')),
                                  str(ctr.corr_params[point].get('beam_slits')),
                                  str(ctr.corr_params[point].get('det_slits')),
@@ -241,14 +242,17 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                           valid=['p','a','s','n'])
             if app == 'p':
                 ctr.corr_params[point].update(corr_params)
+                print "Integrate point index %i" % point
                 ctr.integrate_point(point)
             elif app == 's':
                 for j in set:
                     ctr.corr_params[j].update(corr_params)
+                    print "Integrate point index %i" % j
                     ctr.integrate_point(j)
             elif app == 'a':
                 for j in range(npts):
                     ctr.corr_params[j].update(corr_params)
+                    print "Integrate point index %i" % j
                     ctr.integrate_point(j)
             elif app == 'n':
                 print "Ignoring updates"
