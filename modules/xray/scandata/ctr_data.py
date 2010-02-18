@@ -109,7 +109,9 @@ class CtrData:
     ##########################################################################
     def __init__(self,scans=[],I='I',Inorm='io',Ierr='Ierr',
                  Ibgr='Ibgr',corr_params={},scan_type='image'):
-        #
+        """
+        
+        """
         self.fig    = None
         self.cursor = None
         self.scan   = []

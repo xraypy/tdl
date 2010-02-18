@@ -76,3 +76,13 @@ class menuApps:
                                             filename=filename)
         self.wxSpecData.position = (200, 5)
         self.wxSpecData.visible = True
+
+    def on_menuAppsCtrData_select(self, event):
+        import wxCtrData
+        wxCtrData = mod_import(wxCtrData)
+        wxCtrData = wxCtrData.wxCtrData
+        filename = os.path.join(self.rsrc_path,'wxCtrData.rsrc.py')
+        self.wxCtrData = model.childWindow(self, wxCtrData,
+                                           filename=filename)
+        self.wxCtrData.position = (200, 5)
+        self.wxCtrData.visible = True
