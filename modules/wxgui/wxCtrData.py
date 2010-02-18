@@ -2,7 +2,7 @@
 CTR Gui
 
 Authors/Modifications:
---------------
+----------------------
 Tom Trainor (tptrainor@alaska.edu)
 
 
@@ -23,6 +23,22 @@ from wxUtil import wxUtil
 import scandata
 import ctr_data
 
+########################################################################
+CTR_HEADER = """Number of points       = %s
+New/selected points    = %s
+Current selected point = %s
+Scan Type = '%s'
+Labels: I='%s', Inorm='%s', Ierr='%s',Ibgr='%s'
+Geom='%s'
+Beam slits = %s
+Det slits = %s
+Sample  = %s
+Scale = %s
+H=%3.2f, K=%3.2f, L=%6.5f
+I=%6.5g, Ierr=%6.5g, ctot=%6.5f
+F=%6.5g, Ferr=%6.5g
+"""
+
 ############################################################################
 
 class wxCtrData(model.Background, wxUtil):
@@ -30,13 +46,16 @@ class wxCtrData(model.Background, wxUtil):
     ###########################################################
     # Init and util methods
     ###########################################################
+    
     def on_initialize(self, event):
         # Initialization
         # including sizer setup, do it here
         # self.setupSizers()
         self.startup  = True
         self.dir      = '.'
-
+        self.point = 0
+        self.set = []
+        
         # set up shell
         self.shell = None
         self.init_shell()
@@ -47,21 +66,13 @@ class wxCtrData(model.Background, wxUtil):
         # init all the menus
         self.init_ShellItems()
         self.init_GUI()
-        self.current = True
-
-   ###########################################################
 
     def init_ShellItems(self,):
-        self.init_Grp()
-        self.init_Reader()
-        self.init_ScanVar()
-        self.init_BadMcas()
-        self.init_McaTaus()
-        self.init_XrfLines()
+        self.init_CtrDataVar()
+        self.init_AppendScanVar()
 
     def on_Update_mouseClick(self,event):
         self.init_ShellItems()
-        self.init_SpecFile()
     
     ###########################################################
     #   Menu
@@ -70,74 +81,35 @@ class wxCtrData(model.Background, wxUtil):
     def on_menuFileExit_select(self,event): 
         self.close()
 
-    def on_menuHelpParams_select(self,event): 
-        import wxXrayDataHelp
-        wxXrayDataHelp = mod_import(wxXrayDataHelp)
-        dir       = os.path.dirname(wxXrayDataHelp.__file__)
-        filename  = os.path.join(dir,'wxXrayDataHelp.rsrc.py')
-        wxXrayDataHelp = wxXrayDataHelp.wxXrayDataHelp
-        self.wxXrayDataHelp = model.childWindow(self,wxXrayDataHelp,
-                                                filename=filename)
-        self.wxXrayDataHelp.position = (200, 5)
-        self.wxXrayDataHelp.visible = True
-
-    ######################################################
+    def on_menuHelpParams_select(self,event):
+        pass
 
     ###########################################################
-    #   Group / Reader
+    #  Ctr Data
     ###########################################################
 
-    ######################################################
-
-    def init_Grp(self):
-        " Initialize the menu    "
-        grp = self.components.Grp.text
+    def init_CtrDataVar(self):
+        """
+        Initialize the list of variables. 
+        """
+        ctr_var = self.components.CtrDataVar.stringSelection
         tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
-        self.components.Grp.items = tmp['ins']
-        self.components.Grp.text = grp
-        return
-
-    def on_Grp_select(self, event):
-        "Re-init reader list given the new grp name"
-        grp = self.components.Grp.stringSelection
-        self.components.Grp.text = grp
-        self.init_Model()
-        return
-
-    def on_Grp_keyDown(self,event):
-        "select a variable name and check it out"
-        keyCode = event.keyCode
-        if keyCode == wx.WXK_RETURN:
-            self.init_Model()
-        else:
-            event.skip()
-        return
-
-    def init_Reader(self):
-        """
-        Initialize the menu. Use the group thats
-        selected in the group menu
-        """
-        grp = self.components.Grp.text  
-        if len(grp) == 0: grp = None
-        reader = self.components.Reader.stringSelection
-        tmp = self.shell.interp.symbol_table.list_symbols(symbol=grp,tunnel=False)
+        #tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False,instance=scandata.CtrData)
         tmp = tmp['var'] + tmp['ins']
         tmp.sort()
-        self.components.Reader.items = tmp
-        if reader in tmp:
-            self.components.Reader.stringSelection = reader
+        self.components.CtrDataVar.items = tmp
+        if ctr_var in tmp:
+            self.components.CtrDataVar.stringSelection = ctr_var
         else:
-            #self.components.Reader.stringSelection = 'reader'
-            self.components.Reader.text = 'reader'
+            self.components.CtrDataVar.text = ''
         return
 
-    def on_Reader_select(self,event):
-        "select a Reader name and check it out"
+    def on_CtrDataVar_select(self,event):
+        "select a Ctr data name and check it out"
         self.init_GUI()
         return
 
-    def on_Reader_keyDown(self,event):
+    def on_CtrDataVar_keyDown(self,event):
         "select a variable name and check it out"
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN:
@@ -146,51 +118,105 @@ class wxCtrData(model.Background, wxUtil):
             event.skip()
         return
 
-    def get_ReaderName(self,):
-        if len(self.components.Reader.stringSelection) > 0:
-            self.components.Reader.text = self.components.Reader.stringSelection
-        reader = self.components.Reader.text
-        if len(reader.strip()) == 0: return None
-        name = "%s" % reader.strip()
+    def get_CtrName(self,):
+        if len(self.components.CtrDataVar.stringSelection) > 0:
+            self.components.CtrDataVar.text = self.components.CtrDataVar.stringSelection
+        ctr = self.components.CtrDataVar.text
+        if len(ctr.strip()) == 0: return None
+        name = "%s" % ctr.strip()
         return name
 
-    def get_Reader(self):
-        name = self.get_ReaderName()
+    def get_Ctr(self):
+        name = self.get_CtrName()
         if name == None:
-            print "Please provide a reader name"
+            print "Please provide a Ctr Data instance name"
             return None
-        reader = self.get_data(name)
-        if reader == None:
-            reader = scandata.Reader()
-            self.set_Reader(reader)
-        return reader
+        ctr = self.get_data(name)
+        return ctr
 
-    def set_Reader(self,reader):
-        name = self.get_ReaderName()
-        return self.set_data(name,reader)
+    def set_Ctr(self,ctr):
+        name = self.get_CtrName()
+        return self.set_data(name,ctr)
 
-    def CheckReader(self,):
+    def CheckCtr(self,):
         try:
-            name = self.get_ReaderName()
-            r    = self.get_data(name)
-            #if type(r) == types.InstanceType:
-            #    if hasattr(r,'read_spec'):
-            #        self.post_message("Valid reader object: %s" % name)
-            #        return True
-            #    else:
-            #        self.post_message("Invalid reader object: %s" % name)
-            #        return False
-            if isinstance(r,scandata.Reader):
+            name = self.get_CtrName()
+            ctr  = self.get_data(name)
+            #if isinstance(ctr,scandata.CtrData):
+            if hasattr(ctr,'L'):
+                self.post_message("Valid ctr object")
                 return True
             else:
-                self.post_message("Invalid reader object")
+                self.post_message("Invalid ctr object")
                 return False
         except:
-            self.post_message("Invalid reader object")
+            self.post_message("Invalid ctr object")
             return False
 
+    ###########################################################
+    #  Scan Data
+    ###########################################################
+
+    def init_AppendScanVar(self):
+        """
+        Initialize the list of variables. 
+        """
+        scan_var = self.components.AppendScanVar.stringSelection
+        tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
+        #tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False,
+        #                                                  instance=scandata.ScanData)
+        tmp = tmp['var'] + tmp['ins']
+        tmp.sort()
+        self.components.AppendScanVar.items = tmp
+        if scan_var in tmp:
+            self.components.AppendScanVar.stringSelection = scan_var
+        else:
+            self.components.AppendScanVar.text = ''
+        return
+
+    def get_Scan(self):
+        if len(self.components.AppendScanVar.stringSelection) > 0:
+            self.components.AppendScanVar.text = self.components.AppendScanVar.stringSelection
+        scan = self.components.AppendScanVar.text
+        if len(scan.strip()) == 0: return None
+        name = "%s" % scan.strip()
+        scan = self.get_data(name)
+        try:
+            scan = self.get_data(name)
+            #if isinstance(ctr,scandata.ScanData):
+            if type(scan) != types.ListType:
+                scan = [scan]
+            if hasattr(scan[0],'get_positioner'):
+                self.post_message("Valid scan object")
+                return scan
+            else:
+                self.post_message("Invalid scan object")
+                return None
+        except:
+            self.post_message("Invalid scan object")
+            return None
+
+    ###########################################################
+    #  Point Nums
+    ###########################################################
+    def init_PointNum(self):
+        """
+        Initialize the point nums. 
+        """
+        self.components.PointNum.items = ['0']
+        self.components.PointNum.stringSelection = '0'
+        self.point = 0
+        self.set = []
+
+    def init_AnchorPointNum(self):
+        """
+        Initialize the point nums. 
+        """
+        self.components.AnchorPointNum.items = ['0']
+        self.components.AnchorPointNum.stringSelection = '0'
+        
     ######################################################
-    # here update stuff from reader
+    # here update stuff from ctr
     def init_GUI(self):
         if self.startup:
             self.startup = False
@@ -198,539 +224,77 @@ class wxCtrData(model.Background, wxUtil):
             cmap.insert(0,'')
             self.components.ColorMap.items = cmap 
             self.components.ColorMap.stringSelection = ''
-        check = self.CheckReader()
+        check = self.CheckCtr()
         if check == False:
+            self.init_PointNum()
+            self.components.PointNum.StringSelection = '0'
             return
         else:
-            self.UpdateGuiFromReader()
+            self.UpdateGuiFromCtr()
 
-    def UpdateGuiFromReader(self,):
+    def UpdateGuiFromCtr(self,):
         """
-        update gui from a reader
+        update gui from a ctr data instance
         """
-        reader = self.get_Reader()
-        if reader == None: return
-        
-        self.components.SpecPath.text = reader.spec_path
+        ctr = self.get_Ctr()
+        if ctr == None: return
+        self.point = int(self.components.PointNum.StringSelection)
+        point  = self.point
+        set = self.set
+        header   = CTR_HEADER % (str(len(ctr.L)),str(set),str(point),
+                                 str(ctr.scan_type[point]),
+                                 str(ctr.labels['I'][point]),
+                                 str(ctr.labels['Inorm'][point]),
+                                 str(ctr.labels['Ierr'][point]),
+                                 str(ctr.labels['Ibgr'][point]),
+                                 str(ctr.corr_params[point].get('geom')),
+                                 str(ctr.corr_params[point].get('beam_slits')),
+                                 str(ctr.corr_params[point].get('det_slits')),
+                                 str(ctr.corr_params[point].get('sample')),
+                                 str(ctr.corr_params[point].get('scale')),
+                                 ctr.H[point],ctr.K[point],ctr.L[point],
+                                 ctr.I[point],ctr.Ierr[point],ctr.ctot[point],
+                                 ctr.F[point],ctr.Ferr[point])
+        self.components.PointData.text = header
         #
-        fname0 = ''
-        items = []
-        for j in range(len(reader.spec_files)):
-            s = reader.spec_files[j].fname
-            if j == 0: fname0 = s
-            items.append(s)
-        self.components.SpecFile.items = items
-        if fname0:
-            self.components.SpecFile.stringSelection = fname0
-        #
-        self.UpdateGuiMedImgPar(reader)
-        #
-        self.SpecFileSelect()
-
-    ######################################################
-
+        print self.get_Scan()
+    
     ###########################################################
-    #   Path/files
-    ###########################################################
-
-    ######################################################
-    def init_SpecPath(self):
-        self.components.SpecPath.text = ''
-        
-    def on_SpecPathSel_mouseClick(self,event):        
-        cdir = self.eval_line("pwd()")
-        result = dialog.directoryDialog(self, 'Open', cdir)
-        if result.accepted:
-            dir = result.path
-            dir = dir.replace("\\","\\\\")
-            self.components.SpecPath.text = dir
-            self.init_SpecFile()
-
-    def init_SpecFile(self):
-        dir = self.components.SpecPath.text
-        dir = os.path.join(dir,'*.spc')
-        files = glob.glob(dir)
-        list = []
-        for f in files:
-            list.append(os.path.basename(f))
-        sfile = self.components.SpecFile.stringSelection
-        self.components.SpecFile.items = list
-        if sfile in list:
-            self.components.SpecFile.stringSelection=sfile
-            
-    def on_SpecFileSel_mouseClick(self,event):
-        sdir = self.components.SpecPath.text
-        cdir = self.eval_line("pwd()")
-        if len(sdir.strip()) == 0:
-            dir = cdir
-        else:
-            dir = sdir
-        #
-        result = dialog.fileDialog(self, 'Open', dir, '',"*")
-        if result.accepted == False:
-            self.post_message("File selection cancelled.")
-            return
-        #
-        files = []
-        #print result.paths
-        for j in range(len(result.paths)):
-            path        = result.paths[j]
-            dir,fname   = os.path.split(path)
-            if j == 0:
-                if os.path.abspath(dir) != os.path.abspath(sdir):
-                    self.components.SpecPath.text = dir
-                    #self.init_SpecFile()
-                    self.components.SpecFile.items = []
-                fname0 = fname
-            if fname not in files:
-                files.append(fname)
-        items = self.components.SpecFile.items
-        for f in files:
-            if f not in items: items.append(f)
-        items.sort()
-        self.components.SpecFile.items = items
-        #
-        self.components.SpecFile.stringSelection = fname0
-        self.SpecFileSelect()
-        #idx = items.index(fname0)
-        #self.components.SpecFile.SetSelection(idx)
- 
-    ######################################################
-    def on_SpecFile_select(self,event):
-        self.SpecFileSelect()
-        
-    def SpecFileSelect(self):
-        spath = str(self.components.SpecPath.text)
-        sfile = str(self.components.SpecFile.stringSelection)
-        reader = self.get_Reader()
-        if reader == None: return None
-        if reader.spec_path != spath:
-            reader.spec_path = os.path.abspath(spath)
-        reader.read_spec(sfile)
-        #
-        self.init_ScanVar()
-        #
-        for s in reader.spec_files:
-            if s.fname == sfile:
-                min = s.min_scan
-                max = s.max_scan
-                idx = num.arange(min,max+1,dtype=int)
-                idx = map(str,idx)
-                self.components.ScanNum.items = idx
-                self.components.ScanNum.stringSelection=idx[-1]
-                self.ScanNumSelect()
-
-    ######################################################
-
-    ###########################################################
-    #   ScanVar/Num
+    #  Data Point
     ###########################################################
 
-    ######################################################
-
-    def on_ScanNum_select(self,event):
-        self.ScanNumSelect()
-
-    def on_ScanNum_keyDown(self,event):
+    def on_PointNum_keyDown(self,event):
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN:
-            self.ScanNumSelect()
-            self.ReadScan()
+            pass
         else:
             event.skip()
         return
-
-    def ScanNumSelect(self,):
-        sfile = str(self.components.SpecFile.stringSelection)
-        snum = str(self.components.ScanNum.stringSelection)
-        if self.components.AutoCalcVarName.checked:
-            if self.components.LongName.checked:
-                scan_var = u"%s.s%s" % (sfile,snum)
-                scan_var = scan_var.replace('.','_')
-            else:
-                scan_var = u"s%s" % (snum)
-            #
-            items = self.components.ScanVar.items
-            if scan_var not in items:
-                items.append(scan_var)
-                items.sort()
-                self.components.ScanVar.items = items
-            self.components.ScanVar.stringSelection = scan_var
-        else:
-            scan_var = self.components.ScanVar.stringSelection
-            if  len(scan_var) == 0:
-                self.components.ScanVar.text = 'tmp'
-        if len(self.components.ScanVar.stringSelection) > 0:
-            self.components.ScanVar.text = self.components.ScanVar.stringSelection
-            
-    def init_ScanVar(self,):
-        var = self.components.ScanVar.stringSelection
-        tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
-        self.components.ScanVar.items = tmp['var'] + tmp['ins']
-        self.components.ScanVar.stringSelection = var
-        return
-
-    def on_ScanVar_select(self,event):
-        tmp = self.components.ScanVar.text
-        if len(self.components.ScanVar.stringSelection) > 0:
-            self.components.ScanVar.text = self.components.ScanVar.stringSelection
-        var_name = self.components.ScanVar.text
-        if len(var_name)>0:
-            data = self.get_data(var_name)
-            if (data != None) and (hasattr(data,'primary_axis')==True):
-                self.UpdateGuiParmsFromData(data)
-                if self.components.AutoUpdateCheck.checked==True:
-                    self.AutoPlot(var_name=var_name)
-
-    def on_Read_mouseClick(self,event):
-        self.ReadScan()
-
-    ######################################################    
-    def ReadScan(self):
-        ####
-        self.UpdateReaderMedImgPar()
-
-        ####
-        fname = self.components.SpecFile.stringSelection
-        if len(fname.strip())==0: return
-        #
-        scan_num = self.components.ScanNum.stringSelection
-        if len(scan_num.strip())==0: return
-        scan_num = int(scan_num)
-        #
-        var_name = self.components.ScanVar.text
-        if len(var_name.strip())==0:
-            #var_name = '__tmp__'
-            print "Please enter a variable name"
-            return 
-        ####
-        reader = self.get_Reader()
-        if reader == None: return
-        ###
-        data = reader.spec_scan(scan_num,file=fname)
-        self.set_data(var_name,data)
-        ###
-        self.UpdateGuiParmsFromData(data)        
-        ####
-        if self.components.AutoUpdateCheck.checked==True:
-            self.AutoPlot(var_name=var_name)
-
-    def UpdateGuiParmsFromData(self,data):
-        """
-        update fields
-        """
-        ####
-        x = data.positioners.keys()
-        x.sort()
-        x.insert(0,'')
-        scalers = data.scalers.keys()
-        scalers.sort()
-        scalers.insert(0,'')
-        if hasattr(data,'xrf'):
-            xrf_lines = data.xrf.lines
-        else:
-            xrf_lines = []
-        ####
-        # scaler default
-        default = self.components.DefaultScalerAxes.checked
-        ####
-        # Plot X
-        tmp = self.components.XPlot.stringSelection
-        self.components.XPlot.items = x + scalers
-        if (len(tmp)>0) and (tmp in x or tmp in scalers) and (default==False):
-            self.components.XPlot.stringSelection = tmp
-        else:
-            self.components.XPlot.stringSelection = data.primary_axis[0]
-        ####
-        # Plot Y
-        tmp = self.components.YPlot.stringSelection
-        self.components.YPlot.items = scalers + xrf_lines
-        if (len(tmp)> 0) and (tmp in scalers) and (default==False):
-            self.components.YPlot.stringSelection = tmp
-        else:
-            self.components.YPlot.stringSelection = data.primary_det
-        ####
-        # Plot norm
-        tmp = self.components.NormPlot.stringSelection
-        self.components.NormPlot.items = scalers
-        if len(tmp)>0 and (tmp in scalers) and (default==False):
-            self.components.NormPlot.stringSelection = tmp
-        else:
-            self.components.NormPlot.stringSelection = ''
-        ####
-        # Med Deadtime
-        self.components.DTX.items = scalers + x 
-        self.components.DTX.stringSelection = 'io'
-        self.components.DTNorm.items = scalers
-        self.components.DTNorm.stringSelection = 'Seconds'
-        ###
-        # Med
-        npts = data.dims[0]
-        pts = num.arange(npts,dtype=int)
-        pts = map(str,pts)
-        self.components.ScanPnt.items = pts
-        self.components.ScanPnt.stringSelection = '0'
-        # check bad_idx
-        tmp = str(self.components.BadMcas.text).strip()
-        #print tmp
-        if hasattr(data,'med'):
-            if (len(tmp) == 0) and (len(data.med.med)>0):
-                if (len(data.med.med[0].bad_mca_idx) > 0):
-                    self.components.BadMcas.text = repr(data.med.med[0].bad_mca_idx)
-     
-    ######################################################
-
-    ###########################################################
-    #   Med and Image Params
-    ###########################################################
-
-    ######################################################
-    def init_XrfLines(self,):
-        " Initialize the menu    "
-        var = self.components.XrfLines.stringSelection
-        tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
-        self.components.XrfLines.items = tmp['var']+ tmp['ins']
-        self.components.XrfLines.stringSelection = var
-        return
-
-    def init_BadMcas(self,):
-        " Initialize the menu    "
-        var = self.components.BadMcas.stringSelection
-        tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
-        self.components.BadMcas.items = tmp['var']+ tmp['ins']
-        self.components.BadMcas.stringSelection = var
-        return
-
-    def init_McaTaus(self,):
-        " Initialize the menu    "
-        var = self.components.McaTaus.stringSelection
-        tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
-        self.components.McaTaus.items = tmp['var'] + tmp['ins']
-        self.components.McaTaus.stringSelection = var
-        return
-
-    def init_ImagePath(self):
-        self.components.ImagePath.text = ''
- 
-    def on_MedPathSel_mouseClick(self,event):        
-        cdir = self.eval_line("pwd()")
-        result = dialog.directoryDialog(self, 'Open', cdir)
-        if result.accepted:
-            dir = result.path
-            dir = dir.replace("\\","\\\\")
-            self.components.MedPath.text = dir
-       
-    def on_ImgPathSel_mouseClick(self,event):        
-        cdir = self.eval_line("pwd()")
-        result = dialog.directoryDialog(self, 'Open', cdir)
-        if result.accepted:
-            dir = result.path
-            dir = dir.replace("\\","\\\\")
-            self.components.ImagePath.text = dir
-            
-    def UpdateGuiMedImgPar(self,reader):
-        """
-        update the GUI from reader
-        """
-        tmp = reader.spectra_path
-        if tmp == None:
-            self.components.MedPath.text = ''
-        else:
-            self.components.MedPath.text = str(tmp)
-        self.components.ReadMed.checked = reader.spec_params['med']
-        self.components.ReadXrf.checked = reader.spec_params['xrf']
-        self.components.XrfLines.stringSelection = repr(reader.spectra_params['lines'])
-        self.components.BadMcas.stringSelection = repr(reader.spectra_params['bad_mca_idx'])
-        self.components.McaTaus.stringSelection = repr(reader.spectra_params['tau'])
-        self.components.Emin.text = repr(reader.spectra_params['emin'])
-        self.components.Emax.text = repr(reader.spectra_params['emax'])
-        self.components.Total.checked = reader.spectra_params['total']
-        self.components.Align.checked = reader.spectra_params['align'] 
-        self.components.CorrectData.checked = reader.spectra_params['correct']
-        # missing fields for det_idx and nfmt       
-        #
-        tmp = reader.image_path
-        if tmp == None:
-            self.components.ImagePath.text = ''
-        else:
-            self.components.ImagePath.text = str(tmp)
-        self.components.ReadImg.checked = reader.spec_params['image']
-        
-    def UpdateReaderMedImgPar(self):
-        """
-        update reader from GUI
-        """
-        reader = self.get_Reader()
-        if reader == None: return
-        #
-        med_path = str(self.components.MedPath.text).strip()
-        if len(med_path) > 0:
-            reader.med_path=med_path
-        else:
-            reader.med_path=None
-        #
-        reader.spec_params['med'] = self.components.ReadMed.checked
-        reader.spec_params['xrf'] = self.components.ReadXrf.checked
-        #
-        xrf_lines = str(self.components.XrfLines.stringSelection).strip()
-        if len(xrf_lines) > 0:
-            reader.spectra_params['lines'] = self.eval_line(xrf_lines)
-        else:
-            reader.spectra_params['lines'] = None
-        #
-        #bad_mcas  = str(self.components.BadMcas.stringSelection).strip()
-        bad_mcas  = str(self.components.BadMcas.text).strip()
-        if len(bad_mcas) > 0:
-            reader.spectra_params['bad_mca_idx'] = self.eval_line(bad_mcas)
-        else:
-            reader.spectra_params['bad_mca_idx'] = []
-        #
-        mca_taus  = str(self.components.McaTaus.stringSelection).strip()
-        if len(mca_taus) > 0:
-            reader.spectra_params['tau'] = self.eval_line(mca_taus)
-        else:
-            reader.spectra_params['tau'] = None
-        #
-        emin = str(self.components.Emin.text).strip()
-        if len(emin) > 0:
-            reader.spectra_params['emin'] = self.eval_line(emin)
-        else:
-            reader.spectra_params['emin'] = -1.
-        emax = str(self.components.Emax.text).strip()
-        if len(emax) > 0:
-            reader.spectra_params['emax'] = self.eval_line(emax)
-        else:
-            reader.spectra_params['emax'] = -1.
-        #
-        reader.spectra_params['total'] = self.components.Total.checked
-        reader.spectra_params['align'] = self.components.Align.checked
-        reader.spectra_params['correct'] = self.components.CorrectData.checked
-        # missing fields for det_idx and nfmt       
-        #
-        image_path = str(self.components.ImagePath.text).strip()
-        if len(image_path) > 0:
-            reader.image_path=image_path
-        else:
-            reader.image_path=None
-        reader.spec_params['image'] = self.components.ReadImg.checked
-
-    def on_FitDeadtime_mouseClick(self,event):
-        #reader_name = self.get_ReaderName()
-        tau_name = str(self.components.McaTaus.text).strip()
-        if len(tau_name) == 0:
-            print "Please give a 'Tau' variable name"
-        var_name = self.components.ScanVar.text
-        x = str(self.components.DTX.stringSelection)
-        norm = str(self.components.DTNorm.stringSelection)
-        #s = "%s.spectra_params['tau'] = scandata.fit_deadtime(%s,"
-        #s = s % (reader_name, var_name)
-        #s = s + "x='io',y='Med',norm='Seconds')"
-        s = "%s = scandata.fit_deadtime(%s,"  % (tau_name, var_name)
-        s = s + "x='%s',y='Med',norm='%s')" % (x, norm)
-        #print s
-        self.exec_line(s)
-
-    ######################################################
 
     ###########################################################
     #   Plot
     ###########################################################
 
     ######################################################
-    def on_PlotScaler_mouseClick(self,event):
-        var_name = self.components.ScanVar.text
-        self._plot_scaler(var_name)
-        
-    def on_PlotMed_mouseClick(self,event):
-        var_name = self.components.ScanVar.text
-        self._plot_med(var_name)
-        
     def on_PlotImg_mouseClick(self,event):
-        var_name = self.components.ScanVar.text
+        var_name = self.components.CtrDataVar.text
         self._plot_img(var_name)
-
-    def on_ScanPnt_keyDown(self,event):
-        keyCode = event.keyCode
-        if keyCode == wx.WXK_RETURN:
-            var_name = self.components.ScanVar.text
-            self._plot_img(var_name)
-        else:
-            event.skip()
-        return
-
-    ######################################################
-    def AutoPlot(self,var_name=None):
-        if var_name == None:
-            var_name = self.components.ScanVar.text
-        if len(var_name.strip()) == 0:
-            print "Please provide a scan variable name"
-            return
-        if self.components.ScalerPlot.checked:
-            self._plot_scaler(var_name)
-        if self.components.ReadMed.checked:
-            self._plot_med(var_name)
-        if self.components.ReadImg.checked:
-            self._plot_img(var_name)
-
-    ######################################################
-    def _plot_scaler(self,var_name):
-        from matplotlib import pyplot
-        pyplot.figure(1)
-        hold = str(self.components.HoldCheck.checked)
-        xlog = str(self.components.XlogCheck.checked)
-        ylog = str(self.components.YlogCheck.checked)
-        #
-        x = self.components.XPlot.stringSelection
-        y = self.components.YPlot.stringSelection
-        norm = self.components.NormPlot.stringSelection
-        #
-        if len(norm.strip()) > 0:
-            s = "plot(%s['%s'],%s['%s']/%s['%s']" % (var_name,x,
-                                                     var_name,y,
-                                                     var_name,norm)
-        else:
-            s = "plot(%s['%s'],%s['%s']" % (var_name,x,
-                                         var_name,y)
-        #
-        s = s + ",xlog=%s,ylog=%s,hold=%s)" % (xlog,ylog,hold)
-        #print s
-        self.exec_line(s)
-
-    ######################################################
-    def _plot_med(self,var_name):
-        data = self.get_data(var_name)
-        if data == None: return
-        if len(data.med.med) == 0: return
-        from matplotlib import pyplot
-        pyplot.figure(2)
-        hold = str(self.components.MedHold.checked)
-        ylog = str(self.components.MedYlog.checked)
-        pnt = int(self.components.ScanPnt.stringSelection)
-        s = "scandata.med_data.med_plot(%s.med,scan_pnt=%s,hold=%s,ylog=%s)" % (var_name,
-                                                                                str(pnt),
-                                                                                hold,
-                                                                                ylog)
-        #print s
-        self.exec_line(s)
 
     ######################################################
     def _plot_img(self,var_name):
         data = self.get_data(var_name)
-        if data == None: return
-        if len(data.image.image) == 0: return
-        from matplotlib import pyplot
-        pyplot.figure(3)
-        pyplot.clf()
-        pnt = int(self.components.ScanPnt.stringSelection)
-        s = "scandata.image_data.image_plot(%s.image.image[%s]" % (var_name,str(pnt))
+        pnt = int(self.components.PointNum.stringSelection)
+        """
+        s = "%s.image_plot(%s.image.image[%s]" % (var_name,str(pnt))
         if self.components.ColorMap.stringSelection.strip()!='':
             cmap = self.components.ColorMap.stringSelection.strip()
             s = "%s,cmap='%s'" % (s,cmap)
         s = "%s)" % s
         #print s
         self.exec_line(s)
+        """
         
 ##################################################
 if __name__ == '__main__':
-    app = model.Application(wxXrayData)
+    app = model.Application(wxCtrData)
     app.MainLoop()

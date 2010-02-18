@@ -1,15 +1,13 @@
-########################################################################
 """
-T. Trainor (fftpt@uaf.edu) 6-10-2006  
 wX Utilities Class
 
-Modifications:
---------------
+Authors / Modifications:
+------------------------
+T. Trainor (fftpt@uaf.edu) 6-10-2006  
 
-"""
-########################################################################
-"""
-Todo
+
+Todo:
+----
 - make sure this can make various GUI's run
   independant of starting wxGUI....
 
@@ -40,10 +38,11 @@ class wxUtil:
         return self.shell.interp.get_data(var_name)
 
     ##############################################
-    def list_data(self,symbol=None,tunnel=False,_skip=True):
+    def list_data(self,symbol=None,tunnel=False,_skip=True,instance=None):
         all = self.shell.interp.symbol_table.list_symbols(symbol=symbol,
                                                           tunnel=tunnel,
-                                                          _skip=_skip)
+                                                          _skip=_skip,
+                                                          instance=instance)
         dlist = all['var'] + all['ins']
         dlist.sort()
         return dlist

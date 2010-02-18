@@ -1,16 +1,12 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu), 10-2008  
-Simple python interpretor
+Simple python interpretor.
 
-Modifications:
---------------
-- move Group class in shellutils
+Authors/Modifications:
+----------------------
+T. Trainor (trainor@alaska.edu), 10-2008  
 
-"""
-#######################################################################
-"""
 Description:
+------------
 Very simple set of classes that holds a SymbolTable
 (Python namespace dictionary) and Executes python commands.
 
@@ -141,7 +137,9 @@ OTHERTYPES = [types.BufferType,
 ######################################################################
 ######################################################################
 class SymbolTable:
-
+    """
+    Symbol table class.
+    """
     def __init__(self):
         """
         Set up initial exectution name space.
@@ -151,6 +149,8 @@ class SymbolTable:
 
     #########################################
     def add_symbol(self,name,value):
+        """
+        """
         #self.data.update({name:value})
         self.data['__tmp__'] = value
         s = "%s = __tmp__" % name
@@ -159,6 +159,8 @@ class SymbolTable:
 
     #########################################
     def set_symbol(self,name,value):
+        """
+        """
         #self.data[name]= value
         self.data['__tmp__'] = value
         s = "%s = __tmp__" % name
@@ -167,6 +169,8 @@ class SymbolTable:
 
     #########################################
     def del_symbol(self,name):
+        """
+        """
         #return self.data.pop(name)
         #del self.data[name]
         if self.has_symbol(name):
@@ -205,6 +209,8 @@ class SymbolTable:
             return tmp
     """
     def get_symbol(self,name):
+        """
+        """
         s = "try:\n"
         s = s+ "    __tmp__ = %s\n" % name
         s = s+ "except:\n"
@@ -216,6 +222,8 @@ class SymbolTable:
 
     #########################################
     def has_symbol(self,name):
+        """
+        """
         #if name in self.data.keys(): return True
         #else: return False
         if self.get_symbol(name) != None:
@@ -286,9 +294,21 @@ class SymbolTable:
         return
     
     ######################################################
-    def list_symbols(self,symbol=None,tunnel=True,_skip=True):
+    def list_symbols(self,symbol=None,tunnel=True,_skip=True,instance=None):
+        """
+        Return a dictionary list of symbols
+
+        If symbol is not None we assume its the name of a "group"
+        Note this will only "tunnel" on class instances
+
+        If _skip is True than all symbols that have names starting
+        with '_' will be ignored
+
+        If instance is not Note, then we will only return symbol names
+        that match that instance type
+        """
         self._init_list()
-        self._list_symbol(symbol=symbol,tunnel=tunnel,_skip=_skip)
+        self._list_symbol(symbol=symbol,tunnel=tunnel,_skip=_skip,instance=instance)
         self._list_data['var'].sort()
         self._list_data['fnc'].sort()
         self._list_data['ins'].sort()
@@ -297,6 +317,9 @@ class SymbolTable:
         return self._list_data
 
     def list_symbols_all(self,symbol=None,tunnel=True,_skip=True):
+        """
+        Return a list of all symbols
+        """
         self._init_list()
         self._list_symbol(symbol=symbol,tunnel=tunnel,_skip=_skip)
         all = self._list_data['var']
@@ -309,6 +332,9 @@ class SymbolTable:
 
     ######################################################
     def list_builtins(self,_skip=True):
+        """
+        Return builtins
+        """
         bins_list = {}
         bins_list['var']=[]
         bins_list['fnc']=[]
@@ -358,15 +384,24 @@ class SymbolTable:
         self._list_data['mod']=[]
         self._list_data['oth']=[]
         
-    def _list_symbol(self,symbol=None,tunnel=True,_skip=True):
+    def _list_symbol(self,symbol=None,tunnel=True,_skip=True,instance=None):
         """
-        list names of data and method atributes of a symbol
-        if symbol is None we just pass to _list
-        if symbol is not None we assume its the name of a "group"
+        List names of data and method atributes of a symbol
+        
+        If symbol is None we just pass to _list
+
+        If symbol is not None we assume its the name of a "group"
         Note this will only "tunnel" on class instances
+
+        If _skip is True than all symbols that have names starting
+        with '_' will be ignored
+
+        If instance is not Note, then we will only return symbol names
+        that match that instance type
+
         """
         if symbol == None:
-            self._list(tunnel=tunnel,_skip=_skip)
+            self._list(tunnel=tunnel,_skip=_skip,instance=instance)
             return
 
         sym = self.get_symbol(symbol)
@@ -388,23 +423,28 @@ class SymbolTable:
                 if lim > 1000:
                     print "Max attributes reached in _list_symbol..."
                     break
-            self._list(data=data,pfx=symbol,tunnel=tunnel,_skip=_skip)
+            self._list(data=data,pfx=symbol,tunnel=tunnel,_skip=_skip,instance=instance)
             return
         else:
             raise "Error in _list_symbol, passed argument is not a group"
 
-    def _list(self,data=None,pfx=None,tunnel=True,_skip=True):
+    def _list(self,data=None,pfx=None,tunnel=True,_skip=True,instance=None):
         if data==None:
             data = self.data
         lim = 0
         for key in data.keys():
-            ignore = self._ignore(key,_skip=_skip)
-            if not ignore:
-                if pfx:
-                    name = pfx + '.' + key
-                else:
-                    name = key
-                ##
+            if pfx:
+                name = pfx + '.' + key
+            else:
+                name = key
+            ignore = self._ignore(name,_skip=_skip)
+            if (ignore==False) and (instance != None):
+                try:
+                    if isinstance(data[key],instance) == False:
+                        ignore = True
+                except:
+                    ignore = True
+            if ignore == False:
                 ty = type(data[key])
                 if ty in VARTYPES:
                     self._list_data['var'].append(name)
@@ -425,21 +465,25 @@ class SymbolTable:
                     self._list_data['oth'].append(name)
         return
     
-    def _ignore(self, key,_skip=True):
+    def _ignore(self,name,_skip=True):
         if _skip == True:
-            if key[0] == '_': ignore = True
+            if name[0] == '_': ignore = True
             else: ignore = False
         else:
             ignore = False
         return ignore
     
 ##########################################################################
-##########################################################################
 USE_CODE = True
 class Interpretor:
-    
+    """
+    A python interpretor
+    """
+    ####################################################
     def __init__(self,):
-
+        """
+        Initialize
+        """
         self.symbol_table=SymbolTable()
         self.console     = None
         if USE_CODE:
@@ -449,6 +493,8 @@ class Interpretor:
     ####################################################
     def execute(self,arg,**kws):
         """
+        Execute an argument
+        
         return 1 f command is completed
         return 2 if need more input
         """
@@ -462,19 +508,31 @@ class Interpretor:
             return eval.do_exec(arg,self.symbol_table.data)
 
     def execute_file(self,fname,**kws):
+        """
+        Execute a file
+        """
         return eval.do_execfile(fname,self.symbol_table.data)
         
     def evaluate(self,arg,**kws):
+        """
+        Evaluate an argument
+        """
         return eval.do_eval(arg,self.symbol_table.data)
 
     ####################################################
     def set_data(self,name,val):
+        """
+        Set data in the symbol table
+        """
         if type(val) in DATATYPES:
             self.symbol_table.set_symbol(name,val)
         else:
             print "Error: %s not a valid data type (type=%s)" % (name,type(val))
     
     def get_data(self,name):
+        """
+        Get data from symbol table
+        """
         val = self.symbol_table.get_symbol(name)
         if type(val) in DATATYPES:
             return val
@@ -484,6 +542,9 @@ class Interpretor:
     
     ####################################################
     def set_function(self,name,val):
+        """
+        Set a funtion in the symbol table
+        """
         if type(val) in FUNCTYPES:
             if callable(val):
                 self.symbol_table.set_symbol(name,val)
@@ -491,6 +552,9 @@ class Interpretor:
             print "Error: %s not a valid function type (type=%s)" % (name,type(val))
     
     def get_function(self,name):
+        """
+        Get a funciton from the symbol table
+        """
         val = self.symbol_table.get_symbol(name)
         if type(val) in FUNCTYPES:
             return val

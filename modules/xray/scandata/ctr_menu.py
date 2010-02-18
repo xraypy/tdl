@@ -1,12 +1,9 @@
-#######################################################################
 """
+Menu function to handle interactive ctr data processing.
+
+Authors / Modifications:
+------------------------
 Tom Trainor (tptrainor@alaska.edu)
-
-Menu function to handle interactive
-ctr processing
-
-Modifications:
---------------
 
 
 """

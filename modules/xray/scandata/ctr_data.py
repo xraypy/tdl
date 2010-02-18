@@ -1,28 +1,27 @@
-##############################################################################
 """
+Functions for extracting ctr data from ScanData objects.
+
+Authors / Modifications:
+------------------------
 T. Trainor (tptrainor@alaska.edu)
 Frank Heberling (Frank.Heberling@ine.fzk.de)
 
-Functions for extracting ctr data from ScanData objects
-
-Modifications:
---------------
-"""
-##############################################################################
-"""
-Notes
+Notes:
 ------
 
-References:
-E. Vlieg, J. Appl. Cryst. (1997). 30, 532-543
-C. Schlepuetz et al, Acta Cryst. (2005). A61, 418-425
 
-Todo
+
+References:
+-----------
+ * E. Vlieg, J. Appl. Cryst. (1997). 30, 532-543
+ * C. Schlepuetz et al, Acta Cryst. (2005). A61, 418-425
+
+Todo:
 ----
-- Test!
-- averaging/merging and merge statistics
-- keep track of Ibgr, allow plotting I and Ibgr
-- corrections for rocking scans
+ * Test!
+ * Averaging/merging and merge statistics
+ * Keep track of Ibgr, allow plotting I and Ibgr
+ * Corrections for rocking scans
 """
 ##############################################################################
 
@@ -110,6 +109,7 @@ class CtrData:
     def __init__(self,scans=[],I='I',Inorm='io',Ierr='Ierr',
                  Ibgr='Ibgr',corr_params={},scan_type='image'):
         """
+        Constructor.
         
         """
         self.fig    = None
@@ -142,6 +142,11 @@ class CtrData:
         lout = "%sNumber of scans = %i\n" % (lout,len(self.scan))
         lout = "%sNumber of structure factors = %i\n" % (lout,len(self.L))
         return lout
+
+    ##########################################################################
+    def __save__(self,):
+        del self.cursor
+        self.cursor = None
 
     ##########################################################################
     def append_scans(self,scans,I=None,Inorm=None,Ierr=None,Ibgr=None,

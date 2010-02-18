@@ -1,19 +1,15 @@
 #!/usr/bin/python
-##########################################################################
 """
-Tom Trainor (fftpt@uaf.edu ), 6-10-2006 
 Simple python shell program 
 
-Modifications:
---------------
+Authors / Modifications:
+------------------------
+Tom Trainor (fftpt@uaf.edu ), 6-10-2006 
 - modified from tdl-0.2
 - major revision 10/08 TPT
 
-"""
-##########################################################################
-"""
 ToDo:
-
+-----
 - see wiki
 
 """
@@ -380,11 +376,18 @@ class Shell(_NumShell):
     def do_load(self,fname):
         """
         Load file of pds commands for execution
+
         Note that file execution will halt if there is an
         error in the file.  This default behaviour can
-        be changed by setting the flag
-        file_error_break = False
+        be changed by setting the flag file_error_break = False
+
+        If the file has a '.sav' extension we first try to read it
+        using restore
         """
+        if fname[-4:] == '.sav':
+            if self._restore(fname) == 1:
+                return
+            
         if os.path.exists(fname) and os.path.isfile(fname):
             f = open(fname)
             lines = f.readlines()
@@ -519,6 +522,7 @@ class Shell(_NumShell):
     def do_save(self,args):
         """
         Save program state to a file
+        
         Note this may fail since not all
         objects can be pickled... needs improvement!
         Call as:
@@ -556,16 +560,22 @@ class Shell(_NumShell):
         """
         Restore state from a file
         """
+        self._restore(fname)
+        return 
+
+    def _restore(self,fname):
         from shellutil import unpickle_1 as unpickle
         #from shellutil import unpickle_2 as unpickle
 
         pdata = unpickle(fname)
         if pdata == None:
             print "No data"
-            return
+            return 0
         if len(pdata) > 0:
             self.interp.symbol_table.put_data_dict(pdata)
-            
+            return 1
+        return 0
+    
     ##############################################################
     def do_clear(self,arg):
         """
