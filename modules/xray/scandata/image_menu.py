@@ -79,9 +79,11 @@ def image_menu(imdata,scan_pnt=None):
     Interactively inspect/integrate images in ScanData or a
     ImageScan object
     """
-    if isinstance(imdata,data.ScanData):
+    #if isinstance(imdata,data.ScanData):
+    if hasattr(imdata,'get_positioner'):
         imdata = imdata.image
-    elif isinstance(imdata,image_data.ImageScan):
+    #elif isinstance(imdata,image_data.ImageScan):
+    elif hasattr(imdata,'image'):
         pass
     else:
         print "Invalid image data"

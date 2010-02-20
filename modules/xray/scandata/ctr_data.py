@@ -20,8 +20,10 @@ Todo:
 ----
  * Test!
  * Averaging/merging and merge statistics
- * Keep track of Ibgr, allow plotting I and Ibgr
  * Corrections for rocking scans
+ * Add normalized F plots  - divide by |Fctr|,
+    * need to pass delta_H, delta_K for non-rational surfaces...
+
 """
 ##############################################################################
 
@@ -138,6 +140,7 @@ class CtrData:
 
     ##########################################################################
     def __repr__(self,):
+        """ """
         lout = "CTR DATA\n"
         lout = "%sNumber of scans = %i\n" % (lout,len(self.scan))
         lout = "%sNumber of structure factors = %i\n" % (lout,len(self.L))
@@ -145,6 +148,7 @@ class CtrData:
 
     ##########################################################################
     def __save__(self,):
+        """ """
         del self.cursor
         self.cursor = None
 
@@ -200,7 +204,7 @@ class CtrData:
     ##########################################################################
     def _scan_data(self,scan,I,Inorm,Ierr,Ibgr,corr_params,scan_type):
         """
-        parse scan into data...
+        Parse scan into data...
         """
         data = {'scan_index':[],'I_lbl':[],'Inorm_lbl':[],
                 'Ierr_lbl':[],'Ibgr_lbl':[],'corr_params':[],'scan_type':[],
@@ -243,7 +247,8 @@ class CtrData:
     ##########################################################################
     def integrate_point(self,idx,**kw):
         """
-        (Re)-integrate an individual structure factor point
+        (Re)-integrate an individual structure factor point.
+        
         idx is the index number of the point
 
         If scan type is image use the following kw arguments
@@ -324,7 +329,7 @@ class CtrData:
     ##########################################################################
     def plot(self,fig=None,num_col=2,cursor=True,verbose=True):
         """
-        plot the raw structure factor data
+        Plot the raw structure factor data
         """
         hksets  = sort_data(self)
         nset    = len(hksets)
@@ -364,7 +369,7 @@ class CtrData:
     ##########################################################################
     def plot_I(self,fig=None,num_col=2,cursor=True,verbose=True):
         """
-        plot the raw intensities
+        Plot the raw intensities
         """
         hksets  = sort_data(self)
         nset    = len(hksets)
@@ -420,9 +425,9 @@ class CtrData:
             self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
 
     ##########################################################################
-    def plot_point(self,idx=None,fig=None,show_int=False):
+    def plot_point(self,idx=None,fig=None,show_int=False,cmap=None):
         """
-        plot the raw data for a selected point
+        Plot the raw data for a selected point
 
         idx = point index.
         if idx = None, then uses last cursor click
@@ -434,8 +439,8 @@ class CtrData:
             if show_int:
                 self.integrate_point(idx,plot=True,fig=fig)
             else:
-                (scan_idx,point) = self.scan_index(idx)
-                self.scan[scan_idx].image.plot(idx=point,fig=fig)
+                (scan_idx,point) = self.scan_index[idx]
+                self.scan[scan_idx].image.plot(idx=point,fig=fig,cmap=cmap)
         else:
             # plot scan data
             pass
@@ -443,15 +448,16 @@ class CtrData:
     ##########################################################################
     def get_idx(self):
         """
-        get point index from plot selection
+        Get point index from plot selection
+        
         ie  L = ctr.L[point_idx]
         etc.
         """
         if self.cursor == None:
             return None
         if self.cursor.clicked == False:
-            #return None
-            self.cursor.get_click(msg="Select a data point")
+            #self.cursor.get_click(msg="Select a data point")
+            return None
         L = self.cursor.x
         subplot = self.cursor.subplot
         if subplot < 0:
@@ -471,7 +477,9 @@ class CtrData:
     ##########################################################################
     def get_scan(self,idx=None):
         """
-        get scan from point index
+        Get scan from point index
+
+        Returns (scan,point)
         """
         if idx == None:
             idx = self.get_idx()
@@ -494,8 +502,8 @@ class CtrData:
         if self.cursor == None:
             return None
         if self.cursor.clicked == False:
-            #return None
-            self.cursor.get_click(msg="Zoom on plot")
+            #self.cursor.get_click(msg="Zoom on plot")
+            return None
         self.cursor._zoom()
         z = self.cursor.zoom
         z = (z[0][0],z[1][0])
@@ -680,6 +688,109 @@ def _get_corr(scan,point,corr_params):
         print "Geometry %s not implemented" % geom
         corr = None
     return corr
+
+##############################################################################
+def get_params(ctr,point):
+    """
+    Return relevant parameters from a specified point
+    of a ctr object.  ie use to copy parameters...
+    
+    """
+    corrpar     = ctr.corr_params[point]
+    (scan,spnt) = ctr.get_scan(point)
+    intpar = {}
+    #
+    intpar['I']     = ctr.labels['I'][point]
+    intpar['Inorm'] = ctr.labels['Inorm'][point]
+    intpar['Ierr']  = ctr.labels['Ierr'][point]
+    intpar['Ibgr']  = ctr.labels['Ibgr'][point]
+    if ctr.scan_type[point] == 'image':
+        intpar['image roi']      = scan.image.rois[spnt]
+        intpar['image rotangle'] = scan.image.rotangle[spnt]
+        intpar['bgr flag']       = scan.image.bgrpar[spnt]['bgrflag']
+        intpar['bgr col nbgr']   = scan.image.bgrpar[spnt]['cnbgr']
+        intpar['bgr col width']  = scan.image.bgrpar[spnt]['cwidth']
+        intpar['bgr col power']  = scan.image.bgrpar[spnt]['cpow']
+        intpar['bgr row tan']    = scan.image.bgrpar[spnt]['ctan']
+        intpar['bgr row nbgr']   = scan.image.bgrpar[spnt]['rnbgr']
+        intpar['bgr row width']  = scan.image.bgrpar[spnt]['rwidth']
+        intpar['bgr row power']  = scan.image.bgrpar[spnt]['rpow']
+        intpar['bgr row tan']    = scan.image.bgrpar[spnt]['rtan']
+    else:
+        pass
+    return (intpar,corrpar)
+
+##############################################################################
+def set_params(ctr,point,intpar={},corrpar={}):
+    """
+    Set ctr parameters.
+
+    The intpar and corrpar arguments should be from get_param fcn above
+    ie that sets the correct format...
+    """
+    (scan,spnt) = ctr.get_scan(point)
+    #
+    if len(intpar) > 0:
+        ctr.labels['I'][point]     = intpar['I']
+        ctr.labels['Inorm'][point] = intpar['Inorm']
+        ctr.labels['Ierr'][point]  = intpar['Ierr']
+        ctr.labels['Ibgr'][point]  = intpar['Ibgr']
+        if ctr.scan_type[point] == 'image':
+            if type(intpar['image roi']) == types.StringType:
+                scan.image.rois[spnt] = eval(intpar['image roi'])
+            else:
+                scan.image.rois[spnt] = intpar['image roi']
+            if type(intpar['image rotangle']) == types.StringType:
+                scan.image.rotangle[spnt] = eval(intpar['image rotangle'])
+            else:
+                scan.image.rotangle[spnt] = intpar['image rotangle']
+            if type(intpar['bgr flag']) == types.StringType:
+                scan.image.bgrpar[spnt]['bgrflag'] = eval(intpar['bgr flag'])
+            else:
+                scan.image.bgrpar[spnt]['bgrflag'] = intpar['bgr flag']
+            if type(intpar['bgr col nbgr']) == types.StringType:
+                scan.image.bgrpar[spnt]['cnbgr'] = eval(intpar['bgr col nbgr'])
+            else:
+                scan.image.bgrpar[spnt]['cnbgr'] = intpar['bgr col nbgr']
+            if type(intpar['bgr col width']) == types.StringType:
+                scan.image.bgrpar[spnt]['cwidth'] = eval(intpar['bgr col width'])
+            else:
+                scan.image.bgrpar[spnt]['cwidth'] = intpar['bgr col width']
+            if type(intpar['bgr col power']) == types.StringType:
+                scan.image.bgrpar[spnt]['cpow'] = eval(intpar['bgr col power'])
+            else:
+                scan.image.bgrpar[spnt]['cpow'] = intpar['bgr col power']
+            if type(intpar['bgr row tan']) == types.StringType:
+                scan.image.bgrpar[spnt]['ctan'] = eval(intpar['bgr col power'])
+            else:
+                scan.image.bgrpar[spnt]['ctan'] = intpar['bgr col power']
+            if type(intpar['bgr row nbgr']) == types.StringType:
+                scan.image.bgrpar[spnt]['rnbgr'] = eval(intpar['bgr row nbgr'])
+            else:
+                scan.image.bgrpar[spnt]['rnbgr'] = intpar['bgr row nbgr']
+            if type(intpar['bgr row width']) == types.StringType:
+                scan.image.bgrpar[spnt]['rwidth'] = eval(intpar['bgr row width'])
+            else:
+                scan.image.bgrpar[spnt]['rwidth'] = intpar['bgr row width']
+            if type(intpar['bgr row power']) == types.StringType:
+                scan.image.bgrpar[spnt]['rpow'] = eval(intpar['bgr row power'])
+            else:
+                scan.image.bgrpar[spnt]['rpow'] = intpar['bgr row power']
+            if type(intpar['bgr row tan']) == types.StringType:
+                scan.image.bgrpar[spnt]['rtan'] = eval(intpar['bgr row tan'])
+            else:
+                scan.image.bgrpar[spnt]['rtan'] = intpar['bgr row tan']
+    #
+    if len(corrpar) > 0:
+        corr = {}
+        for (key,val) in corrpar.items():
+            if key == 'geom':
+                corr[key] = corrpar[key]
+            elif type(corrpar[key]) == types.StringType:
+                corr[key] = eval(corrpar[key])
+            else:
+                corr[key] = corrpar[key]
+        ctr.corr_params[point] = corr
 
 ##############################################################################
 def _update_psic_angles(gonio,scan,point):

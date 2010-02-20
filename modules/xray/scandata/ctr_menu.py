@@ -22,6 +22,7 @@ import image_data
 import image_menu
 
 ########################################################################
+
 CTR_HEADER = """
 ##########################################
 Number of points       = %s
@@ -36,7 +37,7 @@ Det slits = %s
 Sample  = %s
 Scale = %s
 H=%3.2f, K=%3.2f, L=%6.5f
-I=%6.5g, Ierr=%6.5g, ctot=%6.5f
+I=%6.5g, Ierr=%6.5g, Ibgr=%6.5g, ctot=%6.5f
 F=%6.5g, Ferr=%6.5g
 ------
 """
@@ -112,8 +113,8 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                                  str(ctr.corr_params[point].get('sample')),
                                  str(ctr.corr_params[point].get('scale')),
                                  ctr.H[point],ctr.K[point],ctr.L[point],
-                                 ctr.I[point],ctr.Ierr[point],ctr.ctot[point],
-                                 ctr.F[point],ctr.Ferr[point])
+                                 ctr.I[point],ctr.Ierr[point],ctr.Ibgr[point],
+                                 ctr.ctot[point],ctr.F[point],ctr.Ferr[point])
         m.header = header
         ret      = m.prompt(prompt)
         #

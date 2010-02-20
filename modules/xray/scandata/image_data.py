@@ -1,26 +1,27 @@
-#######################################################################
 """
+Methods to handle image processing
+
+Authors/Modifications:
+----------------------
 Tom Trainor (tptrainor@alaska.edu)
 Frank Heberling (Frank.Heberling@ine.fzk.de)
 Matt Newville (newville@cars.uchicago.edu)
 
-Methods to handle image processing
+Notes:
+------
 Reads in data for the pilatus detector
 Simple integrations and plotting
 
-Modifications:
---------------
 
-
-"""
-#######################################################################
-"""
-Todo
+Todo:
+-----
  - Improve image background determination
  - In ImageAna.plot should we plot row and column sums
    after bgr subtraction?
 
-###
+"""
+#######################################################################
+"""
 Note issue with organization of PIL/Image modules when
 try to build exe.  Therefore, just do import of Image
 inside the functions that need it (read_file)
@@ -164,7 +165,6 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
         pyplot.figure(fig)
         pyplot.clf()
 
-    # rotate
     if rotangle != 0:
         img = ndimage.rotate(img,rotangle)
     if cmap != None:
@@ -175,7 +175,7 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
                 cmap = None
     if im_max != None:
         if im_max < 1: im_max = None
-    pyplot.imshow(img,cmap=cmap, vmax = im_max)
+    pyplot.imshow(img,cmap=cmap,vmax=im_max)
     pyplot.colorbar(orientation='horizontal')
 
     if figtitle:
