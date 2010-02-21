@@ -187,7 +187,7 @@ def sum_plot(image,bgrflag=0,
              rnbgr=5,rwidth=0,rpow=2.,rtan=False,
              fig=None):
     """
-    plot sums with background.
+    Plot sums with background.
 
     Note should we calc the bgr according
     to bgrflag???
@@ -218,8 +218,9 @@ def sum_plot(image,bgrflag=0,
 ############################################################################
 def line_sum(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
     """
-    sum down 'c'olumns or across 'r'ows
-    this returns the summed data and background
+    Sum down 'c'olumns or across 'r'ows
+    
+    This returns the summed data and background
     """
     if sumflag == 'c':
         data = image.sum(axis=0)
@@ -357,7 +358,7 @@ class ImageAna:
            = 0 determine row and column backgrounds after summation
            = 1 determine 2D background using 'c'olumn direction 
            = 2 determine 2D background using 'r'ow direction 
-           = 3 determine 2D background using both 'r'ow and 'c'olumn direction 
+           = 3 determine 2D background from the average 'r'ow and 'c'olumn directions 
 
         -> below params are for 'c'olumn and 'r'ow directions
 

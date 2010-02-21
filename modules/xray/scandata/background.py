@@ -1,18 +1,11 @@
-#######################################################################
 """
-Tom Trainor (tptrainor@alaska.edu)
-
 Methods to handle generic background determination
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+Tom Trainor (tptrainor@alaska.edu)
 
 
-"""
-#######################################################################
-"""
-Todo
-   
 """
 #######################################################################
 

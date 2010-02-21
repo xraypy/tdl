@@ -40,6 +40,105 @@ I=%6.5g, Ierr=%6.5g, Ibgr=%6.5g, ctot=%6.5f
 F=%6.5g, Ferr=%6.5g
 """
 
+PARAM_DESCR = {
+'I':"""Enter label for intensity. Options:\n%s""",
+
+'Inorm':"""Enter label for intensity normalization. Options:\n%s""",
+
+'Ierr':"""Enter label for intensity errors. Options:\n%s""",
+
+'Ibgr':"""Enter label for intensity background. Options:\n%s""",
+
+'image roi':"""Enter the image roi. The format is [x1,y1,x2,y2] where values
+are in pixels corresponding to two corners of the box. Use the set button to
+select the roi from the image plot (fig 2) - raw scan data plot!""",
+
+'image rotangle':"""Enter a rotation angle for the image (counter clockwise degrees)""",
+
+'bgr flag':"""Enter flag for image background method:
+  0 determine row and column backgrounds after summation
+  1 determine 2D background using 'c'olumn direction 
+  2 determine 2D background using 'r'ow direction 
+  3 determine 2D background from the average 'r'ow and 'c'olumn directions""",
+
+'bgr col nbgr':"""Number of background points for linear part of column direction
+(y-direction) bgr fit. If nbgr = 0, no linear fit is included""",
+
+'bgr col width':"""Peak width for the column (y) direction bgr fit.
+The background function should fit features that are in general broader
+than the width value. Estimate cwidth using width from peak width in the
+column (y) direction. Note: width = 0 corresponds to no polynomial bgr""",
+
+'bgr col power':"""Power of polynomial used in column (y) direction bgr fit.
+Use pow < 0.5 for polynomials flatter than a circle (pow = 0 are linear)
+and pow  > 0.5 for steeper.""",
+
+'bgr col tan':"""Flag for use of tangents in column (y) direction bgr determination.
+If 'True' then the local slope is removed when fitting a polynomial to a point.
+Helpful for data sitting on a broad sloping background""",
+
+'bgr row nbgr':"""Number of background points for linear part of row direction
+(x-direction) bgr fit. If nbgr = 0, no linear fit is included""",
+
+'bgr row width':"""Peak width for the row (x) direction bgr fit.
+The background function should fit features that are in general broader
+than the width value. Estimate rwidth using width from peak width in the
+row (x) direction. Note: width = 0 corresponds to no polynomial bgr""",
+
+'bgr row power':"""Power of polynomial used in row (x) direction bgr fit.
+Use pow < 0.5 for polynomials flatter than a circle (pow = 0 are linear)
+and pow  > 0.5 for steeper.""",
+
+'bgr row tan':"""Flag for use of tangents in row direction (x) bgr determination.
+If 'True' then the local slope is removed when fitting a polynomial to a point.
+Helpful for data sitting on a broad sloping background""",
+
+'beam_slits':"""Enter the incident beam slit settings: beam_slits = {'horz':.6,'vert':.8}.
+horz = beam horz width (at the sample) in mm (total width in lab-z / horizontal scattering plane)
+vert = beam vert hieght (at the sample) in mm (total width in lab-x / vertical scattering plane).
+If beam slits are 'None' or {} no area correction will be done""",
+
+'det_slits':"""Enter the detector slit settings: det_slits = {'horz':1.,'vert':1.}.
+horz = det horz width in mm (total width in lab-z / horizontal scattering plane)
+vert = det vert hieght in mm (total width in lab-x / vertical scattering plane).
+If detector slits are 'None' or {} only a spil-off correction will be computed""",
+
+'geom':"""Enter goniometer geometry.  Options: 'psic'""",
+
+'sample dia':"""Enter the diameter (in mm) of a round sample mounted on center
+of the goniometer.  If this is 'None' then use the sample polygon or
+no sample description. """,
+
+'sample polygon':"""A list of lists that describe a general polygon sample shape, e.g.:    
+  polygon =  [[1.,1.], [.5,1.5], [-1.,1.],[-1.,-1.],[0.,.5],[1.,-1.]]
+Each entry is an [x,y] or [x,y,z] vector pointing to an apex of the sample
+polygon. These vectors should be given in general lab frame coordinates
+(x is lab frame vertical, y is positive along the direction of the beam,
+the origin is the rotation center). The vectors need to be specified at a 
+given set of angles (sample angles).
+
+If the sample vectors are given at the flat phi and chi values and with
+the correct sample hieght (sample Z set so the sample surface is on the
+rotation center), then the z values of the sample vectors will be zero.
+If 2D vectors are passed we therefore assume these are [x,y,0].  If this
+is the case then make sure:
+    angles = {'phi':flatphi,'chi':flatchi,'eta':0.,'mu':0.}
+
+The easiest way to determine the sample coordinate vectors is to take a picture
+of the sample with a camera mounted such that is looks directly down the omega
+axis and the gonio angles set at the sample flat phi and chi values and
+eta = mu = 0. Then find the sample rotation center and measure the position
+of each corner (in mm) with up being the +x direction, and downstream
+being the +y direction.  """,
+
+'sample angles':"""Sample angles used for description of the sample polygon. Use
+the format" angles = {'phi':123.5,'chi':flatchi:0.3,'eta':0.,'mu':0.}""",
+
+'scale':"""Enter scale factor.  The scale factor multiplies by all the intensity
+values. e.g.if Io ~ 1million cps then using 1e6 as the scale makes the normalized
+intensity close to cps.  ie y = scale*y/norm"""
+}
+
 ###############################################################################
 
 class wxCtrData(model.Background, wxUtil):
@@ -116,7 +215,6 @@ class wxCtrData(model.Background, wxUtil):
         return
 
     def on_CtrDataVar_keyDown(self,event):
-        "select a variable name and check it out"
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN:
             self.init_gui()
@@ -394,7 +492,6 @@ class wxCtrData(model.Background, wxUtil):
     
     def init_IntParamList(self,params=None):
         self.components.IntParam.text = ''
-        self.components.IntParamDescr.text = ''
         if params == None:
             self.components.IntParamList.items = []
         else:
@@ -406,7 +503,6 @@ class wxCtrData(model.Background, wxUtil):
     
     def init_CorrParamList(self,params=None):
         self.components.CorrParam.text = ''
-        self.components.CorrParamDescr.text = ''
         if params == None:
             self.components.CorrParamList.items = []
             self.components.CorrParam.text = ''
@@ -418,16 +514,120 @@ class wxCtrData(model.Background, wxUtil):
             self.components.CorrParamList.items = items
         
     def on_IntParamList_select(self,event):
+        self.components.ParamDescr.text = ''
         selected = self.components.IntParamList.getStringSelection()
         (name,val) = selected[0]
         self.components.IntParam.text = val
+        #
+        ctr = self.get_ctr()
+        point = int(self.components.PointNum.stringSelection)
+        (s,spnt) = ctr.get_scan(point)
+        lbls = s.scalers.keys()
+        if hasattr(s,'image'):
+            lbls.extend(s.image.peaks.keys())
+        lbls.sort()
+        #
+        if name == 'I':
+            t = PARAM_DESCR['I'] % lbls
+            self.components.ParamDescr.text = t
+        elif name == 'Inorm':
+            t = PARAM_DESCR['Inorm'] % lbls
+            self.components.ParamDescr.text = t
+        elif name == 'Ierr':
+            t = PARAM_DESCR['Ierr'] % lbls
+            self.components.ParamDescr.text = t
+        elif name == 'Ibgr':
+            t = PARAM_DESCR['Ibgr'] % lbls
+            self.components.ParamDescr.text = t
+        elif name == 'image roi':
+            t = PARAM_DESCR['image roi']
+            self.components.ParamDescr.text = t
+        elif name == 'image rotangle':
+            t = PARAM_DESCR['image rotangle']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr flag':
+            t = PARAM_DESCR['bgr flag']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr col nbgr':
+            t = PARAM_DESCR['bgr col nbgr']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr col width':
+            t = PARAM_DESCR['bgr col width']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr col power':
+            t = PARAM_DESCR['bgr col power']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr col tan':
+            t = PARAM_DESCR['bgr col tan']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr row nbgr':
+            t = PARAM_DESCR['bgr row nbgr']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr row width':
+            t = PARAM_DESCR['bgr row width']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr row power':
+            t = PARAM_DESCR['bgr row power']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr row tan':
+            t = PARAM_DESCR['bgr row tan']
+            self.components.ParamDescr.text = t
         return
 
     def on_CorrParamList_select(self,event):
+        self.components.ParamDescr.text = ''
         selected = self.components.CorrParamList.getStringSelection()
         (name,val) = selected[0]
         self.components.CorrParam.text = val
+        #
+        ctr = self.get_ctr()
+        point = int(self.components.PointNum.stringSelection)
+        (s,spnt) = ctr.get_scan(point)
+        #
+        if name == 'beam_slits':
+            t = PARAM_DESCR['beam_slits']
+            self.components.ParamDescr.text = t
+        elif name == 'det_slits':
+            t = PARAM_DESCR['det_slits']
+            self.components.ParamDescr.text = t
+        elif name == 'geom':
+            t = PARAM_DESCR['geom']
+            self.components.ParamDescr.text = t
+        elif name == 'sample dia':
+            t = PARAM_DESCR['sample dia']
+            self.components.ParamDescr.text = t
+        elif name == 'sample polygon':
+            t = PARAM_DESCR['sample polygon']
+            self.components.ParamDescr.text = t
+        elif name == 'sample angles':
+            t = PARAM_DESCR['sample angles']
+            self.components.ParamDescr.text = t
+        elif name == 'scale':
+            t = PARAM_DESCR['scale']
+            self.components.ParamDescr.text = t
         return
+    
+    def on_IntParam_keyDown(self,event):
+        keyCode = event.keyCode
+        if keyCode == wx.WXK_RETURN or keyCode == 372:
+            print 'set int'
+        else:
+            event.skip()
+        return
+
+    def on_IntSet_mouseClick(self,event):
+        print 'set int'
+
+    def on_CorrParam_keyDown(self,event):
+        keyCode = event.keyCode
+        if keyCode == wx.WXK_RETURN or keyCode == 372:
+            print 'set corr'
+        else:
+            event.skip()
+        return
+
+    def on_CorrSet_mouseClick(self,event):
+        print 'set corr'
 
     ######################################################
     # update stuff from ctr etc
@@ -446,7 +646,7 @@ class wxCtrData(model.Background, wxUtil):
             self.init_AnchorPointNum()
             self.init_IntParamList()
             self.init_CorrParamList()
-            # others...
+            self.components.ParamDescr.text = ''
             return
         else:
             self.update_gui_from_ctr()

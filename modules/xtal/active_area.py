@@ -1,17 +1,14 @@
-##########################################################################
 """
-Tom Trainor (tptrainor@alaska.edu)
 Active area calculations
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+Tom Trainor (tptrainor@alaska.edu)
 
-"""
-##########################################################################
-"""
-Notes
 
-These area are based completley geometric projections.  ie we assume
+Notes:
+------
+These area are based on completley geometric projections.  ie we assume
 that the beam is perfectly parrallel (no divergence)
 
 Note would be interesting if we could set the detector polygon from an 

@@ -1,23 +1,12 @@
-##########################################################################
 """
+Gonio calcs for 6 circle psic geometry
+
+Authors / Modifications:
+------------------------
 Tom Trainor (tptrainor@alaska.edu)
 Frank Heberling (Frank.Heberling@ine.fzk.de)
 
-Gonio calcs for 6 circle psic geometry
-
-Modifications:
---------------
-
-"""
-##########################################################################
-"""
-Todo
-- Test.
-
-"""
-##########################################################################
-"""
-Notes
+Notes:
 ------
 The following describes the calculations used to define the orientation
 matrix of a xtal mounted on a goniometer and to convert between
@@ -106,7 +95,8 @@ The reciprocal lattice indicies (h) are then calc from
 This gives the hkl values of the vector that is in the
 diffraction condition for a given set of angles.
 
-
+References:
+-----------
 1. H. You, J. Appl. Cryst. (1999) 32, 614-623
 2. Busy and Leving
 

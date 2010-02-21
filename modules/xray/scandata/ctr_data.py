@@ -696,9 +696,9 @@ def get_params(ctr,point):
     of a ctr object.  ie use to copy parameters...
     
     """
-    corrpar     = ctr.corr_params[point]
-    (scan,spnt) = ctr.get_scan(point)
     intpar = {}
+    corrpar = {}
+    (scan,spnt) = ctr.get_scan(point)
     #
     intpar['I']     = ctr.labels['I'][point]
     intpar['Inorm'] = ctr.labels['Inorm'][point]
@@ -711,13 +711,32 @@ def get_params(ctr,point):
         intpar['bgr col nbgr']   = scan.image.bgrpar[spnt]['cnbgr']
         intpar['bgr col width']  = scan.image.bgrpar[spnt]['cwidth']
         intpar['bgr col power']  = scan.image.bgrpar[spnt]['cpow']
-        intpar['bgr row tan']    = scan.image.bgrpar[spnt]['ctan']
+        intpar['bgr col tan']    = scan.image.bgrpar[spnt]['ctan']
         intpar['bgr row nbgr']   = scan.image.bgrpar[spnt]['rnbgr']
         intpar['bgr row width']  = scan.image.bgrpar[spnt]['rwidth']
         intpar['bgr row power']  = scan.image.bgrpar[spnt]['rpow']
         intpar['bgr row tan']    = scan.image.bgrpar[spnt]['rtan']
     else:
         pass
+    #
+    corrpar['beam_slits'] = ctr.corr_params[point].get('beam_slits')
+    corrpar['det_slits'] = ctr.corr_params[point].get('det_slits')
+    corrpar['geom'] = ctr.corr_params[point].get('geom')
+    corrpar['scale'] = ctr.corr_params[point].get('scale')
+    sample  = ctr.corr_params[point].get('sample')
+    if sample == None:
+        corrpar['sample dia']     = None
+        corrpar['sample polygon'] = None
+        corrpar['sample angles']  = None
+    elif type(sample) == types.DictType:
+        corrpar['sample dia']     = None
+        corrpar['sample polygon'] = ctr.corr_params[point]['sample']['polygon']
+        corrpar['sample angles']  = ctr.corr_params[point]['sample']['angles']
+    else:
+        corrpar['sample dia']     = ctr.corr_params[point]['sample']
+        corrpar['sample polygon'] = None
+        corrpar['sample angles']  = None
+
     return (intpar,corrpar)
 
 ##############################################################################
@@ -760,10 +779,10 @@ def set_params(ctr,point,intpar={},corrpar={}):
                 scan.image.bgrpar[spnt]['cpow'] = eval(intpar['bgr col power'])
             else:
                 scan.image.bgrpar[spnt]['cpow'] = intpar['bgr col power']
-            if type(intpar['bgr row tan']) == types.StringType:
-                scan.image.bgrpar[spnt]['ctan'] = eval(intpar['bgr col power'])
+            if type(intpar['bgr col tan']) == types.StringType:
+                scan.image.bgrpar[spnt]['ctan'] = eval(intpar['bgr col tan'])
             else:
-                scan.image.bgrpar[spnt]['ctan'] = intpar['bgr col power']
+                scan.image.bgrpar[spnt]['ctan'] = intpar['bgr col tan']
             if type(intpar['bgr row nbgr']) == types.StringType:
                 scan.image.bgrpar[spnt]['rnbgr'] = eval(intpar['bgr row nbgr'])
             else:
@@ -782,16 +801,43 @@ def set_params(ctr,point,intpar={},corrpar={}):
                 scan.image.bgrpar[spnt]['rtan'] = intpar['bgr row tan']
     #
     if len(corrpar) > 0:
-        corr = {}
+        ctr.corr_params[point] = {}
         for (key,val) in corrpar.items():
-            if key == 'geom':
-                corr[key] = corrpar[key]
-            elif type(corrpar[key]) == types.StringType:
-                corr[key] = eval(corrpar[key])
+            if type(corrpar['beam_slits']) == types.StringType:
+                ctr.corr_params[point]['beam_slits'] = eval(corrpar['beam_slits'])
             else:
-                corr[key] = corrpar[key]
-        ctr.corr_params[point] = corr
-
+                ctr.corr_params[point]['beam_slits'] = corrpar['beam_slits']
+            if type(corrpar['det_slits']) == types.StringType:
+                ctr.corr_params[point]['det_slits'] = eval(corrpar['det_slits'])
+            else:
+                ctr.corr_params[point]['det_slits'] = corrpar['det_slits']
+            ctr.corr_params[point]['geom'] = corrpar['geom']
+            if type(corrpar['scale']) == types.StringType:
+                ctr.corr_params[point]['scale'] = eval(corrpar['scale'])
+            else:
+                ctr.corr_params[point]['scale'] = corrpar['scale']
+            #
+            if type(corrpar['sample dia']) == types.StringType:
+                sdia = eval(corrpar['sample dia'])
+            else:
+                sdia = corrpar['sample dia']
+            if type(corrpar['sample polygon']) == types.StringType:
+                spoly = eval(corrpar['sample polygon'])
+            else:
+                spoly = corrpar['sample polygon']
+            if type(corrpar['sample angles']) == types.StringType:
+                sangles = eval(corrpar['sample angles'])
+            else:
+                sangles = corrpar['sample angles']
+            if sdia != None:
+                ctr.corr_params[point]['sample'] = sdia
+            elif spoly != None:
+                ctr.corr_params[point]['sample'] = {}
+                ctr.corr_params[point]['sample']['polygon'] = spoly
+                ctr.corr_params[point]['sample']['angles'] = sangles
+            else:
+                ctr.corr_params[point]['sample'] = None
+    
 ##############################################################################
 def _update_psic_angles(gonio,scan,point):
     """
@@ -1030,7 +1076,7 @@ class CtrCorrectionPsic:
                    viewed by detector)
            A_beam = total beam area
         """
-        if self.beam_slits == {}:
+        if self.beam_slits == {} or self.beam_slits == None:
             print "Warning beam slits not specified"
             return 1.0
         alpha = self.gonio.pangles['alpha']
