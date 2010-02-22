@@ -647,7 +647,6 @@ class ImageScan:
         self.bgrpar   = None
         self.im_max   = []
         self.peaks    = {}
-        self.bad_points = []
         self._is_integrated = False
         self._init_image()
         #
@@ -760,7 +759,7 @@ class ImageScan:
                
     ################################################################
     def integrate(self,idx=[],roi=None,rotangle=None,bgr_params=None,
-                  bad_points=None,plot=False,fig=None):
+                  bad_points=[],plot=False,fig=None):
         """
         integrate images
         roi  = [x1,y1,x2,y2]
@@ -799,16 +798,9 @@ class ImageScan:
             elif len(bgr_params) == len(idx):
                 for j in idx:
                     self.bgrpar[j] = bgr_params[j]
-        # update bad points
-        if bad_points!=None:
-            if type(bad_points)!=types.ListType:
-                bad_points = [bad_points]
-            for p in bad_points:
-                if p not in self.bad_points:
-                    self.bad_points.append(p)
         # do integrations
         for j in idx:
-            if j not in self.bad_points:
+            if j not in bad_points:
                 self._integrate(idx=j,plot=plot,fig=fig)
             else:
                 self.peaks['I'][j]      = 0.

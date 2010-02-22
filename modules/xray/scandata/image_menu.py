@@ -34,7 +34,7 @@ Current image rotation angle = %s
 
 IMG_LABELS = ['display','imax','rotangle','setroi','plotsums',
               'selectroi','background','copyall','integrate','intall',
-              'flag','point','next','previous','help','done']
+              'point','next','previous','help','done']
 IMG_DESCR = ["Display image",
              "Set max image intensity value",
              "Set image rotation angle (deg ccw)",
@@ -45,7 +45,6 @@ IMG_DESCR = ["Display image",
              "Apply current roi and background params to all images",
              "Integrate current image / show integration plot",
              "Integrate all images",
-             "Flag current selected point as 'bad'",
              "Select scan point",
              "Select next point ",
              "Select previous point", 
@@ -59,8 +58,7 @@ Current image rotation angle = %s
 """
 
 IMG_LABELS_SHORT = ['display','imax','rotangle','setroi','plotsums',
-                    'selectroi','background','integrate','flag',
-                    'help','done']
+                    'selectroi','background','integrate','help','done']
 IMG_DESCR_SHORT = ["Display image",
                    "Set max image intensity value",
                    "Set image rotation angle (deg ccw)",
@@ -69,7 +67,6 @@ IMG_DESCR_SHORT = ["Display image",
                    "Select roi from sum plots (Figure 2)",
                    "Set background parameters",
                    "Integrate current image / show integration plot",
-                   "Flag as bad point",
                    "Show options",
                    "All Done"]
 
@@ -90,6 +87,7 @@ def image_menu(imdata,scan_pnt=None):
     prompt   = 'Select option >'
     ret      = ''
     roi      = []
+    #bad_points = []
     im_max   = None
 
     # make menu
@@ -111,10 +109,12 @@ def image_menu(imdata,scan_pnt=None):
     # local plot fun
     def _implot(imdata,scan_pnt):
         rotangle = imdata.rotangle[scan_pnt]
-        im_max = imdata.im_max[scan_pnt]
+        im_max   = imdata.im_max[scan_pnt]
+        roi      = imdata.rois[scan_pnt]
         figtitle = "Scan Point = %i" % (scan_pnt)
         image_data.image_plot(imdata.image[scan_pnt],fig=1,verbose=True,
-                              figtitle=figtitle,im_max=im_max,rotangle=rotangle)
+                              figtitle=figtitle,im_max=im_max,
+                              rotangle=rotangle,roi=roi)
 
     # check init and plot first
     if imdata._is_init() == False:
@@ -211,13 +211,13 @@ def image_menu(imdata,scan_pnt=None):
             pyplot.legend(loc = 9)
             pyplot.xlabel('Point')
             pyplot.ylabel('Integrated Intensity')
-        elif ret == 'flag':
-            if int(scan_pnt) in imdata.bad_points:
-                imdata.bad_points.remove(scan_pnt)
-                print "Data point removed from bad list"
-            else:
-                imdata.bad_points.append(int(scan_pnt))
-                print "Data point added to bad list"
+        #elif ret == 'flag':
+        #    if int(scan_pnt) in bad_points:
+        #        bad_points.remove(scan_pnt)
+        #        print "Data point removed from bad list"
+        #    else:
+        #        bad_points.append(int(scan_pnt))
+        #        print "Data point added to bad list"
         elif ret == 'point':
             scan_pnt = get_int(prompt='Enter scan point',
                                default=scan_pnt,min=0,max = npts-1)

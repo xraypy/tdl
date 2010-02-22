@@ -37,6 +37,7 @@ Beam slits = %s
 Det slits  = %s
 Sample  = %s
 Scale   = %s
+Bad point flag = %s,
 I=%6.5g, Ierr=%6.5g, Ibgr=%6.5g, ctot=%6.5f
 F=%6.5g, Ferr=%6.5g
 """
@@ -185,8 +186,66 @@ class wxCtrData(model.Background, wxUtil):
     def on_menuFileExit_select(self,event): 
         self.close()
 
-    def on_menuHelpParams_select(self,event):
-        pass
+    def on_menuFileReadCtr_select(self,event):        
+        cdir = self.eval_line("pwd()")
+        result = dialog.fileDialog(self, 'Open', cdir, '',"*")
+        if result.accepted:
+            path        = result.paths[0]
+            dir,fname   = os.path.split(path)
+            if os.path.abspath(dir) != os.path.abspath(cdir):
+                dir = dir.replace("\\","\\\\")
+                line = "cd('%s')" % dir
+                self.eval_line(line)
+        else:
+            self.post_message("File selection cancelled.")
+            return
+        #print dir, fname
+        self.save_file = path
+        line = "restore %s" % path
+        print line
+        self.exec_line(line)
+        print "Select ctr data variable"
+        self.init_shell_items()
+
+    def on_menuFileSaveCtr_select(self,event):
+        cdir = self.eval_line("pwd()")
+        result = dialog.fileDialog(self, 'Save', cdir, '',"*")
+        if result.accepted:
+            path        = result.paths[0]
+            dir,fname   = os.path.split(path)
+            if os.path.abspath(dir) != os.path.abspath(cdir):
+                dir = dir.replace("\\","\\\\")
+                line = "cd('%s')" % dir
+                self.eval_line(line)
+        else:
+            self.post_message("File selection cancelled.")
+            return
+        #print dir, fname
+        ctr = self.get_ctr_name()
+        line = "save %s %s" % (ctr,fname) 
+        print line
+        self.exec_line(line)
+
+    def on_menuFileWriteHKL_select(self,event):
+        cdir = self.eval_line("pwd()")
+        result = dialog.fileDialog(self, 'Save', cdir, '',"*")
+        if result.accepted:
+            path        = result.paths[0]
+            dir,fname   = os.path.split(path)
+            if os.path.abspath(dir) != os.path.abspath(cdir):
+                dir = dir.replace("\\","\\\\")
+                line = "cd('%s')" % dir
+                self.eval_line(line)
+        else:
+            self.post_message("File selection cancelled.")
+            return
+        #print dir, fname
+        ctr = self.get_ctr()
+        if ctr != None:
+            ctr.write_HKL(path)  
+
+    def on_menuHelpDocumentation_select(self,event):
+        self.exec_line("web 'http://cars9.uchicago.edu/ifeffit/tdl/Docs/Pds/CtrGui'")
 
     ###########################################################
     #  Ctr Data
@@ -438,6 +497,16 @@ class wxCtrData(model.Background, wxUtil):
     def on_SetUpdate_mouseClick(self,event):
         self.process_set()
 
+    def on_ToggleBad_mouseClick(self,event):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        point  = int(self.components.PointNum.stringSelection)
+        if point in ctr.bad:
+            ctr.bad.remove(point)
+        else:
+            ctr.bad.append(point)
+        self.update_point()
+    
     def update_point(self,update_gui=True):
         ctr = self.get_ctr()
         if ctr == None: return
@@ -457,6 +526,8 @@ class wxCtrData(model.Background, wxUtil):
             self.update_gui_from_ctr()
             if self.components.AutoPlotScan.checked == True:
                 self._plot_scan()
+            if self.components.AutoPlotCorr.checked == True:
+                self._plot_corr()
 
     def process_set(self):
         for point in self.set:
@@ -604,7 +675,7 @@ class wxCtrData(model.Background, wxUtil):
         name = self.components.ParamName.text
         if len(name) == 0: return
         if name == 'image roi':
-            print 'image roi'
+            #print 'image roi'
             pyplot.figure(1)
             (x1,x2,y1,y2) = pyplot.axis()
             roi  = [int(x1),int(y1),int(x2),int(y2)]
@@ -777,6 +848,10 @@ class wxCtrData(model.Background, wxUtil):
         #
         point = int(self.components.PointNum.text)
         set   = self.set
+        if point in ctr.bad:
+            bad_flag = True
+        else:
+            bad_flag = False
         header   = CTR_HEADER % (str(len(ctr.L)),str(set),str(point),
                                  ctr.H[point],ctr.K[point],ctr.L[point],
                                  str(ctr.scan_type[point]),
@@ -789,6 +864,7 @@ class wxCtrData(model.Background, wxUtil):
                                  str(ctr.corr_params[point].get('det_slits')),
                                  str(ctr.corr_params[point].get('sample')),
                                  str(ctr.corr_params[point].get('scale')),
+                                 str(bad_flag),
                                  ctr.I[point],ctr.Ierr[point],ctr.Ibgr[point],
                                  ctr.ctot[point],ctr.F[point],ctr.Ferr[point])
         self.components.PointData.text = header
@@ -850,6 +926,9 @@ class wxCtrData(model.Background, wxUtil):
 
     ######################################################
     def on_CorrPlot_mouseClick(self,event):
+        self._plot_corr()
+        
+    def _plot_corr(self):        
         ctr = self.get_ctr()
         if ctr == None: return
         point = int(self.components.PointNum.stringSelection)

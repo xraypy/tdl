@@ -36,6 +36,7 @@ Beam slits = %s
 Det slits = %s
 Sample  = %s
 Scale = %s
+Bad flag = %s,
 H=%3.2f, K=%3.2f, L=%6.5f
 I=%6.5g, Ierr=%6.5g, Ibgr=%6.5g, ctot=%6.5f
 F=%6.5g, Ferr=%6.5g
@@ -45,7 +46,7 @@ F=%6.5g, Ferr=%6.5g
 CTR_LABELS = ['plot','iplot','labels',
               'correction','cplot','integrate','copyint',
               'pointselect','pplot','zoomselect','selpoint',
-              'next','previous','help','done']
+              'next','previous','flag','help','done']
 CTR_DESCR = ["Plot structure factors",
              "Plot intensities",
              "Set Intensity labels", 
@@ -58,7 +59,8 @@ CTR_DESCR = ["Plot structure factors",
              "Set 'selected points' from last plot zoom (Fig 0)",
              "Select specific point number",
              "Select next point ",
-             "Select previous point", 
+             "Select previous point",
+             "Toggle bad flag",
              "Show options",
              "All Done"]
 
@@ -94,13 +96,17 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
         pyplot.figure(0)
         pyplot.clf()
         if I == False:
-            ctr.plot(fig=0)
+            ctr.plot(fig=0,spnt=point)
         else:
-            ctr.plot_I(fig=0)
+            ctr.plot_I(fig=0,spnt=point)
     _ctr_plot(ctr)
     
     # loop
     while ret != 'done':
+        if point in ctr.bad:
+            bad_flag = True
+        else:
+            bad_flag = False
         header   = CTR_HEADER % (str(npts),str(set),str(point),
                                  str(ctr.scan_type[point]),
                                  str(ctr.labels['I'][point]),
@@ -112,6 +118,7 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                                  str(ctr.corr_params[point].get('det_slits')),
                                  str(ctr.corr_params[point].get('sample')),
                                  str(ctr.corr_params[point].get('scale')),
+                                 str(bad_flag),
                                  ctr.H[point],ctr.K[point],ctr.L[point],
                                  ctr.I[point],ctr.Ierr[point],ctr.Ibgr[point],
                                  ctr.ctot[point],ctr.F[point],ctr.Ferr[point])
@@ -269,7 +276,7 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                 image_menu.image_menu(scan,scan_pnt)
                 #
                 pp = "Apply / copy integration parameters to\n"
-                pp = pp + "(note image max and bad flags not copied)\n"
+                pp = pp + "(note image max is not copied)\n"
                 pp = pp + "'p' current point only, 's' to set, 'a' to all"
                 app = get_str(prompt=pp,
                               default='p',valid=['p','a','s'])
@@ -303,7 +310,7 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
                 bgrpar   = scan.image.bgrpar[scan_pnt]
                 #
                 pp = "Apply / copy integration parameters to\n"
-                pp = pp + "(note image max and bad flags not copied)\n"
+                pp = pp + "(note image max is not copied)\n"
                 pp = pp + "'p' current point only, 's' to set, 'a' to all"
                 app = get_str(prompt=pp,
                               default='p',valid=['p','a','s'])
@@ -338,6 +345,11 @@ def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
         elif ret == 'previous':
             if point - 1 > -1: 
                 point = point - 1
+        elif ret == 'flag':
+            if point in ctr.bad:
+                ctr.bad.remove(point)
+            else:
+                ctr.bad.append(point)
         else:
             pass
 

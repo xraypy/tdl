@@ -116,6 +116,7 @@ class CtrData:
         """
         self.fig    = None
         self.cursor = None
+        self.bad    = []
         self.scan   = []
         self.scan_index  = []
         #
@@ -255,12 +256,13 @@ class CtrData:
         (if the argument is not passed the existing value is used,
         ie just use these to update parameters)
         #
+        bad        = True/False flags point as bad or not
+        #
         roi        = image roi
         rotangle   = image rotation angle
         bgr_params = image background parameters
         plot       = True/False to show integration plot 
         fig        = Fig number for plot
-        bad        = True/False flag data point
         # 
         I          = Intensity label
         Inorm      = Intensity norm label
@@ -270,6 +272,17 @@ class CtrData:
         
         """
         if idx not in range(len(self.L)): return
+
+        bad = kw.get('bad')
+        if bad != None:
+            if bad == True:
+                if idx not in self.bad:
+                    self.bad.append(idx)
+            elif bad == False:
+                if idx in self.bad:
+                    self.bad.remove(idx)
+            else:
+                print "Warning: bad should be True/False"
 
         if self.scan_type[idx]=="image":
             (scan_idx,point) = self.scan_index[idx]
@@ -284,20 +297,15 @@ class CtrData:
             #
             plot       = kw.get('plot',False)
             fig        = kw.get('fig')
-            bad        = kw.get('bad',False)
-            if bad != None:
-                if bad == True:
-                    if point not in scan.image.bad_points:
-                        scan.image.bad_points.append(point)
-                elif bad == False:
-                    if point in scan.image.bad_points:
-                        scan.image.bad_points.remove(point)
-                else:
-                    print "Warning: bad should be True/False"
             
+            if idx in self.bad:
+                bad = [point]
+            else:
+                bad = []
             # integrate the scan.  
             scan.image.integrate(idx=[point],roi=roi,rotangle=rotangle,
-                                 bgr_params=bgr_params,plot=plot,fig=fig)
+                                 bgr_params=bgr_params,bad_points=bad,
+                                 plot=plot,fig=fig)
             
             # parse all the correction info and re-compute 
             I           = kw.get('I',self.labels['I'][idx])
@@ -396,8 +404,7 @@ class CtrData:
             #
             pyplot.plot(d['L'],y,'b.-',label='I/Inorm')
             pyplot.errorbar(d['L'],y,ye, fmt ='o')
-            pyplot.plot(d['L'],yb,'r.-',label='Ibgr/Inorm')
-            pyplot.semilogy()
+            pyplot.plot(d['L'],yb,'m.-',label='Ibgr/Inorm')
             #
             min_L = num.floor(num.min(d['L']))
             max_L = num.ceil(num.max(d['L']))
@@ -405,17 +412,37 @@ class CtrData:
             idx   = num.where(y > 0.)
             min_I = num.min(y[idx])
             min_I = 10.**(num.round(num.log10(min_I)) - 1)
-            min_Ibgr = num.min(yb[idx])
-            min_Ibgr = 10.**(num.round(num.log10(min_Ibgr)) - 1)
+            idxb  = num.where(yb > 0.)
+            if len(idxb[0]) == 0:
+                min_Ibgr = min_I
+            else:
+                min_Ibgr = num.min(yb[idxb])
+                min_Ibgr = 10.**(num.round(num.log10(min_Ibgr)) - 1)
             min_I = min(min_I,min_Ibgr)
             #
             max_I = num.max(y[idx])
             max_I = 10.**(num.round(num.log10(max_I)) + 1)
-            max_Ibgr = num.max(yb[idx])
-            max_Ibgr = 10.**(num.round(num.log10(max_Ibgr)) + 1)
+            if len(idxb[0]) == 0:
+                max_Ibgr = max_I
+            else:
+                max_Ibgr = num.max(yb[idxb])
+                max_Ibgr = 10.**(num.round(num.log10(max_Ibgr)) + 1)
             max_I = max(max_I,max_Ibgr)
-            pyplot.axis([min_L,max_L,min_I,max_I])
             #
+            idx  = num.where(I <= 0.)
+            tmp  = I[idx] * 0.0 + 1.1*min_I 
+            pyplot.plot(d['L'][idx],tmp,'bo')
+            #
+            if spnt != None:
+                if spnt in d['point_idx']:
+                    idx = num.where(d['point_idx']==spnt)
+                    if I[idx] <= 0.:
+                        pyplot.plot(d['L'][idx],[1.1*min_I],'ro')
+                    else:
+                        pyplot.plot(d['L'][idx],y[idx],'ro')
+            #
+            pyplot.semilogy()
+            pyplot.axis([min_L,max_L,min_I,max_I])
             pyplot.xlabel('L')
             pyplot.ylabel('Intensity')
             pyplot.legend()
@@ -429,7 +456,7 @@ class CtrData:
             self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
 
     ##########################################################################
-    def plot_point(self,idx=None,fig=None,show_int=False,cmap=None,im_max=None):
+    def plot_point(self,idx=None,fig=None,show_int=False,cmap=None):
         """
         Plot the raw data for a selected point
 
@@ -444,8 +471,7 @@ class CtrData:
                 self.integrate_point(idx,plot=True,fig=fig)
             else:
                 (scan_idx,point) = self.scan_index[idx]
-                self.scan[scan_idx].image.plot(idx=point,fig=fig,
-                                               cmap=cmap,im_max=im_max)
+                self.scan[scan_idx].image.plot(idx=point,fig=fig,cmap=cmap)
         else:
             # plot scan data
             pass
