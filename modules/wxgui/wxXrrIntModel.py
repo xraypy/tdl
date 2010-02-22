@@ -1,11 +1,9 @@
-########################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
 This should be run as a child window from wxGUI
 
-Modifications:
---------------
-
+Authors/Modifications:
+----------------------
+Tom Trainor (tptrainor@alaska.edu)
 
 """
 ########################################################################

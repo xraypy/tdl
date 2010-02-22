@@ -22,20 +22,21 @@ from matplotlib import pyplot
 from wxUtil import wxUtil
 import scandata
 import ctr_data
+import image_data
 
 ###############################################################################
 
-CTR_HEADER = """Number of points       = %s
-New/selected points    = %s
-Current selected point = %s
+CTR_HEADER = """Number of points          = %s
+New/selected points (set) = %s
+Current selected point    = %s
 H=%3.2f, K=%3.2f, L=%6.5f
 Scan Type = '%s'
 Labels: I='%s', Inorm='%s', Ierr='%s', Ibgr='%s'
 Geom='%s'
 Beam slits = %s
-Det slits = %s
+Det slits  = %s
 Sample  = %s
-Scale = %s
+Scale   = %s
 I=%6.5g, Ierr=%6.5g, Ibgr=%6.5g, ctot=%6.5f
 F=%6.5g, Ferr=%6.5g
 """
@@ -51,15 +52,15 @@ PARAM_DESCR = {
 
 'image roi':"""Enter the image roi. The format is [x1,y1,x2,y2] where values
 are in pixels corresponding to two corners of the box. Use the set button to
-select the roi from the image plot (fig 2) - raw scan data plot!""",
+select the roi from the image plot zoom value (fig 2) -> raw scan data plot.""",
 
 'image rotangle':"""Enter a rotation angle for the image (counter clockwise degrees)""",
 
 'bgr flag':"""Enter flag for image background method:
-  0 determine row and column backgrounds after summation
-  1 determine 2D background using 'c'olumn direction 
-  2 determine 2D background using 'r'ow direction 
-  3 determine 2D background from the average 'r'ow and 'c'olumn directions""",
+    0 determine row and column backgrounds after summation
+    1 determine 2D background using 'c'olumn direction 
+    2 determine 2D background using 'r'ow direction
+    3 determine 2D background from the average 'r'ow and 'c'olumn directions""",
 
 'bgr col nbgr':"""Number of background points for linear part of column direction
 (y-direction) bgr fit. If nbgr = 0, no linear fit is included""",
@@ -110,7 +111,7 @@ of the goniometer.  If this is 'None' then use the sample polygon or
 no sample description. """,
 
 'sample polygon':"""A list of lists that describe a general polygon sample shape, e.g.:    
-  polygon =  [[1.,1.], [.5,1.5], [-1.,1.],[-1.,-1.],[0.,.5],[1.,-1.]]
+    polygon =  [[1.,1.], [.5,1.5], [-1.,1.],[-1.,-1.],[0.,.5],[1.,-1.]]
 Each entry is an [x,y] or [x,y,z] vector pointing to an apex of the sample
 polygon. These vectors should be given in general lab frame coordinates
 (x is lab frame vertical, y is positive along the direction of the beam,
@@ -156,8 +157,8 @@ class wxCtrData(model.Background, wxUtil):
         """
         self.startup  = True
         self.dir      = '.'
-        self.point = 0
         self.set = []
+        self.slider_cnt = 0
         
         # set up shell
         self.shell = None
@@ -339,7 +340,6 @@ class wxCtrData(model.Background, wxUtil):
         if pnts == None:
             self.components.PointNum.items = ['0']
             self.components.PointNum.stringSelection = '0'
-            self.point = 0
             self.set = []
         else:
             if len(self.components.PointNum.stringSelection) > 0:
@@ -353,7 +353,7 @@ class wxCtrData(model.Background, wxUtil):
             self.components.PointNum.items = map(str,pnts)
             self.components.PointNum.stringSelection = str(point)
             self.components.PointNum.text = str(point)
-            
+    
     def init_AnchorPointNum(self,pnts=None):
         """
         Initialize the point nums. 
@@ -467,31 +467,12 @@ class wxCtrData(model.Background, wxUtil):
         self.update_gui_from_ctr()
         if self.components.AutoPlotScan.checked == True:
             self._plot_scan()
-    
-    def integrate_point(self,update_plots=True):
-        ctr = self.get_ctr()
-        if ctr== None: return
-        self.point = int(self.components.PointNum.text)
-        point = self.point
-        if update_plots == True:
-            if self.components.AutoPlotIntegration.checked == True:
-                plot = True
-                fig = 3
-            else:
-                plot = False
-                fig = None
-            ctr.integrate_point(point,plot=plot,fig=fig)
-            if self.components.AutoPlotCtr.checked==True:
-                self._plot_ctr()
-        else:
-            ctr.integrate_point(point)
-        
+
     ###########################################################
     #  Parameters
     ###########################################################
     
     def init_IntParamList(self,params=None):
-        self.components.IntParam.text = ''
         if params == None:
             self.components.IntParamList.items = []
         else:
@@ -502,10 +483,8 @@ class wxCtrData(model.Background, wxUtil):
             self.components.IntParamList.items = items
     
     def init_CorrParamList(self,params=None):
-        self.components.CorrParam.text = ''
         if params == None:
             self.components.CorrParamList.items = []
-            self.components.CorrParam.text = ''
         else:
             items = []
             for (key,val) in params.items():
@@ -517,7 +496,8 @@ class wxCtrData(model.Background, wxUtil):
         self.components.ParamDescr.text = ''
         selected = self.components.IntParamList.getStringSelection()
         (name,val) = selected[0]
-        self.components.IntParam.text = val
+        self.components.ParamName.text = name
+        self.components.ParamVal.text = val
         #
         ctr = self.get_ctr()
         point = int(self.components.PointNum.stringSelection)
@@ -578,7 +558,8 @@ class wxCtrData(model.Background, wxUtil):
         self.components.ParamDescr.text = ''
         selected = self.components.CorrParamList.getStringSelection()
         (name,val) = selected[0]
-        self.components.CorrParam.text = val
+        self.components.ParamName.text = name
+        self.components.ParamVal.text = val
         #
         ctr = self.get_ctr()
         point = int(self.components.PointNum.stringSelection)
@@ -607,31 +588,160 @@ class wxCtrData(model.Background, wxUtil):
             self.components.ParamDescr.text = t
         return
     
-    def on_IntParam_keyDown(self,event):
+    def on_ParamVal_keyDown(self,event):
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN or keyCode == 372:
-            print 'set int'
+            self.update_params()
+            self.update_ctr_from_params()
+            if self.components.AutoIntegrate.checked == True:
+                self.integrate_point()
+            self.update_gui_from_ctr()
         else:
             event.skip()
         return
 
-    def on_IntSet_mouseClick(self,event):
-        print 'set int'
+    def on_ParamSet_mouseClick(self,event):
+        name = self.components.ParamName.text
+        if len(name) == 0: return
+        if name == 'image roi':
+            print 'image roi'
+            pyplot.figure(1)
+            (x1,x2,y1,y2) = pyplot.axis()
+            roi  = [int(x1),int(y1),int(x2),int(y2)]
+            roi = image_data._sort_roi(roi)
+            self.components.ParamVal.text = str(roi)
+        #
+        self.update_params()
+        self.update_ctr_from_params()
+        if self.components.AutoIntegrate.checked == True:
+            self.integrate_point()
+        self.update_gui_from_ctr()
 
-    def on_CorrParam_keyDown(self,event):
+    def on_CopyParamsToAll_mouseClick(self,event):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        npts = len(ctr.L)
+        if npts == 0: return
+        for j in range(npts):
+            print "Setting params for point:", j
+            self.update_ctr_from_params(point=j)
+            self.integrate_point(point=j,update_plots=False)
+        if self.components.AutoPlotCtr.checked==True:
+            self._plot_ctr()
+    
+    def update_params(self):
+        name = self.components.ParamName.text
+        if len(name) == 0: return
+        val = self.components.ParamVal.text
+        val = val.strip()
+        if val == '': return
+        #
+        int_items = self.components.IntParamList.items
+        corr_items = self.components.CorrParamList.items
+        idx1 = self._get_par_idx(name,int_items)
+        idx2 = self._get_par_idx(name,corr_items)
+        if idx1 > -1:
+            int_items[idx1][1] = val
+            self.components.IntParamList.items = int_items
+        elif idx2 > -1:
+            corr_items[idx2][1] = val
+            self.components.CorrParamList.items = corr_items
+        else:
+            return
+
+    def _get_par_idx(self,name,items):
+        for j in range(len(items)):
+            (n,v) = items[j]
+            if n == name: return j
+        return -1
+    
+    def update_ctr_from_params(self,point=None):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        intpar = {}
+        for (n,v) in self.components.IntParamList.items:
+            intpar[n] = str(v)
+        corrpar = {}
+        for (n,v) in self.components.CorrParamList.items:
+            corrpar[n] = str(v)
+        if point == None:
+            point = int(self.components.PointNum.stringSelection)
+        ctr_data.set_params(ctr,point,intpar=intpar,corrpar=corrpar)
+
+    ######################################################
+    # image max
+    ######################################################
+
+    def on_Imax_keyDown(self,event):
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN or keyCode == 372:
-            print 'set corr'
+            im_max = self.components.Imax.text
+            (m1,m2) = self.image_max()
+            if im_max == '-1':
+                self.components.ImaxSlider.value = int(m1)
+                self.components.ImaxSlider.max = int(m1)
+            elif int(im_max) > m1:
+                self.components.ImaxSlider.max = int(im_max)
+                self.components.ImaxSlider.value = int(im_max)
+            #
+            self.set_image_max()
+            if self.components.AutoPlotScan.checked == True:
+                self._plot_scan()
         else:
             event.skip()
         return
 
-    def on_CorrSet_mouseClick(self,event):
-        print 'set corr'
+    def on_ImaxSlider_select(self,event):
+        if self.slider_cnt < 2:
+            self.slider_cnt  = self.slider_cnt  + 1
+            return
+        else:
+            self.slider_cnt  = 1
+        #
+        self.components.Imax.text = str(self.components.ImaxSlider.value)
+        self.set_image_max()
+        if self.components.AutoPlotScan.checked == True:
+            self._plot_scan()
+        return
 
+    def set_image_max(self):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        point = int(self.components.PointNum.stringSelection)
+        (scan,spnt) = ctr.get_scan(point)
+        immax = int(self.components.Imax.text)
+        scan.image.im_max[spnt] = immax
+
+    def image_max(self):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        point = int(self.components.PointNum.stringSelection)
+        (scan,spnt) = ctr.get_scan(point)
+        immax = num.max(scan.image.image[spnt])
+        im_max = scan.image.im_max[spnt]
+        return (immax,im_max)
+    
     ######################################################
     # update stuff from ctr etc
     ######################################################
+    
+    def integrate_point(self,point=None,update_plots=True):
+        ctr = self.get_ctr()
+        if ctr== None: return
+        if point == None:
+            point = int(self.components.PointNum.text)
+        if update_plots == True:
+            if self.components.AutoPlotIntegration.checked == True:
+                plot = True
+                fig = 3
+            else:
+                plot = False
+                fig = None
+            ctr.integrate_point(point,plot=plot,fig=fig)
+            if self.components.AutoPlotCtr.checked==True:
+                self._plot_ctr()
+        else:
+            ctr.integrate_point(point)
     
     def init_gui(self):
         if self.startup:
@@ -647,9 +757,12 @@ class wxCtrData(model.Background, wxUtil):
             self.init_IntParamList()
             self.init_CorrParamList()
             self.components.ParamDescr.text = ''
-            return
+            self.components.ParamVal.text = ''
+            self.components.ParamName.text = ''
+            self.components.Imax.text = ''
         else:
             self.update_gui_from_ctr()
+        return
 
     def update_gui_from_ctr(self,):
         """
@@ -661,9 +774,8 @@ class wxCtrData(model.Background, wxUtil):
         pnts  = range(npts)
         self.init_PointNum(pnts=pnts)
         self.init_AnchorPointNum(pnts=pnts)
-        self.point = int(self.components.PointNum.text)
         #
-        point = self.point
+        point = int(self.components.PointNum.text)
         set   = self.set
         header   = CTR_HEADER % (str(len(ctr.L)),str(set),str(point),
                                  ctr.H[point],ctr.K[point],ctr.L[point],
@@ -684,7 +796,18 @@ class wxCtrData(model.Background, wxUtil):
         (intpar,corrpar) = ctr_data.get_params(ctr,point)
         self.init_IntParamList(params=intpar)
         self.init_CorrParamList(params=corrpar)
-
+        #
+        if ctr.scan_type[point] == 'image':
+            (immax,im_max) = self.image_max()
+            self.components.ImaxSlider.min = 0
+            self.components.ImaxSlider.max = int(immax)
+            if im_max == -1:
+                self.components.Imax.text = '-1'
+                self.components.ImaxSlider.value = int(immax)
+            else:
+                self.components.Imax.text = str(im_max)
+                self.components.ImaxSlider.value = int(im_max)
+                
     ###########################################################
     #   Plot
     ###########################################################
@@ -694,13 +817,19 @@ class wxCtrData(model.Background, wxUtil):
         self._plot_ctr()
 
     def _plot_ctr(self):
+        ncol = self.components.PlotCol.text
+        try:
+            ncol = int(ncol)
+        except:
+            ncol = 2
         ctr = self.get_ctr()
         if ctr == None: return
+        point = int(self.components.PointNum.text)
         if self.components.CtrPlotInt.checked == True:
-            ctr.plot_I(fig=0)
+            ctr.plot_I(fig=0,num_col=ncol,spnt=point)
         else:
-            ctr.plot(fig=0)
-            
+            ctr.plot(fig=0,num_col=ncol,spnt=point)
+    
     ######################################################
     def on_PlotScanData_mouseClick(self,event):
         self._plot_scan()
@@ -718,6 +847,17 @@ class wxCtrData(model.Background, wxUtil):
             ctr.plot_point(idx=pnt,fig=1,cmap=cmap)
         else:
             ctr.plot_point(idx=pnt,fig=1)
+
+    ######################################################
+    def on_CorrPlot_mouseClick(self,event):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        point = int(self.components.PointNum.stringSelection)
+        (scan,spnt) = ctr.get_scan(point)
+        corr_params = ctr.corr_params[point]
+        corr = ctr_data._get_corr(scan,spnt,corr_params)
+        if ctr.scan_type[point] == 'image':
+            corr.ctot_stationary(plot=True,fig=2)
 
 ##################################################
 if __name__ == '__main__':

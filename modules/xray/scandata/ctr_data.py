@@ -327,7 +327,7 @@ class CtrData:
         return 
 
     ##########################################################################
-    def plot(self,fig=None,num_col=2,cursor=True,verbose=True):
+    def plot(self,fig=None,num_col=2,cursor=True,verbose=True,spnt=None):
         """
         Plot the raw structure factor data
         """
@@ -344,6 +344,10 @@ class CtrData:
             pyplot.title(title, fontsize = 12)
             pyplot.plot(d['L'],d['F'],'b.-')
             pyplot.errorbar(d['L'],d['F'],d['Ferr'], fmt ='o')
+            if spnt != None:
+                if spnt in d['point_idx']:
+                    idx = num.where(d['point_idx']==spnt)
+                    pyplot.plot(d['L'][idx],d['F'][idx],'ro')
             pyplot.semilogy()
             #
             min_L = num.floor(num.min(d['L']))
@@ -367,7 +371,7 @@ class CtrData:
             self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
 
     ##########################################################################
-    def plot_I(self,fig=None,num_col=2,cursor=True,verbose=True):
+    def plot_I(self,fig=None,num_col=2,cursor=True,verbose=True,spnt=None):
         """
         Plot the raw intensities
         """
@@ -382,7 +386,7 @@ class CtrData:
             d = hksets[j]
             title = 'H=%2.3f,K=%2.3f' % (d['H'][0],d['K'][0])
             pyplot.title(title, fontsize = 12)
-            I = d['I']
+            I  = d['I']
             In = d['Inorm']
             Ib = d['Ibgr']
             Ie = d['Ierr']
@@ -390,9 +394,9 @@ class CtrData:
             yb = Ib/In
             ye = Ie/In
             #
-            pyplot.plot(d['L'],y,'b.-',label='Norm Int')
+            pyplot.plot(d['L'],y,'b.-',label='I/Inorm')
             pyplot.errorbar(d['L'],y,ye, fmt ='o')
-            pyplot.plot(d['L'],yb,'r.-',label='Norm bgr')
+            pyplot.plot(d['L'],yb,'r.-',label='Ibgr/Inorm')
             pyplot.semilogy()
             #
             min_L = num.floor(num.min(d['L']))
@@ -425,7 +429,7 @@ class CtrData:
             self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
 
     ##########################################################################
-    def plot_point(self,idx=None,fig=None,show_int=False,cmap=None):
+    def plot_point(self,idx=None,fig=None,show_int=False,cmap=None,im_max=None):
         """
         Plot the raw data for a selected point
 
@@ -440,7 +444,8 @@ class CtrData:
                 self.integrate_point(idx,plot=True,fig=fig)
             else:
                 (scan_idx,point) = self.scan_index[idx]
-                self.scan[scan_idx].image.plot(idx=point,fig=fig,cmap=cmap)
+                self.scan[scan_idx].image.plot(idx=point,fig=fig,
+                                               cmap=cmap,im_max=im_max)
         else:
             # plot scan data
             pass
@@ -547,7 +552,7 @@ class CtrData:
 ##########################################################################
 def sort_data(ctr,hkdecimal=3):
     """
-    return a dict of sorted data
+    Return a dict of sorted data
 
     Assume H,K define a set with a range of L values
     All arrays should be of len npts. 

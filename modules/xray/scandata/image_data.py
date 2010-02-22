@@ -109,6 +109,21 @@ def clip_image(image,roi=[],rotangle=0.0,cp=False):
     """
     if len(roi) != 4:
         roi = [0,0,image.shape[1], image.shape[0]]
+    else:
+        [c1,r1,c2,r2] = _sort_roi(roi)
+    # rotate
+    if rotangle != 0:
+        image = ndimage.rotate(image,rotangle)    
+
+    if cp == True:
+        return copy.copy(image[r1:r2, c1:c2])
+    else:
+        return image[r1:r2, c1:c2]
+
+def _sort_roi(roi):
+    """
+    roi = [c1,r1,c2,r2]
+    """
     if roi[0] < roi[2]:
         c1 = roi[0]
         c2 = roi[2]
@@ -121,20 +136,12 @@ def clip_image(image,roi=[],rotangle=0.0,cp=False):
     else:
         r1 = roi[3]
         r2 = roi[1]
-    #(c1,r1,c2,r2) = roi
-        
-    # rotate
-    if rotangle != 0:
-        image = ndimage.rotate(image,rotangle)    
-
-    if cp == True:
-        return copy.copy(image[r1:r2, c1:c2])
-    else:
-        return image[r1:r2, c1:c2]
+    return [c1,r1,c2,r2]
+    
 
 ############################################################################
 def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
-               im_max=None,rotangle=0.0):
+               im_max=None,rotangle=0.0,roi=None):
     """
     show image
     
@@ -148,7 +155,7 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
        verbose = False  # Print some fig statistics
        im_max  = None   # Max intensity value
        rotangle = 0.0   # Rotation angle in degrees ccw
-
+       roi = None       # Plot an roi -> [x1,y1,x2,y2]
     * examples:
        >>>image_plot(im,fig=1,figtitle='Image',cmap='hot')
        >>>image_plot(im,fig=1,figtitle='Image',cmap=pyplot.cm.Spectral)
@@ -175,6 +182,16 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
                 cmap = None
     if im_max != None:
         if im_max < 1: im_max = None
+    #
+    if roi != None:
+        [c1,r1,c2,r2] = _sort_roi(roi)
+        bild = num.zeros(img.shape)
+        bild[r1-2:r1,c1:c2] = img.max()
+        bild[r2:r2+2,c1:c2] = img.max()
+        bild[r1:r2,c1-2:c1] = img.max()
+        bild[r1:r2,c2:c2+2] = img.max()
+        img = img+bild
+    #
     pyplot.imshow(img,cmap=cmap,vmax=im_max)
     pyplot.colorbar(orientation='horizontal')
 
@@ -738,7 +755,8 @@ class ImageScan:
         image_plot(self.image[idx],fig=fig,figtitle=figtitle,
                    cmap=cmap,verbose=verbose,
                    im_max=self.im_max[idx],
-                   rotangle=self.rotangle[idx])
+                   rotangle=self.rotangle[idx],
+                   roi=self.rois[idx])
                
     ################################################################
     def integrate(self,idx=[],roi=None,rotangle=None,bgr_params=None,
