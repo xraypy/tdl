@@ -4,7 +4,7 @@ Functions for extracting ctr data from ScanData objects.
 Authors / Modifications:
 ------------------------
 T. Trainor (tptrainor@alaska.edu)
-Frank Heberling (Frank.Heberling@ine.fzk.de)
+Frank Heberling (Frank.Heberling@kit.edu)
 
 Notes:
 ------
