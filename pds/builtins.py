@@ -1,10 +1,9 @@
-#####################################################################
 """
-T. Trainor (fftpt@uaf.edu), M. Newville
-Builtin funcitons for pds
+Builtin functions for pds
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+- T. Trainor, M. Newville
 - Modified from tdl r259 - 
   for use with pds shell program
 

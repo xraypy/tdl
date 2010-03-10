@@ -857,10 +857,11 @@ class _ImageList:
     """
     ################################################################
     def __init__(self,images,file='images.h5',path=None,
-                 setname='S1',descr='Scan data images'):
+                 setname='S000',descr='Scan data images'):
         self.path = path
         self.file = file
         self.setname = setname
+        #
         if images != None:
             self.nimages = len(images)
             try:
@@ -897,29 +898,33 @@ class _ImageList:
         """
         print "Cannot set item"
         return
-    
+
+    ################################################################
+    def _make_fname(self):
+        if self.path != None:
+            fname = os.path.join(self.path,self.file)
+            fname = os.path.abspath(fname)
+        else:
+            fname = os.path.abspath(self.file)
+        return fname
+
     ################################################################
     def _write_image_tables(self,images,setname,descr):
         """
         Write images to file
         """
         import tables
-
         images = num.array(images)
-        if self.path != None:
-            fname = os.path.join(self.path,self.file)
-            fname = os.path.abspath(fname)
-        else:
-            fname = os.path.abspath(self.file)
+        fname  = self._make_fname()
         if os.path.exists(fname):
             h    = tables.openFile(fname,mode="a")
             if not hasattr(h.root,'images'):
                 h.createGroup(h.root,'images',"Image Data")
         else:
-            h    = tables.openFile(fname,mode="w",title="ScanData Archive")
+            h    = tables.openFile(fname,mode="w",title="Scan Data Archive")
             root = h.createGroup(h.root, "images", "Image Data")
         # if setname == None:
-        #   look under '/images for 'SXX'
+        #   look under '/images for 'SXXX'
         # find the highest one and
         # auto generate set name as next in the sequence 
         if hasattr(h.root.images,setname):
@@ -931,12 +936,7 @@ class _ImageList:
     ################################################################
     def _read_image_tables(self,):
         import tables
-        
-        if self.path != None:
-            fname = os.path.join(self.path,self.file)
-            fname = os.path.abspath(fname)
-        else:
-            fname = os.path.abspath(self.file)
+        fname = self._make_fname()
         if not os.path.exists(fname):
             print "Archive file not found:", fname
             return None

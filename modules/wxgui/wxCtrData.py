@@ -53,7 +53,7 @@ PARAM_DESCR = {
 
 'image roi':"""Enter the image roi. The format is [x1,y1,x2,y2] where values
 are in pixels corresponding to two corners of the box. Use the set button to
-select the roi from the image plot zoom value (fig 2) -> raw scan data plot.""",
+select the roi from the image plot zoom value (Fig 1) -> raw scan data plot.""",
 
 'image rotangle':"""Enter a rotation angle for the image (counter clockwise degrees)""",
 
@@ -111,7 +111,7 @@ If detector slits are 'None' or {} only a spil-off correction will be computed""
 of the goniometer.  If this is 'None' then use the sample polygon or
 no sample description. """,
 
-'sample polygon':"""A list of lists that describe a general polygon sample shape, e.g.:    
+'sample polygon':"""A list of vectors that describe a general polygon sample shape, e.g.:    
     polygon =  [[1.,1.], [.5,1.5], [-1.,1.],[-1.,-1.],[0.,.5],[1.,-1.]]
 Each entry is an [x,y] or [x,y,z] vector pointing to an apex of the sample
 polygon. These vectors should be given in general lab frame coordinates
@@ -134,7 +134,9 @@ of each corner (in mm) with up being the +x direction, and downstream
 being the +y direction.  """,
 
 'sample angles':"""Sample angles used for description of the sample polygon. Use
-the format" angles = {'phi':123.5,'chi':flatchi:0.3,'eta':0.,'mu':0.}""",
+the format:
+   angles = {'phi':123.5,'chi':flatchi:0.3,'eta':0.,'mu':0.}
+See 'sample polygon' for more info""",
 
 'scale':"""Enter scale factor.  The scale factor multiplies by all the intensity
 values. e.g.if Io ~ 1million cps then using 1e6 as the scale makes the normalized
