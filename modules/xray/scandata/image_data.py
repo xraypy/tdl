@@ -659,7 +659,7 @@ class ImageScan:
                         self.rois[j] = rois[j]
                 else:
                     for j in range(npts):
-                        self.rois[j] = rois
+                        self.rois[j] = copy.copy(rois)
             elif len(rois) == len(npts):
                 for j in range(npts):
                     self.rois[j] = rois[j]
@@ -675,7 +675,7 @@ class ImageScan:
         if bgr_params!=None:
             if type(bgr_params) == types.DictType:
                 for j in range(npts):
-                    self.bgrpar[j] = bgr_params
+                    self.bgrpar[j] = copy.copy(bgr_params)
             elif len(bgr_params) == npts:
                 for j in range(npts):
                     self.bgrpar[j] = bgr_params[j]
@@ -720,7 +720,7 @@ class ImageScan:
         if len(self.bgrpar) != npts:
             self.bgrpar = []
             for j in range(npts):
-                self.bgrpar.append(IMG_BGR_PARAMS)
+                self.bgrpar.append(copy.copy(IMG_BGR_PARAMS))
         # should we init all these or set based on an integrate flag?
         self.peaks  = {}
         self.peaks['I']      = num.zeros(npts,dtype=float)

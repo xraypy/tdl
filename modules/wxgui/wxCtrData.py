@@ -68,7 +68,7 @@ select the roi from the image plot zoom value (Fig 1) -> raw scan data plot.""",
 
 'bgr col width':"""Peak width for the column (y) direction bgr fit.
 The background function should fit features that are in general broader
-than the width value. Estimate cwidth using width from peak width in the
+than the width value. Estimate cwidth using the peak width in the
 column (y) direction. Note: width = 0 corresponds to no polynomial bgr""",
 
 'bgr col power':"""Power of polynomial used in column (y) direction bgr fit.
@@ -84,7 +84,7 @@ Helpful for data sitting on a broad sloping background""",
 
 'bgr row width':"""Peak width for the row (x) direction bgr fit.
 The background function should fit features that are in general broader
-than the width value. Estimate rwidth using width from peak width in the
+than the width value. Estimate rwidth using the peak width in the
 row (x) direction. Note: width = 0 corresponds to no polynomial bgr""",
 
 'bgr row power':"""Power of polynomial used in row (x) direction bgr fit.
@@ -709,7 +709,7 @@ class wxCtrData(model.Background, wxUtil):
         val = val.strip()
         if val == '': return
         #
-        int_items = self.components.IntParamList.items
+        int_items  = self.components.IntParamList.items
         corr_items = self.components.CorrParamList.items
         idx1 = self._get_par_idx(name,int_items)
         idx2 = self._get_par_idx(name,corr_items)

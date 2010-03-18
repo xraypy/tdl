@@ -48,9 +48,9 @@
 
 {'type':'Button', 
     'name':'ToggleBad', 
-    'position':(116, 88), 
-    'size':(180, 23), 
-    'label':'Toggle bad point flag', 
+    'position':(220, 65), 
+    'size':(73, 23), 
+    'label':'Toggle bad', 
     },
 
 {'type':'CheckBox', 
@@ -81,15 +81,15 @@
 
 {'type':'StaticText', 
     'name':'StaticText8', 
-    'position':(622, 231), 
-    'size':(68, 49), 
-    'text':'Copy these parameters to all points', 
+    'position':(575, 231), 
+    'size':(106, -1), 
+    'text':'Copy parameters ', 
     },
 
 {'type':'Button', 
     'name':'CopyParamsToAll', 
-    'position':(622, 282), 
-    'size':(63, 29), 
+    'position':(588, 256), 
+    'size':(56, 26), 
     'label':'Copy All', 
     },
 
@@ -103,7 +103,7 @@
 {'type':'TextArea', 
     'name':'ParamDescr', 
     'position':(16, 233), 
-    'size':(598, 85), 
+    'size':(542, 85), 
     'editable':False, 
     'text':'Parameter Description', 
     },
@@ -117,14 +117,14 @@
 
 {'type':'Button', 
     'name':'SetUpdate', 
-    'position':(210, 65), 
-    'size':(87, 23), 
-    'label':'Selected Set', 
+    'position':(164, 65), 
+    'size':(42, 23), 
+    'label':'Set', 
     },
 
 {'type':'StaticText', 
     'name':'StaticText7', 
-    'position':(144, 46), 
+    'position':(114, 47), 
     'text':'Integrate/update', 
     },
 
@@ -437,8 +437,8 @@
 {'type':'Button', 
     'name':'PointUpdate', 
     'position':(117, 65), 
-    'size':(90, 23), 
-    'label':'Selected Point', 
+    'size':(47, 23), 
+    'label':'Point', 
     },
 
 {'type':'Choice', 
