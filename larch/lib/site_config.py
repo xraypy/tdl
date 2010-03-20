@@ -23,11 +23,11 @@ try:
 except:
     pass
 
-mod_dirs = ['.']
+module_path = ['.']
 if 'LARCHPATH' in os.environ:
-    mod_dirs.append(os.environ['LARCHPATH'])
+    module_path.extend(os.environ['LARCHPATH'].split(':'))
 
-mod_dirs.append(os.path.join(base_path,'modules'))
+module_path.append(os.path.join(base_path,'modules'))
 
 # initial larch files run at startup
 init_files = []

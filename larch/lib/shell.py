@@ -62,7 +62,6 @@ class shell(cmd.Cmd):
         self.larch  = interpreter.Interpreter()
         self.input  = inputText.InputText(prompt=self.ps1)
         self.prompt = self.ps1
-
         
     def __del__(self):
         if (self.rdline):
@@ -120,9 +119,9 @@ class shell(cmd.Cmd):
             self.prompt = self.ps2
             while len(self.input) >0:
                 block,fname,lineno = self.input.get()
-                # print 'BLOCK, FNAME, LINENO ', block, fname, lineno
+                print 'BLOCK, FNAME, LINENO ', block, fname, lineno
                 ret = self.larch.eval(block,fname=fname,lineno=lineno)
-
+                # print ' >> ', ret, self.larch.error
                 if callable(ret) and not isinstance(ret,type):
                     try:
                         if 1 == len(block.split()):

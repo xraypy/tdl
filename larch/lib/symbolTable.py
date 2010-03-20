@@ -72,9 +72,11 @@ class symbolTable(Group):
                                  'searchNames':None, 'searchGroups': None}
 
         self._sys.path         = ['.']
-        larchpath = os.environ.get(site_config.module_path,None)
-        if larchpath is not None:
-            self._sys.path.extend(larch.path.split(':'))
+        
+        if site_config.module_path is not None:
+            for i in site_config.module_path:
+                if i not in self._sys.path and os.path.exists(i):
+                    self._sys.path.append(i)
             
         self._sys.modules      = {'_main':self}
         for gname in self.core_groups:

@@ -784,7 +784,7 @@ class Interpreter:
         # print("  larch path: ", _sys.path)
 
         for i in _sys.path:
-            if i not in sys.path:
+            if i not in sys.path and os.path.exists(i):
                 sys.path.append(i)
 
         # print("  python path: ", sys.path)
@@ -804,6 +804,7 @@ class Interpreter:
             isLarch = False
             larchname = "%s.lar" % name
             for dirname in _sys.path:
+                if not os.path.exists(dirname): continue
                 if larchname in os.listdir(dirname):
                     isLarch = True
                     modname = os.path.abspath(os.path.join(dirname,larchname))
