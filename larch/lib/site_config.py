@@ -2,7 +2,7 @@
 ## site configuration for larch:
 ##  
 ##   init_files:  list of larch files run (in order) on startup
-##   mod_dirs:    list of directories to search for larch code
+##   module_path: list of directories to search for larch code
 
 import os
 import sys
