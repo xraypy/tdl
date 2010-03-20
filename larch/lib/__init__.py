@@ -2,7 +2,6 @@
 
 """
   Larch: a data processing macro language for python
-  
 """
 
 #

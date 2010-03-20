@@ -290,7 +290,7 @@ class Interpreter:
     """larch program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
   using python's ast module, and then executes the AST representation
-  using a custom SymboplTable for named object (variable, functions).
+  using a custom SymbolTable for named object (variable, functions).
   This then gives a restricted version of Python, with slightly modified
   namespace rules.  The program syntax here is expected to be valid Python,
   but that may have been translated as with the inputText module.
@@ -308,8 +308,8 @@ class Interpreter:
        
         if symtable is None:
             symtable = symbolTable.symbolTable(larch=self)
-        self.isGroup    = symtable.isGroup
         self.symtable   = symtable
+        self.isGroup    = symtable.isGroup
         self.setSymbol  = symtable.setSymbol
         self.getSymbol  = symtable.getSymbol
         self.delSymbol  = symtable.delSymbol        

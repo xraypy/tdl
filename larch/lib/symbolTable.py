@@ -4,8 +4,7 @@ from __future__ import print_function
 import os
 import sys
 import types
-
-larchpath_envvar = 'LARCHPATH'
+import site_config
 
 def isGroup(g): return isinstance(g,Group)
 
@@ -59,7 +58,6 @@ class symbolTable(Group):
     def __init__(self,larch=None):
         Group.__init__(self,name=self.top_group)
         # self.__writer = writer  or sys.stdout.write
-
         self.__interpreter = larch
        
         setattr(self,self.top_group, self)
@@ -74,7 +72,7 @@ class symbolTable(Group):
                                  'searchNames':None, 'searchGroups': None}
 
         self._sys.path         = ['.']
-        larchpath = os.environ.get(larchpath_envvar,None)
+        larchpath = os.environ.get(site_config.module_path,None)
         if larchpath is not None:
             self._sys.path.extend(larch.path.split(':'))
             
@@ -112,7 +110,6 @@ class symbolTable(Group):
             sys.searchGroups != cache['searchNames']):
 
             # print(" fix searchGroups ")
-
             
             if sys.moduleGroup is None: sys.moduleGroup = self.top_group
             if sys.localGroup is None: sys.localGroup = self.moduleGroup
