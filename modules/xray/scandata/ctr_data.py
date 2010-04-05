@@ -17,8 +17,7 @@ References:
  * C. Schlepuetz et al, Acta Cryst. (2005). A61, 418-425
 
 Todo:
-----
- * Test!
+-----
  * Averaging/merging and merge statistics
  * Corrections for rocking scans
  * Add normalized F plots  - divide by |Fctr|,
@@ -781,93 +780,121 @@ def set_params(ctr,point,intpar={},corrpar={}):
     (scan,spnt) = ctr.get_scan(point)
     #
     if len(intpar) > 0:
-        ctr.labels['I'][point]     = intpar['I']
-        ctr.labels['Inorm'][point] = intpar['Inorm']
-        ctr.labels['Ierr'][point]  = intpar['Ierr']
-        ctr.labels['Ibgr'][point]  = intpar['Ibgr']
+        if intpar.get('I')!=None:
+            ctr.labels['I'][point] = intpar['I']
+        if intpar.get('Inorm')!=None:
+            ctr.labels['Inorm'][point] = intpar['Inorm']
+        if intpar.get('Ierr')!=None:
+            ctr.labels['Ierr'][point]  = intpar['Ierr']
+        if intpar.get('Ibgr')!=None:
+            ctr.labels['Ibgr'][point]  = intpar['Ibgr']
         if ctr.scan_type[point] == 'image':
-            if type(intpar['image roi']) == types.StringType:
-                scan.image.rois[spnt] = eval(intpar['image roi'])
-            else:
-                scan.image.rois[spnt] = intpar['image roi']
-            if type(intpar['image rotangle']) == types.StringType:
-                scan.image.rotangle[spnt] = eval(intpar['image rotangle'])
-            else:
-                scan.image.rotangle[spnt] = intpar['image rotangle']
-            if type(intpar['bgr flag']) == types.StringType:
-                scan.image.bgrpar[spnt]['bgrflag'] = eval(intpar['bgr flag'])
-            else:
-                scan.image.bgrpar[spnt]['bgrflag'] = intpar['bgr flag']
-            if type(intpar['bgr col nbgr']) == types.StringType:
-                scan.image.bgrpar[spnt]['cnbgr'] = eval(intpar['bgr col nbgr'])
-            else:
-                scan.image.bgrpar[spnt]['cnbgr'] = intpar['bgr col nbgr']
-            if type(intpar['bgr col width']) == types.StringType:
-                scan.image.bgrpar[spnt]['cwidth'] = eval(intpar['bgr col width'])
-            else:
-                scan.image.bgrpar[spnt]['cwidth'] = intpar['bgr col width']
-            if type(intpar['bgr col power']) == types.StringType:
-                scan.image.bgrpar[spnt]['cpow'] = eval(intpar['bgr col power'])
-            else:
-                scan.image.bgrpar[spnt]['cpow'] = intpar['bgr col power']
-            if type(intpar['bgr col tan']) == types.StringType:
-                scan.image.bgrpar[spnt]['ctan'] = eval(intpar['bgr col tan'])
-            else:
-                scan.image.bgrpar[spnt]['ctan'] = intpar['bgr col tan']
-            if type(intpar['bgr row nbgr']) == types.StringType:
-                scan.image.bgrpar[spnt]['rnbgr'] = eval(intpar['bgr row nbgr'])
-            else:
-                scan.image.bgrpar[spnt]['rnbgr'] = intpar['bgr row nbgr']
-            if type(intpar['bgr row width']) == types.StringType:
-                scan.image.bgrpar[spnt]['rwidth'] = eval(intpar['bgr row width'])
-            else:
-                scan.image.bgrpar[spnt]['rwidth'] = intpar['bgr row width']
-            if type(intpar['bgr row power']) == types.StringType:
-                scan.image.bgrpar[spnt]['rpow'] = eval(intpar['bgr row power'])
-            else:
-                scan.image.bgrpar[spnt]['rpow'] = intpar['bgr row power']
-            if type(intpar['bgr row tan']) == types.StringType:
-                scan.image.bgrpar[spnt]['rtan'] = eval(intpar['bgr row tan'])
-            else:
-                scan.image.bgrpar[spnt]['rtan'] = intpar['bgr row tan']
+            if intpar.get('image roi')!=None:
+                if type(intpar['image roi']) == types.StringType:
+                    scan.image.rois[spnt] = eval(intpar['image roi'])
+                else:
+                    scan.image.rois[spnt] = intpar['image roi']
+            if intpar.get('image rotangle')!=None:
+                if type(intpar['image rotangle']) == types.StringType:
+                    scan.image.rotangle[spnt] = eval(intpar['image rotangle'])
+                else:
+                    scan.image.rotangle[spnt] = intpar['image rotangle']
+            if intpar.get('bgr flag')!=None:
+                if type(intpar['bgr flag']) == types.StringType:
+                    scan.image.bgrpar[spnt]['bgrflag'] = eval(intpar['bgr flag'])
+                else:
+                    scan.image.bgrpar[spnt]['bgrflag'] = intpar['bgr flag']
+            if intpar.get('bgr col nbgr')!=None:
+                if type(intpar['bgr col nbgr']) == types.StringType:
+                    scan.image.bgrpar[spnt]['cnbgr'] = eval(intpar['bgr col nbgr'])
+                else:
+                    scan.image.bgrpar[spnt]['cnbgr'] = intpar['bgr col nbgr']
+            if intpar.get('bgr col width')!=None:
+                if type(intpar['bgr col width']) == types.StringType:
+                    scan.image.bgrpar[spnt]['cwidth'] = eval(intpar['bgr col width'])
+                else:
+                    scan.image.bgrpar[spnt]['cwidth'] = intpar['bgr col width']
+            if intpar.get('bgr col power')!=None:
+                if type(intpar['bgr col power']) == types.StringType:
+                    scan.image.bgrpar[spnt]['cpow'] = eval(intpar['bgr col power'])
+                else:
+                    scan.image.bgrpar[spnt]['cpow'] = intpar['bgr col power']
+            if intpar.get('bgr col tan')!=None:
+                if type(intpar['bgr col tan']) == types.StringType:
+                    scan.image.bgrpar[spnt]['ctan'] = eval(intpar['bgr col tan'])
+                else:
+                    scan.image.bgrpar[spnt]['ctan'] = intpar['bgr col tan']
+            if intpar.get('bgr row nbgr')!=None:
+                if type(intpar['bgr row nbgr']) == types.StringType:
+                    scan.image.bgrpar[spnt]['rnbgr'] = eval(intpar['bgr row nbgr'])
+                else:
+                    scan.image.bgrpar[spnt]['rnbgr'] = intpar['bgr row nbgr']
+            if intpar.get('bgr row width')!=None:
+                if type(intpar['bgr row width']) == types.StringType:
+                    scan.image.bgrpar[spnt]['rwidth'] = eval(intpar['bgr row width'])
+                else:
+                    scan.image.bgrpar[spnt]['rwidth'] = intpar['bgr row width']
+            if intpar.get('bgr row power')!=None:
+                if type(intpar['bgr row power']) == types.StringType:
+                    scan.image.bgrpar[spnt]['rpow'] = eval(intpar['bgr row power'])
+                else:
+                    scan.image.bgrpar[spnt]['rpow'] = intpar['bgr row power']
+            if intpar.get('bgr row tan')!=None:
+                if type(intpar['bgr row tan']) == types.StringType:
+                    scan.image.bgrpar[spnt]['rtan'] = eval(intpar['bgr row tan'])
+                else:
+                    scan.image.bgrpar[spnt]['rtan'] = intpar['bgr row tan']
     #
     if len(corrpar) > 0:
-        ctr.corr_params[point] = {}
-        for (key,val) in corrpar.items():
+        #ctr.corr_params[point] = {}
+        if corrpar.get('beam_slits')!=None:
             if type(corrpar['beam_slits']) == types.StringType:
                 ctr.corr_params[point]['beam_slits'] = eval(corrpar['beam_slits'])
             else:
                 ctr.corr_params[point]['beam_slits'] = corrpar['beam_slits']
+        if corrpar.get('det_slits')!=None:
             if type(corrpar['det_slits']) == types.StringType:
                 ctr.corr_params[point]['det_slits'] = eval(corrpar['det_slits'])
             else:
                 ctr.corr_params[point]['det_slits'] = corrpar['det_slits']
+        if corrpar.get('geom')!=None:
             ctr.corr_params[point]['geom'] = corrpar['geom']
+        if corrpar.get('scale')!=None:
             if type(corrpar['scale']) == types.StringType:
                 ctr.corr_params[point]['scale'] = eval(corrpar['scale'])
             else:
                 ctr.corr_params[point]['scale'] = corrpar['scale']
-            #
+        #
+        if corrpar.get('sample dia')!=None:
             if type(corrpar['sample dia']) == types.StringType:
                 sdia = eval(corrpar['sample dia'])
             else:
                 sdia = corrpar['sample dia']
-            if type(corrpar['sample polygon']) == types.StringType:
-                spoly = eval(corrpar['sample polygon'])
+            ctr.corr_params[point]['sample'] = sdia
+        elif corrpar.get('sample polygon')!=None or corrpar.get('sample angles')!=None:
+            if corrpar.get('sample polygon')!=None:
+                if type(corrpar['sample polygon']) == types.StringType:
+                    spoly = eval(corrpar['sample polygon'])
+                else:
+                    spoly = corrpar['sample polygon']
             else:
-                spoly = corrpar['sample polygon']
-            if type(corrpar['sample angles']) == types.StringType:
-                sangles = eval(corrpar['sample angles'])
+                try:
+                    spoly = ctr.corr_params[point]['sample']['polygon']
+                except:
+                    spoly = None
+            if corrpar.get('sample angles')!=None:
+                if type(corrpar['sample angles']) == types.StringType:
+                    sangles = eval(corrpar['sample angles'])
+                else:
+                    sangles = corrpar['sample angles']
             else:
-                sangles = corrpar['sample angles']
-            if sdia != None:
-                ctr.corr_params[point]['sample'] = sdia
-            elif spoly != None:
-                ctr.corr_params[point]['sample'] = {}
-                ctr.corr_params[point]['sample']['polygon'] = spoly
-                ctr.corr_params[point]['sample']['angles'] = sangles
-            else:
-                ctr.corr_params[point]['sample'] = None
+                try:
+                    sangles = ctr.corr_params[point]['sample']['angles']
+                except:
+                    sangles = None
+            ctr.corr_params[point]['sample'] = {}
+            ctr.corr_params[point]['sample']['polygon'] = spoly
+            ctr.corr_params[point]['sample']['angles'] = sangles
     
 ##############################################################################
 def _update_psic_angles(gonio,scan,point):

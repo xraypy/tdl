@@ -16,8 +16,6 @@ Simple integrations and plotting
 Todo:
 -----
  - Improve image background determination
- - In ImageAna.plot should we plot row and column sums
-   after bgr subtraction?
 
 """
 #######################################################################
@@ -298,7 +296,7 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
 
 ##############################################################################
 def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
-              tangent=False,plot=False,filter=False):
+              tangent=False,nline=1,filter=True,plot=False):
     """
     Calculate a 2D background for the image.
 
@@ -321,50 +319,60 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
     * tangent is a flag to indicate if local slope of the data should be fitted 
       (see background.background)
 
-     * plot is a flag to indicate if a 'plot' should be made
+    * nline = number of lines to average for each bgr line fit
+
+    * filter (True/False) flag indicates if a laplace filter should be applied
+      before background subtraction.  (see scipy.ndimage.filters)
+     
+    * plot is a flag to indicate if a 'plot' should be made
     """
     bgr_arr = num.zeros(image.shape)
 
+    # note this works poorly if the filter removes
+    # too much intensity.  Use with caution!
     if filter == True:
-        image = ndimage.laplace(image)
+        #image = ndimage.laplace(image)
+        image = ndimage.interpolation.spline_filter(image)
 
-    # number of lines to average for bgr fit
-    nline = 3.
-    
     # fit to rows
-    #if lineflag=='r':
-    #    for j in range(image.shape[0]):
-    #        bgr_arr[j,:] = background(image[j],nbgr=nbgr,width=width,pow=pow,
-    #                                  tangent=tangent)
     if lineflag=='r':
-        n = image.shape[0]
-        line = num.zeros(len(image[0]))
-        for j in range(n):
-            idx = [k for k in range(j-int(nline/2.),j+int(nline/2.)+1) if k>=0 and k<n]
-            line = line * 0.0
-            for k in idx:
-                line = line + image[k]
-            line = line/float(len(idx))
-            bgr_arr[j,:] = background(line,nbgr=nbgr,width=width,pow=pow,
-                                      tangent=tangent)
+        if nline > 1:
+            ll = int(nline/2.)
+            n = image.shape[0]
+            line = num.zeros(len(image[0]))
+            for j in range(n):
+                idx = [k for k in range(j-ll,j+ll+1) if k>=0 and k<n]
+                line = line * 0.0
+                for k in idx:
+                    line = line + image[k]
+                line = line/float(len(idx))
+                bgr_arr[j,:] = background(line,nbgr=nbgr,width=width,pow=pow,
+                                          tangent=tangent)
+        else:
+            for j in range(image.shape[0]):
+                bgr_arr[j,:] = background(image[j],nbgr=nbgr,width=width,pow=pow,
+                                          tangent=tangent)
 
     # fit to cols
     #if lineflag=='c':
-    #    for j in range(image.shape[1]):
-    #        bgr_arr[:,j] = background(image[:,j],nbgr=nbgr,width=width,pow=pow,
-    #                                  tangent=tangent)
     if lineflag=='c':
-        n = image.shape[1]
-        line = num.zeros(len(image[:,0]))
-        for j in range(n):
-            idx = [k for k in range(j-int(nline/2.),j+int(nline/2.)+1) if k>=0 and k<n]
-            line = line * 0.0
-            for k in idx:
-                line = line + image[:,k]
-            line = line/float(len(idx))
-            bgr_arr[:,j] = background(line,nbgr=nbgr,width=width,pow=pow,
-                                      tangent=tangent)
-
+        if nline > 1:
+            ll = int(nline/2.)
+            n = image.shape[1]
+            line = num.zeros(len(image[:,0]))
+            for j in range(n):
+                idx = [k for k in range(j-ll,j+ll+1) if k>=0 and k<n]
+                line = line * 0.0
+                for k in idx:
+                    line = line + image[:,k]
+                line = line/float(len(idx))
+                bgr_arr[:,j] = background(line,nbgr=nbgr,width=width,pow=pow,
+                                          tangent=tangent)
+        else:
+            for j in range(image.shape[1]):
+                bgr_arr[:,j] = background(image[:,j],nbgr=nbgr,width=width,pow=pow,
+                                          tangent=tangent)
+            
     #show
     if plot:
         pyplot.figure(3)

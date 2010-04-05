@@ -433,12 +433,16 @@ class wxCtrData(model.Background, wxUtil):
     def on_PointNum_keyDown(self,event):
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN or keyCode == 372:
+            point = int(self.components.PointNum.stringSelection)
+            print point
             self.update_point()
         else:
             event.skip()
         return
     
     def on_PointNum_select(self,event):
+        point = self.components.PointNum.stringSelection
+        self.components.PointNum.stringSelection = point
         self.update_point()
         return
 
@@ -464,10 +468,6 @@ class wxCtrData(model.Background, wxUtil):
         if point in self.components.PointNum.items:
             self.components.PointNum.stringSelection = point
             self.update_point()
-        return
-
-    def on_PointNum_select(self,event):
-        self.update_point()
         return
 
     def on_SetPointClick_mouseClick(self,event):
@@ -701,7 +701,66 @@ class wxCtrData(model.Background, wxUtil):
             self.integrate_point(point=j,update_plots=False)
         if self.components.AutoPlotCtr.checked==True:
             self._plot_ctr()
+
+    def on_CopyParamsToSet_mouseClick(self,event):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        npts = len(ctr.L)
+        if npts == 0: return
+        for j in self.set:
+            print "Setting params for point:", j
+            self.update_ctr_from_params(point=j)
+            self.integrate_point(point=j,update_plots=False)
+        if self.components.AutoPlotCtr.checked==True:
+            self._plot_ctr()
+
+    def on_CopySelParamToAll_mouseClick(self,event):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        npts = len(ctr.L)
+        ret = self._get_sel_par()
+        if ret == None: return
+        (intpar,corrpar)=ret
+        for j in range(npts):
+            print "Setting param for point:" , j
+            ctr_data.set_params(ctr,j,intpar=intpar,corrpar=corrpar)
+            self.integrate_point(point=j,update_plots=False)
+        if self.components.AutoPlotCtr.checked==True:
+            self._plot_ctr()
     
+    def on_CopySelParamToSet_mouseClick(self,event):
+        ctr = self.get_ctr()
+        if ctr == None: return
+        npts = len(ctr.L)
+        ret = self._get_sel_par()
+        if ret == None: return
+        (intpar,corrpar)=ret
+        for j in self.set:
+            print "Setting param for point:", j
+            ctr_data.set_params(ctr,j,intpar=intpar,corrpar=corrpar)
+            self.integrate_point(point=j,update_plots=False)
+        if self.components.AutoPlotCtr.checked==True:
+            self._plot_ctr()
+
+    def _get_sel_par(self):
+        intpar = {}
+        corrpar = {}
+        name = self.components.ParamName.text
+        if len(name) == 0: return None 
+        val = self.components.ParamVal.text
+        val = val.strip()
+        if val == '': return None
+        int_items  = self.components.IntParamList.items
+        for (n,v) in int_items:
+            if name == n:
+                intpar[n] = str(val)
+                return (intpar,corrpar)
+        corr_items = self.components.CorrParamList.items
+        for (n,v) in corr_items:
+            if name == n:
+                corrpar[name] = val
+                return (intpar,corrpar)
+
     def update_params(self):
         name = self.components.ParamName.text
         if len(name) == 0: return
@@ -810,6 +869,7 @@ class wxCtrData(model.Background, wxUtil):
             else:
                 plot = False
                 fig = None
+            print "Integrate point:", point
             ctr.integrate_point(point,plot=plot,fig=fig)
             if self.components.AutoPlotCtr.checked==True:
                 self._plot_ctr()

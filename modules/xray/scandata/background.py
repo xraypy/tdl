@@ -112,7 +112,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     
     # linear bgr subtract data
     linbgr = linear_background(data,nbgr=nbgr)
-    if width <= 0.: return linbgr
+    if width <= 0. or pow == 0.: return linbgr
     y = data - linbgr
 
     # create bgr array
@@ -169,8 +169,15 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
             p.append((y[j] + poly[plidx:pridx] + line))
             d.append(delta)
 
+    # do another linbgr to get residual
+    # note this seem important since the polynomials
+    # come up from the bottom, they will always tend to
+    # underfit.  So having an additional linear part
+    # helps to limit the residual. 
+    linbgr2 = linear_background(y-bgr,nbgr=nbgr)
+
     # add back linbgr
-    bgr = bgr + linbgr
+    bgr = bgr + linbgr + linbgr2
     if debug:
         return (bgr,p,d,linbgr)
     else:
