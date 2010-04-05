@@ -46,11 +46,29 @@
      },
          'components': [
 
+{'type':'TextField', 
+    'name':'SetEdit', 
+    'position':(137, 90), 
+    'size':(184, -1), 
+    },
+
+{'type':'StaticText', 
+    'name':'StaticText11', 
+    'position':(104, 92), 
+    'text':'Set:', 
+    },
+
+{'type':'StaticText', 
+    'name':'StaticText10', 
+    'position':(107, 47), 
+    'text':'Bad Point', 
+    },
+
 {'type':'Button', 
     'name':'ToggleBad', 
-    'position':(220, 65), 
-    'size':(73, 23), 
-    'label':'Toggle bad', 
+    'position':(105, 65), 
+    'size':(53, 23), 
+    'label':'Toggle', 
     },
 
 {'type':'CheckBox', 
@@ -95,8 +113,8 @@
 
 {'type':'TextField', 
     'name':'ParamName', 
-    'position':(72, 323), 
-    'size':(120, 26), 
+    'position':(66, 323), 
+    'size':(97, 26), 
     'editable':False, 
     },
 
@@ -117,14 +135,14 @@
 
 {'type':'Button', 
     'name':'SetUpdate', 
-    'position':(164, 65), 
-    'size':(42, 23), 
+    'position':(244, 65), 
+    'size':(45, 23), 
     'label':'Set', 
     },
 
 {'type':'StaticText', 
     'name':'StaticText7', 
-    'position':(114, 47), 
+    'position':(195, 47), 
     'text':'Integrate/update', 
     },
 
@@ -177,21 +195,21 @@
 
 {'type':'StaticText', 
     'name':'StaticText2', 
-    'position':(177, 169), 
+    'position':(184, 170), 
     'font':{'faceName': u'Tahoma', 'family': 'sansSerif', 'size': 16}, 
     'text':'>', 
     },
 
 {'type':'CheckBox', 
     'name':'AutoPlotIntegration', 
-    'position':(145, 140), 
+    'position':(151, 140), 
     'size':(149, -1), 
     'label':'Plot Integration (Fig 3)', 
     },
 
 {'type':'Choice', 
     'name':'AnchorPointNum', 
-    'position':(201, 178), 
+    'position':(216, 178), 
     'size':(81, -1), 
     'items':[], 
     },
@@ -204,8 +222,8 @@
 
 {'type':'StaticBox', 
     'name':'StaticBox5', 
-    'position':(312, 29), 
-    'size':(386, 185), 
+    'position':(339, 29), 
+    'size':(360, 185), 
     'label':'Info', 
     },
 
@@ -218,8 +236,8 @@
 
 {'type':'StaticLine', 
     'name':'StaticLine3', 
-    'position':(17, 115), 
-    'size':(280, -1), 
+    'position':(19, 116), 
+    'size':(295, -1), 
     'layout':'horizontal', 
     },
 
@@ -262,8 +280,8 @@
 
 {'type':'TextArea', 
     'name':'PointData', 
-    'position':(320, 55), 
-    'size':(374, 152), 
+    'position':(345, 55), 
+    'size':(349, 152), 
     'editable':False, 
     'text':'Data Point Information\n', 
     },
@@ -304,8 +322,8 @@
 
 {'type':'TextField', 
     'name':'ParamVal', 
-    'position':(197, 322), 
-    'size':(495, 27), 
+    'position':(168, 322), 
+    'size':(391, 27), 
     },
 
 {'type':'StaticText', 
@@ -339,19 +357,19 @@
 {'type':'StaticBox', 
     'name':'StaticBox21', 
     'position':(9, 29), 
-    'size':(297, 185), 
+    'size':(321, 185), 
     'label':'Data point', 
     },
 
 {'type':'StaticText', 
     'name':'Lbl11', 
-    'position':(26, 48), 
+    'position':(26, 47), 
     'text':'Point Index', 
     },
 
 {'type':'ComboBox', 
     'name':'PointNum', 
-    'position':(22, 65), 
+    'position':(22, 64), 
     'size':(69, -1), 
     'items':[u'0'], 
     'stringSelection':'0', 
@@ -381,7 +399,7 @@
 
 {'type':'StaticText', 
     'name':'Lbl3', 
-    'position':(204, 160), 
+    'position':(218, 160), 
     'text':'Anchor  index:', 
     },
 
@@ -436,8 +454,8 @@
 
 {'type':'Button', 
     'name':'PointUpdate', 
-    'position':(117, 65), 
-    'size':(47, 23), 
+    'position':(192, 65), 
+    'size':(48, 23), 
     'label':'Point', 
     },
 

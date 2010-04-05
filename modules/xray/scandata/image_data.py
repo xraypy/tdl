@@ -138,6 +138,13 @@ def _sort_roi(roi):
         r2 = roi[1]
     return [c1,r1,c2,r2]
     
+def calc_roi(dx=100,dy=100,im_shape=(200,200),cen=None):
+    """
+    Calculate an roi given a width, hieght and center
+    
+    roi = [c1,r1,c2,r2]
+    """
+    pass
 
 ############################################################################
 def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
@@ -291,7 +298,7 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
 
 ##############################################################################
 def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
-              tangent=False,plot=False):
+              tangent=False,plot=False,filter=False):
     """
     Calculate a 2D background for the image.
 
@@ -318,16 +325,44 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
     """
     bgr_arr = num.zeros(image.shape)
 
+    if filter == True:
+        image = ndimage.laplace(image)
+
+    # number of lines to average for bgr fit
+    nline = 3.
+    
     # fit to rows
+    #if lineflag=='r':
+    #    for j in range(image.shape[0]):
+    #        bgr_arr[j,:] = background(image[j],nbgr=nbgr,width=width,pow=pow,
+    #                                  tangent=tangent)
     if lineflag=='r':
-        for j in range(image.shape[0]):
-            bgr_arr[j,:] = background(image[j],nbgr=nbgr,width=width,pow=pow,
+        n = image.shape[0]
+        line = num.zeros(len(image[0]))
+        for j in range(n):
+            idx = [k for k in range(j-int(nline/2.),j+int(nline/2.)+1) if k>=0 and k<n]
+            line = line * 0.0
+            for k in idx:
+                line = line + image[k]
+            line = line/float(len(idx))
+            bgr_arr[j,:] = background(line,nbgr=nbgr,width=width,pow=pow,
                                       tangent=tangent)
 
     # fit to cols
+    #if lineflag=='c':
+    #    for j in range(image.shape[1]):
+    #        bgr_arr[:,j] = background(image[:,j],nbgr=nbgr,width=width,pow=pow,
+    #                                  tangent=tangent)
     if lineflag=='c':
-        for j in range(image.shape[1]):
-            bgr_arr[:,j] = background(image[:,j],nbgr=nbgr,width=width,pow=pow,
+        n = image.shape[1]
+        line = num.zeros(len(image[:,0]))
+        for j in range(n):
+            idx = [k for k in range(j-int(nline/2.),j+int(nline/2.)+1) if k>=0 and k<n]
+            line = line * 0.0
+            for k in idx:
+                line = line + image[:,k]
+            line = line/float(len(idx))
+            bgr_arr[:,j] = background(line,nbgr=nbgr,width=width,pow=pow,
                                       tangent=tangent)
 
     #show
@@ -576,7 +611,7 @@ class ImageAna:
         pyplot.plot(data_idx, bgr, 'r',label='bgr')
         pyplot.plot(data_idx, data, 'b',label='data-bgr')
         pyplot.axis([0, data_idx.max(), 0, rawmax*1.25])
-        pyplot.legend()
+        pyplot.legend(loc=0)
 
         ####################################
         # plot full image with ROI
@@ -620,7 +655,7 @@ class ImageAna:
         pyplot.plot(data, data_idx, 'b',label='data-bgr')
         pyplot.axis([0,rawmax*1.25, data_idx.max(), 0])
         pyplot.xticks(rotation=-45)
-        pyplot.legend()
+        pyplot.legend(loc=0)
 
 ##############################################################################
 class ImageScan:
