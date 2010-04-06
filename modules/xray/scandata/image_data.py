@@ -50,7 +50,8 @@ from background import background
 ########################################################################
 IMG_BGR_PARAMS = {'bgrflag':1,
                   'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
-                  'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False}
+                  'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False,
+                  'nline':1,'filter':False}
 
 #######################################################################
 def read(file):
@@ -258,8 +259,7 @@ def line_sum(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
     return (data, data_idx, bgr)
 
 ############################################################################
-def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
-                      tangent=False):
+def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
     """
     Calc the integral after image is summed down 'c'olumns
     or across 'r'ows.
@@ -296,7 +296,7 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
 
 ##############################################################################
 def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
-              tangent=False,nline=1,filter=True,plot=False):
+              tangent=False,nline=1,filter=False,plot=False):
     """
     Calculate a 2D background for the image.
 
@@ -321,7 +321,7 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
 
     * nline = number of lines to average for each bgr line fit
 
-    * filter (True/False) flag indicates if a laplace filter should be applied
+    * filter (True/False) flag indicates if a spline filter should be applied
       before background subtraction.  (see scipy.ndimage.filters)
      
     * plot is a flag to indicate if a 'plot' should be made
@@ -332,6 +332,7 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
     # too much intensity.  Use with caution!
     if filter == True:
         #image = ndimage.laplace(image)
+        print 'spline filter'
         image = ndimage.interpolation.spline_filter(image)
 
     # fit to rows
@@ -400,6 +401,7 @@ class ImageAna:
                  bgrflag=1,
                  cnbgr=5,cwidth=0,cpow=2.,ctan=False,
                  rnbgr=5,rwidth=0,rpow=2.,rtan=False,
+                 nline=1,filter=False,
                  plot=True,fig=None,figtitle=''):
         """
         Analyze images
@@ -437,6 +439,11 @@ class ImageAna:
           
         * c/rtangent is a flag to indicate if local slope of the data should be fitted 
           (see background.background)
+
+        * nline = number of lines to average for each bgr line fit
+    
+        * filter (True/False) flag indicates if a spline filter should be applied
+          before background subtraction.  (see scipy.ndimage.filters)
         
         * plot = show fancy plot 
 
@@ -479,6 +486,8 @@ class ImageAna:
         self.bgrflag = bgrflag
         self.cbgr = {'nbgr':cnbgr,'width':cwidth,'pow':cpow,'tan':ctan}
         self.rbgr = {'nbgr':rnbgr,'width':rwidth,'pow':rpow,'tan':rtan}
+        self.nline  = nline
+        self.filter = filter
         self.plotflag = plot
         
         self.integrate()
@@ -514,18 +523,22 @@ class ImageAna:
             if self.bgrflag == 1:
                 self.bgrimg = image_bgr(self.clpimg,lineflag='c',nbgr=self.cbgr['nbgr'],
                                         width=self.cbgr['width'],pow=self.cbgr['pow'],
-                                        tangent=self.cbgr['tan'],plot=False)
+                                        tangent=self.cbgr['tan'],nline=self.nline,
+                                        filter=self.filter,plot=False)
             elif self.bgrflag == 2:
                 self.bgrimg = image_bgr(self.clpimg,lineflag='r',nbgr=self.rbgr['nbgr'],
                                         width=self.rbgr['width'],pow=self.rbgr['pow'],
-                                        tangent=self.rbgr['tan'],plot=False)
+                                        tangent=self.rbgr['tan'],nline=self.nline,
+                                        filter=self.filter,plot=False)
             else:
                 bgr_r = image_bgr(self.clpimg,lineflag='c',nbgr=self.cbgr['nbgr'],
                                   width=self.cbgr['width'],pow=self.cbgr['pow'],
-                                  tangent=self.cbgr['tan'],plot=False)
+                                  tangent=self.cbgr['tan'],nline=self.nline,
+                                  filter=self.filter,plot=False)
                 bgr_c = image_bgr(self.clpimg,lineflag='r',nbgr=self.rbgr['nbgr'],
                                   width=self.rbgr['width'],pow=self.rbgr['pow'],
-                                  tangent=self.rbgr['tan'],plot=False)
+                                  tangent=self.rbgr['tan'],nline=self.nline,
+                                  filter=self.filter,plot=False)
                 # combine the two bgrs by taking avg
                 self.bgrimg = (bgr_r + bgr_c)/2.
                 

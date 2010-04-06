@@ -95,6 +95,11 @@ and pow  > 0.5 for steeper.""",
 If 'True' then the local slope is removed when fitting a polynomial to a point.
 Helpful for data sitting on a broad sloping background""",
 
+'bgr nline':"""For 2D backgrounds, number of lines to average for polynomial fits.
+This option helps to smear out sharp features in the background""",
+
+'bgr filter':"""Flag (True/False) to use a spline filter for 2D background determination""",
+
 'beam_slits':"""Enter the incident beam slit settings: beam_slits = {'horz':.6,'vert':.8}.
 horz = beam horz width (at the sample) in mm (total width in lab-z / horizontal scattering plane)
 vert = beam vert hieght (at the sample) in mm (total width in lab-x / vertical scattering plane).
@@ -127,7 +132,7 @@ is the case then make sure:
     angles = {'phi':flatphi,'chi':flatchi,'eta':0.,'mu':0.}
 
 The easiest way to determine the sample coordinate vectors is to take a picture
-of the sample with a camera mounted such that is looks directly down the omega
+of the sample with a camera mounted so that is looks directly down the omega
 axis and the gonio angles set at the sample flat phi and chi values and
 eta = mu = 0. Then find the sample rotation center and measure the position
 of each corner (in mm) with up being the +x direction, and downstream
@@ -135,8 +140,9 @@ being the +y direction.  """,
 
 'sample angles':"""Sample angles used for description of the sample polygon. Use
 the format:
-   angles = {'phi':123.5,'chi':flatchi:0.3,'eta':0.,'mu':0.}
-See 'sample polygon' for more info""",
+   angles = {'phi':123.5,'chi':0.3,'eta':0.,'mu':0.}
+Note that sample polygon must be set before you can enter the angles.
+See 'sample polygon' for more info.""",
 
 'scale':"""Enter scale factor.  The scale factor multiplies by all the intensity
 values. e.g.if Io ~ 1million cps then using 1e6 as the scale makes the normalized
@@ -624,6 +630,12 @@ class wxCtrData(model.Background, wxUtil):
             self.components.ParamDescr.text = t
         elif name == 'bgr row tan':
             t = PARAM_DESCR['bgr row tan']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr nline':
+            t = PARAM_DESCR['bgr nline']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr filter':
+            t = PARAM_DESCR['bgr filter']
             self.components.ParamDescr.text = t
         return
 
