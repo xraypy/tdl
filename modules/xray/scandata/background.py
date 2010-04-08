@@ -128,7 +128,8 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     # of the compression factor
     if compress > 1:
         (y,rem) = compress_array(y,compress)
-        width = int(width/float(compress))
+        width = int(width/compress)
+        if width == 0: width = 1 
 
     # create bgr array
     ndat = len(y)
