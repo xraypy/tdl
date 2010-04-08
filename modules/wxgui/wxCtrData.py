@@ -100,6 +100,9 @@ This option helps to smear out sharp features in the background""",
 
 'bgr filter':"""Flag (True/False) to use a spline filter for 2D background determination""",
 
+'bgr compress':"""Compression factor to apply during background fitting.  This will
+speed up the background determinations and add some smoothing""",
+
 'beam_slits':"""Enter the incident beam slit settings: beam_slits = {'horz':.6,'vert':.8}.
 horz = beam horz width (at the sample) in mm (total width in lab-z / horizontal scattering plane)
 vert = beam vert hieght (at the sample) in mm (total width in lab-x / vertical scattering plane).
@@ -110,7 +113,7 @@ horz = det horz width in mm (total width in lab-z / horizontal scattering plane)
 vert = det vert hieght in mm (total width in lab-x / vertical scattering plane).
 If detector slits are 'None' or {} only a spil-off correction will be computed""",
 
-'geom':"""Enter goniometer geometry.  Options: 'psic'""",
+'geom':"""Enter goniometer geometry.  Options: psic""",
 
 'sample dia':"""Enter the diameter (in mm) of a round sample mounted on center
 of the goniometer.  If this is 'None' then use the sample polygon or
@@ -540,12 +543,20 @@ class wxCtrData(model.Background, wxUtil):
     def process_set(self):
         for point in self.set:
             self.components.PointNum.stringSelection = str(point)
-            print "Process point ", point
             self.update_point(update_gui=False)
         self.components.PointNum.stringSelection = str(self.set[0])
         self.update_gui_from_ctr()
         if self.components.AutoPlotScan.checked == True:
             self._plot_scan()
+
+    def on_AutoPlotIntegration_mouseClick(self,event):
+        if self.components.AutoPlotIntegration.checked == True:
+            self.components.AutoIntegrate.checked = True
+
+    def on_AutoIntegrate_mouseClick(self,event):
+        if self.components.AutoIntegrate.checked == False:
+            if self.components.AutoPlotIntegration.checked == True:
+                self.components.AutoPlotIntegration.checked = False
 
     ###########################################################
     #  Parameters
@@ -636,6 +647,9 @@ class wxCtrData(model.Background, wxUtil):
             self.components.ParamDescr.text = t
         elif name == 'bgr filter':
             t = PARAM_DESCR['bgr filter']
+            self.components.ParamDescr.text = t
+        elif name == 'bgr compress':
+            t = PARAM_DESCR['bgr compress']
             self.components.ParamDescr.text = t
         return
 
@@ -886,6 +900,7 @@ class wxCtrData(model.Background, wxUtil):
             if self.components.AutoPlotCtr.checked==True:
                 self._plot_ctr()
         else:
+            print "Integrate point:", point
             ctr.integrate_point(point)
     
     def init_gui(self):

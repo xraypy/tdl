@@ -748,6 +748,7 @@ def get_params(ctr,point):
         intpar['bgr row tan']    = scan.image.bgrpar[spnt]['rtan']
         intpar['bgr nline']      = scan.image.bgrpar[spnt]['nline']
         intpar['bgr filter']     = scan.image.bgrpar[spnt]['filter']
+        intpar['bgr compress']   = scan.image.bgrpar[spnt]['compress']
     else:
         pass
     #
@@ -856,6 +857,11 @@ def set_params(ctr,point,intpar={},corrpar={}):
                     scan.image.bgrpar[spnt]['filter'] = eval(intpar['bgr filter'])
                 else:
                     scan.image.bgrpar[spnt]['filter'] = intpar['bgr filter']
+            if intpar.get('bgr compress')!=None:
+                if type(intpar['bgr compress']) == types.StringType:
+                    scan.image.bgrpar[spnt]['compress'] = eval(intpar['bgr compress'])
+                else:
+                    scan.image.bgrpar[spnt]['compress'] = intpar['bgr compress']
     #
     if len(corrpar) > 0:
         #ctr.corr_params[point] = {}

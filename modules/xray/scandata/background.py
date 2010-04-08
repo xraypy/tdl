@@ -39,7 +39,8 @@ def linear_background(data,nbgr=0):
     return linbgr
 
 #######################################################################
-def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
+def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
+               compress=1,debug=False):
     """
     Calculate the background for a given line, y.
 
@@ -84,7 +85,10 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
       average local linear slope of the data to the polynomial
       (this effectively removes the local slope of the data while
       adjusting the position of the polynomials)
-    
+
+    * compress is a compression factor for the array.  It should help
+      speed up the fitting and smooth the background
+      
     * debug is a flag (True/False) to indicate if additional debug arrays
       should be calculated
     
@@ -94,10 +98,10 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
         d^2(poly)/dx^2 = 0
     to determine where this function will have the max slope.
     The result is:
-       delx_max_slope = r/sqrt(2*pow-1)
+        delx_max_slope = r/sqrt(2*pow-1)
     If we assume that the 'width' argument corresponds to this
     delx_max_slope, then we can calc r for the polynomial as:
-       r = width*sqrt(2*pow-1)
+        r = width*sqrt(2*pow-1)
     (if pow<=1/2 just use r = width)
 
     """
@@ -114,6 +118,17 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     linbgr = linear_background(data,nbgr=nbgr)
     if width <= 0. or pow == 0.: return linbgr
     y = data - linbgr
+
+    # Compression
+    # note we compress after linear bgr because
+    # (1) linear fit is fast and (2) if we've
+    # removed most of the slope then we limit
+    # end point errors that result from trunction
+    # if the array length is not an integer divisor
+    # of the compression factor
+    if compress > 1:
+        (y,rem) = compress_array(y,compress)
+        width = int(width/float(compress))
 
     # create bgr array
     ndat = len(y)
@@ -132,6 +147,9 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     poly = ((width*pow)/pmax) * poly
     
     # loop through each point
+    # NOTE this loop is the bottleneck
+    # in the backgorund calculations!
+    # We should speed up this loop.  
     #delta = num.zeros(len(poly))
     n = (npoly-1)/2
     for j in range(ndat):
@@ -175,26 +193,35 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
     # underfit.  So having an additional linear part
     # helps to limit the residual. 
     linbgr2 = linear_background(y-bgr,nbgr=nbgr)
+    bgr = bgr + linbgr2
 
-    # add back linbgr
-    bgr = bgr + linbgr + linbgr2
+    # Compression
+    if compress > 1:
+        bgr = expand_array(bgr,compress)
+        if rem > 0:
+            temp = bgr[-1]*num.ones(rem,dtype=bgr.dtype)
+            bgr = num.append(bgr,temp)
+
+    # Add back the original linear background / slope
+    bgr = bgr + linbgr
+    
     if debug:
         return (bgr,p,d,linbgr)
     else:
         return bgr
 
 ############################################################################
-def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
+def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
     """
     make a fancy background plot
     """
     #
     if debug:
         (bgr,p,d,l) = background(data,nbgr=nbgr,width=width,pow=pow,
-                                 tangent=tangent,debug=debug)
+                                 tangent=tangent,compress=compress,debug=debug)
     else:
         bgr = background(data,nbgr=nbgr,width=width,pow=pow,
-                         tangent=tangent,debug=debug)
+                         tangent=tangent,compress=compress,debug=debug)
         
     # plot data and bgr
     pyplot.figure(1)
@@ -235,6 +262,52 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,debug=False):
         #pyplot.plot(xx,d[j],'*-')
         dd = num.min((0,num.min(d[j]))) 
         pyplot.plot(xx,p[j]+dd,'*-')
+
+############################################################
+def compress_array(array, compress):
+    """
+    Compresses an 1-D array by the integer factor "compress".
+
+    Returns:
+    --------
+    * newarray is the compressed array
+    * rem is the number of end points that were not
+      compressed (ie compression has to be by integer divisor).  
+    """
+    compress = int(compress)
+    alen = len(array)
+    nlen = int(len(array)/compress)
+    rem  = alen % compress
+
+    temp = num.resize(array, (nlen, compress))
+    newarray = num.sum(temp, 1)/compress
+    #ra = array[alen-rem:]
+    return (newarray,rem)
+
+############################################################
+def expand_array(array, expand, sample=0, rem=0):
+    """
+    Expands an 1-D array by the integer factor "expand".
+    
+    if 'sample' is 1 the new array is created with sampling,
+    if 0 then the new array is created via interpolation (default)
+    Temporary fix until the equivalent of IDL's 'rebin' is found.
+    """
+
+    alen = len(array)
+    if (expand == 1): return array
+    if (sample == 1): return num.repeat(array, expand)
+
+    kernel = num.ones(expand)/float(expand)
+    # The following mimic the behavior of IDL's rebin when expanding
+    temp = num.convolve(num.repeat(array, expand), kernel, mode=2)
+    # Discard the first "expand-1" entries
+    temp = temp[expand-1:]
+    # Replace the last "expand" entries with the last entry of original
+    for i in range(1,expand): temp[-i]=array[-1]
+    if temp.dtype != array.dtype:
+        temp = num.array(temp,dtype=array.dtype)
+    return temp
     
 ################################################################################
 ################################################################################
@@ -242,7 +315,7 @@ if __name__ == '__main__':
     from matplotlib import pyplot
     from mpcutils.mathutil import gauss
     # generate a curve
-    npts = 35
+    npts = 135
     x = num.array(range(npts))
     g1  = gauss(x, npts/2., 5., 300)
     g2  = gauss(x, npts/2., 30., 100)
@@ -251,5 +324,6 @@ if __name__ == '__main__':
     y = (1.0*r+ 10.*x) + g1 + g2
     # plot bgr
     width=5
-    plot_bgr(y,nbgr=3,width=width,pow=8.,tangent=True,debug=True)
+    plot_bgr(y,nbgr=3,width=width,pow=2.,tangent=False,
+             compress=2,debug=False)
     

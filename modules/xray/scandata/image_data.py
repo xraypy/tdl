@@ -12,10 +12,9 @@ Notes:
 Reads in data for the pilatus detector
 Simple integrations and plotting
 
-
 Todo:
 -----
- - Improve image background determination
+ - Improve /speedup image background determination
 
 """
 #######################################################################
@@ -51,7 +50,7 @@ from background import background
 IMG_BGR_PARAMS = {'bgrflag':1,
                   'cnbgr':5,'cwidth':0,'cpow':2.,'ctan':False,
                   'rnbgr':5,'rwidth':0,'rpow':2.,'rtan':False,
-                  'nline':1,'filter':False}
+                  'nline':1,'filter':False,'compress':1}
 
 #######################################################################
 def read(file):
@@ -104,7 +103,18 @@ def read_files(file_prefix,start=0,end=100,nfmt=3):
 ############################################################################
 def clip_image(image,roi=[],rotangle=0.0,cp=False):
     """
-    roi = [c1,r1,c2,r2]
+    Clip an image given the roi
+
+    Parameters:
+    -----------
+    * roi is a list [c1,r1,c2,r2] = [x1,y1,x2,y2]
+      Note take x as the horizontal image axis index (col index), 
+      and y as vertical axis index (row index).
+      Therefore, in image indexing:
+         image[y1:y2,x1:x2] ==> rows y1 to y2 and cols x1 to x2
+    * rotangle
+    * cp
+    
     """
     if len(roi) != 4:
         roi = [0,0,image.shape[1], image.shape[0]]
@@ -137,13 +147,37 @@ def _sort_roi(roi):
         r2 = roi[1]
     return [c1,r1,c2,r2]
     
-def calc_roi(dx=100,dy=100,im_shape=(200,200),cen=None):
+def calc_roi(dx=100,dy=100,shape=(195,487),cen=None):
     """
     Calculate an roi given a width, hieght and center
-    
-    roi = [c1,r1,c2,r2]
+
+    Parameters:
+    -----------
+    * dx is the roi width (number of columns) in pixels
+    * dy is the roi height (number of rows) in pixels
+    * shape is the image shape (nrows,ncols)
+    * cen is the tuple (r,c) for the central pixel.  If None
+      then cen is calculated from the shape
+
+    Returns:
+    --------
+    * [c1,r1,c2,r2] = [x1,y1,x2,y2] where c1/2,r1/2 are the
+      column (x) and row (y) values defining the roi box.  
+      Therefore the image can be indexed as: image[y1:y2,x1:x2]
+
+    Examples:
+    ---------
+    >> r = calc_roi(dx=20,dy=50,shape=a.shape)
+
     """
-    pass
+    if cen == None:
+        cen = (int(shape[0]/2),int(shape[1]/2))
+    c1 = int(cen[1] - int(dx/2))
+    c2 = int(cen[1] + int(dx/2))
+    r1 = int(cen[0] - int(dy/2))
+    r2 = int(cen[0] + int(dy/2))
+    roi = _sort_roi([c1,r1,c2,r2])
+    return roi
 
 ############################################################################
 def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
@@ -239,7 +273,7 @@ def sum_plot(image,bgrflag=0,
     pyplot.plot(data_idx, bgr, 'b')
 
 ############################################################################
-def line_sum(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
+def line_sum(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False,compress=1):
     """
     Sum down 'c'olumns or across 'r'ows
     
@@ -254,12 +288,14 @@ def line_sum(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
     #data_err  = data**(0.5)
 
     ### compute background
-    bgr = background(data,nbgr=nbgr,width=width,pow=pow,tangent=tangent)
+    bgr = background(data,nbgr=nbgr,width=width,pow=pow,tangent=tangent,
+                     compress=compress)
     
     return (data, data_idx, bgr)
 
 ############################################################################
-def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
+def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
+                      tangent=False,compress=1):
     """
     Calc the integral after image is summed down 'c'olumns
     or across 'r'ows.
@@ -274,7 +310,7 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
     """
     # get line sum
     (data, data_idx, bgr) = line_sum(image,sumflag=sumflag,nbgr=nbgr,width=width,
-                                     pow=pow,tangent=tangent)
+                                     pow=pow,tangent=tangent,compress=compress)
     ### integrate
     #Itot = data.sum()
     #Ibgr = bgr.sum()
@@ -295,8 +331,8 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,tangent=False):
     return(I,Ierr,Ibgr)
 
 ##############################################################################
-def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
-              tangent=False,nline=1,filter=False,plot=False):
+def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,tangent=False,
+              nline=1,filter=False,compress=1,plot=False):
     """
     Calculate a 2D background for the image.
 
@@ -323,6 +359,9 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
 
     * filter (True/False) flag indicates if a spline filter should be applied
       before background subtraction.  (see scipy.ndimage.filters)
+
+    * compress is a factor by which the number of points in each line is
+      reduced.  This helps speed up the background fits.  
      
     * plot is a flag to indicate if a 'plot' should be made
     """
@@ -332,8 +371,8 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
     # too much intensity.  Use with caution!
     if filter == True:
         #image = ndimage.laplace(image)
-        print 'spline filter'
-        image = ndimage.interpolation.spline_filter(image)
+        #print 'spline filter'
+        image = ndimage.interpolation.spline_filter(image,order=3)
 
     # fit to rows
     if lineflag=='r':
@@ -348,14 +387,13 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
                     line = line + image[k]
                 line = line/float(len(idx))
                 bgr_arr[j,:] = background(line,nbgr=nbgr,width=width,pow=pow,
-                                          tangent=tangent)
+                                          tangent=tangent,compress=compress)
         else:
             for j in range(image.shape[0]):
                 bgr_arr[j,:] = background(image[j],nbgr=nbgr,width=width,pow=pow,
-                                          tangent=tangent)
+                                          tangent=tangent,compress=compress)
 
     # fit to cols
-    #if lineflag=='c':
     if lineflag=='c':
         if nline > 1:
             ll = int(nline/2.)
@@ -368,12 +406,11 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,
                     line = line + image[:,k]
                 line = line/float(len(idx))
                 bgr_arr[:,j] = background(line,nbgr=nbgr,width=width,pow=pow,
-                                          tangent=tangent)
+                                          tangent=tangent,compress=compress)
         else:
             for j in range(image.shape[1]):
                 bgr_arr[:,j] = background(image[:,j],nbgr=nbgr,width=width,pow=pow,
-                                          tangent=tangent)
-            
+                                          tangent=tangent,compress=compress)
     #show
     if plot:
         pyplot.figure(3)
@@ -401,7 +438,7 @@ class ImageAna:
                  bgrflag=1,
                  cnbgr=5,cwidth=0,cpow=2.,ctan=False,
                  rnbgr=5,rwidth=0,rpow=2.,rtan=False,
-                 nline=1,filter=False,
+                 nline=1,filter=False,compress=1,
                  plot=True,fig=None,figtitle=''):
         """
         Analyze images
@@ -444,6 +481,9 @@ class ImageAna:
     
         * filter (True/False) flag indicates if a spline filter should be applied
           before background subtraction.  (see scipy.ndimage.filters)
+
+        * compress is a factor by which the number of points in each line is
+          reduced.  This helps speed up the background fits.  
         
         * plot = show fancy plot 
 
@@ -488,6 +528,7 @@ class ImageAna:
         self.rbgr = {'nbgr':rnbgr,'width':rwidth,'pow':rpow,'tan':rtan}
         self.nline  = nline
         self.filter = filter
+        self.compress = compress
         self.plotflag = plot
         
         self.integrate()
@@ -524,24 +565,26 @@ class ImageAna:
                 self.bgrimg = image_bgr(self.clpimg,lineflag='c',nbgr=self.cbgr['nbgr'],
                                         width=self.cbgr['width'],pow=self.cbgr['pow'],
                                         tangent=self.cbgr['tan'],nline=self.nline,
-                                        filter=self.filter,plot=False)
+                                        filter=self.filter,compress=self.compress,
+                                        plot=False)
             elif self.bgrflag == 2:
                 self.bgrimg = image_bgr(self.clpimg,lineflag='r',nbgr=self.rbgr['nbgr'],
                                         width=self.rbgr['width'],pow=self.rbgr['pow'],
                                         tangent=self.rbgr['tan'],nline=self.nline,
-                                        filter=self.filter,plot=False)
+                                        filter=self.filter,compress=self.compress,
+                                        plot=False)
             else:
                 bgr_r = image_bgr(self.clpimg,lineflag='c',nbgr=self.cbgr['nbgr'],
                                   width=self.cbgr['width'],pow=self.cbgr['pow'],
                                   tangent=self.cbgr['tan'],nline=self.nline,
-                                  filter=self.filter,plot=False)
+                                  filter=self.filter,compress=self.compress,plot=False)
                 bgr_c = image_bgr(self.clpimg,lineflag='r',nbgr=self.rbgr['nbgr'],
                                   width=self.rbgr['width'],pow=self.rbgr['pow'],
                                   tangent=self.rbgr['tan'],nline=self.nline,
-                                  filter=self.filter,plot=False)
+                                  filter=self.filter,compress=self.compress,plot=False)
                 # combine the two bgrs by taking avg
                 self.bgrimg = (bgr_r + bgr_c)/2.
-                
+                    
             # correct for 2D bgr
             self.Ibgr = num.sum(num.trapz(self.bgrimg))
             self.I    = self.I - self.Ibgr
@@ -557,7 +600,8 @@ class ImageAna:
                                               nbgr=self.rbgr['nbgr'],
                                               width=self.rbgr['width'],
                                               pow=self.rbgr['pow'],
-                                              tangent=self.rbgr['tan'])
+                                              tangent=self.rbgr['tan'],
+                                              compress=self.compress)
         self.I_c      = I
         self.Ierr_c   = Ierr
         self.Ibgr_c   = Ibgr
@@ -570,10 +614,13 @@ class ImageAna:
                                               nbgr=self.cbgr['nbgr'],
                                               width=self.cbgr['width'],
                                               pow=self.cbgr['pow'],
-                                              tangent=self.cbgr['tan'])
+                                              tangent=self.cbgr['tan'],
+                                              compress=self.compress)
         self.I_r      = I
         self.Ierr_r   = Ierr
         self.Ibgr_r   = Ibgr
+        #
+        self.integrated = True
 
     ############################################################################
     def plot(self,fig=None):
