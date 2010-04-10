@@ -937,6 +937,7 @@ def sample_vectors(sample,angles={},gonio=None):
     being the +y direction.  
 
     """
+    if sample == None: return None
     if len(sample) < 3:
         print "Sample polygon must be 3 or more points"
         return None

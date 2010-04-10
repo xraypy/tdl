@@ -757,6 +757,7 @@ def get_params(ctr,point):
     corrpar['geom'] = ctr.corr_params[point].get('geom')
     corrpar['scale'] = ctr.corr_params[point].get('scale')
     sample  = ctr.corr_params[point].get('sample')
+    print 'get', sample
     if sample == None:
         corrpar['sample dia']     = None
         corrpar['sample polygon'] = None
@@ -864,6 +865,7 @@ def set_params(ctr,point,intpar={},corrpar={}):
                     scan.image.bgrpar[spnt]['compress'] = intpar['bgr compress']
     #
     if len(corrpar) > 0:
+        print 'set', corrpar
         #ctr.corr_params[point] = {}
         if corrpar.get('beam_slits')!=None:
             if type(corrpar['beam_slits']) == types.StringType:
@@ -883,36 +885,38 @@ def set_params(ctr,point,intpar={},corrpar={}):
             else:
                 ctr.corr_params[point]['scale'] = corrpar['scale']
         #
-        if corrpar.get('sample dia')!=None:
-            if type(corrpar['sample dia']) == types.StringType:
-                sdia = eval(corrpar['sample dia'])
-            else:
-                sdia = corrpar['sample dia']
+        sdia   = _getpar(corrpar.get('sample dia'))
+        if type(ctr.corr_params[point]['sample']) == types.FloatType:
+            sdia = ctr.corr_params[point]['sample']
+        else:
+            sdia = None
+        spoly  = _getpar(corrpar.get('sample polygon'))
+        if spoly == None:
+            try:
+                spoly = ctr.corr_params[point]['sample']['polygon']
+            except:
+                spoly = None
+        sangle = _getpar(corrpar.get('sample angles'))
+        if sangle == None and spoly!=None:
+            try:
+                sangle = ctr.corr_params[point]['sample']['angles']
+            except:
+                sangle = {'phi':0.0,'chi':0.0}
+        #
+        ctr.corr_params[point]['sample'] = None
+        if sdia != None:
             ctr.corr_params[point]['sample'] = sdia
-        elif corrpar.get('sample polygon')!=None or corrpar.get('sample angles')!=None:
-            if corrpar.get('sample polygon')!=None:
-                if type(corrpar['sample polygon']) == types.StringType:
-                    spoly = eval(corrpar['sample polygon'])
-                else:
-                    spoly = corrpar['sample polygon']
-            else:
-                try:
-                    spoly = ctr.corr_params[point]['sample']['polygon']
-                except:
-                    spoly = None
-            if corrpar.get('sample angles')!=None:
-                if type(corrpar['sample angles']) == types.StringType:
-                    sangles = eval(corrpar['sample angles'])
-                else:
-                    sangles = corrpar['sample angles']
-            else:
-                try:
-                    sangles = ctr.corr_params[point]['sample']['angles']
-                except:
-                    sangles = None
+        if spoly!=None:
             ctr.corr_params[point]['sample'] = {}
             ctr.corr_params[point]['sample']['polygon'] = spoly
-            ctr.corr_params[point]['sample']['angles'] = sangles
+            ctr.corr_params[point]['sample']['angles'] = sangle
+
+def _getpar(x):
+    if x == None: return None
+    if type(x) == types.StringType:
+        x = eval(x)
+    return x
+
     
 ##############################################################################
 def _update_psic_angles(gonio,scan,point):
