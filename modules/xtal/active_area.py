@@ -53,7 +53,8 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
     If det = None then we ignore it and just compute spill-off correction
 
     If sample is a single number we take it as the diamter of a round sample
-    mounted flat.
+    mounted flat. Otherwise sample hould be a list of lab frame vectors that 
+    describes the sample polygon.
 
     If sample == None, then we assume the sample is infinite in size    
     
@@ -153,6 +154,8 @@ def _area_round(beam_poly,det_poly,diameter=None,plot=False,fig=None):
         inner_poly = inner_polygon(beam_poly,det_poly)
     else:
         inner_poly = beam_poly
+    if diameter <= 0.:
+        diameter = None
     if diameter == None:
         A_int = poly_area(inner_poly)
     else:

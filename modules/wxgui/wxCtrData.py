@@ -103,21 +103,23 @@ This option helps to smear out sharp features in the background""",
 'bgr compress':"""Compression factor to apply during background fitting.  This will
 speed up the background determinations and add some smoothing""",
 
-'beam_slits':"""Enter the incident beam slit settings: beam_slits = {'horz':.6,'vert':.8}.
-horz = beam horz width (at the sample) in mm (total width in lab-z / horizontal scattering plane)
-vert = beam vert hieght (at the sample) in mm (total width in lab-x / vertical scattering plane).
+'beam_slits':"""Enter the incident beam slit settings: beam_slits = {'horz':.6,'vert':.8}
+horz = beam horz width in mm (total width in lab-z / horz scattering plane)
+vert = beam vert hieght in mm (total width in lab-x / vert scattering plane)
+Note these dimensions should be the values at the sample position (ie measured
+with sample position scans)
 If beam slits are 'None' or {} no area correction will be done""",
 
-'det_slits':"""Enter the detector slit settings: det_slits = {'horz':1.,'vert':1.}.
-horz = det horz width in mm (total width in lab-z / horizontal scattering plane)
-vert = det vert hieght in mm (total width in lab-x / vertical scattering plane).
+'det_slits':"""Enter the detector slit settings: det_slits = {'horz':1.,'vert':1.}
+horz = det horz width in mm (total width in lab-z / horiz scattering plane)
+vert = det vert hieght in mm (total width in lab-x / vert scattering plane)
 If detector slits are 'None' or {} only a spil-off correction will be computed""",
 
 'geom':"""Enter goniometer geometry.  Options: psic""",
 
 'sample dia':"""Enter the diameter (in mm) of a round sample mounted on center
-of the goniometer.  If this is 'None' then use the sample polygon or
-no sample description. """,
+of the goniometer.  If this is 'None' or <= 0 then use the sample polygon for computing
+the sample correction (or no sample description if a polygon is also not specified). """,
 
 'sample polygon':"""A list of vectors that describe a general polygon sample shape, e.g.:    
     polygon =  [[1.,1.], [.5,1.5], [-1.,1.],[-1.,-1.],[0.,.5],[1.,-1.]]
@@ -125,7 +127,7 @@ Each entry is an [x,y] or [x,y,z] vector pointing to an apex of the sample
 polygon. These vectors should be given in general lab frame coordinates
 (x is lab frame vertical, y is positive along the direction of the beam,
 the origin is the rotation center). The vectors need to be specified at a 
-given set of angles (sample angles).
+given set of angles (see 'sample angles').
 
 If the sample vectors are given at the flat phi and chi values and with
 the correct sample hieght (sample Z set so the sample surface is on the
@@ -136,15 +138,14 @@ is the case then make sure:
 
 The easiest way to determine the sample coordinate vectors is to take a picture
 of the sample with a camera mounted so that is looks directly down the omega
-axis and the gonio angles set at the sample flat phi and chi values and
+axis and the gonio angles set at the sample flat phi and chi values with
 eta = mu = 0. Then find the sample rotation center and measure the position
 of each corner (in mm) with up being the +x direction, and downstream
 being the +y direction.  """,
 
-'sample angles':"""Sample angles used for description of the sample polygon. Use
-the format:
+'sample angles':"""Sample angles used for the description of the sample polygon.
+Use the format (note if any angles are left out they are assumed zero):
    angles = {'phi':123.5,'chi':0.3,'eta':0.,'mu':0.}
-Note that sample polygon must be set before you can enter the angles.
 See 'sample polygon' for more info.""",
 
 'scale':"""Enter scale factor.  The scale factor multiplies by all the intensity
@@ -899,6 +900,8 @@ class wxCtrData(model.Background, wxUtil):
             ctr.integrate_point(point,plot=plot,fig=fig)
             if self.components.AutoPlotCtr.checked==True:
                 self._plot_ctr()
+            if self.components.AutoPlotCorr.checked==True:
+                self._plot_corr()
         else:
             print "Integrate point:", point
             ctr.integrate_point(point)

@@ -94,8 +94,12 @@ class CtrData:
                                     {'horz':.6,'vert':.8}
         corr_params['det_slits'] = dictionary describing the beam slits,e.g.
                                     {'horz':.6,'vert':.8}
-        corr_params['sample'] = either dimater of round sample, or dictionary
-                                describing the sample shape.
+        corr_params['sample'] = a dictionary describing the sample shape.
+                                {'dia':0,'angles':{},'polygon':[]}
+                                if dia >=0 then assume a round sample.
+                                Otherwise use polygon/angles
+                                If all are None, then no sample correction is
+                                computed
         corr_params['scale'] = scale factor to multiply by all the intensity
                                values. e.g.  if Io ~ 1million cps
                                then using 1e6 as the scale makes the normalized
@@ -679,7 +683,8 @@ def image_point_F(scan,point,I='I',Inorm='io',Ierr='Ierr',Ibgr='Ibgr',
         scale = 1.0
     else:
         # compute correction factors
-        scale  = corr_params.get('scale',1.0)
+        scale  = corr_params.get('scale')
+        if scale == None: scale = 1.
         scale  = float(scale)
         corr = _get_corr(scan,point,corr_params)
         if corr == None:
@@ -703,8 +708,7 @@ def _get_corr(scan,point,corr_params):
     """
     get CtrCorrection instance
     """
-    geom   = corr_params.get('geom')
-    if geom == None: geom='psic'
+    geom   = corr_params.get('geom','psic')
     beam   = corr_params.get('beam_slits',{})
     det    = corr_params.get('det_slits')
     sample = corr_params.get('sample')
@@ -756,18 +760,18 @@ def get_params(ctr,point):
     corrpar['det_slits'] = ctr.corr_params[point].get('det_slits')
     corrpar['geom'] = ctr.corr_params[point].get('geom')
     corrpar['scale'] = ctr.corr_params[point].get('scale')
+    #
     sample  = ctr.corr_params[point].get('sample')
-    print 'get', sample
     if sample == None:
         corrpar['sample dia']     = None
         corrpar['sample polygon'] = None
         corrpar['sample angles']  = None
     elif type(sample) == types.DictType:
-        corrpar['sample dia']     = None
-        corrpar['sample polygon'] = ctr.corr_params[point]['sample']['polygon']
-        corrpar['sample angles']  = ctr.corr_params[point]['sample']['angles']
+        corrpar['sample dia']     = ctr.corr_params[point]['sample'].get('dia')
+        corrpar['sample polygon'] = ctr.corr_params[point]['sample'].get('polygon')
+        corrpar['sample angles']  = ctr.corr_params[point]['sample'].get('angles')
     else:
-        corrpar['sample dia']     = ctr.corr_params[point]['sample']
+        corrpar['sample dia']     = None
         corrpar['sample polygon'] = None
         corrpar['sample angles']  = None
 
@@ -783,6 +787,12 @@ def set_params(ctr,point,intpar={},corrpar={}):
     """
     (scan,spnt) = ctr.get_scan(point)
     #
+    def _getpar(x):
+        if x == None: return None
+        if type(x) == types.StringType:
+            x = eval(x)
+        return x
+    #
     if len(intpar) > 0:
         if intpar.get('I')!=None:
             ctr.labels['I'][point] = intpar['I']
@@ -794,129 +804,51 @@ def set_params(ctr,point,intpar={},corrpar={}):
             ctr.labels['Ibgr'][point]  = intpar['Ibgr']
         if ctr.scan_type[point] == 'image':
             if intpar.get('image roi')!=None:
-                if type(intpar['image roi']) == types.StringType:
-                    scan.image.rois[spnt] = eval(intpar['image roi'])
-                else:
-                    scan.image.rois[spnt] = intpar['image roi']
+                scan.image.rois[spnt] = _getpar(intpar['image roi'])
             if intpar.get('image rotangle')!=None:
-                if type(intpar['image rotangle']) == types.StringType:
-                    scan.image.rotangle[spnt] = eval(intpar['image rotangle'])
-                else:
-                    scan.image.rotangle[spnt] = intpar['image rotangle']
+                scan.image.rotangle[spnt] = _getpar(intpar['image rotangle'])
             if intpar.get('bgr flag')!=None:
-                if type(intpar['bgr flag']) == types.StringType:
-                    scan.image.bgrpar[spnt]['bgrflag'] = eval(intpar['bgr flag'])
-                else:
-                    scan.image.bgrpar[spnt]['bgrflag'] = intpar['bgr flag']
+                scan.image.bgrpar[spnt]['bgrflag'] = _getpar(intpar['bgr flag'])
             if intpar.get('bgr col nbgr')!=None:
-                if type(intpar['bgr col nbgr']) == types.StringType:
-                    scan.image.bgrpar[spnt]['cnbgr'] = eval(intpar['bgr col nbgr'])
-                else:
-                    scan.image.bgrpar[spnt]['cnbgr'] = intpar['bgr col nbgr']
+                scan.image.bgrpar[spnt]['cnbgr'] = _getpar(intpar['bgr col nbgr'])
             if intpar.get('bgr col width')!=None:
-                if type(intpar['bgr col width']) == types.StringType:
-                    scan.image.bgrpar[spnt]['cwidth'] = eval(intpar['bgr col width'])
-                else:
-                    scan.image.bgrpar[spnt]['cwidth'] = intpar['bgr col width']
+                scan.image.bgrpar[spnt]['cwidth'] = _getpar(intpar['bgr col width'])
             if intpar.get('bgr col power')!=None:
-                if type(intpar['bgr col power']) == types.StringType:
-                    scan.image.bgrpar[spnt]['cpow'] = eval(intpar['bgr col power'])
-                else:
-                    scan.image.bgrpar[spnt]['cpow'] = intpar['bgr col power']
+                scan.image.bgrpar[spnt]['cpow'] = _getpar(intpar['bgr col power'])
             if intpar.get('bgr col tan')!=None:
-                if type(intpar['bgr col tan']) == types.StringType:
-                    scan.image.bgrpar[spnt]['ctan'] = eval(intpar['bgr col tan'])
-                else:
-                    scan.image.bgrpar[spnt]['ctan'] = intpar['bgr col tan']
+                scan.image.bgrpar[spnt]['ctan'] = _getpar(intpar['bgr col tan'])
             if intpar.get('bgr row nbgr')!=None:
-                if type(intpar['bgr row nbgr']) == types.StringType:
-                    scan.image.bgrpar[spnt]['rnbgr'] = eval(intpar['bgr row nbgr'])
-                else:
-                    scan.image.bgrpar[spnt]['rnbgr'] = intpar['bgr row nbgr']
+                scan.image.bgrpar[spnt]['rnbgr'] = _getpar(intpar['bgr row nbgr'])
             if intpar.get('bgr row width')!=None:
-                if type(intpar['bgr row width']) == types.StringType:
-                    scan.image.bgrpar[spnt]['rwidth'] = eval(intpar['bgr row width'])
-                else:
-                    scan.image.bgrpar[spnt]['rwidth'] = intpar['bgr row width']
+                scan.image.bgrpar[spnt]['rwidth'] = _getpar(intpar['bgr row width'])
             if intpar.get('bgr row power')!=None:
-                if type(intpar['bgr row power']) == types.StringType:
-                    scan.image.bgrpar[spnt]['rpow'] = eval(intpar['bgr row power'])
-                else:
-                    scan.image.bgrpar[spnt]['rpow'] = intpar['bgr row power']
+                scan.image.bgrpar[spnt]['rpow'] = _getpar(intpar['bgr row power'])
             if intpar.get('bgr row tan')!=None:
-                if type(intpar['bgr row tan']) == types.StringType:
-                    scan.image.bgrpar[spnt]['rtan'] = eval(intpar['bgr row tan'])
-                else:
-                    scan.image.bgrpar[spnt]['rtan'] = intpar['bgr row tan']
+                scan.image.bgrpar[spnt]['rtan'] = _getpar(intpar['bgr row tan'])
             if intpar.get('bgr nline')!=None:
-                if type(intpar['bgr nline']) == types.StringType:
-                    scan.image.bgrpar[spnt]['nline'] = eval(intpar['bgr nline'])
-                else:
-                    scan.image.bgrpar[spnt]['nline'] = intpar['bgr nline']
+                scan.image.bgrpar[spnt]['nline'] = _getpar(intpar['bgr nline'])
             if intpar.get('bgr filter')!=None:
-                if type(intpar['bgr filter']) == types.StringType:
-                    scan.image.bgrpar[spnt]['filter'] = eval(intpar['bgr filter'])
-                else:
-                    scan.image.bgrpar[spnt]['filter'] = intpar['bgr filter']
+                scan.image.bgrpar[spnt]['filter'] = _getpar(intpar['bgr filter'])
             if intpar.get('bgr compress')!=None:
-                if type(intpar['bgr compress']) == types.StringType:
-                    scan.image.bgrpar[spnt]['compress'] = eval(intpar['bgr compress'])
-                else:
-                    scan.image.bgrpar[spnt]['compress'] = intpar['bgr compress']
-    #
+                scan.image.bgrpar[spnt]['compress'] = _getpar(intpar['bgr compress'])
     if len(corrpar) > 0:
-        print 'set', corrpar
-        #ctr.corr_params[point] = {}
         if corrpar.get('beam_slits')!=None:
-            if type(corrpar['beam_slits']) == types.StringType:
-                ctr.corr_params[point]['beam_slits'] = eval(corrpar['beam_slits'])
-            else:
-                ctr.corr_params[point]['beam_slits'] = corrpar['beam_slits']
+            ctr.corr_params[point]['beam_slits'] = _getpar(corrpar['beam_slits'])
         if corrpar.get('det_slits')!=None:
-            if type(corrpar['det_slits']) == types.StringType:
-                ctr.corr_params[point]['det_slits'] = eval(corrpar['det_slits'])
-            else:
-                ctr.corr_params[point]['det_slits'] = corrpar['det_slits']
+            ctr.corr_params[point]['det_slits'] = _getpar(corrpar['det_slits'])
         if corrpar.get('geom')!=None:
             ctr.corr_params[point]['geom'] = corrpar['geom']
         if corrpar.get('scale')!=None:
-            if type(corrpar['scale']) == types.StringType:
-                ctr.corr_params[point]['scale'] = eval(corrpar['scale'])
-            else:
-                ctr.corr_params[point]['scale'] = corrpar['scale']
+            ctr.corr_params[point]['scale'] = _getpar(corrpar['scale'])
         #
-        sdia   = _getpar(corrpar.get('sample dia'))
-        if type(ctr.corr_params[point]['sample']) == types.FloatType:
-            sdia = ctr.corr_params[point]['sample']
-        else:
-            sdia = None
-        spoly  = _getpar(corrpar.get('sample polygon'))
-        if spoly == None:
-            try:
-                spoly = ctr.corr_params[point]['sample']['polygon']
-            except:
-                spoly = None
-        sangle = _getpar(corrpar.get('sample angles'))
-        if sangle == None and spoly!=None:
-            try:
-                sangle = ctr.corr_params[point]['sample']['angles']
-            except:
-                sangle = {'phi':0.0,'chi':0.0}
-        #
-        ctr.corr_params[point]['sample'] = None
-        if sdia != None:
-            ctr.corr_params[point]['sample'] = sdia
-        if spoly!=None:
-            ctr.corr_params[point]['sample'] = {}
-            ctr.corr_params[point]['sample']['polygon'] = spoly
-            ctr.corr_params[point]['sample']['angles'] = sangle
-
-def _getpar(x):
-    if x == None: return None
-    if type(x) == types.StringType:
-        x = eval(x)
-    return x
-
+        if ctr.corr_params[point].get('sample')==None:
+            ctr.corr_params[point]['sample']={}
+        if corrpar.get('sample dia')!=None:
+            ctr.corr_params[point]['sample']['dia'] = _getpar(corrpar.get('sample dia'))
+        if corrpar.get('sample polygon')!=None:
+            ctr.corr_params[point]['sample']['polygon'] = _getpar(corrpar.get('sample polygon'))
+        if corrpar.get('sample angles')!=None:
+            ctr.corr_params[point]['sample']['angles'] = _getpar(corrpar.get('sample angles'))
     
 ##############################################################################
 def _update_psic_angles(gonio,scan,point):
@@ -993,11 +925,10 @@ class CtrCorrectionPsic:
               or the vertical scattering plane)
 
     A sample description is needed.
-    If sample = a number then is is taken as the diameter
-    of a round sample mounted on center.
-
-    Otherwise is may describe a general sample shape:    
       sample = {}
+        sample['dia'] = is taken as the diameter of a round sample
+                        mounted on center. if dia<=0 then we either use
+                        the polygon description or ignore the sample.
         sample['polygon'] = [[1.,1.], [.5,1.5], [-1.,1.],
                              [-1.,-1.],[0.,.5],[1.,-1.]]
         sample['angles']  = {'phi':108.0007,'chi':0.4831}
@@ -1011,7 +942,7 @@ class CtrCorrectionPsic:
              are the instrument angles at which the sample
              vectors were determined.
 
-      The lab frame coordinate systems is defined such that:
+      Note: the lab frame coordinate systems is defined such that:
         x is vertical (perpendicular, pointing to the ceiling of the hutch)
         y is directed along the incident beam path
         z make the system right handed and lies in the horizontal scattering plane
@@ -1036,7 +967,7 @@ class CtrCorrectionPsic:
     Note need to add attenuation parameters.  
     
     """
-    def __init__(self,gonio=None,beam_slits={},det_slits=None,sample=None):
+    def __init__(self,gonio=None,beam_slits={},det_slits=None,sample={}):
         self.gonio      = gonio
         if self.gonio.calc_psuedo == False:
             self.gonio.calc_psuedo = True
@@ -1186,11 +1117,18 @@ class CtrCorrectionPsic:
                                           delta=self.gonio.angles['delta'])
         # get sample poly
         if type(self.sample) == types.DictType:
-            sample_vecs = self.sample['polygon']
-            sample_angles = self.sample['angles']
-            sample = gonio_psic.sample_vectors(sample_vecs,
-                                               angles=sample_angles,
-                                               gonio=self.gonio)
+            sample_dia    = self.sample.get('dia',0.)
+            sample_vecs   = self.sample.get('polygon',None)
+            sample_angles = self.sample.get('angles',{})
+            #
+            if sample_vecs != None and sample_dia <= 0.:
+                sample = gonio_psic.sample_vectors(sample_vecs,
+                                                   angles=sample_angles,
+                                                   gonio=self.gonio)
+            elif sample_dia > 0.:
+                sample = sample_dia
+            else:
+                sample = None
         else:
             sample = self.sample
 

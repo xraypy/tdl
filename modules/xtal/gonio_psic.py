@@ -953,7 +953,7 @@ def sample_vectors(sample,angles={},gonio=None):
         Z = calc_Z(**angles)
         Zinv = num.linalg.inv(Z)
         polygon_phi = []
-        # If p's have anly two components then we assume they are 
+        # If p's have only two components then we assume they are 
         # xy pairs therefore we can add a third value of zero for z
         for p in sample:
             if len(p) == 2: p = [p[0],p[1],0.]
@@ -968,6 +968,9 @@ def sample_vectors(sample,angles={},gonio=None):
     polygon = []
     if gonio != None:
         for p in polygon_phi:
+            # If p's have only two components then we assume they are 
+            # xy pairs therefore we can add a third value of zero for z
+            if len(p) == 2: p = [p[0],p[1],0.]
             p_m = num.dot(gonio.Z,p)
             polygon.append(p_m)
     else:
