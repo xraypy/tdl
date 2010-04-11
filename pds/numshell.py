@@ -241,8 +241,11 @@ class _NumShell:
         \r'h' = help
         \r'p' = pop last entry from buffer
         \r'q' = exit
+        \r'r' = take product of all values in buffer
         \r's' = show buffer
+        \r't' = total all values in buffer
         \r'u' = useage examples
+        \r'v' = verbose listing of buffer values (default on)
         \r'w' = swap last two entries in buffer
         """
         use = """
@@ -358,6 +361,7 @@ class _NumShell:
         ################
         debug      = False
         do_float   = True
+        do_verbose = True
         calc_types = [types.BooleanType, types.ComplexType,
                       types.FloatType, types.IntType,
                       types.LongType]
@@ -387,6 +391,9 @@ class _NumShell:
                 elif line in ('f','float'):
                     do_float = not do_float
                     print "Do float = ", do_float
+                elif line in ('v','verbose'):
+                    do_verbose = not do_verbose
+                    print "Verbose = ", do_verbose
                 elif line in ('c','clear'):
                     ex('__calc__.buff = []')
                 elif line in ('s','show'):
@@ -401,6 +408,22 @@ class _NumShell:
                 elif line in ('p','pop'):
                     if buff_len() > 0:
                         ex('print __calc__.buff.pop()')
+                elif line in ('t','total'):
+                    total = 0.0
+                    buff = self.interp.get_data('__calc__.buff')
+                    for v in buff:
+                        total = total + v
+                    self.interp.set_data('__calc__.buff',[total])
+                    self.interp.set_data('__calc__.val',0.0)
+                    print "  = " ,  total
+                elif line in ('r','product'):
+                    total = 1.0
+                    buff = self.interp.get_data('__calc__.buff')
+                    for v in buff:
+                        total = total * v
+                    self.interp.set_data('__calc__.buff',[total])
+                    self.interp.set_data('__calc__.val',0.0)
+                    print "  = " ,  total
                 else:
                     # finally execute line
                     line = get_line(line)
@@ -408,18 +431,24 @@ class _NumShell:
                     if line:
                         if debug: print_err = True
                         else: print_err = False
-                        val = ev(line,print_err=print_err)
-                        if type(val) in calc_types:
-                            if do_float:
-                                try:
-                                    val = float(val)
-                                except:
-                                    pass
-                            print "  = " ,  val
-                            self.interp.set_data('__calc__.val',val)
-                            ex('__calc__.buff.append(__calc__.val)')
-                        else:
-                            print "Error in type returned to calc: %s" % type(val)
+                        try:
+                            val = ev(line,print_err=print_err)
+                            if type(val) in calc_types:
+                                if do_float:
+                                    try: val = float(val)
+                                    except: pass
+                                self.interp.set_data('__calc__.val',val)
+                                ex('__calc__.buff.append(__calc__.val)')
+                                if do_verbose:
+                                    buff = self.interp.get_data('__calc__.buff')
+                                    for v in buff: print v
+                                else:
+                                    print "  = " ,  val
+                            else:
+                                print "Error in type returned to calc: %s" % type(val)
+                        except:
+                            print "Error evaluating: %s" % line
+                            self.interp.set_data('__calc__.val',0.0)
                     else:
                         val = None
                         self.interp.set_data('__calc__.val',0.0)
