@@ -771,7 +771,10 @@ def get_params(ctr,point):
         corrpar['sample polygon'] = ctr.corr_params[point]['sample'].get('polygon')
         corrpar['sample angles']  = ctr.corr_params[point]['sample'].get('angles')
     else:
-        corrpar['sample dia']     = None
+        try:
+            corrpar['sample dia'] = float(sample)
+        except:
+            corrpar['sample dia'] = None
         corrpar['sample polygon'] = None
         corrpar['sample angles']  = None
 
@@ -841,8 +844,16 @@ def set_params(ctr,point,intpar={},corrpar={}):
         if corrpar.get('scale')!=None:
             ctr.corr_params[point]['scale'] = _getpar(corrpar['scale'])
         #
-        if ctr.corr_params[point].get('sample')==None:
+        sample = ctr.corr_params[point].get('sample') 
+        if sample ==None:
             ctr.corr_params[point]['sample']={}
+        elif type(sample) != types.DictType:
+            ctr.corr_params[point]['sample']={}
+            try:
+                ctr.corr_params[point]['sample']['dia'] = float(sample)
+            except:
+                print 'Cant convert original sample descr.'
+        #
         if corrpar.get('sample dia')!=None:
             ctr.corr_params[point]['sample']['dia'] = _getpar(corrpar.get('sample dia'))
         if corrpar.get('sample polygon')!=None:

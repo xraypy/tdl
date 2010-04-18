@@ -1,15 +1,13 @@
-#######################################################################
 """
+Scan Data
+
+Authors/Modifications:
+----------------------
 Tom Trainor (tptrainor@alaska.edu)
+
+Notes:
+------
 Class to store and operate on generic 'scan data'
-
-Modifications:
---------------
-
-"""
-#######################################################################
-"""
-Notes
 
 """
 #######################################################################
@@ -21,6 +19,7 @@ import numpy as num
 import image_data
 import med_data
 import xrf_data
+import save_data
 
 #######################################################################
 class ScanData:
@@ -341,7 +340,8 @@ def _sort_data(data):
 ########################################################################
 def merge(data=[],average=True,align=False,fast=True):
     """
-    Merge  a list of ScanData instances
+    Merge a list of ScanData instances
+
     This works for one dimensional data
     
     """

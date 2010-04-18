@@ -2,7 +2,7 @@
 from reader       import Reader
 from data         import ScanData 
 from ctr_data     import CtrData
-from rasd         import RASDData
+from rasd         import RasdData
 #
 from image_menu   import image_menu
 from med_menu     import med_menu

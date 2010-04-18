@@ -1,10 +1,14 @@
-############################################################################
 """
-Function for extracting RASD data from spec "raxr" scans (probably specific for APS 13ID-C)
+Function for extracting RASD data from spec "raxr" scans
+
+Authors/Modifications:
+----------------------
 Frank Heberling (Frank.Heberling@kit.edu)
 
 Notes:
---------------
+------
+Currently probably specific for APS 13ID-C
+
 To use the function you may type in these 4 variables with the values you need:
 
     spec_path = 'D:/Data/Surf_Diff/Aps_Data_ID' (path to your spec file)
@@ -32,15 +36,16 @@ A.G (state['G'] matrix from first hklscan)
 A.corr (array of values: corr = Ci/(Cp * I0))
 A.F, A.Ferr (arrays with structure factors / uncertainty of structure factors, respectively)
 
-
 Todo:
---------------
+-----
 - make RASDData use the more sophisticated correction functions from CtrData
 - include active area correction
-(- include normalization, amplitude, and phase fitting)
+- include normalization, amplitude, and phase fitting
 - Test
+
 """
 #############################################################################
+
 import types
 import pylab
 import numpy as Num
@@ -48,6 +53,7 @@ from   reader import Reader
 from   data import ScanData
 import image_data
 from image_menu import image_menu
+
 #############################################################################
 def rasd(spec_path,spec,first_scan,last_scan):
     """
@@ -79,8 +85,9 @@ def rasd(spec_path,spec,first_scan,last_scan):
     filename = 'rasd'+str(int(Z.H))+str(int(Z.K))+'_'+str(Z.L)+'.rsd'
     Z.write_rsd(filename)
     return Z
+
 #############################################################################
-class RASDData:
+class RasdData:
     def __init__(self,scans=[]):
         #
         self.H    = 0
@@ -109,7 +116,8 @@ class RASDData:
         self.corr  = Num.array([],float)
         self.F     = Num.array([],float)
         self.Ferr  = Num.array([],float)
-##############################################################################
+
+    ##############################################################################
     def append_rasd(self, scans):
         self.H    = scans[0].scalers['H'][0]
         self.K    = scans[0].scalers['K'][0]
@@ -129,7 +137,8 @@ class RASDData:
             self.positioners['nu']   = Num.append(self.positioners['nu'],scan.positioners['nu'][0])
             self.positioners['eta']  = Num.append(self.positioners['eta'],scan.positioners['eta'][0])
             self.positioners['del']  = Num.append(self.positioners['del'],scan.positioners['del'][0])            
-##############################################################################            
+
+    ##############################################################################            
     def plot(self):
         """
         plot the rasd-wiggle
@@ -143,7 +152,8 @@ class RASDData:
         pylab.xlabel('Energy (eV)')
         pylab.ylabel('F (arb. units)')
         pylab.show()
-##########################################################################
+
+    ##########################################################################
     def write_rsd(self,fname = 'rasd.rsd'):
         """
         write data file
@@ -158,7 +168,8 @@ class RASDData:
                                                            self.Ferr[i])
                 f.write(line)
         f.close()
-###########################################################################       
+
+    ###########################################################################       
     def calc_correction(self, data):
         """
         correction factors for pilatus

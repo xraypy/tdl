@@ -70,6 +70,11 @@ def spec_scan(spec,sc_num):
     # this is APS sector 13 specific, and may change...
     # We need a switch here based on the identification
     # of the beamline and instrument...
+    # note we may never use this for anything, so probably best to just
+    # get rid of it.... or better just list array of numbers
+    # (no labels etc.).  These are beamline/geo specific but can be
+    # parsed based on whatever geo label is attached to the scan data
+    """
     A = {}
     try:
         A['delta'] = d['P'].get('TwoTheta')
@@ -83,6 +88,27 @@ def spec_scan(spec,sc_num):
         A['kphi']  = d['P'].get('Phi')
     except:
         pass
+    """
+    A = []
+    """
+    try:
+        A = num.zeros(9,dtype=[ ('vals','float'), ('names','a10') ])
+        tmp1 = []
+        tmp1.append(d['P'].get('TwoTheta'))
+        tmp1.append(d['P'].get('theta'))
+        tmp1.append(d['P'].get('chi'))
+        tmp1.append(d['P'].get('phi'))
+        tmp1.append(d['P'].get('Nu'))
+        tmp1.append(d['P'].get('Psi'))
+        tmp1.append(d['P'].get('Omega'))
+        tmp1.append(d['P'].get('Kappa'))
+        tmp1.append(d['P'].get('Phi'))
+        tmp2 = ['TwoTheta','theta','chi','phi','Nu','Psi','Omega','Kappa','Phi']
+        A['vals'] = num.array(tmp1)
+        A['names'] = tmp2
+    except:
+        pass
+    """
     state = {'G':d.get('G'),'Q':d.get('Q'),'A':A,
              'ATTEN':d.get('ATTEN'), 'ENERGY':d.get('ENERGY')}
 

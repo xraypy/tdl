@@ -1,17 +1,13 @@
-#######################################################################
 """
-Matt Newville
-Tom Trainor (tptrainor@alaska.edu)
 Class to handle spec files
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+Matt Newville (newville@cars.uchicago.edu)
+Tom Trainor (tptrainor@alaska.edu)
 
 
-"""
-#######################################################################
-"""
-Notes on the spec format
+Notes on the spec format:
 -------------------------
 
 An example scan would look like the following:
