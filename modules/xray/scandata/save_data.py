@@ -11,9 +11,9 @@ Notes:
 Structure hdf files as follows:
 root/scan
 root/image
-root/ctr
 root/med
 root/xrf
+root/ctr
 etc
 
 Examples:
@@ -70,6 +70,20 @@ def list_file(fname,path=None,display=True):
     return ll
 
 ################################################################################
+def calc_next_setname(names):
+    if len(names) == 0:
+        return 'S000'
+    idx = []
+    try:
+        for n in names:
+            idx.append(int(n[1:]))
+        m = num.max(idx)
+        s = "S%03d" % (m)
+        return s
+    except:
+        return 'S000'
+
+################################################################################
 def _cleanup():
     tables.file.close_open_files()
 
@@ -78,16 +92,26 @@ def write_scandata(fname,data,setname=None,path=None,overwrite=True):
     """
     Write scan data
     """
-    # get data as a dictionary of arrays.
-    (d,image,med,xrf) = _scan_to_dict(data)
     h = get_file(fname,path)
     if h == None: return
+
+    # Scan data
     #try:
+    d = _scan_data(data)
     _write_scan(h,d,setname,overwrite=overwrite)
-    h.close()
     #except:
     #    _cleanup()
     #    print "Unable to write scandata"
+    
+    # Image data
+    #try:
+    im = _image_data(data)
+    _write_image(h,im,setname,overwrite=overwrite)
+    #except:
+    #    _cleanup()
+    #    print "Unable to write imagedata"
+
+    h.close()
     return
 
 def _write_scan(h,data,setname,overwrite=True):
@@ -143,34 +167,26 @@ def _write_scan(h,data,setname,overwrite=True):
             h.createArray(grp,name,val,name)
         except:
             print "Unable to write state variable: ", name
-    
-    # images (should add only if data has images..)
-    
+
+################################################################################
+def _write_image(h,data,setname,overwrite=True):
     if not hasattr(h.root,'images'):
         h.createGroup(h.root,'images',"Image Data")
-    
-    # xrf/med (should add only if data has med/xrf..)
+
+
+################################################################################
+def _write_med(h,data,setname,overwrite=True):
     if not hasattr(h.root,'med'):
         h.createGroup(h.root,'med',"MED Data")
+
+
+################################################################################
+def _write_xrf(h,data,setname,overwrite=True):
     if not hasattr(h.root,'xrf'):
         h.createGroup(h.root,'xrf',"XRF Data")
 
 ################################################################################
-def calc_next_setname(names):
-    if len(names) == 0:
-        return 'S000'
-    idx = []
-    try:
-        for n in names:
-            idx.append(int(n[1:]))
-        m = num.max(idx)
-        s = "S%03d" % (m)
-        return s
-    except:
-        return 'S000'
-
-################################################################################
-def _scan_to_dict(data):
+def _scan_data(data):
     """
     Turn a scan data object into dictionary of arrays
     """
@@ -197,6 +213,10 @@ def _scan_to_dict(data):
     for (n,v) in data.state.items():
         d['stnames'].append(n)
         d['stvals'].append(v)
+    return d
+
+################################################################################
+def _image_data(data):
     # images
     if hasattr(data,'image'):
         d['imparams'] = {}
@@ -214,10 +234,18 @@ def _scan_to_dict(data):
     else:
         d['imparams'] = None
         image = None
+    return image
+
+################################################################################
+def _med_data(data):
     # need same for med and xrf
     med = None
+    return med
+
+################################################################################
+def _xrf_data(data):
     xrf = None
-    return (d,image,med,xrf)
+    return xrf
 
 ################################################################################
 def read_scandata(file,setname,path=None):
