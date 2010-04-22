@@ -142,11 +142,13 @@ def _write_scan(h,data,setname,overwrite=True):
         try:
             h.createArray(grp,name,val,name)
         except:
-            print "Unable to write state variable: ", name, val
+            print "Unable to write state variable: ", name
     
     # images (should add only if data has images..)
+    
     if not hasattr(h.root,'images'):
         h.createGroup(h.root,'images',"Image Data")
+    
     # xrf/med (should add only if data has med/xrf..)
     if not hasattr(h.root,'med'):
         h.createGroup(h.root,'med',"MED Data")

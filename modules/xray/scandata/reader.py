@@ -1,15 +1,13 @@
-#######################################################################
 """
-Tom Trainor (tptrainor@alaska.edu)
 Reading 'scan data'
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+Tom Trainor (tptrainor@alaska.edu)
 
-"""
-#######################################################################
-"""
-Todo
+
+Todo:
+-----
 - add escan files, ascii_scan files ....
 
 """
@@ -29,17 +27,25 @@ import xrf_data
 import med_data
 
 ########################################################################
-def spec_scan(spec,sc_num):
+def spec_scan(spec,sc_num,geo='PSIC_APS_S13'):
     """
     Return scan data instance from a specfile / scan number
     
     spec can be a specfile instance or string file name
     sc_num is the scan number
-    """
-    # Define these to make sure we get things sorted
-    # correclty. These may be instrument/geometry specific!!
-    PSIC_POSITIONER_KEYS = ['phi','chi','eta','mu','nu','del']
 
+    Note that a vector A is appended to the state info.  This
+    is the set of essential gonio angles at the start of the scan
+    These are defined based on the 'geo' label and are geometry/
+    beamline specific
+    
+    """
+    # Define to make sure we get things sorted correclty. 
+    if geo=='PSIC_APS_S13':
+        POSITIONER_KEYS = ['phi','chi','eta','mu','nu','del']
+    else:
+        POSITIONER_KEYS =[]
+    
     # get the spec scan data
     if type(spec) == types.StringType:
         spec = SpecFile(spec)
@@ -56,7 +62,7 @@ def spec_scan(spec,sc_num):
     for key in d['data'].keys():
         if key in positioners.keys():
             positioners[key] = num.array(d['data'][key])
-        elif key in PSIC_POSITIONER_KEYS:
+        elif key in POSITIONER_KEYS:
             positioners[key] = num.array(d['data'][key])
         else:
             scalers[key] = num.array(d['data'][key])
@@ -65,50 +71,21 @@ def spec_scan(spec,sc_num):
     paxis = d['labels'][0]
     pdet  = d['labels'][-1]
 
-    # Grab state info.  Note make 'A' the essential
-    # gonio angles at the start of the scan
-    # this is APS sector 13 specific, and may change...
-    # We need a switch here based on the identification
-    # of the beamline and instrument...
-    # note we may never use this for anything, so probably best to just
-    # get rid of it.... or better just list array of numbers
-    # (no labels etc.).  These are beamline/geo specific but can be
-    # parsed based on whatever geo label is attached to the scan data
-    """
-    A = {}
+    # Grab state info.  
     try:
-        A['delta'] = d['P'].get('TwoTheta')
-        A['eta']   = d['P'].get('theta')
-        A['chi']   = d['P'].get('chi')
-        A['phi']   = d['P'].get('phi')
-        A['nu']    = d['P'].get('Nu')
-        A['mu']    = d['P'].get('Psi')
-        A['keta']  = d['P'].get('Omega')
-        A['kap']   = d['P'].get('Kappa')
-        A['kphi']  = d['P'].get('Phi')
+        A = []
+        if geo=='PSIC_APS_S13':
+            A.append(d['P'].get('TwoTheta'))
+            A.append(d['P'].get('theta'))
+            A.append(d['P'].get('chi'))
+            A.append(d['P'].get('phi'))
+            A.append(d['P'].get('Nu'))
+            A.append(d['P'].get('Psi'))
+            A.append(d['P'].get('Omega'))
+            A.append(d['P'].get('Kappa'))
+            A.append(d['P'].get('Phi'))
     except:
-        pass
-    """
-    A = []
-    """
-    try:
-        A = num.zeros(9,dtype=[ ('vals','float'), ('names','a10') ])
-        tmp1 = []
-        tmp1.append(d['P'].get('TwoTheta'))
-        tmp1.append(d['P'].get('theta'))
-        tmp1.append(d['P'].get('chi'))
-        tmp1.append(d['P'].get('phi'))
-        tmp1.append(d['P'].get('Nu'))
-        tmp1.append(d['P'].get('Psi'))
-        tmp1.append(d['P'].get('Omega'))
-        tmp1.append(d['P'].get('Kappa'))
-        tmp1.append(d['P'].get('Phi'))
-        tmp2 = ['TwoTheta','theta','chi','phi','Nu','Psi','Omega','Kappa','Phi']
-        A['vals'] = num.array(tmp1)
-        A['names'] = tmp2
-    except:
-        pass
-    """
+        A = []
     state = {'G':d.get('G'),'Q':d.get('Q'),'A':A,
              'ATTEN':d.get('ATTEN'), 'ENERGY':d.get('ENERGY')}
 
