@@ -9,16 +9,15 @@ Notes:
 ------
 
 Structure hdf files as follows:
-root/scan
-root/image
-root/med
-root/xrf
-root/ctr
-etc
+root/scan_data/...
+root/image_data/...
+root/med_data/...
+root/xrf_data/...
+root/ctr_data/...
+
 
 Examples:
 --------
-
 >>scandata.save(ctr,file='ctr.h5')
 >>ctr = scandata.restore(file='ctr.h5',name='ctr')
 
@@ -26,7 +25,7 @@ Examples:
 Todo:
 -----
 - work in progress
-
+- have nto done med or xrf yet
 """
 #######################################################################
 
@@ -120,6 +119,14 @@ def write_scandata(fname,data,setname=None,path=None,overwrite=True):
             _cleanup()
             print "Unable to write imagedata"
 
+    # Med data
+    if hasattr(data,'med'):
+        pass
+    
+    # Xrf data
+    if hasattr(data,'xrf'):
+        pass
+    
     h.close()
     return
 
@@ -308,6 +315,11 @@ def _xrf_data(data):
     xrf = None
     return xrf
 
+
+################################################################################
+def write_ctrdata(fname,data,setname=None,path=None,overwrite=True):
+    pass
+
 ################################################################################
 def read_scandata(file,setname,path=None):
     """
@@ -317,7 +329,7 @@ def read_scandata(file,setname,path=None):
     if h==None: return
     data = {}
     try:
-        grp = '/scans/' + setname
+        grp = '/scan_data/' + setname
         #items = getattr(h,grp)
         items  = h.getNode('/scans',setname)
         names = items._v_children.keys()

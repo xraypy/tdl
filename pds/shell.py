@@ -698,8 +698,8 @@ class Shell(_NumShell):
             return
         else:
             d = self.interp.symbol_table.list_symbols(symbol=symbol,
-                                                    tunnel=tunnel,
-                                                    _skip=_skip)
+                                                      tunnel=tunnel,
+                                                      _skip=_skip)
             self._print_show(d)
 
     #############################################################

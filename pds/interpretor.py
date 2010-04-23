@@ -467,8 +467,12 @@ class SymbolTable:
     
     def _ignore(self,name,_skip=True):
         if _skip == True:
-            if name[0] == '_': ignore = True
-            else: ignore = False
+            if name[0] == '_':
+              ignore = True
+            elif name.find('._') > 0:
+              ignore = True
+            else:
+              ignore = False
         else:
             ignore = False
         return ignore
