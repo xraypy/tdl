@@ -1021,19 +1021,21 @@ class _ImageList:
         fname  = self._make_fname()
         if os.path.exists(fname):
             h    = tables.openFile(fname,mode="a")
-            if not hasattr(h.root,'images'):
-                h.createGroup(h.root,'images',"Image Data")
+            if not hasattr(h.root,'image_data'):
+                h.createGroup(h.root,'image_data',"Image Data")
         else:
             h    = tables.openFile(fname,mode="w",title="Scan Data Archive")
-            root = h.createGroup(h.root, "images", "Image Data")
+            root = h.createGroup(h.root, "image_data", "Image Data")
         # if setname == None:
         #   look under '/images for 'SXXX'
         # find the highest one and
         # auto generate set name as next in the sequence 
-        if hasattr(h.root.images,setname):
-            print "   Image Archive File %s: Setname %s already exists" % (fname,setname)
+        if hasattr(h.root.image_data,setname):
+            print "Image Archive File %s: Setname %s already exists" % (fname,setname)
         else:
-            h.createArray('/images',setname,images,descr)
+            h.createGroup('/image_data',setname,"Image Data")
+            grp = '/image_data/' + setname
+            h.createArray(grp,'images',images,descr)
         h.close()
 
     ################################################################
@@ -1044,7 +1046,9 @@ class _ImageList:
             print "Archive file not found:", fname
             return None
         h  = tables.openFile(fname,mode="r")
-        n  = h.getNode('/images',self.setname)
+        grp = '/image_data/' + self.setname
+        #n  = h.getNode('/images',self.setname)
+        n  = h.getNode(grp,'images')
         im = n.read()
         h.close()
         return im

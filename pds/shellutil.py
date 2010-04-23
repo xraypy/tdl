@@ -648,33 +648,39 @@ def mod_import(name,debug=False):
         return(name)
 
 ##########################################################################
-def PrintExceptErr(err_str,print_trace=True):
-    " print error on exceptions"
-    print '\n***********************************'
-    #print 'PrintExceptErr', err_str
-    try:
-        print err_str
-        print 'Error:', sys.exc_type
-        xx, yy, zz = sys.exc_info()
-        if print_trace == False: zz = ''
-        sys.excepthook(xx,yy,zz)
-    except:
-        print '  Error printing exception error '
-    print '***********************************\n'
-
+class  PrintExceptErr:
+    """
+    print error on exceptions
+    """
+    def __init__(self,err_str,print_trace=True):
+        print '\n***********************************'
+        #print 'PrintExceptErr', err_str
+        try:
+            print err_str
+            print 'Error:', sys.exc_type
+            xx, yy, zz = sys.exc_info()
+            if print_trace == False: zz = ''
+            sys.excepthook(xx,yy,zz)
+        except:
+            print '  Error printing exception error '
+        print '***********************************\n'
+        
 ##########################################################################
-def PrintShortExcept(err_str):
-    " print error on exceptions"
-    print '\n***********************************'
-    #print 'PrintShortExcept', err_str
-    try:
-        print err_str
-        xx, yy, zz = sys.exc_info()
-        sys.excepthook(xx,yy,None)
-    except:
-        print '  Error printing exception error '
-    print '***********************************\n'
-
+class  PrintShortExcept:
+    """
+    print error on exceptions
+    """
+    def __init__(self,err_str):
+        print '\n***********************************'
+        #print 'PrintShortExcept', err_str
+        try:
+            print err_str
+            xx, yy, zz = sys.exc_info()
+            sys.excepthook(xx,yy,None)
+        except:
+            print '  Error printing exception error '
+        print '***********************************\n'
+        
 ##########################################################################
 def set_path(pth=None,recurse=False,verbose=False,clean=True):
     """

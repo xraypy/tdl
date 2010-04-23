@@ -36,6 +36,9 @@ import copy
 import numpy as num
 import tables
 
+import data as scandata
+import image_data
+
 ################################################################################
 def get_file(fname,path=None):
     """
@@ -47,6 +50,7 @@ def get_file(fname,path=None):
             fname = os.path.abspath(fname)
         else:
             fname = os.path.abspath(fname)
+        #print fname
         if os.path.exists(fname):
             h = tables.openFile(fname,mode="a")
         else:
@@ -85,6 +89,10 @@ def calc_next_setname(names):
 
 ################################################################################
 def _cleanup():
+    import sys
+    xx, yy, zz = sys.exc_info()
+    sys.excepthook(xx,yy,zz)
+    #
     tables.file.close_open_files()
 
 ################################################################################
@@ -96,49 +104,51 @@ def write_scandata(fname,data,setname=None,path=None,overwrite=True):
     if h == None: return
 
     # Scan data
-    #try:
-    d = _scan_data(data)
-    _write_scan(h,d,setname,overwrite=overwrite)
-    #except:
-    #    _cleanup()
-    #    print "Unable to write scandata"
+    try:
+        d = _scan_data(data)
+        _write_scan(h,d,setname,overwrite=overwrite)
+    except:
+        _cleanup()
+        print "Unable to write scandata"
     
     # Image data
-    #try:
-    im = _image_data(data)
-    _write_image(h,im,setname,overwrite=overwrite)
-    #except:
-    #    _cleanup()
-    #    print "Unable to write imagedata"
+    if hasattr(data,'image'):
+        try:
+            im = _image_data(data.image)
+            _write_image(h,im,setname,overwrite=overwrite)
+        except:
+            _cleanup()
+            print "Unable to write imagedata"
 
     h.close()
     return
 
+################################################################################
 def _write_scan(h,data,setname,overwrite=True):
     """
     note create array stores any homogeneous data type,
     and remembers what it is so you get back correct
     type when you read it back in (except tuples->lists)
     """
-    if not hasattr(h.root,'scans'):
-        h.createGroup(h.root,'scans',"Scan Data")
+    if not hasattr(h.root,'scan_data'):
+        h.createGroup(h.root,'scan_data',"Scan Data")
     if setname == None:
         names = h.root.scans._v_children.keys()
         setname = calc_next_setname(names)
-    if hasattr(h.root.scans,setname):
+    if hasattr(h.root.scan_data,setname):
         print "Archive File %s: Setname %s already exists" % (h.filename,setname)
         if overwrite==False:
             print "Data is not overwritten"
             return
         else:
             print "Data being overwritten"
-            h.removeNode(h.root.scans,setname,recursive=True)
-            h.createGroup(h.root.scans,setname,"Scan Data")
+            h.removeNode(h.root.scan_data,setname,recursive=True)
+            h.createGroup(h.root.scan_data,setname,"Scan Data")
     else:
-        h.createGroup(h.root.scans,setname,"Scan Data")
+        h.createGroup(h.root.scan_data,setname,"Scan Data")
 
     # add data
-    grp0 = '/scans/' + setname
+    grp0 = '/scan_data/' + setname
     h.createArray(grp0,'name',data['name'],data['name'])
     h.createArray(grp0,'dims',data['dims'],'dims')
     h.createArray(grp0,'primary_axis',data['primary_axis'],'primary_axis')
@@ -170,15 +180,34 @@ def _write_scan(h,data,setname,overwrite=True):
 
 ################################################################################
 def _write_image(h,data,setname,overwrite=True):
-    if not hasattr(h.root,'images'):
-        h.createGroup(h.root,'images',"Image Data")
+    if not hasattr(h.root,'image_data'):
+        h.createGroup(h.root,'image_data',"Image Data")
 
+    if hasattr(h.root.image_data,setname):
+        print "Image Archive File %s: Setname %s already exists" % (fname,setname)
+        if overwrite==False:
+            print "Data is not overwritten"
+            return
+        else:
+            print "Data being overwritten"
+            h.removeNode(h.root.image_data,setname,recursive=True)
+            h.createGroup(h.root.image_data,setname,"Scan Data")
+    else:
+        h.createGroup(h.root.image_data,setname,"Scan Image Data")
+    # images
+    grp = '/image_data/' + setname
+    h.createArray(grp,'images',data['images'],'Images')
+    # image params
+    for name,val in data['imparams'].items():
+        h.createArray(grp,name,val,name)
+    # bgr params
+    for name,val in data['bparams'].items():
+        h.createArray(grp,name,val,name)
 
 ################################################################################
 def _write_med(h,data,setname,overwrite=True):
     if not hasattr(h.root,'med'):
         h.createGroup(h.root,'med',"MED Data")
-
 
 ################################################################################
 def _write_xrf(h,data,setname,overwrite=True):
@@ -190,6 +219,9 @@ def _scan_data(data):
     """
     Turn a scan data object into dictionary of arrays
     """
+    if not isinstance(data,scandata.ScanData):
+        print "Warning data is not a ScanData instance"
+    
     d = {}
     d['name'] = data.name
     d['dims'] = data.dims
@@ -216,25 +248,54 @@ def _scan_data(data):
     return d
 
 ################################################################################
-def _image_data(data):
-    # images
-    if hasattr(data,'image'):
-        d['imparams'] = {}
-        image = []
-        for j in range(len(data.image.image)):
-            # tedious
-            #d['imparams']['aparam'][j] = d.image.aparam[j]
-            #s[0].image._is_integrated    
-            #s[0].image.bgrpar
-            #s[0].image.im_max
-            #s[0].image.peaks             
-            #s[0].image.rois
-            #s[0].image.rotangle          
-            image.append(data.image.image[j])
-    else:
-        d['imparams'] = None
-        image = None
-    return image
+def _image_data(imdata):
+    """
+    This parses image data
+    """
+    if not isinstance(imdata,image_data.ImageScan):
+        print "Warning data is not a ImageScan instance"
+
+    imparams = {}
+    imparams['rois'] = []
+    imparams['rotangle'] = []
+    imparams['im_max'] = []
+    imparams['I'] = []
+    imparams['Ierr'] = []
+    imparams['Ibgr'] = []
+    imparams['I_c'] = []
+    imparams['Ierr_c'] = []
+    imparams['Ibgr_c'] = []
+    imparams['I_r'] = []
+    imparams['Ierr_r'] = []
+    imparams['Ibgr_r'] = []
+    
+    bparams = {}
+    bkey = imdata.bgrpar[0].keys()
+    for key in bkey:
+        bparams[key] = []
+
+    images = []
+    npts = len(imdata.image)
+
+    for j in range(npts):
+        images.append(imdata.image[j])
+        imparams['rois'].append(imdata.rois[j])
+        imparams['rotangle'].append(imdata.rotangle[j])
+        imparams['im_max'].append(imdata.im_max[j])
+        imparams['I'].append(imdata.peaks['I'][j])
+        imparams['Ierr'].append(imdata.peaks['Ierr'][j])
+        imparams['Ibgr'].append(imdata.peaks['Ibgr'][j])
+        imparams['I_c'].append(imdata.peaks['I_c'][j])
+        imparams['Ierr_c'].append(imdata.peaks['Ierr_c'][j])
+        imparams['Ibgr_c'].append(imdata.peaks['Ibgr_c'][j])
+        imparams['I_r'].append(imdata.peaks['I_r'][j])
+        imparams['Ierr_r'].append(imdata.peaks['Ierr_r'][j])
+        imparams['Ibgr_r'].append(imdata.peaks['Ibgr_r'][j])
+        for key in bkey:
+            bparams[key].append(imdata.bgrpar[j][key])
+
+    data = {'images':images,'imparams':imparams,'bparams':bparams}
+    return data
 
 ################################################################################
 def _med_data(data):
@@ -273,7 +334,11 @@ def read_scandata(file,setname,path=None):
 if __name__ == '__main__':
     x = num.arange(100.)
     y = num.sin(x/num.pi)
-    d = {'x':x,'y':y,'t':'a string','i':1,'p':(1,2),'Q':[1,2,3]}
+    sc = {'x':x,'t':'a string','i':1}
+    po = {'y':y,'p':(1,2)}
+    st = {'Q':[1,2,3]}
+    d = scandata.ScanData(name='x',dims=[1,],scalers=sc,positioners=po,
+                          primary_axis=['x'],primary_det=['y'],state=st)
     write_scandata('xx.hdf',d,setname='S1')
     zz = read_scandata('xx.hdf','S1')
     print 'zz', zz.keys()
