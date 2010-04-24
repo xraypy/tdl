@@ -21,13 +21,13 @@ Examples:
 >>scandata.save(ctr,file='ctr.h5')
 >>ctr = scandata.restore(file='ctr.h5',name='ctr')
 
-
 Todo:
 -----
 - work in progress
-- have nto done med or xrf yet
+- have to do med and xrf
+
 """
-#######################################################################
+################################################################################
 
 import types
 import os
@@ -37,6 +37,7 @@ import tables
 
 import data as scandata
 import image_data
+import ctr_data
 
 ################################################################################
 def get_file(fname,path=None):
@@ -95,13 +96,171 @@ def _cleanup():
     tables.file.close_open_files()
 
 ################################################################################
-def write_scandata(fname,data,setname=None,path=None,overwrite=True):
+def write_ctrdata(fname,ctr,setname='ctr',path=None,overwrite=True):
     """
     Write scan data
     """
     h = get_file(fname,path)
     if h == None: return
 
+    # write all scans
+    try:
+        for j in range(len(ctr.scan)):
+            d = _scan_data(ctr.scan[j])
+            scanname = "%s_S%03d" % (setname,j)
+            _write_scan(h,d,scanname,overwrite=overwrite)
+            if hasattr(ctr.scan[j],'image'):
+                im = _image_data(ctr.scan[j].image)
+                _write_image(h,im,scanname,overwrite=overwrite)
+    except:
+        _cleanup()
+        print "Unable to write scandata"
+    # now write ctr data
+    #try:
+    d = _ctr_data(ctr)
+    _write_ctr(h,d,setname,overwrite=overwrite)
+    #except:
+    #    _cleanup()
+    #    print "Unable to write scandata"
+    h.close()
+    return d
+
+################################################################################
+def _write_ctr(h,data,setname='ctr',overwrite=True):
+    """
+    note create array stores any homogeneous data type,
+    and remembers what it is so you get back correct
+    type when you read it back in (except tuples->lists)
+    """
+    if not hasattr(h.root,'ctr_data'):
+        h.createGroup(h.root,'ctr_data',"Ctr Data")
+    if hasattr(h.root.ctr_data,setname):
+        print "Archive File %s: Setname %s already exists" % (h.filename,setname)
+        if overwrite==False:
+            print "Data is not overwritten"
+            return
+        else:
+            print "Data being overwritten"
+            h.removeNode(h.root.ctr_data,setname,recursive=True)
+            h.createGroup(h.root.ctr_data,setname,"Ctr Data")
+    else:
+        h.createGroup(h.root.ctr_data,setname,"Ctr Data")
+    # add data
+    """
+    class CtrTable(table.IsDescription):
+        I_lbl  = StringCol(16)
+        In_lbl = StringCol(16)
+        Ie_lbl = StringCol(16)
+        Ib_lbl = StringCol(16)
+        stype  = StringCol(16)
+    """
+    grp0 = '/ctr_data/' + setname
+    if len(data['bad'])>0:
+        h.createArray(grp0,'bad',data['bad'],'bad points')
+    h.createArray(grp0,'scan_index',data['scan_index'],'scan_index')
+    h.createArray(grp0,'scan_type',data['scan_type'],'scan_type')
+    h.createArray(grp0,'Ilbl',data['I_lbl'],'I_lbl')
+    h.createArray(grp0,'Inorm_lbl',data['In_lbl'],'Inorm_lbl')
+    h.createArray(grp0,'Ierr_lbl',data['Ie_lbl'],'Ierr_lbl')
+    h.createArray(grp0,'Ibgr_lbl',data['Ib_lbl'],'Ibgr_lbl')
+    #
+    h.createArray(grp0,'H',data['H'],'H')
+    h.createArray(grp0,'K',data['K'],'K')
+    h.createArray(grp0,'L',data['L'],'L')
+    h.createArray(grp0,'I',data['I'],'I')
+    h.createArray(grp0,'Inorm',data['In'],'Inorm')
+    h.createArray(grp0,'Ierr',data['Ie'],'Ierr')
+    h.createArray(grp0,'Ibgr',data['Ib'],'Ibgr')
+    h.createArray(grp0,'ctot',data['c'],'ctot')
+    h.createArray(grp0,'F',data['F'],'F')
+    h.createArray(grp0,'Ferr',data['Fe'],'Ferr')
+    h.createArray(grp0,'beam_slit_horz',data['beam_slit_horz'],'beam_slit_horz') 
+    h.createArray(grp0,'beam_slit_vert',data['beam_slit_vert'],'beam_slit_vert')
+    h.createArray(grp0,'det_slit_horz',data['det_slit_horz'],'det_slit_horz') 
+    h.createArray(grp0,'det_slit_vert',data['det_slit_vert'],'det_slit_vert')
+    h.createArray(grp0,'geom',data['geom'],'geom')
+    h.createArray(grp0,'scale',data['scale'],'scale')
+    h.createArray(grp0,'sdia',data['sdia'],'sdia')
+    h.createArray(grp0,'spoly',data['spoly'],'spoly')
+    if type(data['sangle']) == types.DictType:
+        for name,val in data['sangle'].items():
+            name = 'sangle_'+name
+            h.createArray(grp0,name,val,name)
+    else:
+        h.createArray(grp0,'sangle',data['sangle'],'sangle')
+
+################################################################################
+def _ctr_data(ctr):
+    """
+    Turn a ctr data object into dictionary of arrays
+    """
+    if not isinstance(ctr,ctr_data.CtrData):
+        print "Warning data is not a CtrData instance"
+    npts = len(ctr.L)
+    d = {}
+    d['bad']        = ctr.bad
+    d['scan_index'] = ctr.scan_index
+    d['scan_type']  = ctr.scan_type
+    d['I_lbl']      = ctr.labels['I']
+    d['In_lbl']     = ctr.labels['Inorm']
+    d['Ie_lbl']     = ctr.labels['Ierr']
+    d['Ib_lbl']     = ctr.labels['Ibgr']
+    d['H']  = ctr.H   
+    d['K']  = ctr.K     
+    d['L']  = ctr.L    
+    d['I']  = ctr.I     
+    d['In'] = ctr.Inorm 
+    d['Ie'] = ctr.Ierr  
+    d['Ib'] = ctr.Ibgr  
+    d['c']  = ctr.ctot  
+    d['F']  = ctr.F     
+    d['Fe'] = ctr.Ferr
+    #
+    d['beam_slit_horz'] = []
+    d['beam_slit_vert'] = []
+    d['det_slit_horz'] = []
+    d['det_slit_vert'] = []
+    d['geom'] = []
+    d['scale'] = []
+    d['sdia'] = []
+    d['spoly'] = []
+    d['sangle'] = []
+    for j in range(npts):
+        d['geom'].append(ctr.corr_params[j].get('geom',''))
+        d['scale'].append(ctr.corr_params[j].get('scale',1.0))
+        if ctr.corr_params[j]['beam_slits'] != None:
+            d['beam_slit_horz'].append(ctr.corr_params[j]['beam_slits'].get('horz',0.))
+            d['beam_slit_vert'].append(ctr.corr_params[j]['beam_slits'].get('vert',0.))
+        else:
+            d['beam_slit_horz'].append(0.)
+            d['beam_slit_vert'].append(0.)
+        if ctr.corr_params[j]['det_slits'] != None:
+            d['det_slit_horz'].append(ctr.corr_params[j]['det_slits'].get('horz',0.))
+            d['det_slit_vert'].append(ctr.corr_params[j]['det_slits'].get('vert',0.))
+        else:
+            d['det_slit_horz'].append(0.)
+            d['det_slit_vert'].append(0.)
+        d['sdia'].append(ctr.corr_params[j]['sample'].get('dia',0.0))
+        d['spoly'].append(ctr.corr_params[j]['sample'].get('polygon',0.0))
+        d['sangle'].append(ctr.corr_params[j]['sample'].get('angles',0.0))
+    if type(d['sangle'][0]) == types.DictType:
+        tmp = {}
+        names = d['sangle'][0].keys()
+        for key in names:
+            tmp[key] = []
+        for sa in d['sangle']:
+            for key in names:
+                tmp[key].append(sa.get(key,0.))
+        d['sangle'] = tmp
+    return d
+
+################################################################################
+def write_scandata(fname,data,setname=None,path=None,overwrite=True):
+    """
+    Write scan data
+    """
+    h = get_file(fname,path)
+    if h == None: return
     # Scan data
     try:
         d = _scan_data(data)
@@ -109,7 +268,6 @@ def write_scandata(fname,data,setname=None,path=None,overwrite=True):
     except:
         _cleanup()
         print "Unable to write scandata"
-    
     # Image data
     if hasattr(data,'image'):
         try:
@@ -118,15 +276,12 @@ def write_scandata(fname,data,setname=None,path=None,overwrite=True):
         except:
             _cleanup()
             print "Unable to write imagedata"
-
     # Med data
     if hasattr(data,'med'):
         pass
-    
     # Xrf data
     if hasattr(data,'xrf'):
         pass
-    
     h.close()
     return
 
@@ -140,7 +295,7 @@ def _write_scan(h,data,setname,overwrite=True):
     if not hasattr(h.root,'scan_data'):
         h.createGroup(h.root,'scan_data',"Scan Data")
     if setname == None:
-        names = h.root.scans._v_children.keys()
+        names = h.root.scan_data._v_children.keys()
         setname = calc_next_setname(names)
     if hasattr(h.root.scan_data,setname):
         print "Archive File %s: Setname %s already exists" % (h.filename,setname)
@@ -189,9 +344,8 @@ def _write_scan(h,data,setname,overwrite=True):
 def _write_image(h,data,setname,overwrite=True):
     if not hasattr(h.root,'image_data'):
         h.createGroup(h.root,'image_data',"Image Data")
-
     if hasattr(h.root.image_data,setname):
-        print "Image Archive File %s: Setname %s already exists" % (fname,setname)
+        print "Image Archive File %s: Setname %s already exists" % (h.filename,setname)
         if overwrite==False:
             print "Data is not overwritten"
             return
@@ -228,7 +382,6 @@ def _scan_data(data):
     """
     if not isinstance(data,scandata.ScanData):
         print "Warning data is not a ScanData instance"
-    
     d = {}
     d['name'] = data.name
     d['dims'] = data.dims
@@ -315,11 +468,6 @@ def _xrf_data(data):
     xrf = None
     return xrf
 
-
-################################################################################
-def write_ctrdata(fname,data,setname=None,path=None,overwrite=True):
-    pass
-
 ################################################################################
 def read_scandata(file,setname,path=None):
     """
@@ -327,6 +475,12 @@ def read_scandata(file,setname,path=None):
     """
     h = get_file(file,path)
     if h==None: return
+    data = _read_scan(h,setname)
+    h.close()
+    return data
+
+################################################################################
+def _read_scan(h,setname):
     data = {}
     try:
         grp = '/scan_data/' + setname
@@ -338,12 +492,13 @@ def read_scandata(file,setname,path=None):
     for n in names:
         node  = h.getNode(grp,n)
         data[n] = node.read()
-    h.close()
     return data
+
 
 ################################################################################
 ################################################################################
 if __name__ == '__main__':
+    """
     x = num.arange(100.)
     y = num.sin(x/num.pi)
     sc = {'x':x,'t':'a string','i':1}
@@ -351,9 +506,10 @@ if __name__ == '__main__':
     st = {'Q':[1,2,3]}
     d = scandata.ScanData(name='x',dims=[1,],scalers=sc,positioners=po,
                           primary_axis=['x'],primary_det=['y'],state=st)
-    write_scandata('xx.hdf',d,setname='S1')
-    zz = read_scandata('xx.hdf','S1')
+    write_scandata('xx.h5',d,setname='S1')
+    zz = read_scandata('xx.h5','S1')
     print 'zz', zz.keys()
     #
-    list_file('xx.hdf')
-    
+    list_file('xx.h5')
+    """
+    pass
