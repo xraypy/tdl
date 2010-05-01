@@ -125,12 +125,14 @@ def _import_pyplot(backend="TkAgg",verbose=True):
     # ie plotting works without below line
     # but this lets us grab tk if needed...
     pyplot.plot_root = PLOT_ROOT 
-    
     # import plotter
-    import plotter
-    pyplot.plotter    = plotter.plotter
-    pyplot.newplotter = plotter.newplotter
-    pyplot.cursor     = plotter.cursor
+    try:
+        import plotter
+        pyplot.plotter    = plotter.plotter
+        pyplot.newplotter = plotter.newplotter
+        pyplot.cursor     = plotter.cursor
+    except:
+        print "Plotter error"
 
     # Make sure we're interactive
     #pyplot.show._needmain=False

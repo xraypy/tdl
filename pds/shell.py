@@ -20,6 +20,10 @@ import sys
 import types
 import getopt
 import time
+try:
+    import readline
+except:
+    pass
 
 from   interpretor import Interpretor
 from   shellutil   import set_path
