@@ -150,6 +150,7 @@ class SymbolTable:
     #########################################
     def add_symbol(self,name,value):
         """
+        Add
         """
         #self.data.update({name:value})
         self.data['__tmp__'] = value
@@ -160,6 +161,7 @@ class SymbolTable:
     #########################################
     def set_symbol(self,name,value):
         """
+        Set
         """
         #self.data[name]= value
         self.data['__tmp__'] = value
@@ -170,6 +172,7 @@ class SymbolTable:
     #########################################
     def del_symbol(self,name):
         """
+        Delete
         """
         #return self.data.pop(name)
         #del self.data[name]
@@ -210,6 +213,7 @@ class SymbolTable:
     """
     def get_symbol(self,name):
         """
+        Get
         """
         s = "try:\n"
         s = s+ "    __tmp__ = %s\n" % name
@@ -223,6 +227,7 @@ class SymbolTable:
     #########################################
     def has_symbol(self,name):
         """
+        Has symbol
         """
         #if name in self.data.keys(): return True
         #else: return False

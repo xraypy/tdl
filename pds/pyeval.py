@@ -1,18 +1,13 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu) 10-6-2008  
 Simple python interpretor functions
 
---------------
- Modifications
---------------
+Authors / Modifications:
+------------------------
+T. Trainor (tptrainor@alaska.edu) 10-6-2008  
 - Original version: numeval.py from data_shell_2 (6-1-2004)
 
-"""
-#######################################################################
-"""
 Description:
- 
+------------ 
 This module just sets up a clean name-space for execution
 of python commands/code.  VAR_DICT should be a dictionary
 defined in another module, that keep track of it.  E.g. Shell
@@ -33,7 +28,7 @@ import types
 ###################################################################
 def init_namespace():
     """
-    create a variables dictionary for code exec
+    Create a variables dictionary for code exec
     delete stuff not needed....
     """
     vars = {}
@@ -52,7 +47,7 @@ def init_namespace():
 ###################################################################
 def do_exec(exec_str,vars={}):
     """
-    exec code str in vars workspace
+    Exec code str in vars workspace
     return 0 if command is completed
 
     Note this function does not deal with
@@ -69,7 +64,7 @@ def do_exec(exec_str,vars={}):
 ###################################################################
 def do_execfile(fname,vars={}):
     """
-    exec file in vars workspace 
+    Exec file in vars workspace 
     """
     if vars == {}: vars = init_namespace()
     execfile(fname, vars)
@@ -78,7 +73,7 @@ def do_execfile(fname,vars={}):
 ###################################################################
 def do_eval(eval_str,vars={}):
     """
-    do an eval and ret data
+    Do an eval and ret data
     """
     if vars == {}: vars = init_namespace()
     ret = eval(eval_str,vars)

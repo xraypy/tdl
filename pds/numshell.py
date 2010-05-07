@@ -1,16 +1,13 @@
-#################################################################
 """
-Tom Trainor (tptrainor@alaska.edu), 11-08
 Numerical/plotting features for shell program
 
-Modifications:
---------------
-- Initial ideas from old tdl NumImports module by Matt Newville
+Authors/Modifications:
+----------------------
+Tom Trainor (tptrainor@alaska.edu), 11-08
+Initial ideas from old tdl NumImports module by Matt Newville
 
-"""
-#################################################################
-"""
 Notes:
+------
 The _NumShell class should be used as a subclass within shell.Shell.
 This adds numerical/plotting modules to the shell by default,
 as well as the calc function.
@@ -94,7 +91,7 @@ def _modules(backend="TkAgg"):
 
 #################################################################
 def _import_pyplot(backend="TkAgg",verbose=True):
-    #
+    """import pyplot"""
     import matplotlib
     check = matplotlib.get_backend()
     #
@@ -144,10 +141,16 @@ def _import_pyplot(backend="TkAgg",verbose=True):
 #################################################################
 #################################################################
 class _NumShell:
-    
+    """
+    Numerical shell program
+
+    Adds numerical methods to Shell.shell
+    """
     def num_setup(self,):
         """
-        Add numerical methods to Shell.shell
+        setup the imports
+
+        we try to import numpy, scipy and pyplot 
         """
         ##############
         self.pds_commands.update({'calc':self.do_calc})
@@ -183,7 +186,7 @@ class _NumShell:
             startup.append("__builtins__.update({'deg':num.degrees})")
             startup.append("__builtins__.update({'rad':num.radians})")
             startup.append("__builtins__.update({'arange':num.arange})")
-            
+            #
             startup.append("__builtins__.update({'ln':num.log})")
             startup.append("__builtins__.update({'log':num.log10})")
             startup.append("__builtins__.update({'exp':num.exp})")

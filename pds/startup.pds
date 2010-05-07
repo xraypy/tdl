@@ -2,8 +2,8 @@
 # Default site startup file for pds.
 # Add paths, imports and other data that should be
 # defined for the site
-# Individual users can place a .pds file in thier home
-# directories for additional startup options
+# Individual users can place a .pds file in thier 
+# home directories for additional startup options
 ##################################################
 ##################################################
 

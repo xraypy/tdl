@@ -4,10 +4,8 @@ Utilities for shell programs
 Authors/Modifications:
 ---------------------
 M. Newville (2006)
-
-- Modified from tdl-revision 226
-  for use with pds shell program
-  Tom Trainor (tptrainor@alaska.edu)
+Modified from tdl-revision 226 for use with pds
+shell program Tom Trainor (tptrainor@alaska.edu)
 
 """
 ##########################################################################
@@ -43,7 +41,9 @@ def is_group(g):
 
 ##########################################################################
 def datalen(x):
-    "return length of data for many datatypes"
+    """
+    return length of data for many datatypes
+    """
     try:
         return len(x)
     except:
@@ -302,6 +302,9 @@ def split_delim(s,delim='='):
 
 ##########################################################################
 def unescape_string(s):
+    """
+    replace escaped characters
+    """
     escapes =(("\\n","\n"), ("\\r","\r"), ("\\a","\a"),("\\f","\f"),
               ("\\\\","\\"), ("\\b","\b"), ("\\v","\v"), ("\\t","\t"))
     for i,j in escapes: s = s.replace(i,j)
@@ -309,6 +312,9 @@ def unescape_string(s):
 
 ##########################################################################
 def escape_string(s):
+    """
+    escape control characters
+    """
     escapes =(("\n","\\n"), ("\r","\\r"), ("\a","\\a"),("\f","\\f"),
               ("\\","\\\\"), ("\b","\\b"), ("\v","\\v"), ("\t","\\t"))
     for i,j in escapes: s = s.replace(i,j)
@@ -608,7 +614,8 @@ def unpickle_2(fname):
 ##########################################################################
 def mod_import(name,debug=False):
     """
-    wrapper for imports/reloads
+    Wrapper for imports/reloads
+    
     given a module name, try reloading the module
     given a string name, try loading the given module
     Note if a str is passed the returned mod will point to
@@ -709,6 +716,9 @@ def set_path(pth=None,recurse=False,verbose=False,clean=True):
 
 ##########################################################################
 def clean_path():
+    """
+    sort path strings
+    """
     temp = []
     for p in sys.path:
         if p not in temp:
@@ -718,6 +728,9 @@ def clean_path():
 
 ##########################################################################
 def sub_dirs(pth,alp_only=True):
+    """
+    Find sub dirs
+    """
     sub_dirs = []
     if os.path.exists(pth):
         for root,dirs,files in os.walk(pth):
@@ -737,8 +750,11 @@ def sub_dirs(pth,alp_only=True):
 ##########################################################################
 class FileOpen:
     """
-    open a file using default path.  The default path may be
-    passed as a kw or determined from a symbol table if present.
+    Open a file using default path.
+
+    The default path may be passed as a kw or determined from a symbol
+    table if present.
+
     This class is intended to override the builtin function open
     The equivalent operation file is used here to return a file
     object.  Note do not override the builtin function 'file' with this class
@@ -792,6 +808,7 @@ def gtline(pterm='>>',p0=None,p1=None,p2=None,valid=None,
     Fancy get line function
 
     Arguments:
+    ----------
     * pterm   = prompt terminator
     * p0      = line to print prior to actual prompt
     * p1      = prompt
@@ -844,6 +861,9 @@ def _gtline(prompt='',default=None,pterm='>>',rettype=None,valid=None):
 
 ##########################################################################
 def get_str(prompt=None,default=None,valid=None,nlprompt=True):
+    """
+    get a string from prompt
+    """
     if prompt == None:
         prompt = ""
     if default != None:
@@ -874,6 +894,9 @@ def get_str(prompt=None,default=None,valid=None,nlprompt=True):
     
 ##########################################################################
 def get_yn(prompt=None,default=None,nlprompt=True):
+    """
+    get a yes/no response from the prompt
+    """
     ylbl=['yes','y','1']
     nlbl=['no','n','0']
     if prompt == None:
@@ -906,6 +929,9 @@ def get_yn(prompt=None,default=None,nlprompt=True):
     
 ##########################################################################
 def get_tf(prompt=None,default=None,nlprompt=True):
+    """
+    get a true/false response from the prompt
+    """
     tlbl=['true','t','1']
     flbl=['false','f','0']
     if prompt == None:
@@ -944,6 +970,9 @@ def get_tf(prompt=None,default=None,nlprompt=True):
         
 ##########################################################################
 def get_int(prompt=None,default=None,valid=[],min=None,max=None,nlprompt=True):
+    """
+    get an integer response from the prompt
+    """
     if prompt == None:
         prompt = "Enter an integer"
     if default != None:
@@ -978,6 +1007,9 @@ def get_int(prompt=None,default=None,valid=[],min=None,max=None,nlprompt=True):
         
 ##########################################################################
 def get_flt(prompt=None,default=None,min=None,max=None,nlprompt=True):
+    """
+    get a float response from the prompt
+    """
     if prompt == None:
         prompt = "Enter a float"
     if default != None:
@@ -1008,6 +1040,9 @@ def get_flt(prompt=None,default=None,min=None,max=None,nlprompt=True):
 
 ##########################################################################
 def get_flt_list(prompt=None,default=None,nlprompt=True):
+    """
+    get a list of floats from the prompt
+    """
     if prompt == None:
         prompt = "Enter a list of floats"
     if default != None:
@@ -1030,7 +1065,9 @@ def get_flt_list(prompt=None,default=None,nlprompt=True):
 ##########################################################################
 class Menu:
     """
-    given a set of menu labels
+    A menu driven interface
+    
+    Given a set of menu labels
     and corresponding set of descriptions,
     loop until there is a match to one of the labels
     at the command line
@@ -1038,6 +1075,7 @@ class Menu:
     ##########################################################
     def __init__(self,labels=[],descr=[],header=None,
                  dohelp=True,matchidx=True,sort=True):
+        """init"""
         self.dohelp = dohelp
         if (len(descr) != 0) and (len(descr) != len(labels)):
             print "Error length mis-match between labels and descriptions"
@@ -1047,7 +1085,7 @@ class Menu:
 
     ##########################################################
     def _init(self,labels,descr,header,matchidx,sort):
-        
+        """init"""
         import numpy as num
 
         self.matchidx = matchidx
@@ -1208,3 +1246,4 @@ if __name__ == "__main__":
     print get_yn()
     print get_tf()
     print get_int()
+    

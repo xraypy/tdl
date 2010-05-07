@@ -1,16 +1,15 @@
-#!/usr/bin/python
+#!python
 """
 Simple python shell program 
 
 Authors / Modifications:
 ------------------------
-Tom Trainor (fftpt@uaf.edu ), 6-10-2006 
+Tom Trainor (tptrainor@alaska.edu ), 6-10-2006 
 - modified from tdl-0.2
 - major revision 10/08 TPT
 
-ToDo:
------
-- see wiki
+More information can be found at:
+http://cars.uchicago.edu/ifeffit/tdl/docs/pds
 
 """
 ##########################################################################
@@ -57,7 +56,7 @@ HELP_STR =  """\n
 
 ===To list data and variables, use the show command: 
 >show              # List defined data/functions
->show  name        # Detailed list
+>show name         # Detailed list
 >help show         # For more show options
 *****************************************************************\n
 """
@@ -81,9 +80,21 @@ This can be customized via the startup files:
      - and -
    HOMEPATH/.pds
 
+You can determine the values for these paths using the following:
+>>show -a __pds__.__path__   # INSTALL_PATH
+>>show -a __home__           # HOMEPATH
+
+** Syntax
+Command line syntax is the same as at the typical python interpretor prompt
+with some minor differences.  We have defined a list of 'commands' that can
+be called with a command syntax (see below).  You can also call the shell
+using the following syntax for example: '>>!dir'.  Finally modules and functions
+etc can be displayed in an organized format using the '>>show' command.  
+
 ** Commands
-The list of commands are displayed by typing 'show' at the command line
-Commands can be exectuted from the command line as:
+The list of commands (and other loaded objects) are displayed by typing
+'show' at the command line. Commands can be exectuted from the
+command line as:
 
   pds>command arg1, arg2
 
@@ -100,6 +111,7 @@ in one of two ways, depending on how the command was defined:
     repacked into a function call and sent to the interpretor.
     Type 'help addcmd' and 'help alias' for more information on how to
     create these.
+
 
 More information on pds and the overall project can be found at:
 http://cars9.uchicago.edu/ifeffit/tdl/Docs/Pds
@@ -121,6 +133,9 @@ class Shell(_NumShell):
     #############################################################
     def __init__(self,args=[],stdin=None,stdout=None,
                  completekey='tab',intro=None,debug=False,GUI='TkAgg'):
+        """
+        Init
+        """
         # Prompt
         self.ps1 = "pds>"
         self.ps2 = "...>"
@@ -163,7 +178,7 @@ class Shell(_NumShell):
                               'help':self.do_help,
                               'load':self.do_load,
                               'debug':self.do_debug,
-                              'execfile':self.do_execfile,
+                              'exfile':self.do_execfile,
                               'save':self.do_save,
                               'restore':self.do_restore,
                               'clear':self.do_clear,
@@ -197,7 +212,7 @@ class Shell(_NumShell):
         startup.append("__builtins__.update({'ls':__pds__._ls})")
         startup.append("__builtins__.update({'cd':__pds__._cd})")
         startup.append("__builtins__.update({'pwd':__pds__._cwd})")
-        startup.append("__builtins__.update({'mod_import':__pds__.mod_import})")
+        startup.append("__builtins__.update({'rimport':__pds__.rimport})")
         startup.append("__builtins__.update({'path':__pds__._path})")
         startup.append("__builtins__.update({'source':__pds__.source})")
         startup.append("__builtins__.update({'info':__pds__.info})")
@@ -208,7 +223,7 @@ class Shell(_NumShell):
         self.do_addcmd('cd',"__pds__.cd")
         self.do_addcmd('more',"__pds__.more")
         self.do_addcmd('path',"__pds__.path")
-        self.do_addcmd('mod_import',"__pds__.mod_import")
+        self.do_addcmd('rimport',"__pds__.rimport")
         self.do_addcmd('source',"__pds__.source")
         self.do_addcmd('info',"__pds__.info")
 
@@ -239,6 +254,8 @@ class Shell(_NumShell):
     ############################################################################
     def loop(self, intro=None):
         """
+        The prompt loop
+        
         Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.  Modified from cmd.Cmd.cmdloop.
@@ -276,6 +293,8 @@ class Shell(_NumShell):
     #############################################################
     def exec_line(self, line):
         """
+        Exec a line of code
+        
         This method first checks for blank line.
         If not blank then
             If a shell command: pass to shell
@@ -386,7 +405,7 @@ class Shell(_NumShell):
         be changed by setting the flag file_error_break = False
 
         If the file has a '.sav' extension we first try to read it
-        using restore
+        using restore (ie assume its a pickle)
         """
         if fname[-4:] == '.sav':
             if self._restore(fname) == 1:
@@ -422,6 +441,8 @@ class Shell(_NumShell):
     #############################################################
     def do_addcmd(self,*arg):
         """
+        Add a command interface to a function
+        
         Allows a function to be called with command syntax.
           >>addcmd mycmd, myfun
         results in
@@ -470,6 +491,8 @@ class Shell(_NumShell):
     def do_addalias(self,*arg):
         """
         Create a command shortcut for a function.
+
+        The alias is just a way of making shortcuts for repetitive taks
           >>alias myalias, 'myfun(args)'
         results in
           >>myalias
@@ -480,7 +503,8 @@ class Shell(_NumShell):
         Note alias's are added to the command list
         (see 'show' and 'help addcmd')
 
-        example
+        Example:
+        --------
         pds>alias "code", "cd('~/code')"
         pds>code
         pds>pwd
@@ -529,10 +553,12 @@ class Shell(_NumShell):
         
         Note this may fail since not all
         objects can be pickled... needs improvement!
-        Call as:
-        >save            # save all to default fname
-        >save fname      # save all to fname
-        >save data fname # save data to file
+
+        Examples:
+        ---------
+        >>save            # save all to default fname
+        >>save fname      # save all to fname
+        >>save data fname # save data to file
         """
         from shellutil import pickle_1 as pickle
         #from shellutil import pickle_2 as pickle
@@ -562,7 +588,7 @@ class Shell(_NumShell):
     ##############################################################
     def do_restore(self,fname):
         """
-        Restore state from a file
+        Restore state from a file that was created with save
         """
         self._restore(fname)
         return 
@@ -584,6 +610,9 @@ class Shell(_NumShell):
     def do_clear(self,arg):
         """
         Clear all 'data' from the workspace
+
+        This clears everything that looks like a variable, ie
+        simple data types and class instances
         """
         args  = split_args(arg)
         if len(args) == 0:
@@ -665,6 +694,8 @@ class Shell(_NumShell):
 
     #############################################################
     def _show_builtins(self,_skip=True):
+        """
+        """
         print "\n***** Builtins ******"
         # show python keywords
         print "\n==== Python Key Words ===="
@@ -675,6 +706,8 @@ class Shell(_NumShell):
 
     #############################################################
     def _show(self,symbol=None,tunnel=False,_skip=True):
+        """
+        """
         if symbol:
             ty = self.interp.symbol_table.sym_type(symbol)
             if ty == None:
@@ -708,7 +741,9 @@ class Shell(_NumShell):
 
     #############################################################
     def _print_show(self,d):
-        # Print stuff
+        """
+        Print stuff
+        """
         if d == None: return
         if len(d['mod'])> 0:
             print "\n==== Modules ===="
@@ -733,6 +768,9 @@ class Shell(_NumShell):
 ##################################################################################### 
 #####################################################################################
 def show_usage():
+    """
+    Print use options
+    """
     print 'Startup options for pds:'
     print '-h:  help'
     print '-w:  use wx GUI'
@@ -749,6 +787,9 @@ def show_usage():
     
 #####################################################################################
 def main(arg):
+    """
+    Startup the shell program
+    """
     ##############################################################
     # test for command line switches
     ##############################################################
@@ -821,7 +862,7 @@ def main(arg):
     if sys.platform == 'win32':
         pds_path = pds_path.replace('\\','/')
         user_home = user_home.replace('\\','/')
-    sys_vars['__pds__.pds_path'] = pds_path
+    sys_vars['__pds__.__path__'] = pds_path
     sys_vars['__home__'] = user_home
     args = []
     for var in sys_vars.keys():
