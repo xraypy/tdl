@@ -7,7 +7,7 @@ import help
 
 helper = help.Helper()
 
-# inherit these from python's __builtin__
+# inherit these from python's __builtins__
 _from_builtin= ('ArithmeticError', 'AssertionError', 'AttributeError',
                 'BaseException', 'BufferError', 'BytesWarning',
                 'DeprecationWarning', 'EOFError', 'EnvironmentError',

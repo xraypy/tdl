@@ -4,7 +4,7 @@
 from __future__ import print_function
 import os
 import types
-from . import site_config
+import site_config
 
 def isgroup(grp):
     "tests if input is a Group"
@@ -49,7 +49,7 @@ class Group(object):
 
 class InvalidName:
     """ used to create a value that will NEVER be a useful symbol.
-    symbolTable._lookup() uses this to check for invalid names"""
+    symboltable._lookup() uses this to check for invalid names"""
     pass
     
 class SymbolTable(Group):
@@ -281,7 +281,7 @@ class SymbolTable(Group):
         for item in mem:
             if not (item.startswith('_Group__') or
                     item == '__name__' or
-                    item.startswith('_symbolTable__')):
+                    item.startswith('_SymbolTable__')):
                 out.append('  %s: %s' % (item, repr(getattr(grp, item))))
         msg = '\n'.join(out)
         return "%s\n" % msg  
