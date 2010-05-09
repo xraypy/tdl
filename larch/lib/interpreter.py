@@ -587,7 +587,7 @@ class Interpreter:
             return        
         for tnode in node.targets:
             self._NodeAssign(tnode, val)
-        return val # return
+        return # return val
 
     def do_augassign(self, node):    # ('target', 'op', 'value')
         "augmented assign"
