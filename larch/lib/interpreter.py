@@ -313,8 +313,9 @@ class Interpreter:
 
         builtingroup = getattr(symtable,'_builtin')
         mathgroup    = getattr(symtable,'_math')
+
         for sym in builtins._from_builtin:
-            setattr(builtingroup, sym, getattr(__builtins__, sym))
+            setattr(builtingroup, sym, __builtins__[sym])
 
         if HAS_NUMPY:
             for sym in builtins._from_numpy:
