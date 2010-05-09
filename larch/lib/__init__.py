@@ -6,7 +6,7 @@
 
 #
 import sys
-major,minor = sys.version_info[0], sys.version_info[1]
+major, minor = sys.version_info[0], sys.version_info[1]
 if major == 2 and minor < 6:
     raise EnvironmentError('requires python 2.6 or higher')
 

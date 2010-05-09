@@ -1,17 +1,9 @@
-import __builtin__
-import copy
+
 import os
 import sys
-import numpy
-import pydoc
-
+import copy
 from glob import glob
-
-#
-#
-# import plotter
 import help
-from util import closure
 
 helper = help.Helper()
 
@@ -44,6 +36,7 @@ _from_builtin= ('ArithmeticError', 'AssertionError', 'AttributeError',
                 'type', 'unichr', 'unicode', 'zip')
 
 # inherit these from numpy
+
 _from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
                'sqrt','arange', 'arccos', 'arccosh', 'arcsin', 'arcsinh',
                'arctan', 'arctan2', 'arctanh', 'argmax', 'argmin',
@@ -57,12 +50,21 @@ _from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
                'indices', 'invert', 'left_shift', 'less', 'less_equal',
                'logical_and', 'logical_not', 'logical_or', 'logical_xor',
                'maximum', 'minimum', 'multiply', 'negative', 'nonzero',
-               'not_equal', 'ones', 'power', 'product', 'put', 'putmask',
-               'rank', 'ravel', 'remainder', 'repeat', 'reshape', 'resize',
-               'right_shift', 'searchsorted', 'shape', 'size', 'sometrue',
-               'sort', 'subtract', 'sum', 'swapaxes', 'trace', 'transpose',
-               'true_divide', 'vdot', 'where', 'zeros','linspace')
+               'not_equal', 'ones', 'outer', 'power', 'product', 'put',
+               'putmask', 'rank', 'ravel', 'remainder', 'repeat',
+               'reshape', 'resize', 'right_shift', 'searchsorted', 'shape',
+               'size', 'sometrue', 'sort', 'subtract', 'sum', 'swapaxes',
+               'trace', 'transpose', 'true_divide', 'vdot', 'where',
+               'zeros','linspace')
 
+_numpy_renames ={'ln':'log',
+                 'atan':'arctan',
+                 'atan2':'arctan2',
+                 'acos':'arccos',
+                 'acosh':'arccosh',
+                 'asin':'arcsin',
+                 'asinh':'arcsinh'}
+                 
 ##
 ## More builtin commands, to set up the larch language:
 ##
@@ -126,24 +128,24 @@ def show_more(text,filename=None,writer=None,pagelength=30,prefix=''):
                 writer.write("\n")
                 return
 
-def _ls(dir= '.',**kws):
+def _ls(dir='.', **kws):
     " return list of files in the current directory "
     dir.strip()
-    if len(dir)==0: arg = '.'
+    if len(dir) == 0: arg = '.'
     if os.path.isdir(dir):
         ret = os.listdir(dir)
     else:
         ret = glob(dir)
     if sys.platform == 'win32':
-        for i,r in enumerate(ret):
+        for i, r in enumerate(ret):
             ret[i] = ret[i].replace('\\','/')
     return ret
 
-def _ls_cmdout(x,ncol=None,**kws):
+def _ls_cmdout(x, ncol=None, **kws):
     " output for ls "
-    return show_list(x,ncol=ncol)
+    pass # return show_list(x, ncol=ncol)
 
-def _cwd(x=None,**kws):
+def _cwd(x=None, **kws):
     "return current working directory"
     ret = os.getcwd()
     if sys.platform == 'win32':
@@ -179,18 +181,14 @@ def _help(*args,**kws):
     helper.buffer = []
     larch = kws.get('larch',None)
     if helper.larch is None and larch is not None:  helper.larch = larch
-
-    if args == ('',): args = ('help',)
-    # print ' :: _help ', args
-
+    if args == ('',):
+        args = ('help',)
     if helper.larch is None:
         helper.addtext('cannot start help system!')
     else:
-
-        [helper.help(a) for a in args]
+        [helper.help(a.strip()) for a in args]
 
     return helper.getbuffer()
-
 
 def _plot(*args,**kws):
     pass

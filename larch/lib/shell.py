@@ -4,9 +4,6 @@ from __future__ import print_function
 import cmd
 from os import path, environ, system, getcwd
 import sys
-import types
-import getopt
-import traceback
 import numpy
 import interpreter
 
@@ -41,7 +38,8 @@ class shell(cmd.Cmd):
         except ImportError:
             self.rdline = None
         cmd.Cmd.__init__(self,completekey='tab')
-        self.historyfile = path.join(environ.get('HOME',getcwd()),'.larch_history')
+        self.historyfile = path.join(environ.get('HOME', getcwd()),
+                                     '.larch_history')
         if self.rdline is not None:
             try:
                 self.rdline.read_history_file(self.historyfile)
@@ -88,15 +86,8 @@ class shell(cmd.Cmd):
                 return None, None, line
         return '', '', line
 
-
     def do_shell(self, arg):
         system(arg)
-
-    def do_help(self,arg):
-        if arg.startswith('(') and arg.endswith(')'): arg = arg[1:-1]
-        if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
-        if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
-        self.default("help(%s)"% (repr(arg)))
 
     def larch_execute(self,s_inp):
         self.default(s_inp)
@@ -110,7 +101,14 @@ class shell(cmd.Cmd):
         text = text.strip()
         if text in ('quit','exit','EOF'):
             return 1
-        elif text.startswith('!'):
+
+        if text.startswith('help'):
+            arg = text[4:]
+            if arg.startswith('(') and arg.endswith(')'): arg = arg[1:-1]
+            if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
+            if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
+            text  = "help(%s)"% (repr(arg))
+        if text.startswith('!'):
             self.do_shell(text[1:])
         else:
             ret = None
@@ -140,5 +138,4 @@ class shell(cmd.Cmd):
                 self.prompt = self.ps1
             
 if __name__ == '__main__':
-
     t = shell(debug=True).cmdloop()

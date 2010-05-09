@@ -9,15 +9,17 @@ def get_DefVar(text):
     returns (varname, expression) if this is a valid defvar statement
     or None,None if not a valid defvar statement
     """
-    if text.find('=')>0 and text.startswith('def '):
+    if text.find('=') > 0 and text.startswith('def '):
         t = text[4:].replace('=',' = ').strip()
         words = t.split()
         if len(words) > 2 and words[1] == '=':
             iequal = t.find('=')
             iparen = t.find('(')
             icolon = t.find(':')
-            if iparen < 0 : iparen = len(t)+1
-            if icolon < 0 : icolon = len(t)+1
+            if iparen < 0 :
+                iparen = len(t)+1
+            if icolon < 0 :
+                icolon = len(t)+1
             # print iequal, iparen, icolon, words[0], isValidName(words[0])
             if (iequal < iparen and iequal < icolon and
                 isValidName(words[0])):
@@ -84,20 +86,20 @@ class InputText:
     indent = ' '*4
     ps1 = ' >'
     ps2 = '.....>'
-    block_friends = {'if':  ('else','elif'),
+    block_friends = {'if':    ('else', 'elif'),
                      'for':   ('else'),
                      'def':   (),
-                     'try':   ('else','except','finally'),
+                     'try':   ('else', 'except', 'finally'),
                      'while': ('else') }
 
-    parens = {'{':'}','(':')','[':']'}
+    parens = {'{':'}', '(':')', '[':']'}
     fcn_defvar= "_builtin.definevar"
     fcn_print = "_builtin._print_"
     nonkey    = 'NONKEY'
 
-    empty_frame = (None,None,-1)
+    empty_frame = (None, None, -1)
     
-    def __init__(self,prompt=None,
+    def __init__(self, prompt=None,
                  interactive=True, input=None,
                  filename=None):
         self.prompt = prompt or self.ps1
@@ -105,7 +107,8 @@ class InputText:
         self.interactive = interactive
         self.lineno   = 0
         self.filename = filename or '<StdInput>'
-        if interactive:  self.input = input or self.__defaultInput
+        if interactive:
+            self.input = input or self.__defaultInput
         self._fifo     = [[],[]]
         self.block     = []
         self.keys      = []
@@ -127,12 +130,13 @@ class InputText:
     def put(self, text, filename=None, lineno=None ):
         """add line of input code text"""
         fname = filename or self.filename or '<StdInput>'
-        if lineno is not None:  self.lineno = lineno
+        if lineno is not None:
+            self.lineno = lineno
 
         def addText(text, lineno=None):
             self.input_complete = self.__isComplete(text)                    
-            for t in text.split('\n'):
-                self.input_buff.append((t, self.input_complete,
+            for txt in text.split('\n'):
+                self.input_buff.append((txt, self.input_complete,
                                         fname, self.lineno))
                 self.lineno += 1
 
@@ -155,7 +159,7 @@ class InputText:
             try:
                 return  self._fifo[0].pop()
             except IndexError:
-                raise IndexError, 'InputText out of complete text'
+                raise IndexError('InputText out of complete text')
 
         return self.empty_frame
     
@@ -206,8 +210,8 @@ class InputText:
                 # as thiskey may have changed above for defined variables
                 if thiskey in startkeys:
                     if text.find(':') < 1:
-                        raise SyntaxError, \
-                              "%s statement needs a ':' at\n    %s" % (thiskey, text)
+                        raise SyntaxError(
+                            "%s statement needs a ':' at\n    %s" % (thiskey, text))
                     elif text.endswith(':'): 
                         self.current = thiskey
                         self.keys.append(thiskey)
@@ -240,7 +244,7 @@ class InputText:
                 indent_level = indent_level - 1
  
             if indent_level < 0:
-                raise SyntaxError, 'impossible indent level!'
+                raise SyntaxError('impossible indent level!')
 
             self.block.append('%s%s%s' % (self.indent*indent_level,prefix,text))
             if len(self.keys) == 0:

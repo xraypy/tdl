@@ -502,7 +502,7 @@ _h_DefVariables = 'Defined Variables'
 _h_String_Formatting = "String Formatting"
 
 def generate():
-    topics = {}
+    topics = {'':_h_Help}
     for key,val in globals().items():
         if key.startswith('_h_'):
             name = key[3:].lower().replace('_',' ')
@@ -522,4 +522,5 @@ def generate():
             s = ''
     tnames.append(s)
     topics['topics'] = '\n'.join(tnames)
+
     return topics
