@@ -181,7 +181,7 @@ class SymbolTable(Group):
             out = ['== %s ==' % group]
             for item in names:
                 if not (item.startswith('_Group__') or
-                        item.startswith('_symbolTable__')):
+                        item.startswith('_SymbolTable__')):
                     out.append('  %s: %s' % (item, repr(getattr(grp, item))))
             msg = '\n'.join(out)
         else:
@@ -200,6 +200,7 @@ class SymbolTable(Group):
         cache = self._fix_searchGroups()
         searchGroups = [cache['localGroup'], cache['moduleGroup']]
         searchGroups.extend(cache['searchGroups'])
+        # print(" _lookup!" , name)
         if self not in searchGroups:
             searchGroups.append(self)
 
@@ -258,6 +259,7 @@ class SymbolTable(Group):
 
     def show_group(self, gname=None):
         "show groups"
+        print(" showgroup %s " % gname)
         if gname is None:
             gname = '_main'
         if isgroup(gname): 
@@ -266,6 +268,7 @@ class SymbolTable(Group):
         elif isinstance(gname, types.ModuleType):
             grp = gname
             title = gname.__name__
+            print("Mod!" )
         else:
             grp = self._lookup(gname, create=False)
             title = gname
@@ -275,7 +278,7 @@ class SymbolTable(Group):
 
         if grp == self:
             title = 'SymbolTable _main'
-
+        print(" showgroup 1")
         mem = dir(grp)
         out = ['== %s: %i symbols ==' % (title, len(mem))]
         for item in mem:

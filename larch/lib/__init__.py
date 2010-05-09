@@ -14,7 +14,7 @@ if major == 2 and minor < 6:
 import numpy
 
 from . import interpreter
-from .symbolTable import Group, symbolTable
+from .symboltable import Group, SymbolTable
 from .shell import shell
 from .interpreter import Interpreter
 from .inputText import InputText
@@ -23,4 +23,4 @@ interp= Interpreter
 input = InputText
 
 __version__ = interpreter.__version__
-__date__    = '22-Nov-2009'
+__date__    = '08-May-2010'

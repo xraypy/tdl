@@ -680,6 +680,7 @@ class Interpreter:
             self.interp(tnode)
 
     def do_ifexp(self, node):    # ('test', 'body', 'orelse')
+
         "if expressions"
         expr = node.orelse
         if self.interp(node.test):
@@ -741,8 +742,12 @@ class Interpreter:
         "function/procedure execution"
         # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
-        if not hasattr(func, '__call__'):
-            msg = "'%s' is not not callable" % (func)
+        #  note: callable(func) in 2.x becomes
+        #    hasattr(func, '__call__') in 3.x, BUT::
+        # classes in 2.x do NOT HAVE attribute '__call__'
+        # but ARE callable!!!x
+        if not callable(func): # hasattr(func, '__call__'):
+            msg = "'%s' is not callable" % (func)
             self.on_except(node, msg=msg, py_exc=sys.exc_info())
 
         args = [self.interp(targ) for targ in node.args]
@@ -925,11 +930,12 @@ class Interpreter:
             if self.error:
                 e_type, e_value = self.error[-1].py_exc
                 this_exc = e_type()
+                # print("Look for except: ", this_exc)
+                # print("out of handlers: ", node.handlers)
                 for hnd in node.handlers:
-                    try:
-                        htype = getattr(__builtins__, hnd.type.id)
-                    except:
-                        htype = None
+                    htype = None
+                    if hnd.type is not None:
+                        htype = __builtins__.get(hnd.type.id,None)
                     if htype is None or isinstance(this_exc, htype):
                         self.error = []
                         if hnd.name is not None:
