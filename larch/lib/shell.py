@@ -125,14 +125,17 @@ class shell(cmd.Cmd):
                     except:
                         pass
                 if self.larch.error:
-                    print('== Error ==')
                     err = self.larch.error.pop(0)
+                    fname, lineno = err.fname, err.lineno
                     print("%s: %s" % err.get_error())
+
                     for err in self.larch.error:
-                        err_type,err_msg =  err.get_error()
-                        if not (err_type.startswith('Extra Error')
-                                or err_type.startswith('Eval Error')):
-                            print(err_msg)
+                        if ((err.fname != fname or err.lineno != lineno)
+                            and err.lineno >= 0):
+                            print('%s' % (err.get_error()[1]))
+                            #(err_type.startswith('Extra Error') or
+                            #     err_type.startswith('Eval Error')):
+
                 elif ret is not None:
                     print("%s" % ret)
                 self.prompt = self.ps1

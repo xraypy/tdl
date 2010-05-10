@@ -68,7 +68,7 @@ class SymbolTable(Group):
         for gname in self.core_groups:
             setattr(self, gname, Group(name=gname))
 
-        self.frames = []
+        self._sys.frames = []
         self._sys.searchNames  = []
         self._sys.searchGroups = []
         self._sys.localGroup   = self
@@ -90,13 +90,13 @@ class SymbolTable(Group):
     
     def save_frame(self):
         " save current local/module group"
-        self.frames.append((self._sys.localGroup,
-                           self._sys.moduleGroup))
+        self._sys.frames.append((self._sys.localGroup,
+                                 self._sys.moduleGroup))
 
     def restore_frame(self):
         "restore last saved local/module group"        
         try:
-            lgrp, mgrp = self.frames.pop()
+            lgrp, mgrp = self._sys.frames.pop()
             self._sys.localGroup = lgrp
             self._sys.moduleGroup  = mgrp
             self._fix_searchGroups()

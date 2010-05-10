@@ -104,17 +104,20 @@ class Procedure(object):
         self.fname    = fname
         
     def __repr__(self):
-        sig = "%s(" % self.name
-        if len(self.argnames ) > 0:
-            sig = "%s%s" % (sig, ','.join(self.argnames))
+        sig = ""
+        if len(self.argnames) > 0:
+            sig = "%s%s" % (sig, ', '.join(self.argnames))
+        if self.vararg is not None:
+            sig = "%s, *%s" % (sig, self.vararg)
         if len(self.kwargs) > 0:
-            if len(self.argnames ) > 0:
-                sig = "%s," % sig            
+            if len(sig) > 0:
+                sig = "%s, " % sig            
             _kw = ["%s=%s" % (k, v) for k, v in self.kwargs]
-            sig = "%s%s" % (sig, ','.join(_kw))
-            
-        sig = "<Procedure %s, file=%s)>" % (sig, self.fname)
+            sig = "%s%s" % (sig, ', '.join(_kw))
 
+        if self.varkws is not None:
+            sig = "%s, **%s" % (sig, self.varkws)
+        sig = "<Procedure %s(%s), file=%s>" % (self.name, sig, self.fname)
         if self.__doc__ is not None:
             sig = "%s\n  %s" % (sig, self.__doc__)
         return sig
@@ -127,7 +130,7 @@ class Procedure(object):
             msg = 'Cannot run Procedure %s' % self.name
             self.larch.on_except(None, msg=msg, expr='<>',
                                  fname=self.fname,
-                                 lineno=self.lineno+1,
+                                 lineno=self.lineno,
                                  py_exc=sys.exc_info())
 
         args   = list(args)
@@ -143,7 +146,7 @@ class Procedure(object):
                                                    n_args)
                 self.larch.on_except(None, msg=msg, expr='<>',
                                      fname=self.fname,
-                                     lineno=self.lineno+1,
+                                     lineno=self.lineno,
                                      py_exc=sys.exc_info())
                 
             msg = "too many arguments for Procedure %s" % self.name
@@ -158,7 +161,7 @@ class Procedure(object):
                     msg = msg % (t_kw[0], self.name)
                     self.larch.on_except(None, msg=msg, expr='<>',
                                          fname=self.fname,
-                                         lineno=self.lineno+1,
+                                         lineno=self.lineno,
                                          py_exc=sys.exc_info())
 
                 else:
@@ -180,7 +183,7 @@ class Procedure(object):
                 msg = msg % (self.name, ','.join(list(kwargs.keys())))
                 self.larch.on_except(None, msg=msg, expr='<>',
                                      fname=self.fname,
-                                     lineno=self.lineno+1,
+                                     lineno=self.lineno,
                                      py_exc=sys.exc_info())
                 
         except:
@@ -188,7 +191,7 @@ class Procedure(object):
             self.larch.on_except(None, msg=msg,
                                  expr='<>',
                                  fname=self.fname,
-                                 lineno=self.lineno+1,
+                                 lineno=self.lineno,
                                  py_exc=sys.exc_info())            
             
 
@@ -217,7 +220,7 @@ class LarchExceptionHolder:
     "basic exception handler"
     def __init__(self, node, msg='', fname='<StdIn>',
                  py_exc=(None, None),
-                 expr=None, lineno=0):
+                 expr=None, lineno=-3):
         self.node   = node
         self.fname  = fname
         self.expr   = expr
@@ -256,14 +259,15 @@ class LarchExceptionHolder:
         out = []
         if len(exc_text) > 0:
             out.append(exc_text)
-        py_etype, py_eval = self.py_exc
-        
-        if py_etype is not None and py_eval is not None:
-            out.append("%s: %s" % (py_etype, py_eval))
-        if self.fname == '<StdInput>' and self.lineno == 0:
+        else:
+            py_etype, py_eval = self.py_exc
+            if py_etype is not None and py_eval is not None:
+                out.append("%s: %s" % (py_etype, py_eval))
+                
+        if self.fname == '<StdInput>' and self.lineno <= 0:
             out.append(' <StdInput>')
         else:
-            out.append(" %s, line number %i" % (self.fname, self.lineno))
+            out.append(" %s, line number %i" % (self.fname, 1+self.lineno))
             
         out.append("     %s" % expr)
         if node_col_offset > 0:
@@ -341,7 +345,7 @@ class Interpreter:
                        py_exc=sys.exc_info())
 
     def on_except(self, node, msg='', expr=None,
-                  fname=None, lineno=0, py_exc=None):
+                  fname=None, lineno=-1, py_exc=None):
         "add an exception"
         if self.error is None:
             self.error = []
@@ -350,7 +354,7 @@ class Interpreter:
         if fname is None:
             fname = self.fname        
         if lineno is None:
-            lineno = 0
+            lineno = self.lineno
 
         if len(self.error) > 0 and not isinstance(node, ast.Module):
             msg = 'Extra Error (%s)' % msg
@@ -370,7 +374,7 @@ class Interpreter:
     #  compile:  string statement -> ast
     #  interp :  ast -> result
     #  eval   :  string statement -> result = interp(compile(statement))
-    def compile(self, text, fname=None, lineno=0):
+    def compile(self, text, fname=None, lineno=-4):
         """compile statement/expression to Ast representation    """
         self.expr  = text
         # print(" larch compile: '%s'" % text)
@@ -389,7 +393,7 @@ class Interpreter:
             return None
         if isinstance(node, str):
             node = self.compile(node)
-               
+
         method = "do_%s" % node.__class__.__name__.lower()
         if lineno is not None:
             self.lineno = lineno
@@ -402,8 +406,8 @@ class Interpreter:
         try:
             fcn = getattr(self, method)
         except:
-            self.on_except(node, msg='Lookup Error',
-                              expr=expr, fname=fname, lineno=lineno,
+            self.on_except(node, msg='Lookup Error', expr=expr,
+                           fname=fname, lineno=lineno,
                               py_exc=sys.exc_info())
             return ret
         try:
@@ -603,7 +607,12 @@ class Interpreter:
                      self.interp(node.step))
 
     def do_extslice(self, node):    # ():('dims',)
-        "extended slice"        # print("do_subscript: ", ast.dump(node))
+        "extended slice"
+        return tuple([self.interp(tnode) for tnode in node.dims])
+    
+    def do_subscript(self, node):    # ('value', 'slice', 'ctx') 
+        "subscript handling -- one of the tricky parts"
+        # print("do_subscript: ", ast.dump(node))
         val    = self.interp(node.value)
         nslice = self.interp(node.slice)
         ctx = node.ctx.__class__
@@ -680,7 +689,6 @@ class Interpreter:
             self.interp(tnode)
 
     def do_ifexp(self, node):    # ('test', 'body', 'orelse')
-
         "if expressions"
         expr = node.orelse
         if self.interp(node.test):
@@ -843,8 +851,7 @@ class Interpreter:
         #   if
         do_load = (name not in st_sys.modules and name not in sys.modules)
         do_load = do_load or do_reload
-        
-        # print("  larch do_load ", do_load)
+        # print("  larch do_load ", do_load, len(self.error))
         if do_load:
             # first look for "name.lar"
             isLarch = False
@@ -859,7 +866,7 @@ class Interpreter:
                     # save current module group
                     #  create new group, set as moduleGroup and localGroup
                     symtable.save_frame()
-                    st_sys.modules[name] = thismod = Group()
+                    st_sys.modules[name] = thismod = Group(name=name)
                     symtable.set_frame((thismod, thismod))
 
                     text = open(modname).read()
