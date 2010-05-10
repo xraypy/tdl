@@ -9,17 +9,16 @@ import interpreter
 
 import inputText
 
-try:
-    import scipy
-    scipy_version = scipy.__version__
-except:
-    scipy_version = '(not available)'
+# try:
+#     import scipy
+#     scipy_version = scipy.__version__
+# except:
+#     scipy_version = '(not available)'
     
 banner = """  Larch %s  M. Newville, T. Trainor (2009)
-  using python %s, numpy %s, and scipy %s""" % (interpreter.__version__,
+  using python %s, numpy %s""" % (interpreter.__version__,
                                                 '%i.%i.%i' % sys.version_info[:3],
-                                                numpy.__version__,
-                                                scipy_version)
+                                                numpy.__version__)
 class shell(cmd.Cmd):
     ps1    = "larch> "
     ps2    = ".....> "

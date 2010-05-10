@@ -864,7 +864,7 @@ class Interpreter:
                 if larchname in os.listdir(dirname):
                     isLarch = True
                     modname = os.path.abspath(os.path.join(dirname, larchname))
-                    # print("Found larch module:" , modname)
+                    print("Found larch module:" , modname)
 
                     # save current module group
                     #  create new group, set as moduleGroup and localGroup
@@ -889,6 +889,7 @@ class Interpreter:
 
             # or, if not a larch module, load as a regular python module
             if not isLarch:
+                print(" not isLarch" , name)
                 try:
                     __import__(name)
                     thismod = sys.modules[name]
