@@ -23,7 +23,7 @@ class Group(object):
     def __repr__(self):
         if self.__name__ is not None:
             return '<Group %s>' % self.__name__
-        return '<Group: ??>'
+        return '<Group>'
 
     def __id__(self):
         return (id(self))
@@ -259,16 +259,15 @@ class SymbolTable(Group):
 
     def show_group(self, gname=None):
         "show groups"
-        print(" showgroup %s " % gname)
+
         if gname is None:
             gname = '_main'
         if isgroup(gname): 
             grp = gname
-            title = 'Group'
+            title = repr(grp)[1:-1]
         elif isinstance(gname, types.ModuleType):
             grp = gname
             title = gname.__name__
-            print("Mod!" )
         else:
             grp = self._lookup(gname, create=False)
             title = gname
@@ -278,7 +277,7 @@ class SymbolTable(Group):
 
         if grp == self:
             title = 'SymbolTable _main'
-        print(" showgroup 1")
+
         mem = dir(grp)
         out = ['== %s: %i symbols ==' % (title, len(mem))]
         for item in mem:
@@ -319,7 +318,7 @@ class SymbolTable(Group):
         setattr(grp, child, value)
         return getattr(grp, child)        
 
-    def _parentOf(self, name):
+    def parentOf(self, name):
         """return parent group, child name for an absolute symbol name
         (as from _lookup) that is, a pair suitable for hasattr,
         getattr, or delattr 
@@ -328,14 +327,17 @@ class SymbolTable(Group):
         if len(tnam) < 1 or name == self.top_group:
             return (self, None)
         child = tnam.pop()
-        sym = self._lookup('.'.join(tnam))
+        sym = self
+        if len(tnam) > 0:
+            sym = self._lookup('.'.join(tnam))
         return sym, child
     
     def delSymbol(self, name):
         sym = self._lookup(name, create=False)
+        parent, child = self.parentOf(name)
         if isgroup(sym): 
             raise LookupError("symbol '%s' is a group" % (name))
-        parent, child = self._parentOf(name)
+        parent, child = self.parentOf(name)
         if child is not None:
             delattr(parent, child)
 
@@ -346,7 +348,7 @@ class SymbolTable(Group):
         if sym._Group__status == 'nodelete':
             raise LookupError("cannot delete group '%s'\n" % name)
         else:
-            parent, child = self._parentOf(name)
+            parent, child = self.parentOf(name)
             if child is not None:
                 delattr(parent, child)
             

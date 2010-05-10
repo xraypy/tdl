@@ -8,7 +8,7 @@ import help
 helper = help.Helper()
 
 # inherit these from python's __builtins__
-_from_builtin= ('ArithmeticError', 'AssertionError', 'AttributeError',
+from_builtin= ('ArithmeticError', 'AssertionError', 'AttributeError',
                 'BaseException', 'BufferError', 'BytesWarning',
                 'DeprecationWarning', 'EOFError', 'EnvironmentError',
                 'Exception', 'False', 'FloatingPointError',
@@ -37,7 +37,7 @@ _from_builtin= ('ArithmeticError', 'AssertionError', 'AttributeError',
 
 # inherit these from numpy
 
-_from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
+from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
                'sqrt','arange', 'arccos', 'arccosh', 'arcsin', 'arcsinh',
                'arctan', 'arctan2', 'arctanh', 'argmax', 'argmin',
                'argsort', 'array', 'cosh', 'fabs', 'floor', 'floor_divide',
@@ -57,7 +57,7 @@ _from_numpy = ('pi','e', 'array','sin','cos','tan','exp','log','log10',
                'trace', 'transpose', 'true_divide', 'vdot', 'where',
                'zeros','linspace')
 
-_numpy_renames ={'ln':'log',
+numpy_renames ={'ln':'log',
                  'atan':'arctan',
                  'atan2':'arctan2',
                  'acos':'arccos',
@@ -141,9 +141,6 @@ def _ls(dir='.', **kws):
             ret[i] = ret[i].replace('\\','/')
     return ret
 
-def _ls_cmdout(x, ncol=None, **kws):
-    " output for ls "
-    pass # return show_list(x, ncol=ncol)
 
 def _cwd(x=None, **kws):
     "return current working directory"
@@ -194,13 +191,14 @@ def _plot(*args,**kws):
     pass
 
     
-_local_funcs = {'group':_group,
-                'showgroup':_showgroup,
-                'reload':_reload,
-                'copy': _copy,
-                'more': _more,
-                'ls': _ls,
-                'cd': _cd,
-                'help': _help,
-                }
+local_funcs = {'group':_group,
+               'showgroup':_showgroup,
+               'reload':_reload,
+               'copy': _copy,
+               'more': _more,
+               'ls': _ls,
+               'cd': _cd,
+               'cwd': _cwd, 
+               'help': _help,
+               }
        

@@ -123,15 +123,12 @@ class Procedure(object):
         return sig
 
     def __call__(self, *args, **kwargs):
-        try:
-            stable  = self.larch.symtable
-            lgroup  = Group()
-        except:
-            msg = 'Cannot run Procedure %s' % self.name
-            self.larch.on_except(None, msg=msg, expr='<>',
-                                 fname=self.fname,
-                                 lineno=self.lineno,
-                                 py_exc=sys.exc_info())
+        stable  = self.larch.symtable
+        lgroup  = Group()
+        msg = 'Cannot run Procedure %s' % self.name
+        self.larch.on_except(None, msg=msg, expr='<>',
+                             fname=self.fname, lineno=self.lineno,
+                             py_exc=sys.exc_info())
 
         args   = list(args)
         n_args = len(args)
@@ -145,8 +142,7 @@ class Procedure(object):
                                                    n_expected,
                                                    n_args)
                 self.larch.on_except(None, msg=msg, expr='<>',
-                                     fname=self.fname,
-                                     lineno=self.lineno,
+                                     fname=self.fname, lineno=self.lineno,
                                      py_exc=sys.exc_info())
                 
             msg = "too many arguments for Procedure %s" % self.name
@@ -163,7 +159,6 @@ class Procedure(object):
                                          fname=self.fname,
                                          lineno=self.lineno,
                                          py_exc=sys.exc_info())
-
                 else:
                     kwargs[t_a] = t_kw[1]
 
@@ -182,35 +177,29 @@ class Procedure(object):
                 msg = 'extra keyword arguments for Procedure %s (%s)'
                 msg = msg % (self.name, ','.join(list(kwargs.keys())))
                 self.larch.on_except(None, msg=msg, expr='<>',
-                                     fname=self.fname,
-                                     lineno=self.lineno,
+                                     fname=self.fname, lineno=self.lineno,
                                      py_exc=sys.exc_info())
                 
-        except:
+        except (ValueError, LookupError, TypeError, 
+                NameError, AttributeError):
             msg = 'incorrect arguments for Procedure %s' % self.name
-            self.larch.on_except(None, msg=msg,
-                                 expr='<>',
-                                 fname=self.fname,
-                                 lineno=self.lineno,
+            self.larch.on_except(None, msg=msg, expr='<>',
+                                 fname=self.fname,   lineno=self.lineno,
                                  py_exc=sys.exc_info())            
             
-
         stable.save_frame()
         stable.set_frame((lgroup, self.modgroup))
         retval = None
         self.larch.retval = None
-        # print("***** Calling proc " , self.name, self.fname, self.lineno)
+
         for node in self.body:
             self.larch.interp(node, expr='<>',
-                              fname=self.fname,
-                              lineno=self.lineno)
-            
+                              fname=self.fname, lineno=self.lineno)            
             if len(self.larch.error) > 0:
                 break
             if self.larch.retval is not None:
                 retval = self.larch.retval
                 break
-
         stable.restore_frame()
         self.larch.retval = None
         del lgroup
@@ -243,7 +232,6 @@ class LarchExceptionHolder:
                 pass
             
         lineno = self.lineno + node_lineno 
-
         exc_text = str(self.exc_info[1])
         if exc_text in (None, 'None'):
             exc_text = ''
@@ -272,7 +260,6 @@ class LarchExceptionHolder:
         out.append("     %s" % expr)
         if node_col_offset > 0:
             out.append("    %s^^^" % ((node_col_offset)*' '))
-
         return (self.msg, '\n'.join(out))
 
 class LarchError(Exception):
@@ -310,25 +297,25 @@ class Interpreter:
         self.getSymbol  = symtable.getSymbol
         self.delSymbol  = symtable.delSymbol        
         self._interrupt = None
-        self.error      = []
+        self.error      = [] 
         self.expr       = None
         self.retval     = None
-        self.fname      = '<StdIn>'
-
+        self.fname     = '<StdIn>'
+        self.lineno    = -5
         builtingroup = getattr(symtable,'_builtin')
         mathgroup    = getattr(symtable,'_math')
 
-        for sym in builtins._from_builtin:
+        for sym in builtins.from_builtin:
             setattr(builtingroup, sym, __builtins__[sym])
 
         if HAS_NUMPY:
-            for sym in builtins._from_numpy:
+            for sym in builtins.from_numpy:
                 setattr(mathgroup, sym, getattr(numpy, sym))
             
-                for fname, sym in list(builtins._numpy_renames.items()):
+                for fname, sym in list(builtins.numpy_renames.items()):
                     setattr(mathgroup, fname, getattr(numpy, sym))
 
-        for fname, fcn in list(builtins._local_funcs.items()):
+        for fname, fcn in list(builtins.local_funcs.items()):
             setattr(builtingroup, fname,
                     util.Closure(func=fcn, larch=self))
         setattr(builtingroup, 'definevar',
@@ -338,7 +325,7 @@ class Interpreter:
         """define a defined variable (re-evaluate on access)"""
         self.setSymbol(name, DefinedVariable(expr=expr, larch=self))
 
-    def NotImplemented(self, node):
+    def unimplemented(self, node):
         "unimplemented nodes"
         cname = node.__class__.__name__
         self.on_except(node, "'%s' not supported" % (cname),
@@ -530,7 +517,7 @@ class Interpreter:
                 val = val.evaluate()
         return val
 
-    def _NodeAssign(self, nod, val):
+    def node_assign(self, nod, val):
         """here we assign a value (not the node.value object) to a node
         this is used by do_assign, but also by for, list comprehension, etc.
         """
@@ -555,7 +542,7 @@ class Interpreter:
         elif nod.__class__ in (ast.Tuple, ast.List):
             if len(val) == len(nod.elts):
                 for telem, tval in zip(nod.elts, val):
-                    self._NodeAssign(telem, tval)
+                    self.node_assign(telem, tval)
             else:
                 raise ValueError('too many values to unpack')
 
@@ -590,7 +577,7 @@ class Interpreter:
         if len(self.error) > 0:
             return        
         for tnode in node.targets:
-            self._NodeAssign(tnode, val)
+            self.node_assign(tnode, val)
         return # return val
 
     def do_augassign(self, node):    # ('target', 'op', 'value')
@@ -630,9 +617,27 @@ class Interpreter:
         for tnode in node.targets:
             ctx = tnode.ctx.__class__
             assert ctx == ast.Del, 'wrong Context for delete???'
-            #print(ast.dump(n))
-            print(" READY TO DELETE: %s"  %  self.interp(tnode))
-
+            tclass = tnode.__class__
+            children = []
+            while tclass == ast.Attribute:
+                children.append(tnode.attr)
+                tnode = tnode.value
+                tclass = tnode.__class__
+            # lastchild = children.pop(0)
+            if tclass == ast.Name:
+                sym = tnode.id
+                parent,child = self.symtable.parentOf(sym)
+                children.append(child)
+                lastchild = children.pop(0)
+                for child in children:
+                    if hasattr(parent, child):
+                        parent = getattr(parent, child)
+                delattr(parent, lastchild)
+            else:
+                msg = "could not delete symbol"
+                self.on_except(node, msg=msg, py_exc=sys.exc_info())
+                
+            
     def do_unaryop(self, node):    # ('op', 'operand')
         "unary operator"
         return OPERATORS[node.op.__class__](self.interp(node.operand))
@@ -713,7 +718,7 @@ class Interpreter:
     def do_for(self, node):    # ('target', 'iter', 'body', 'orelse')
         "for blocks"
         for val in self.interp(node.iter):
-            self._NodeAssign(node.target, val)
+            self.node_assign(node.target, val)
             if len(self.error) > 0:
                 return            
             self._interrupt = None
@@ -736,7 +741,7 @@ class Interpreter:
         for tnode in node.generators:
             if tnode.__class__ == ast.comprehension:
                 for val in self.interp(tnode.iter):
-                    self._NodeAssign(tnode.target, val)
+                    self.node_assign(tnode.target, val)
                     if len(self.error) > 0:
                         return                    
                     add = True
@@ -752,8 +757,7 @@ class Interpreter:
         func = self.interp(node.func)
         #  note: callable(func) in 2.x becomes
         #    hasattr(func, '__call__') in 3.x, BUT::
-        # classes in 2.x do NOT HAVE attribute '__call__'
-        # but ARE callable!!!x
+        # classes in 2.x do NOT HAVE attribute '__call__'  but ARE callable!!
         if not callable(func): # hasattr(func, '__call__'):
             msg = "'%s' is not callable" % (func)
             self.on_except(node, msg=msg, py_exc=sys.exc_info())
@@ -793,14 +797,12 @@ class Interpreter:
             docnode = node.body.pop(0)
             doc = self.interp(docnode.value)
 
-        proc = Procedure(node.name, larch= self, doc= doc,
-                         lineno = self.lineno,
-                         body   = node.body,
-                         fname  = self.fname,
-                         args   = args,
-                         kwargs = kwargs,
-                         vararg = node.args.vararg,
-                         varkws = node.args.kwarg)
+            proc = Procedure(node.name, larch= self, doc= doc,
+                             body   = node.body,
+                             fname  = self.fname,   lineno = self.lineno,
+                             args   = args,   kwargs = kwargs,
+                             vararg = node.args.vararg,
+                             varkws = node.args.kwarg)
         self.setSymbol(node.name, value=proc)
 
     # imports
@@ -857,7 +859,8 @@ class Interpreter:
             isLarch = False
             larchname = "%s.lar" % name
             for dirname in st_sys.path:
-                if not os.path.exists(dirname): continue
+                if not os.path.exists(dirname):
+                    continue
                 if larchname in os.listdir(dirname):
                     isLarch = True
                     modname = os.path.abspath(os.path.join(dirname, larchname))
@@ -942,11 +945,11 @@ class Interpreter:
                 for hnd in node.handlers:
                     htype = None
                     if hnd.type is not None:
-                        htype = __builtins__.get(hnd.type.id,None)
+                        htype = __builtins__.get(hnd.type.id, None)
                     if htype is None or isinstance(this_exc, htype):
                         self.error = []
                         if hnd.name is not None:
-                            self._NodeAssign(hnd.name, e_value)
+                            self.node_assign(hnd.name, e_value)
                         for tline in hnd.body:
                             self.interp(tline)
                         break
@@ -960,42 +963,37 @@ class Interpreter:
                     
     def do_tryfinally(self, node):
         "try finally"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
     
     def do_exec(self, node):
         "exec statement: not allowed!"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
     
     def do_lambda(self, node):
         "lambda: non-ultimate"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
     
     def do_class(self, node):
         "class: we have none!"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
     
     def do_global(self, node):
         "global: handled with different namespace rules"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
     
     def do_generators(self, node):
         "generators: not implemented"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
 
     def do_yield(self, node):
         "yield: not implemented"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
 
     def do_decorators(self, node):
         "decorators: not implemented"
-        return self.NotImplemented(node)
+        return self.unimplemented(node)
     
     def do_generatorexp(self, node):
         "generator expressions: not implemented"
-        return self.NotImplemented(node)        
-
-#         print('Incomplete GeneratorExp ')
-#         print(ast.dump(node.elt),include_attributes=True)
-#         for n in node.generators:
-#             print(n)             
-
+        return self.unimplemented(node)
+    
