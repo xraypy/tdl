@@ -11,9 +11,9 @@ except ImportError:
     HAS_NUMPY = False
 
 import inputText
-from symboltable import SymbolTable, Group, isgroup
 import builtins
-import util 
+from symboltable import SymbolTable, Group, isgroup
+from util import Closure, LarchExceptionHolder, Procedure, DefinedVariable
 
 __version__ = '0.9.2'
 OPERATORS = {ast.Is:     lambda a, b: a is b,
@@ -45,233 +45,6 @@ OPERATORS = {ast.Is:     lambda a, b: a is b,
              ast.UAdd:   lambda a: +a,
              ast.USub:   lambda a: -a}
 
-##
-class DefinedVariable(object):
-    """defined variable: re-evaluate on access
-
-    Note that the localGroup/moduleGroup are cached
-    at compile time, and restored for evaluation.
-    """
-    def __init__(self, expr=None, larch=None):
-        self.expr = expr
-        self.larch = larch
-        self.ast = None
-        self._groups = None, None
-        self.compile()
-
-    def __repr__(self):
-        return "<DefinedVariable: '%s'>" % (self.expr)
-        
-    def compile(self):
-        """compile to ast"""
-        if self.larch is not None and self.expr is not None:
-            self.ast = self.larch.compile(self.expr)
-
-    def evaluate(self):
-        "actually evaluate ast to a value"
-        if self.ast is None:
-            self.compile()
-        if self.ast is None:
-            msg = "Cannot compile '%s'"  % (self.expr)
-            raise Warning(msg)
-            
-        if hasattr(self.larch, 'interp'):
-            # save current localGroup/moduleGroup 
-            self.larch.symtable.save_frame()
-            rval = self.larch.interp(self.ast, expr=self.expr)
-            self.larch.symtable.restore_frame()
-            return rval
-        else:
-            msg = "Cannot evaluate '%s'"  % (self.expr)
-            raise ValueError(msg)
-
-class Procedure(object):
-    """larch procedure:  function """
-    def __init__(self, name, larch=None, doc=None,
-                 fname='<StdIn>', lineno=0,
-                 body=None, args=None, kwargs=None,
-                 vararg=None, varkws=None):
-        self.name     = name
-        self.larch = larch
-        self.modgroup = larch.symtable._sys.moduleGroup
-        self.body     = body
-        self.argnames = args
-        self.kwargs   = kwargs
-        self.vararg   = vararg
-        self.varkws   = varkws
-        self.__doc__  = doc
-        self.lineno   = lineno
-        self.fname    = fname
-        
-    def __repr__(self):
-        sig = ""
-        if len(self.argnames) > 0:
-            sig = "%s%s" % (sig, ', '.join(self.argnames))
-        if self.vararg is not None:
-            sig = "%s, *%s" % (sig, self.vararg)
-        if len(self.kwargs) > 0:
-            if len(sig) > 0:
-                sig = "%s, " % sig            
-            _kw = ["%s=%s" % (k, v) for k, v in self.kwargs]
-            sig = "%s%s" % (sig, ', '.join(_kw))
-
-        if self.varkws is not None:
-            sig = "%s, **%s" % (sig, self.varkws)
-        sig = "<Procedure %s(%s), file=%s>" % (self.name, sig, self.fname)
-        if self.__doc__ is not None:
-            sig = "%s\n  %s" % (sig, self.__doc__)
-        return sig
-
-    def __call__(self, *args, **kwargs):
-        stable  = self.larch.symtable
-        lgroup  = Group()
-        msg = 'Cannot run Procedure %s' % self.name
-        self.larch.on_except(None, msg=msg, expr='<>',
-                             fname=self.fname, lineno=self.lineno,
-                             py_exc=sys.exc_info())
-
-        args   = list(args)
-        n_args = len(args)
-        n_expected = len(self.argnames)
-
-        if n_args != n_expected:
-            msg = None
-            if n_args < n_expected:            
-                msg = 'not enough arguments for Procedure %s' % self.name
-                msg = '%s (expected %i, got %i)'% (msg,
-                                                   n_expected,
-                                                   n_args)
-                self.larch.on_except(None, msg=msg, expr='<>',
-                                     fname=self.fname, lineno=self.lineno,
-                                     py_exc=sys.exc_info())
-                
-            msg = "too many arguments for Procedure %s" % self.name
-
-        for argname in self.argnames:
-            setattr(lgroup, argname, args.pop(0))
-
-        if len(args) > 0 and self.kwargs is not None:
-            msg = "got multiple values for keyword argument '%s' Procedure %s"
-            for t_a, t_kw in zip(args, self.kwargs):
-                if t_kw[0] in kwargs:
-                    msg = msg % (t_kw[0], self.name)
-                    self.larch.on_except(None, msg=msg, expr='<>',
-                                         fname=self.fname,
-                                         lineno=self.lineno,
-                                         py_exc=sys.exc_info())
-                else:
-                    kwargs[t_a] = t_kw[1]
-
-        try:
-            if self.vararg is not None:
-                setattr(lgroup, self.vararg, tuple(args))
-
-            for key, val in self.kwargs:
-                if key in kwargs:
-                    val = kwargs.pop(key)
-                setattr(lgroup, key, val)
-
-            if self.varkws is not None:
-                setattr(lgroup, self.varkws, kwargs)
-            elif len(kwargs) > 0:
-                msg = 'extra keyword arguments for Procedure %s (%s)'
-                msg = msg % (self.name, ','.join(list(kwargs.keys())))
-                self.larch.on_except(None, msg=msg, expr='<>',
-                                     fname=self.fname, lineno=self.lineno,
-                                     py_exc=sys.exc_info())
-                
-        except (ValueError, LookupError, TypeError, 
-                NameError, AttributeError):
-            msg = 'incorrect arguments for Procedure %s' % self.name
-            self.larch.on_except(None, msg=msg, expr='<>',
-                                 fname=self.fname,   lineno=self.lineno,
-                                 py_exc=sys.exc_info())            
-            
-        stable.save_frame()
-        stable.set_frame((lgroup, self.modgroup))
-        retval = None
-        self.larch.retval = None
-
-        for node in self.body:
-            self.larch.interp(node, expr='<>',
-                              fname=self.fname, lineno=self.lineno)            
-            if len(self.larch.error) > 0:
-                break
-            if self.larch.retval is not None:
-                retval = self.larch.retval
-                break
-        stable.restore_frame()
-        self.larch.retval = None
-        del lgroup
-        return retval
-    
-class LarchExceptionHolder:
-    "basic exception handler"
-    def __init__(self, node, msg='', fname='<StdIn>',
-                 py_exc=(None, None),
-                 expr=None, lineno=-3):
-        self.node   = node
-        self.fname  = fname
-        self.expr   = expr
-        self.msg    = msg
-        self.py_exc = py_exc
-        self.lineno = lineno
-        self.exc_info = sys.exc_info()
-
-    def get_error(self):
-        "retrieve error data"
-        node = self.node
-        node_lineno = 0
-        node_col_offset = 0
-
-        if node is not None:
-            try:
-                node_lineno = node.lineno
-                node_col_offset = self.node.col_offset
-            except: 
-                pass
-            
-        lineno = self.lineno + node_lineno 
-        exc_text = str(self.exc_info[1])
-        if exc_text in (None, 'None'):
-            exc_text = ''
-        expr = self.expr
-        if expr == '<>': # denotes non-saved expression -- go fetch from file!
-            try:
-                ftmp = open(self.fname, 'r')
-                expr = ftmp.readlines()[lineno-1][:-1]
-                ftmp.close()
-            except IOError:
-                pass
-
-        out = []
-        if len(exc_text) > 0:
-            out.append(exc_text)
-        else:
-            py_etype, py_eval = self.py_exc
-            if py_etype is not None and py_eval is not None:
-                out.append("%s: %s" % (py_etype, py_eval))
-                
-        if self.fname == '<StdInput>' and self.lineno <= 0:
-            out.append(' <StdInput>')
-        else:
-            out.append(" %s, line number %i" % (self.fname, 1+self.lineno))
-            
-        out.append("     %s" % expr)
-        if node_col_offset > 0:
-            out.append("    %s^^^" % ((node_col_offset)*' '))
-        return (self.msg, '\n'.join(out))
-
-class LarchError(Exception):
-    "general exception"
-    def __init__(self, error='Larch Error', descr=None, node=None):
-        self.error = error
-        self.descr = descr
-        self.node  = node
-    def __repr__(self):
-        return "%s: %s" % (self.error, self.descr)
-    __str__ = __repr__
-
 class Interpreter:
     """larch program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
@@ -281,7 +54,6 @@ class Interpreter:
   namespace rules.  The program syntax here is expected to be valid Python,
   but that may have been translated as with the inputText module.
 
-    
   The following Python syntax is not supported:
       Exec, Lambda, Class, Global, Generators, Yield, Decorators
         
@@ -293,14 +65,11 @@ class Interpreter:
         if symtable is None:
             symtable = SymbolTable(larch=self)
         self.symtable   = symtable
-        self.setSymbol  = symtable.setSymbol
-        self.getSymbol  = symtable.getSymbol
-        self.delSymbol  = symtable.delSymbol        
         self._interrupt = None
         self.error      = [] 
         self.expr       = None
         self.retval     = None
-        self.fname     = '<StdIn>'
+        self.fname     = '<StdInput>'
         self.lineno    = -5
         builtingroup = getattr(symtable,'_builtin')
         mathgroup    = getattr(symtable,'_math')
@@ -317,13 +86,14 @@ class Interpreter:
 
         for fname, fcn in list(builtins.local_funcs.items()):
             setattr(builtingroup, fname,
-                    util.Closure(func=fcn, larch=self))
+                    Closure(func=fcn, larch=self))
         setattr(builtingroup, 'definevar',
-                util.Closure(func=self.__definevar))
+                Closure(func=self.__definevar))
         
     def __definevar(self, name, expr):
         """define a defined variable (re-evaluate on access)"""
-        self.setSymbol(name, DefinedVariable(expr=expr, larch=self))
+        self.symtable.setSymbol(name, DefinedVariable(expr=expr,
+                                                      larch=self))
 
     def unimplemented(self, node):
         "unimplemented nodes"
@@ -364,7 +134,6 @@ class Interpreter:
     def compile(self, text, fname=None, lineno=-4):
         """compile statement/expression to Ast representation    """
         self.expr  = text
-        # print(" larch compile: '%s'" % text)
         try:
             return  ast.parse(text)
         except:
@@ -414,10 +183,11 @@ class Interpreter:
         self.error = []
         node = self.compile(expr, fname=fname, lineno=lineno)
         if not self.error:
-            out = self.interp(node, expr=expr, fname=fname, lineno=lineno)
+            out = self.interp(node, expr=expr,
+                              fname=fname, lineno=lineno)
             if len(self.error) > 0:
-                self.on_except(node, msg='Eval Error',
-                               expr=expr, fname=fname, lineno=lineno,
+                self.on_except(node, msg='Eval Error', expr=expr,
+                               fname=fname, lineno=lineno,
                                py_exc=sys.exc_info())
             return out
         
@@ -508,11 +278,11 @@ class Interpreter:
         """ Name node """
         ctx = node.ctx.__class__
         if ctx == ast.Del:
-            val = self.delSymbol(node.id)
+            val = self.symtable.delSymbol(node.id)
         elif ctx == ast.Param:  # for Function Def
             val = str(node.id)
         else:
-            val = self.getSymbol(node.id)
+            val = self.symtable.getSymbol(node.id)
             if isinstance(val, DefinedVariable):
                 val = val.evaluate()
         return val
@@ -524,7 +294,7 @@ class Interpreter:
         if len(self.error) > 0:
             return
         if nod.__class__ == ast.Name:
-            sym = self.setSymbol(nod.id, value=val)
+            sym = self.symtable.setSymbol(nod.id, value=val)
         elif nod.__class__ == ast.Attribute:
             if nod.ctx.__class__  == ast.Load:
                 errmsg = "cannot assign to attribute %s" % nod.attr
@@ -614,28 +384,35 @@ class Interpreter:
 
     def do_delete(self, node):    # ('targets',)
         "delete statement"
+        error = False
         for tnode in node.targets:
             ctx = tnode.ctx.__class__
-            assert ctx == ast.Del, 'wrong Context for delete???'
-            tclass = tnode.__class__
+            if ctx != ast.Del:
+                error = True
+                break
+
             children = []
-            while tclass == ast.Attribute:
+            while tnode.__class__ == ast.Attribute:
                 children.append(tnode.attr)
                 tnode = tnode.value
-                tclass = tnode.__class__
-            # lastchild = children.pop(0)
-            if tclass == ast.Name:
-                sym = tnode.id
-                parent,child = self.symtable.parentOf(sym)
+
+            if tnode.__class__ == ast.Name:
+                parent,child = self.symtable.parentOf(tnode.id)
                 children.append(child)
                 lastchild = children.pop(0)
                 for child in children:
                     if hasattr(parent, child):
                         parent = getattr(parent, child)
+                    else:
+                        error = True
+                        break
                 delattr(parent, lastchild)
             else:
-                msg = "could not delete symbol"
-                self.on_except(node, msg=msg, py_exc=sys.exc_info())
+                error = True
+                break
+        if error:
+            msg = "could not delete symbol"
+            self.on_except(node, msg=msg, py_exc=sys.exc_info())
                 
             
     def do_unaryop(self, node):    # ('op', 'operand')
@@ -756,8 +533,9 @@ class Interpreter:
         # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
         #  note: callable(func) in 2.x becomes
-        #    hasattr(func, '__call__') in 3.x, BUT::
-        # classes in 2.x do NOT HAVE attribute '__call__'  but ARE callable!!
+        #  hasattr(func, '__call__') in 3.x, BUT::
+        #  classes in 2.x do NOT HAVE attribute
+        # '__call__'  and ARE callable!!
         if not callable(func): # hasattr(func, '__call__'):
             msg = "'%s' is not callable" % (func)
             self.on_except(node, msg=msg, py_exc=sys.exc_info())
@@ -789,21 +567,19 @@ class Interpreter:
             key    = self.interp(node.args.args.pop())
             kwargs.append((key, defval))
         kwargs.reverse()
-
         args = [tnode.id for tnode in node.args.args]
-     
         doc = None
         if isinstance(node.body[0], ast.Expr):
             docnode = node.body.pop(0)
             doc = self.interp(docnode.value)
-
-            proc = Procedure(node.name, larch= self, doc= doc,
-                             body   = node.body,
-                             fname  = self.fname,   lineno = self.lineno,
-                             args   = args,   kwargs = kwargs,
-                             vararg = node.args.vararg,
-                             varkws = node.args.kwarg)
-        self.setSymbol(node.name, value=proc)
+        # 
+        proc = Procedure(node.name, larch= self, doc= doc,
+                         body   = node.body,
+                         fname  = self.fname,   lineno = self.lineno,
+                         args   = args,   kwargs = kwargs,
+                         vararg = node.args.vararg,
+                         varkws = node.args.kwarg)
+        self.symtable.setSymbol(node.name, value=proc)
 
     # imports
     def do_import(self, node):    # ('names',)
@@ -856,16 +632,15 @@ class Interpreter:
         # print("  larch do_load ", do_load, len(self.error))
         if do_load:
             # first look for "name.lar"
-            isLarch = False
+            islarch = False
             larchname = "%s.lar" % name
             for dirname in st_sys.path:
                 if not os.path.exists(dirname):
                     continue
                 if larchname in os.listdir(dirname):
-                    isLarch = True
+                    islarch = True
                     modname = os.path.abspath(os.path.join(dirname, larchname))
-                    print("Found larch module:" , modname)
-
+                    # print("Found larch module:" , modname)
                     # save current module group
                     #  create new group, set as moduleGroup and localGroup
                     symtable.save_frame()
@@ -888,8 +663,7 @@ class Interpreter:
                 return
 
             # or, if not a larch module, load as a regular python module
-            if not isLarch:
-                print(" not isLarch" , name)
+            if not islarch:
                 try:
                     __import__(name)
                     thismod = sys.modules[name]

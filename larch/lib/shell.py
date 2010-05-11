@@ -2,23 +2,18 @@
 #
 from __future__ import print_function
 import cmd
-from os import path, environ, system, getcwd
+import os
 import sys
 import numpy
-import interpreter
 
+import interpreter
 import inputText
 
-# try:
-#     import scipy
-#     scipy_version = scipy.__version__
-# except:
-#     scipy_version = '(not available)'
-    
-banner = """  Larch %s  M. Newville, T. Trainor (2009)
-  using python %s, numpy %s""" % (interpreter.__version__,
-                                                '%i.%i.%i' % sys.version_info[:3],
-                                                numpy.__version__)
+HISTFILE = '.larch_history'
+BANNER = """  Larch %s  M. Newville, T. Trainor (2009)
+  using python %s, numpy %s"""
+
+
 class shell(cmd.Cmd):
     ps1    = "larch> "
     ps2    = ".....> "
@@ -27,8 +22,12 @@ class shell(cmd.Cmd):
                  stdin=None, stdout=None, quiet=False,userbanner=None):
 
         if not quiet:
-            print(banner)
-            if userbanner is not None: print(userbanner)
+            print(BANNER % (interpreter.__version__,
+                            '%i.%i.%i' % sys.version_info[:3],
+                            numpy.__version__))
+
+            if userbanner is not None:
+                print(userbanner)
             
         self.debug  = debug
         try:
@@ -37,8 +36,9 @@ class shell(cmd.Cmd):
         except ImportError:
             self.rdline = None
         cmd.Cmd.__init__(self,completekey='tab')
-        self.historyfile = path.join(environ.get('HOME', getcwd()),
-                                     '.larch_history')
+        homedir = os.environ.get('HOME', os.getcwd())
+
+        self.historyfile = os.path.join(homedir, HISTFILE)
         if self.rdline is not None:
             try:
                 self.rdline.read_history_file(self.historyfile)
@@ -54,7 +54,6 @@ class shell(cmd.Cmd):
 
         self.stdin = sys.stdin
         self.stdout = sys.stdout
-
         
         self.larch  = interpreter.Interpreter()
         self.input  = inputText.InputText(prompt=self.ps1)
@@ -86,7 +85,7 @@ class shell(cmd.Cmd):
         return '', '', line
 
     def do_shell(self, arg):
-        system(arg)
+        os.system(arg)
 
     def larch_execute(self,s_inp):
         self.default(s_inp)
@@ -132,8 +131,6 @@ class shell(cmd.Cmd):
                         if ((err.fname != fname or err.lineno != lineno)
                             and err.lineno >= 0):
                             print('%s' % (err.get_error()[1]))
-                            #(err_type.startswith('Extra Error') or
-                            #     err_type.startswith('Eval Error')):
 
                 elif ret is not None:
                     print("%s" % ret)

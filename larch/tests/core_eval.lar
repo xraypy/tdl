@@ -24,6 +24,7 @@ def f2(c=100, **kws):
     """ Doc for f2: """
     return c/2.0
 #enddef
+
 def mul2(x, b):
     return x * b
 #enddef
@@ -97,7 +98,7 @@ alist[2][3]
 [0,1,2,4,8,16,32]         
 alist[1]                  
 
-xxmul2(2.5,b)[3]
+j1 = mul2(2.5,b)[3]
 
 mul2(2.5,b)[3,4]            
  
