@@ -1,6 +1,5 @@
 #!/usr/bin/env python2.6
 #
-from __future__ import print_function
 import cmd
 import os
 import sys
@@ -11,24 +10,18 @@ from .inputText import InputText
 
 HISTFILE = '.larch_history'
 BANNER = """  Larch %s  M. Newville, T. Trainor (2009)
-  using python %s, numpy %s"""
+  using python %s, numpy %s
+"""
 
 
 class shell(cmd.Cmd):
     ps1    = "larch> "
     ps2    = ".....> "
     max_save_lines = 5000
-    def __init__(self, completekey='tab', scripts=None, debug=False,
-                 stdin=None, stdout=None, quiet=False,userbanner=None):
-
-        if not quiet:
-            print(BANNER % (__version__,
-                            '%i.%i.%i' % sys.version_info[:3],
-                            numpy.__version__))
-
-            if userbanner is not None:
-                print(userbanner)
-            
+    def __init__(self,  completekey='tab',   debug=False,
+                 stdin=None, stdout=None, quiet=False,
+                 userbanner=None):
+        
         self.debug  = debug
         try:
             import readline
@@ -45,15 +38,23 @@ class shell(cmd.Cmd):
             except IOError:
                 pass
 
-        self.use_rawinput = True
         if stdin is not None:
             sys.stdin = stdin
-            self.use_rawinput = False
 
-        if stdout is not None:  sys.stdout = stdout
+        if stdout is not None:
+            sys.stdout = stdout
 
         self.stdin = sys.stdin
         self.stdout = sys.stdout
+
+        if not quiet:
+            sys.stdout.write(BANNER % (__version__,
+                                       '%i.%i.%i' % sys.version_info[:3],
+                                       numpy.__version__))
+
+            if userbanner is not None:
+                sys.stdout.write("%s\n" % userbanner)
+            
         
         self.larch  = Interpreter()
         self.input  = InputText(prompt=self.ps1)
@@ -84,16 +85,11 @@ class shell(cmd.Cmd):
                 return None, None, line
         return '', '', line
 
-    def do_shell(self, arg):
-        os.system(arg)
-
     def larch_execute(self,s_inp):
         self.default(s_inp)
 
-    def loadfile(self,filename):
-        fh = open(filename,'r')
-        for i,line in enumerate(fh.readlines()):
-            self.input.put(line, filename=filename,lineno=i)
+    def do_shell(self, arg):
+        os.system(arg)
 
     def default(self,text):
         text = text.strip()
@@ -107,7 +103,7 @@ class shell(cmd.Cmd):
             if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
             text  = "help(%s)"% (repr(arg))
         if text.startswith('!'):
-            self.do_shell(text[1:])
+            os.system(text[1:])
         else:
             ret = None
             self.input.put(text,lineno=0)
@@ -125,16 +121,17 @@ class shell(cmd.Cmd):
                 if self.larch.error:
                     err = self.larch.error.pop(0)
                     fname, lineno = err.fname, err.lineno
-                    print("%s: %s" % err.get_error())
-
+                    sys.stdout.write("%s:\n%s\n" % err.get_error())
                     for err in self.larch.error:
                         if ((err.fname != fname or err.lineno != lineno)
-                            and err.lineno >= 0):
-                            print('%s' % (err.get_error()[1]))
+                            and err.lineno > 0 and lineno > 0):
+                            print err.lineno , lineno
+                            sys.stdout.write("%s\n" % (err.get_error()[1]))
 
                 elif ret is not None:
-                    print("%s" % ret)
+                    sys.stdout.write("%s\n" % ret)
                 self.prompt = self.ps1
             
 if __name__ == '__main__':
-    t = shell(debug=True).cmdloop()
+    fout = open('larch.out', 'w')
+    t = shell(debug=True, stdout=fout).cmdloop()

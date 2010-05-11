@@ -33,7 +33,6 @@ if len(args)>0:
         elif s.endswith('.lar'):
             t.default("import %s" % s[:-4])
 
-
 if not options.exec_script_only:
        t.cmdloop()
 

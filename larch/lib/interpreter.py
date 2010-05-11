@@ -70,7 +70,7 @@ class Interpreter:
                        'subscript', 'tryexcept', 'tuple', 'unaryop', 'while')
 
     def __init__(self, symtable=None, writer=None):
-        self.__writer = writer or sys.stdout.write
+        self.writer = writer or sys.stdout
        
         if symtable is None:
             symtable = SymbolTable(larch=self)
@@ -460,7 +460,7 @@ class Interpreter:
         should look for and translate print -> print_() to become
         a customized function call.
         """
-        dest = self.interp(node.dest) or sys.stdout
+        dest = self.interp(node.dest) or self.writer
         end = ''
         if node.nl:
             end = '\n'
