@@ -81,7 +81,7 @@ adict['c'] /adict['b']
 0.223e+4                  
 .32101e+3j                
  
-adict                     
+print adict                     
 
 
 [1,2,['a', 'b','c'], 4.0] 

@@ -1,4 +1,4 @@
-print '== Symbol Test 01'
+print '== Larch Test #1'
 
 import larch
 import larch.symboltable

@@ -283,6 +283,10 @@ class SymbolTable(Group):
         "create a new Group, not placed anywhere in symbol table"
         return Group(**kw)
 
+    def new_group(self, name, **kw):
+        g = Group(**kw)
+        self.set_symbol(name, value=g)
+        
     def get_symbol(self, sym, create=False):
         "lookup and return a symbol by name"
         return self._lookup(sym, create=create)
