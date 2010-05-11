@@ -14,9 +14,11 @@ class Group(object):
     """container for variables, subgroups, and modules:
     a lightweight object, with 
     """
-    def __init__(self, name=None):
+    def __init__(self, name=None, **kws):
         self.__name__ = name
-
+        for key,val in kws.items():
+            setattr(self,key,val)
+            
     def __len__(self):
         return max(1, len(dir(self))-1)
 
