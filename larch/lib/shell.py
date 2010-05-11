@@ -6,8 +6,8 @@ import os
 import sys
 import numpy
 
-import interpreter
-import inputText
+from .interpreter import Interpreter, __version__
+from .inputText import InputText
 
 HISTFILE = '.larch_history'
 BANNER = """  Larch %s  M. Newville, T. Trainor (2009)
@@ -22,7 +22,7 @@ class shell(cmd.Cmd):
                  stdin=None, stdout=None, quiet=False,userbanner=None):
 
         if not quiet:
-            print(BANNER % (interpreter.__version__,
+            print(BANNER % (__version__,
                             '%i.%i.%i' % sys.version_info[:3],
                             numpy.__version__))
 
@@ -55,8 +55,8 @@ class shell(cmd.Cmd):
         self.stdin = sys.stdin
         self.stdout = sys.stdout
         
-        self.larch  = interpreter.Interpreter()
-        self.input  = inputText.InputText(prompt=self.ps1)
+        self.larch  = Interpreter()
+        self.input  = InputText(prompt=self.ps1)
         self.prompt = self.ps1
         
     def __del__(self):

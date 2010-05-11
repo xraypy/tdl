@@ -10,12 +10,12 @@ try:
 except ImportError:
     HAS_NUMPY = False
 
-import inputText
-import builtins
-from symboltable import SymbolTable, Group, isgroup
-from util import Closure, LarchExceptionHolder, Procedure, DefinedVariable
+from . import inputText
+from . import builtins
+from .symboltable import SymbolTable, Group, isgroup
+from .util import Closure, LarchExceptionHolder, Procedure, DefinedVariable
 
-__version__ = '0.9.2'
+__version__ = '0.9.3'
 OPERATORS = {ast.Is:     lambda a, b: a is b,
              ast.IsNot:  lambda a, b: a is not b,
              ast.In:     lambda a, b: a in b,
@@ -59,6 +59,16 @@ class Interpreter:
         
   In addition, Function is greatly altered so as to allow a Larch procedure.
   """
+
+    supported_nodes = ('assert', 'assign', 'attribute', 'augassign', 'binop',
+                       'boolop', 'break', 'call', 'compare', 'continue',
+                       'delete', 'dict', 'ellipsis', 'excepthandler', 'expr',
+                       'expression', 'extslice', 'for', 'functiondef', 'if',
+                       'ifexp', 'import', 'importfrom', 'index', 'interrupt',
+                       'list', 'listcomp', 'module', 'name', 'num', 'pass',
+                       'print', 'raise', 'repr', 'return', 'slice', 'str',
+                       'subscript', 'tryexcept', 'tuple', 'unaryop', 'while')
+
     def __init__(self, symtable=None, writer=None):
         self.__writer = writer or sys.stdout.write
        
@@ -88,21 +98,26 @@ class Interpreter:
             setattr(builtingroup, fname,
                     Closure(func=fcn, larch=self))
         setattr(builtingroup, 'definevar',
-                Closure(func=self.__definevar))
+                Closure(func=self.set_definedvariable))
         
-    def __definevar(self, name, expr):
+        self.node_handlers = {}
+        for tnode in self.supported_nodes:
+            self.node_handlers[tnode] = getattr(self, "on_%s" % tnode)
+
+
+    def set_definedvariable(self, name, expr):
         """define a defined variable (re-evaluate on access)"""
-        self.symtable.setSymbol(name, DefinedVariable(expr=expr,
-                                                      larch=self))
+        self.symtable.set_symbol(name,
+                                 DefinedVariable(expr=expr, larch=self))
 
     def unimplemented(self, node):
         "unimplemented nodes"
-        cname = node.__class__.__name__
-        self.on_except(node, "'%s' not supported" % (cname),
-                       py_exc=sys.exc_info())
+        self.raise_exception(node,
+                             "'%s' not supported" % (node.__class__.__name__),
+                             py_exc=sys.exc_info())
 
-    def on_except(self, node, msg='', expr=None,
-                  fname=None, lineno=-1, py_exc=None):
+    def raise_exception(self, node, msg='', expr=None,
+                        fname=None, lineno=-1, py_exc=None):
         "add an exception"
         if self.error is None:
             self.error = []
@@ -137,9 +152,9 @@ class Interpreter:
         try:
             return  ast.parse(text)
         except:
-            self.on_except(None, msg='Syntax Error',
-                           expr=text, fname=fname, lineno=lineno,
-                           py_exc=sys.exc_info())
+            self.raise_exception(None, msg='Syntax Error',
+                                 expr=text, fname=fname, lineno=lineno,
+                                 py_exc=sys.exc_info())
             
     def interp(self, node, expr=None, fname=None, lineno=None):
         """executes compiled Ast representation for an expression"""
@@ -149,33 +164,35 @@ class Interpreter:
             return None
         if isinstance(node, str):
             node = self.compile(node)
-
-        method = "do_%s" % node.__class__.__name__.lower()
         if lineno is not None:
             self.lineno = lineno
         if fname  is not None:
             self.fname  = fname
         if expr   is not None:
             self.expr   = expr
-        
-        ret = None
+       
+        # get handler for this node:
+        #   on_xxx with handle nodes of type 'xxx', etc
         try:
-            fcn = getattr(self, method)
-        except:
-            self.on_except(node, msg='Lookup Error', expr=expr,
-                           fname=fname, lineno=lineno,
-                              py_exc=sys.exc_info())
+            handler = self.node_handlers[node.__class__.__name__.lower()]
+        except KeyError:
+            return self.unimplemented(node)
+
+        # run the handler:  this will likely generate
+        # recursive calls into this interp method.
+        try:
+            ret = handler(node)
+            if isinstance(ret, enumerate):
+                ret = list(ret)
             return ret
-        try:
-            ret = fcn(node)
         except:
-            self.on_except(node, msg='Runtime Error',
-                              expr=expr, fname=fname, lineno=lineno,
-                              py_exc=sys.exc_info())              
-        if isinstance(ret, enumerate):
-            ret = list(ret)
-        return ret
+            self.raise_exception(node, msg='Runtime Error',
+                                 expr=expr, fname=fname, lineno=lineno,
+                                 py_exc=sys.exc_info())              
             
+    def __call__(self, expr, **kw):
+        return self.eval(expr, **kw)
+        
     def eval(self, expr, fname=None, lineno=0):
         """evaluates a single statement"""
         self.fname = fname        
@@ -186,9 +203,9 @@ class Interpreter:
             out = self.interp(node, expr=expr,
                               fname=fname, lineno=lineno)
             if len(self.error) > 0:
-                self.on_except(node, msg='Eval Error', expr=expr,
-                               fname=fname, lineno=lineno,
-                               py_exc=sys.exc_info())
+                self.raise_exception(node, msg='Eval Error', expr=expr,
+                                     fname=fname, lineno=lineno,
+                                     py_exc=sys.exc_info())
             return out
         
     def dump(self, node, **kw):
@@ -196,110 +213,112 @@ class Interpreter:
         return ast.dump(node, **kw)
 
     # handlers for ast components
-    def do_expr(self, node):
+    def on_expr(self, node):
         "expression"
         return self.interp(node.value)  # ('value',)
 
-    def do_index(self, node):
+    def on_index(self, node):
         "index"
         return self.interp(node.value)  # ('value',)
 
-    def do_return(self, node): # ('value',)
+    def on_return(self, node): # ('value',)
         "return statement"
         self.retval = self.interp(node.value)
         return
     
-    def do_repr(self, node):
+    def on_repr(self, node):
         "repr "
         return repr(self.interp(node.value))  # ('value',)
 
-    def do_module(self, node):    # ():('body',) 
+    def on_module(self, node):    # ():('body',) 
         "module def"
         out = None
         for tnode in node.body:
             out = self.interp(tnode)
         return out
 
-    def do_expression(self, node):
+    def on_expression(self, node):
         "basic expression"
-        return self.do_module(node) # ():('body',) 
+        return self.on_module(node) # ():('body',) 
 
-    def do_pass(self, node):
+    def on_pass(self, node):
         "pass statement"
         return None  # () 
 
-    def do_ellipsis(self, node):
+    def on_ellipsis(self, node):
         "ellipses"
         return Ellipsis
 
     # for break and continue: set the instance variable _interrupt
-    def do_interrupt(self, node):    # ()
+    def on_interrupt(self, node):    # ()
         "interrupt handler"
         self._interrupt = node
         return node
 
-    def do_break(self, node):
+    def on_break(self, node):
         "break"
-        return self.do_interrupt(node)
+        return self.on_interrupt(node)
 
-    def do_continue(self, node):
+    def on_continue(self, node):
         "continue"
-        return self.do_interrupt(node)    
+        return self.on_interrupt(node)    
 
-    def do_assert(self, node):    # ('test', 'msg')
+    def on_assert(self, node):    # ('test', 'msg')
         "assert statement"
         if not self.interp(node.test):
             raise AssertionError(self.interp(node.msg()))
         return True
 
-    def do_list(self, node):    # ('elt', 'ctx')
+    def on_list(self, node):    # ('elt', 'ctx')
         "list"
         return [self.interp(e) for e in node.elts]
 
-    def do_tuple(self, node):    # ('elts', 'ctx')
+    def on_tuple(self, node):    # ('elts', 'ctx')
         "tuple"
-        return tuple(self.do_list(node))
+        return tuple(self.on_list(node))
     
-    def do_dict(self, node):    # ('keys', 'values')
+    def on_dict(self, node):    # ('keys', 'values')
         "dictionary"
         nodevals = list(zip(node.keys, node.values))
         interp = self.interp
         return dict([(interp(k), interp(v)) for k, v in nodevals])
 
-    def do_num(self, node):
+    def on_num(self, node):
         'return number'
         return node.n  # ('n',) 
 
-    def do_str(self, node):
+    def on_str(self, node):
         'return string'
         return node.s  # ('s',)
 
-    def do_name(self, node):    # ('id', 'ctx')
+    def on_name(self, node):    # ('id', 'ctx')
         """ Name node """
         ctx = node.ctx.__class__
         if ctx == ast.Del:
-            val = self.symtable.delSymbol(node.id)
+            val = self.symtable.del_symbol(node.id)
         elif ctx == ast.Param:  # for Function Def
             val = str(node.id)
         else:
-            val = self.symtable.getSymbol(node.id)
+            val = self.symtable.get_symbol(node.id)
             if isinstance(val, DefinedVariable):
                 val = val.evaluate()
         return val
 
     def node_assign(self, nod, val):
         """here we assign a value (not the node.value object) to a node
-        this is used by do_assign, but also by for, list comprehension, etc.
+        this is used by on_assign, but also by for, list comprehension, etc.
         """
         if len(self.error) > 0:
             return
         if nod.__class__ == ast.Name:
-            sym = self.symtable.setSymbol(nod.id, value=val)
+            sym = self.symtable.set_symbol(nod.id, value=val)
         elif nod.__class__ == ast.Attribute:
             if nod.ctx.__class__  == ast.Load:
                 errmsg = "cannot assign to attribute %s" % nod.attr
-                self.on_except(nod, errmsg)
+                self.raise_exception(nod, errmsg)
+
             setattr(self.interp(nod.value), nod.attr, val)
+            
         elif nod.__class__ == ast.Subscript:
             sym    = self.interp(nod.value)
             xslice = self.interp(nod.slice)
@@ -316,10 +335,10 @@ class Interpreter:
             else:
                 raise ValueError('too many values to unpack')
 
-    def do_attribute(self, node):    # ('value', 'attr', 'ctx')
+    def on_attribute(self, node):    # ('value', 'attr', 'ctx')
         "extract attribute"
         ctx = node.ctx.__class__
-        # print("do_attribute",node.value,node.attr,ctx)
+        # print("on_attribute",node.value,node.attr,ctx)
         if ctx == ast.Load:
             sym = self.interp(node.value)
             if hasattr(sym, node.attr):
@@ -334,14 +353,16 @@ class Interpreter:
                     obj = obj.__class__
                     fmt = "%s does not have attribute '%s'"
                 msg = fmt % (obj, node.attr)
-                self.on_except(node, msg=msg, py_exc=sys.exc_info())
+
+                self.raise_exception(node, msg=msg, py_exc=sys.exc_info())
+
         elif ctx == ast.Del:
             return delattr(sym, node.attr)
         elif ctx == ast.Store:
             msg = "attribute for storage: shouldn't be here!"
-            self.on_except(node, msg=msg, py_exc=sys.exc_info())        
+            self.raise_exception(node, msg=msg, py_exc=sys.exc_info())        
 
-    def do_assign(self, node):    # ('targets', 'value')
+    def on_assign(self, node):    # ('targets', 'value')
         "simple assignment"
         val = self.interp(node.value)
         if len(self.error) > 0:
@@ -350,26 +371,26 @@ class Interpreter:
             self.node_assign(tnode, val)
         return # return val
 
-    def do_augassign(self, node):    # ('target', 'op', 'value')
+    def on_augassign(self, node):    # ('target', 'op', 'value')
         "augmented assign"
         # print( "AugASSIGN ", node.target, node.value)
-        return self.do_assign(ast.Assign(targets=[node.target],
+        return self.on_assign(ast.Assign(targets=[node.target],
                                          value=ast.BinOp(left = node.target,
                                                          op   = node.op,
                                                          right= node.value)))
        
-    def do_slice(self, node):    # ():('lower', 'upper', 'step')
+    def on_slice(self, node):    # ():('lower', 'upper', 'step')
         "simple slice"
         return slice(self.interp(node.lower), self.interp(node.upper),
                      self.interp(node.step))
 
-    def do_extslice(self, node):    # ():('dims',)
+    def on_extslice(self, node):    # ():('dims',)
         "extended slice"
         return tuple([self.interp(tnode) for tnode in node.dims])
     
-    def do_subscript(self, node):    # ('value', 'slice', 'ctx') 
+    def on_subscript(self, node):    # ('value', 'slice', 'ctx') 
         "subscript handling -- one of the tricky parts"
-        # print("do_subscript: ", ast.dump(node))
+        # print("on_subscript: ", ast.dump(node))
         val    = self.interp(node.value)
         nslice = self.interp(node.slice)
         ctx = node.ctx.__class__
@@ -380,51 +401,36 @@ class Interpreter:
                 return val[(nslice)]
         else:
             msg = "subscript with unknown context"
-            self.on_except(node, msg=msg, py_exc=sys.exc_info())
+            self.raise_exception(node, msg=msg, py_exc=sys.exc_info())
 
-    def do_delete(self, node):    # ('targets',)
+    def on_delete(self, node):    # ('targets',)
         "delete statement"
-        error = False
         for tnode in node.targets:
-            ctx = tnode.ctx.__class__
-            if ctx != ast.Del:
-                error = True
+            if tnode.ctx.__class__ != ast.Del:
                 break
-
             children = []
             while tnode.__class__ == ast.Attribute:
                 children.append(tnode.attr)
                 tnode = tnode.value
 
             if tnode.__class__ == ast.Name:
-                parent,child = self.symtable.parentOf(tnode.id)
-                children.append(child)
-                lastchild = children.pop(0)
-                for child in children:
-                    if hasattr(parent, child):
-                        parent = getattr(parent, child)
-                    else:
-                        error = True
-                        break
-                delattr(parent, lastchild)
+                children.append(tnode.id)
+                children.reverse()
+                self.symtable.del_symbol('.'.join(children))
             else:
-                error = True
-                break
-        if error:
-            msg = "could not delete symbol"
-            self.on_except(node, msg=msg, py_exc=sys.exc_info())
-                
+                msg = "could not delete symbol"
+                self.raise_exception(node, msg=msg, py_exc=sys.exc_info())
             
-    def do_unaryop(self, node):    # ('op', 'operand')
+    def on_unaryop(self, node):    # ('op', 'operand')
         "unary operator"
         return OPERATORS[node.op.__class__](self.interp(node.operand))
     
-    def do_binop(self, node):    # ('left', 'op', 'right')
+    def on_binop(self, node):    # ('left', 'op', 'right')
         "binary operator"
         return OPERATORS[node.op.__class__](self.interp(node.left),
                                             self.interp(node.right))
 
-    def do_boolop(self, node):    # ('op', 'values')
+    def on_boolop(self, node):    # ('op', 'values')
         "boolean operator"
         val = self.interp(node.values.pop(0))
         is_and = ast.Or != node.op.__class__
@@ -435,7 +441,7 @@ class Interpreter:
                     break
         return val
     
-    def do_compare(self, node):    # ('left', 'ops', 'comparators')
+    def on_compare(self, node):    # ('left', 'ops', 'comparators')
         "comparison operators"
         lval = self.interp(node.left)
         out  = True
@@ -448,7 +454,7 @@ class Interpreter:
                 break
         return out
 
-    def do_print(self, node):    # ('dest', 'values', 'nl')
+    def on_print(self, node):    # ('dest', 'values', 'nl')
         """ note: implements Python2 style print statement, not
         print() function.  Probably, the 'larch2py' translation
         should look for and translate print -> print_() to become
@@ -462,7 +468,7 @@ class Interpreter:
         if out and len(self.error)==0:
             print(*out, file=dest, end=end)
         
-    def do_if(self, node):    # ('test', 'body', 'orelse')
+    def on_if(self, node):    # ('test', 'body', 'orelse')
         "regular if-then-else statement"
         block = node.orelse
         if self.interp(node.test):
@@ -470,14 +476,14 @@ class Interpreter:
         for tnode in block:
             self.interp(tnode)
 
-    def do_ifexp(self, node):    # ('test', 'body', 'orelse')
+    def on_ifexp(self, node):    # ('test', 'body', 'orelse')
         "if expressions"
         expr = node.orelse
         if self.interp(node.test):
             expr = node.body
         return self.interp(expr)
 
-    def do_while(self, node):    # ('test', 'body', 'orelse')
+    def on_while(self, node):    # ('test', 'body', 'orelse')
         "while blocks"
         while self.interp(node.test):
             self._interrupt = None
@@ -492,7 +498,7 @@ class Interpreter:
                 self.interp(tnode)
         self._interrupt = None
 
-    def do_for(self, node):    # ('target', 'iter', 'body', 'orelse')
+    def on_for(self, node):    # ('target', 'iter', 'body', 'orelse')
         "for blocks"
         for val in self.interp(node.iter):
             self.node_assign(node.target, val)
@@ -512,7 +518,7 @@ class Interpreter:
                 self.interp(tnode)
         self._interrupt = None
 
-    def do_listcomp(self, node):    # ('elt', 'generators') 
+    def on_listcomp(self, node):    # ('elt', 'generators') 
         "list comprehension"
         out = []
         for tnode in node.generators:
@@ -528,17 +534,49 @@ class Interpreter:
                         out.append(self.interp(node.elt))
         return out
 
-    def do_call(self, node):
+
+    #
+    def on_excepthandler(self, node): # ('type', 'name', 'body')
+        "exception handler..."
+        print("except handler %s / %s " % (node.type, ast.dump(node.name)))
+        return (self.interp(node.type), node.name, node.body)
+    
+    def on_tryexcept(self, node):    # ('body', 'handlers', 'orelse')
+        "try/except blocks"
+        for tnode in node.body:
+            self.interp(tnode)
+            if self.error:
+                e_type, e_value = self.error[-1].py_exc
+                this_exc = e_type()
+                # print("Look for except: ", this_exc)
+                # print("out of handlers: ", node.handlers)
+                for hnd in node.handlers:
+                    htype = None
+                    if hnd.type is not None:
+                        htype = __builtins__.get(hnd.type.id, None)
+                    if htype is None or isinstance(this_exc, htype):
+                        self.error = []
+                        if hnd.name is not None:
+                            self.node_assign(hnd.name, e_value)
+                        for tline in hnd.body:
+                            self.interp(tline)
+                        break
+
+    def on_raise(self, node):    # ('type', 'inst', 'tback')
+        "raise statement"
+        msg = "%s: %s" % (self.interp(node.type).__name__,
+                          self.interp(node.inst))
+        self.raise_exception(node.type, msg=msg,
+                             py_exc=sys.exc_info())
+                    
+    def on_call(self, node):
         "function/procedure execution"
         # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
-        #  note: callable(func) in 2.x becomes
-        #  hasattr(func, '__call__') in 3.x, BUT::
-        #  classes in 2.x do NOT HAVE attribute
-        # '__call__'  and ARE callable!!
-        if not callable(func): # hasattr(func, '__call__'):
-            msg = "'%s' is not callable" % (func)
-            self.on_except(node, msg=msg, py_exc=sys.exc_info())
+
+        if not hasattr(func, '__call__'):
+            msg = "'%s' is not callable!!" % (func)
+            self.raise_exception(node, msg=msg, py_exc=sys.exc_info())
 
         args = [self.interp(targ) for targ in node.args]
         if node.starargs is not None:
@@ -548,14 +586,14 @@ class Interpreter:
         for key in node.keywords:
             if not isinstance(key, ast.keyword):
                 msg = "keyword error in function call '%s'" % (func)
-                self.on_except(node, msg=msg, py_exc=sys.exc_info())
+                self.raise_exception(node, msg=msg, py_exc=sys.exc_info())
             
             keywords[key.arg] = self.interp(key.value)
         if node.kwargs is not None:
             keywords.update(self.interp(node.kwargs))
         return func(*args, **keywords)
     
-    def do_functiondef(self, node):
+    def on_functiondef(self, node):
         "define procedures"
         # ('name', 'args', 'body', 'decorator_list') 
         if node.decorator_list != []:
@@ -579,15 +617,15 @@ class Interpreter:
                          args   = args,   kwargs = kwargs,
                          vararg = node.args.vararg,
                          varkws = node.args.kwarg)
-        self.symtable.setSymbol(node.name, value=proc)
+        self.symtable.set_symbol(node.name, value=proc)
 
     # imports
-    def do_import(self, node):    # ('names',)
+    def on_import(self, node):    # ('names',)
         "simple import"
         for tnode in node.names:
             self.import_module(tnode.name, asname=tnode.asname)
         
-    def do_importfrom(self, node):    # ('module', 'names', 'level')
+    def on_importfrom(self, node):    # ('module', 'names', 'level')
         "import/from"
         fromlist, asname = [], []
         for tnode in node.names:
@@ -626,11 +664,8 @@ class Interpreter:
         #   either sys.modules for python modules
         #   or  st_sys.modules for larch modules
         # reload takes effect here in the normal python way:
-        #   if
-        do_load = (name not in st_sys.modules and name not in sys.modules)
-        do_load = do_load or do_reload
-        # print("  larch do_load ", do_load, len(self.error))
-        if do_load:
+        if (do_reload or
+            (name not in st_sys.modules and name not in sys.modules)):
             # first look for "name.lar"
             islarch = False
             larchname = "%s.lar" % name
@@ -668,9 +703,8 @@ class Interpreter:
                     __import__(name)
                     thismod = sys.modules[name]
                 except:
-                    # print(" import error ", name, sys.exc_info())
-                    self.on_except(None, msg='Import Error',
-                                      py_exc=sys.exc_info())
+                    self.raise_exception(None, msg='Import Error',
+                                         py_exc=sys.exc_info())
                     return
         else: # previously loaded module, just do lookup
             if name in st_sys.modules:
@@ -702,73 +736,3 @@ class Interpreter:
                 setattr(st_sys.moduleGroup, alias, getattr(thismod, sym))
     # end of import_module
 
-    # not yet implemented:
-    def do_excepthandler(self, node): # ('type', 'name', 'body')
-        "exception handler..."
-        print("except handler %s / %s " % (node.type, ast.dump(node.name)))
-        return (self.interp(node.type), node.name, node.body)
-    
-    def do_tryexcept(self, node):    # ('body', 'handlers', 'orelse')
-        "try/except blocks"
-        for tnode in node.body:
-            self.interp(tnode)
-            if self.error:
-                e_type, e_value = self.error[-1].py_exc
-                this_exc = e_type()
-                # print("Look for except: ", this_exc)
-                # print("out of handlers: ", node.handlers)
-                for hnd in node.handlers:
-                    htype = None
-                    if hnd.type is not None:
-                        htype = __builtins__.get(hnd.type.id, None)
-                    if htype is None or isinstance(this_exc, htype):
-                        self.error = []
-                        if hnd.name is not None:
-                            self.node_assign(hnd.name, e_value)
-                        for tline in hnd.body:
-                            self.interp(tline)
-                        break
-
-    def do_raise(self, node):    # ('type', 'inst', 'tback')
-        "raise statement"
-        msg = "%s: %s" % (self.interp(node.type).__name__,
-                          self.interp(node.inst))
-        self.on_except(node.type, msg=msg,
-                       py_exc=sys.exc_info())
-                    
-    def do_tryfinally(self, node):
-        "try finally"
-        return self.unimplemented(node)
-    
-    def do_exec(self, node):
-        "exec statement: not allowed!"
-        return self.unimplemented(node)
-    
-    def do_lambda(self, node):
-        "lambda: non-ultimate"
-        return self.unimplemented(node)
-    
-    def do_class(self, node):
-        "class: we have none!"
-        return self.unimplemented(node)
-    
-    def do_global(self, node):
-        "global: handled with different namespace rules"
-        return self.unimplemented(node)
-    
-    def do_generators(self, node):
-        "generators: not implemented"
-        return self.unimplemented(node)
-
-    def do_yield(self, node):
-        "yield: not implemented"
-        return self.unimplemented(node)
-
-    def do_decorators(self, node):
-        "decorators: not implemented"
-        return self.unimplemented(node)
-    
-    def do_generatorexp(self, node):
-        "generator expressions: not implemented"
-        return self.unimplemented(node)
-    

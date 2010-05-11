@@ -13,14 +13,10 @@ if major == 2 and minor < 6:
 ## require that numpy be available right away!!
 import numpy
 
-from . import interpreter
 from .symboltable import Group, SymbolTable
 from .shell import shell
-from .interpreter import Interpreter
+from .interpreter import Interpreter, __version__
 from .inputText import InputText
 
-interp= Interpreter
-input = InputText
-
-__version__ = interpreter.__version__
+# __version__ = interpreter.__version__
 __date__    = '08-May-2010'

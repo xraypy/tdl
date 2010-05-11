@@ -4,7 +4,8 @@
 from __future__ import print_function
 import os
 import types
-import site_config
+
+from . import site_config
 
 def isgroup(grp):
     "tests if input is a Group"
@@ -16,8 +17,8 @@ class Group(object):
     """
     def __init__(self, name=None, **kws):
         self.__name__ = name
-        for key,val in kws.items():
-            setattr(self,key,val)
+        for key, val in kws.items():
+            setattr(self, key, val)
             
     def __len__(self):
         return max(1, len(dir(self))-1)
@@ -190,10 +191,6 @@ class SymbolTable(Group):
             msg = '%s is not a Subgroup' % group
         return "%s\n" % msg  ### self.__writer("%s\n" % msg)
     
-    def has_group(self, grp):
-        "return whether there is a toplevel group with given name"
-        return hasattr(self, grp) and isgroup(getattr(self, grp))
-        
     def _lookup(self, name=None, create=False):
         """looks up symbol in search path
         returns symbol given symbol name,
@@ -242,11 +239,7 @@ class SymbolTable(Group):
                     "cannot locate member '%s' of '%s'" % (prt,out))
         return out
 
-    def getSymbol(self, sym, create=False):
-        "lookup and return a symbol by name"
-        return self._lookup(sym, create=create)
-
-    def getGroup(self, gname):
+    def get_group(self, gname):
         "find group by name"
         sym = self._lookup(gname, create=False)
         if isgroup(sym):
@@ -254,10 +247,6 @@ class SymbolTable(Group):
         else:
             raise LookupError(
                 "symbol '%s' found, but not a group" % (gname))
-
-    def isgroup(self, sym):
-        "is symbol a group"
-        return isgroup(sym)
 
     def show_group(self, gname=None):
         "show groups"
@@ -290,23 +279,19 @@ class SymbolTable(Group):
         msg = '\n'.join(out)
         return "%s\n" % msg  
 
-    def placeGroup(self, gname, group=None, parent=None):
-        if parent is None:
-            parent = self._fix_searchGroups()['localGroup']
-        if isinstance(parent, str):
-            parent = self.getGroup(parent)
-        if group is None:
-            group = self.getGroup(gname)
-        if isgroup(group):
-            setattr(parent, gname, group)
-
-    def createGroup(self, **kw):
+    def create_group(self, **kw):
+        "create a new Group, not placed anywhere in symbol table"
         return Group(**kw)
-        
-    def setSymbol(self, name, value=None, group=None):
+
+    def get_symbol(self, sym, create=False):
+        "lookup and return a symbol by name"
+        return self._lookup(sym, create=create)
+
+    def set_symbol(self, name, value=None, group=None):
+        "set a symbol in the table"
         grp = self._fix_searchGroups()['localGroup']
         if group is not None:
-            grp = self.getGroup(group)
+            grp = self.get_group(group)
         names = name.split('.')
         child = names.pop()
         for nam in names:
@@ -320,7 +305,18 @@ class SymbolTable(Group):
         setattr(grp, child, value)
         return getattr(grp, child)        
 
-    def parentOf(self, name):
+   
+    def del_symbol(self, name):
+        "delete a symbol"
+        sym = self._lookup(name, create=False)
+        parent, child = self.get_parent(name)
+        if isgroup(sym): 
+            raise LookupError("symbol '%s' is a group" % (name))
+        parent, child = self.get_parent(name)
+        if child is not None:
+            delattr(parent, child)
+
+    def get_parent(self, name):
         """return parent group, child name for an absolute symbol name
         (as from _lookup) that is, a pair suitable for hasattr,
         getattr, or delattr 
@@ -333,26 +329,7 @@ class SymbolTable(Group):
         if len(tnam) > 0:
             sym = self._lookup('.'.join(tnam))
         return sym, child
-    
-    def delSymbol(self, name):
-        sym = self._lookup(name, create=False)
-        parent, child = self.parentOf(name)
-        if isgroup(sym): 
-            raise LookupError("symbol '%s' is a group" % (name))
-        parent, child = self.parentOf(name)
-        if child is not None:
-            delattr(parent, child)
 
-    def delGroup(self, name):
-        sym = self._lookup(name, create=False)
-        if not isgroup(sym): 
-            raise LookupError("symbol '%s' found, but not a group" % (name))
-        if sym._Group__status == 'nodelete':
-            raise LookupError("cannot delete group '%s'\n" % name)
-        else:
-            parent, child = self.parentOf(name)
-            if child is not None:
-                delattr(parent, child)
             
 # if __name__ == '__main__':
 #     symtab = SymbolTable()

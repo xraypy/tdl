@@ -71,7 +71,7 @@ numpy_renames ={'ln':'log',
 def _group(larch=None,**kw):
     """create a group"""
     try:
-        g = larch.symtable.createGroup()
+        g = larch.symtable.create_group()
         for k,v in kw.items():  setattr(g,k,v)
         return g
     except:

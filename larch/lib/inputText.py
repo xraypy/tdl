@@ -1,5 +1,6 @@
 from __future__ import print_function
-from util import isValidName, isNumber, isLiteralStr, strip_comments
+
+from .util import isValidName, isNumber, isLiteralStr, strip_comments
 
 def get_DefVar(text):
     """
