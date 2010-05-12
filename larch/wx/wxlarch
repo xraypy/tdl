@@ -12,6 +12,153 @@ import larch
 import MPlot
 import numpy
 
+DEFAULT_HISTORYFILE = '.wxlarch_hist'
+MAX_HISTORY = 1000
+
+class ReadlineTextCtrl(wx.TextCtrl):
+    def __init__(self, parent, id, value='', size=(400,-1),
+                 historyfile = None, mode = 'emacs',
+                 style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER, **kws):
+        wx.TextCtrl.__init__(self, parent, id, value=value,
+                             size=size, style=style, **kws)
+
+        self._val = value
+        self._mode = mode
+
+        self.hist_file = historyfile
+        self.hist_buff = []
+        if self.hist_file is None:
+            self.hist_file= os.path.join(os.environ.get('HOME','.'),
+                                         DEFAULT_HISTORYFILE)
+        self.LoadHistory()
+        self.hist_mark = len(self.hist_buff)
+
+        self.Bind(wx.EVT_CHAR, self.onChar)
+        self.Bind(wx.EVT_SET_FOCUS, self.onSetFocus)
+        self.Bind(wx.EVT_KILL_FOCUS, self.onKillFocus)
+        self.__GetMark()
+
+    def __GetMark(self,  event=None):
+        " keep track of cursor position within text"
+        try:
+            self.__mark = min(wx.TextCtrl.GetSelection(self)[0],
+                              len(wx.TextCtrl.GetValue(self).strip()))
+        except:
+            self.__mark = 0
+
+    def __SetMark(self, m=None):
+        "set position of mark"
+        if m is None:
+            m = self.__mark
+        self.SetSelection(m,m)
+
+    def onKillFocus(self, event=None):
+        self.__GetMark()
+        if event is not None:
+            event.Skip()
+
+    def onSetFocus(self, event=None):
+        self.__SetMark()
+        if event is not None:
+            event.Skip()
+      
+    def onChar(self, event):
+        """ on Character event"""
+        key   = event.GetKeyCode()
+        entry = wx.TextCtrl.GetValue(self).strip()
+        pos   = wx.TextCtrl.GetSelection(self)
+
+        do_skip = True
+        # really, the order here is important:
+        # 1. return sends to ValidateEntry
+        if key == wx.WXK_RETURN:
+            pass
+        
+        # 2. other non-text characters are passed without change
+        elif key == wx.WXK_UP:
+            self.hist_mark = max(0, self.hist_mark-1)
+            self.SetValue(self.hist_buff[self.hist_mark])
+            self.SetInsertionPointEnd()
+        elif key == wx.WXK_DOWN:
+            self.hist_mark += 1
+            if self.hist_mark >= len(self.hist_buff):
+                self.SetValue('')                
+            else:
+                self.SetValue(self.hist_buff[self.hist_mark])
+            self.SetInsertionPointEnd()            
+        else: 
+            ctrl = event.ControlDown()
+            keycode = event.GetKeyCode()
+            if ctrl:
+                if keycode == 0:
+                    self.SetSelection(0,1)
+                    self.SetInsertionPoint(0)
+                    self.SetValue(entry)
+                    self.SetSelection(0,1)
+                    wx.KeyEvent(wx.WXK_LEFT)
+                    do_skip = False
+                elif keycode == 4:
+                    mark = self.GetSelection()[1]
+                    self.SetValue("%s%s" % (entry[:mark],
+                                            entry[mark+1:]) )
+                    self.SetSelection(mark, mark)
+                elif keycode == 5:
+                    self.SetInsertionPointEnd()
+                elif keycode == 3:
+                    wx.TheClipBoard.Open()
+                    wx.TheClipBoard.SetData(entry)                
+                elif keycode == 22:
+                    tmp_txt = wx.TextDataObject()
+                    wx.TheClipBoard.Open()
+                    wx.TheClipBoard.GetData(tmp_txt)                
+                    wx.TheClipBoard.Close()
+                    self.SetValue(tmp_txt)
+        self.Refresh()
+        if do_skip:
+            event.Skip()
+        return
+        
+    def AddToHistory(self, text=''):
+        if len(text.strip()) > 0:
+            self.hist_buff.append(text)
+            self.hist_mark = len(self.hist_buff)
+            
+    def SaveHistory(self):
+        try:
+            fout = open(self.hist_file,'w')
+        except IOError:
+            print 'Cannot save history ', self.hist_file
+            
+        fout.write("# wxlarch history saved %s\n\n" % time.ctime())
+        fout.write('\n'.join(self.hist_buff[-MAX_HISTORY:]))
+        fout.write("\n")
+        fout.close()
+     
+    def LoadHistory(self):
+        if os.path.exists(self.hist_file):
+            self.hist_buff = []
+            for txt in open(self.hist_file,'r').readlines():
+                stxt = txt.strip()
+                if len(stxt) > 0 and not stxt.startswith('#'):
+                    self.hist_buff.append(txt[:-1])
+
+    def def_onText(self, event=None):
+        if event is None:
+            return 
+        txt = event.GetString()
+        if len(txt.strip()) > 0:
+            self.hist_buff.append(txt)
+            self.hist_mark = len(self.hist_buff)
+           
+        event.Skip()
+
+ #################
+
+def makeColorPanel(parent, color):
+    p = wx.Panel(parent, -1)
+    p.SetBackgroundColour(color)
+    return p
+
 BANNER = """
 ==================================================
                                         Welcome to Larch
@@ -21,68 +168,82 @@ BANNER = """
 ==================================================
  """  % (larch.__version__, "%i.%i.%i" % (sys.version_info[:3]), numpy.__version__)
 
-
 class LarchWxShell(object):
     ps1 = 'Larch>'
-    ps2 = '.....>'
+    ps2 = '  ...   >'
     def __init__(self, writer=None, prompt=None, output=None, input=None):
         self.larch  = larch.Interpreter()
-        self.input  = larch.InputText(prompt=self.ps1)
+        self.inptext  = larch.InputText(prompt=self.ps1, interactive=False)
+        
         self.prompt = prompt
         self.output = output
         self.larch.writer = self
+        self.SetPrompt()
 
     def help(self, topic):
         print  'help ', topic
         
     def SetPrompt(self, partial=False):
         if self.prompt is not None:
-            p = self.ps1
-            if partial:  p = self.ps2
-            self.prompt.SetLabel(p)
+            if partial:
+                self.prompt.SetLabel(self.ps2)
+                self.prompt.SetForegroundColour('#E00075')                
+            else:
+                self.prompt.SetLabel(self.ps1)
+                self.prompt.SetForegroundColour('#000075')
 
+            self.prompt.Refresh()
+            
     def write(self,text):
         if self.output is not None:
             self.output.WriteText(text)
             self.output.SetInsertionPointEnd()
             
-    def execute(self, text):
-        if  text.startswith('help'):
-            arg = text[4:]
-            if arg.startswith('(') and arg.endswith(')'): arg = arg[1:-1]
-            if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
-            if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
-            text  = "help(%s)"% (repr(arg))
-        if text.startswith('!'):
-            os.system(text[1:])
-        else:
-            ret = None
-            self.input.put(text,lineno=0)
-            
+    def execute(self, text=None):
+        if text is not None:
+            if  text.startswith('help'):
+                arg = text[4:]
+                if arg.startswith('(') and arg.endswith(')'): arg = arg[1:-1]
+                if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
+                if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
+                text  = "help(%s)"% (repr(arg))
+                print 'Show help: ', text
+            if text.startswith('!'):
+                return os.system(text[1:])
+            else:
+                self.inptext.put(text,lineno=0)
+                
+        if not self.inptext.input_complete:
             self.SetPrompt(partial = True)
-            while len(self.input) >0:
-                block, fname, lineno = self.input.get()
-                ret = self.larch.eval(block,
-                                      fname=fname, lineno=lineno)
-                if hasattr(ret, '__call__') and not isinstance(ret,type):
-                    try:
-                        if 1 == len(block.split()):
-                            ret = ret()
-                    except:
-                        pass
-                if self.larch.error:
-                    err = self.larch.error.pop(0)
-                    fname, lineno = err.fname, err.lineno
-                    self.write("%s:\n%s\n" % err.get_error())
-                    for err in self.larch.error:
-                        if ((err.fname != fname or err.lineno != lineno)
-                            and err.lineno > 0 and lineno > 0):
-                            self.write("%s\n" % (err.get_error()[1]))
+            return None
 
-                elif ret is not None:
-                    self.write("%s\n" % ret)
-                self.SetPrompt()
-        
+        ret = None
+        self.SetPrompt(partial = False)
+
+        while len(self.inptext) > 0:
+            block, fname, lineno = self.inptext.get()
+
+            ret = self.larch.eval(block,
+                                  fname=fname, lineno=lineno)
+            
+            if hasattr(ret, '__call__') and not isinstance(ret,type):
+                try:
+                    if 1 == len(block.split()):
+                        ret = ret()
+                except:
+                    pass
+            if self.larch.error:
+                err = self.larch.error.pop(0)
+                fname, lineno = err.fname, err.lineno
+                self.write("%s:\n%s\n" % err.get_error())
+                for err in self.larch.error:
+                    if ((err.fname != fname or err.lineno != lineno)
+                        and err.lineno > 0 and lineno > 0):
+                        self.write("%s\n" % (err.get_error()[1]))
+            elif ret is not None:
+                self.write("%s\n" % ret)
+
+
 class MainFrame(wx.Frame):
     def __init__(self,  parent=None, **kwds):
         self.larch = LarchWxShell()
@@ -93,43 +254,66 @@ class MainFrame(wx.Frame):
     def BuildFrame(self, parent=None, **kwds):
         wx.Frame.__init__(self, parent, -1, size=(600,400), style= wx.DEFAULT_FRAME_STYLE)
         
-
         self.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, False))
         sbar = self.CreateStatusBar(2, wx.CAPTION|wx.THICK_FRAME)
         self.SetStatusWidths([-2,-1])
         self.SetStatusText("Larch initializing...", 0)
 
+        self.Bind(wx.EVT_CLOSE,  self.onClose)
+        self.Bind(wx.EVT_SIZE,  self.onResize)
+
         self.BuildMenus()
 
-        bot_panel = wx.Panel(self, -1)
-        prompt = wx.StaticText(bot_panel, -1, 'Larch>',    size = (65,-1),
+        inp_panel = wx.Panel(self, -1)
+        prompt = wx.StaticText(inp_panel, -1, 'Larch>',    size = (65,-1),
                                style = wx.ALIGN_CENTER|wx.ALIGN_RIGHT|wx.EXPAND)
 
-        input = wx.TextCtrl(bot_panel, -1,  '', size=(500,-1), 
-                            style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER)
+        input = ReadlineTextCtrl(inp_panel, -1,  '', size=(500,-1),
+                                 historyfile=None, mode='emacs',
+                                 style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER)
         
         input.Bind(wx.EVT_TEXT_ENTER, self.onText)
         
         bsizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        bsizer.Add(prompt, 0, wx.BOTTOM|wx.CENTER)
+        bsizer.Add(prompt,  0, wx.BOTTOM|wx.CENTER)
         bsizer.Add(input,      1, wx.ALIGN_LEFT|wx.ALIGN_CENTER|wx.EXPAND)
 
-        bot_panel.SetSizer(bsizer)
-        bsizer.Fit(bot_panel)        
+        inp_panel.SetSizer(bsizer)
+        bsizer.Fit(inp_panel)        
+        
+        nb_panel = wx.Notebook(self, style=wx.BK_DEFAULT)
 
+        self.notebooks = nb_panel
 
-        output = wx.TextCtrl(self, -1,  BANNER,
-                             size=(500,200), style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
+        output_panel =makeColorPanel(nb_panel, '#E9E9DA')
+        
+        output = wx.TextCtrl(output_panel, -1,  BANNER,
+                             size=(550, 450),
+                             style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
         output.SetBackgroundColour('#E9E9DA')
         output.SetInsertionPointEnd()
         output.SetFont(wx.Font(11, wx.SWISS, wx.NORMAL, wx.BOLD, False))
-        
+
+        help_panel = makeColorPanel(nb_panel, '#E9E9DA')
+
+        helptext = wx.TextCtrl(help_panel, -1,  '--- HELP for Larch ---',
+                               size=(550,450),
+                               style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
+        helptext.SetBackgroundColour('#E9E9DA')
+        helptext.SetInsertionPointEnd()
+        helptext.SetFont(wx.Font(11, wx.SWISS, wx.NORMAL, wx.BOLD, False))
+
+        nb_panel.AddPage(output_panel, 'Output', select=1)
+        nb_panel.AddPage(help_panel, 'Help')        
+
+
         mainsizer = wx.BoxSizer(wx.VERTICAL)
-        mainsizer.Add(output,       1, wx.ALIGN_CENTER|wx.CENTER|wx.EXPAND)
-        mainsizer.Add(bot_panel,  0, wx.ALIGN_LEFT|wx.ALIGN_BOTTOM|wx.EXPAND)
+        mainsizer.Add(nb_panel,      1, wx.ALIGN_CENTER|wx.CENTER|wx.EXPAND)
+        mainsizer.Add(inp_panel,     0, wx.ALIGN_LEFT|wx.ALIGN_BOTTOM|wx.EXPAND)
       
         self.SetAutoLayout(True)
+        
         self.SetSizer(mainsizer)
         self.Fit()
         self.Refresh()
@@ -139,6 +323,7 @@ class MainFrame(wx.Frame):
         self.prompt = prompt
         self.SetStatusText("Ready", 0)
 
+    
     def BuildMenus(self):
         ID_ABOUT = wx.NewId()
         ID_CLOSE  = wx.NewId()
@@ -162,7 +347,6 @@ class MainFrame(wx.Frame):
         hmenu = wx.Menu()
         hmenu.Append(ID_ABOUT, "&About",
                      "More information about this program")
-        
         menuBar = wx.MenuBar()
         menuBar.Append(fmenu, "&File");
         menuBar.Append(hmenu, "&Help");
@@ -174,11 +358,34 @@ class MainFrame(wx.Frame):
     def onText(self, event=None):
         text =  event.GetString()
         self.larch.write(">%s\n" % text)
-        self.larch.execute(text)
         self.input.Clear()
-
+        if text.lower() in ('quit', 'exit'):
+            self.onClose()
+        else:
+            self.input.AddToHistory(text)
+            wx.CallAfter(self.larch.execute, text) 
         event.Skip()
         
+    def onResize(self, event=None):
+        print 'on size ', event
+        size = event.GetSize()
+        for k in range(self.notebooks.GetPageCount()):
+            p = self.notebooks.GetPage(k)
+            p.SetBestFittingSize()
+            try:
+                p.SetMaxSize(size)
+                p.SetSize(size)
+            except:
+                print 'cannot set size'
+            print p.SetSize.__doc__
+            print k, size, p
+#             for i in dir(p):
+#                 if i.startswith('Set'):
+#                     print i
+# 
+            
+        event.Skip()
+
     def onAbout(self, event=None):
         about_msg =  """wxLarch 
         Matt Newville <newville@cars.uchicago.edu>"""
@@ -188,10 +395,14 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
     def onClose(self,event=None):
-        try:
+        dlg = wx.MessageDialog(None, 'Really Quit?', 'Question',
+                               wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
+        ret = dlg.ShowModal()
+        if ret == wx.ID_YES:
+            self.input.SaveHistory()
             self.Destroy()
-        except:
-            pass
+        else:
+            event.Veto()
 
 if __name__ == '__main__':
     app = wx.PySimpleApp()

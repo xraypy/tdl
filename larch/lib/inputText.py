@@ -86,7 +86,7 @@ class InputText:
     """
     indent = ' '*4
     ps1 = ' >'
-    ps2 = '.....>'
+    ps2 = '....>'
     block_friends = {'if':    ('else', 'elif'),
                      'for':   ('else'),
                      'def':   (),
@@ -145,7 +145,10 @@ class InputText:
         self.prompt = self.ps2
         if self.interactive:
             while not self.input_complete :
-                addText(self.input())
+                t = self.input()
+                t0 = t.strip()
+                if len(t0) > 0:
+                    addText(t)
 
         if self.input_complete:
             self.prompt = self.ps1            
