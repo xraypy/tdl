@@ -31,12 +31,13 @@ if len(args)>0:
         if s.endswith('.py'):
             t.default("import %s" %  s[:-3])
         else:
+            t.input.interactive = False
             finp = open(s,'r')
             for itxt, txt in enumerate(finp.readlines()):
                 t.input.put(txt[:-1], lineno=itxt, filename=s)
             finp.close()
-
             t.larch_execute('')
+            t.input.interactive = True
             
 if not options.exec_script_only:
        t.cmdloop()

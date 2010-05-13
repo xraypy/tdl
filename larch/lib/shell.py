@@ -109,10 +109,10 @@ class shell(cmd.Cmd):
             self.input.put(text,lineno=0)
             
             self.prompt = self.ps2
-            while len(self.input) >0:
+            while len(self.input) > 0:
                 block,fname,lineno = self.input.get()
-                ret = self.larch.eval(block,fname=fname,lineno=lineno)
-                if callable(ret) and not isinstance(ret,type):
+                ret = self.larch.eval(block, fname=fname, lineno=lineno)
+                if callable(ret) and not isinstance(ret, type):
                     try:
                         if 1 == len(block.split()):
                             ret = ret()
@@ -125,9 +125,9 @@ class shell(cmd.Cmd):
                     for err in self.larch.error:
                         if ((err.fname != fname or err.lineno != lineno)
                             and err.lineno > 0 and lineno > 0):
-                            print err.lineno , lineno
                             sys.stdout.write("%s\n" % (err.get_error()[1]))
-
+                    self.input.clear()
+                    break
                 elif ret is not None:
                     sys.stdout.write("%s\n" % ret)
                 self.prompt = self.ps1

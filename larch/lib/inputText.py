@@ -258,6 +258,10 @@ class InputText:
                 self.block=[]
         return len(self.keys), len(self.block)
 
+    def clear(self):
+        "clear the input"
+        self._fifo  = [[],[]]
+        
     def __isCommand(self,key,word2):
         """ decide if a keyword, and second one might be of the form
           'command arg'

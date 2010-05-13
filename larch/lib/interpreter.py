@@ -141,7 +141,8 @@ class Interpreter:
                                    py_exc=(etype, evalue) )
         self._interrupt = ast.Break()
         self.error.append(err)
-    
+        # print("_Raise ", self.error)
+        
     # main entry point for Ast node evaluation
     #  compile:  string statement -> ast
     #  interp :  ast -> result
