@@ -119,14 +119,25 @@ class shell(cmd.Cmd):
                     except:
                         pass
                 if self.larch.error:
+                    print(" ERROR " , len(self.larch.error))
                     err = self.larch.error.pop(0)
                     fname, lineno = err.fname, err.lineno
                     sys.stdout.write("%s:\n%s\n" % err.get_error())
                     for err in self.larch.error:
-                        if ((err.fname != fname or err.lineno != lineno)
-                            and err.lineno > 0 and lineno > 0):
+                        if self.debug or ((err.fname != fname or err.lineno != lineno)
+                                     and err.lineno > 0 and lineno > 0):
                             sys.stdout.write("%s\n" % (err.get_error()[1]))
                     self.input.clear()
+                    self.prompt = self.ps1                    
+                    if  self.debug: 
+                        for err in self.larch.error:
+                            fname, lineno = err.fname, err.lineno
+                            sys.stdout.write("%s:\n%s\n" % err.get_error())
+                            for err in self.larch.error:
+                                if self.debug or ((err.fname != fname or err.lineno != lineno)
+                                                  and err.lineno > 0 and lineno > 0):
+                                    sys.stdout.write("%s\n" % (err.get_error()[1]))
+                    
                     break
                 elif ret is not None:
                     sys.stdout.write("%s\n" % ret)

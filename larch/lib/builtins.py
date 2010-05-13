@@ -70,12 +70,14 @@ numpy_renames ={'ln':'log',
 ##
 def _group(larch=None,**kw):
     """create a group"""
-    try:
-        g = larch.symtable.create_group()
-        for k,v in kw.items():  setattr(g,k,v)
-        return g
-    except:
-        return None
+    # try:
+    print 'HELLO group ' , kw
+    g = larch.symtable.create_group()
+    for k,v in kw.items():
+        setattr(g,k,v)
+    return g
+#     except:
+#         return None
 
 def _showgroup(gname=None,larch=None):
     if larch is not None:
@@ -186,9 +188,6 @@ def _help(*args,**kws):
         [helper.help(a.strip()) for a in args]
 
     return helper.getbuffer()
-
-def _plot(*args,**kws):
-    pass
 
     
 local_funcs = {'group':_group,

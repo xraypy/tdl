@@ -13,7 +13,8 @@ except ImportError:
 from . import inputText
 from . import builtins
 from .symboltable import SymbolTable, Group, isgroup
-from .util import Closure, LarchExceptionHolder, Procedure, DefinedVariable
+from .util import LarchExceptionHolder, Procedure, DefinedVariable
+from .closure import Closure
 
 __version__ = '0.9.3'
 OPERATORS = {ast.Is:     lambda a, b: a is b,
@@ -151,7 +152,7 @@ class Interpreter:
         """compile statement/expression to Ast representation    """
         self.expr  = text
         try:
-            return  ast.parse(text)
+            return ast.parse(text)
         except:
             self.raise_exception(None, msg='Syntax Error',
                                  expr=text, fname=fname, lineno=lineno,

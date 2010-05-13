@@ -12,7 +12,11 @@ import MPlot
 import numpy
 
 from wx_utils import ReadlineTextCtrl, makeColorPanel
+from wxLarchfilling import Filling
 
+import plotter
+
+PLUGINS = [plotter.register]
 
 BANNER = """==================================================
                                         Welcome to Larch
@@ -32,6 +36,9 @@ class LarchWxShell(object):
         self.prompt = prompt
         self.output = output
         self.larch.writer = self
+        self.symtable.AddPlugins(PLUGINS)
+        self.symtable._sys.searchGroups.append('_plotter')
+
         self.SetPrompt()
 
     def help(self, topic):
@@ -155,13 +162,13 @@ class MainFrame(wx.Frame):
         helptext = wx.TextCtrl(nbk_panel, -1,  ' ',
                                style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
         
-
-        datatree = FillingTree(nbk_panel,
-                               rootObject= self.larch.symtable,
-                               rootLabel='main')        
+        
+        datapanel = Filling(nbk_panel,
+                            rootObject= self.larch.symtable,
+                            rootLabel='main')
 
         nbk_panel.AddPage(output,      'Output', select=1)
-        nbk_panel.AddPage(datatree,   'Data')
+        nbk_panel.AddPage(datapanel,   'Data')
         nbk_panel.AddPage(helptext,   'Help')        
         
         sizer = wx.BoxSizer(wx.VERTICAL)
