@@ -28,7 +28,7 @@ class LarchWxShell(object):
     def __init__(self, writer=None, prompt=None, output=None, input=None):
         self.larch  = larch.Interpreter()
         self.inptext  = larch.InputText(prompt=self.ps1, interactive=False)
-        
+        self.symtable = self.larch.symtable
         self.prompt = prompt
         self.output = output
         self.larch.writer = self
@@ -155,7 +155,13 @@ class MainFrame(wx.Frame):
         helptext = wx.TextCtrl(nbk_panel, -1,  ' ',
                                style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
         
-        nbk_panel.AddPage(output, 'Output', select=1)
+
+        datatree = FillingTree(nbk_panel,
+                               rootObject= self.larch.symtable,
+                               rootLabel='main')        
+
+        nbk_panel.AddPage(output,      'Output', select=1)
+        nbk_panel.AddPage(datatree,   'Data')
         nbk_panel.AddPage(helptext,   'Help')        
         
         sizer = wx.BoxSizer(wx.VERTICAL)
