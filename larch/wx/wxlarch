@@ -4,7 +4,6 @@
 
 import sys
 import os
-import time
 
 import wx
 
@@ -12,155 +11,11 @@ import larch
 import MPlot
 import numpy
 
-DEFAULT_HISTORYFILE = '.wxlarch_hist'
-MAX_HISTORY = 1000
+from wx_utils import ReadlineTextCtrl, makeColorPanel
 
-class ReadlineTextCtrl(wx.TextCtrl):
-    def __init__(self, parent, id, value='', size=(400,-1),
-                 historyfile = None, mode = 'emacs',
-                 style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER, **kws):
-        wx.TextCtrl.__init__(self, parent, id, value=value,
-                             size=size, style=style, **kws)
+from N import TestNB
 
-        self._val = value
-        self._mode = mode
-
-        self.hist_file = historyfile
-        self.hist_buff = []
-        if self.hist_file is None:
-            self.hist_file= os.path.join(os.environ.get('HOME','.'),
-                                         DEFAULT_HISTORYFILE)
-        self.LoadHistory()
-        self.hist_mark = len(self.hist_buff)
-
-        self.Bind(wx.EVT_CHAR, self.onChar)
-        self.Bind(wx.EVT_SET_FOCUS, self.onSetFocus)
-        self.Bind(wx.EVT_KILL_FOCUS, self.onKillFocus)
-        self.__GetMark()
-
-    def __GetMark(self,  event=None):
-        " keep track of cursor position within text"
-        try:
-            self.__mark = min(wx.TextCtrl.GetSelection(self)[0],
-                              len(wx.TextCtrl.GetValue(self).strip()))
-        except:
-            self.__mark = 0
-
-    def __SetMark(self, m=None):
-        "set position of mark"
-        if m is None:
-            m = self.__mark
-        self.SetSelection(m,m)
-
-    def onKillFocus(self, event=None):
-        self.__GetMark()
-        if event is not None:
-            event.Skip()
-
-    def onSetFocus(self, event=None):
-        self.__SetMark()
-        if event is not None:
-            event.Skip()
-      
-    def onChar(self, event):
-        """ on Character event"""
-        key   = event.GetKeyCode()
-        entry = wx.TextCtrl.GetValue(self).strip()
-        pos   = wx.TextCtrl.GetSelection(self)
-
-        do_skip = True
-        # really, the order here is important:
-        # 1. return sends to ValidateEntry
-        if key == wx.WXK_RETURN:
-            pass
-        
-        # 2. other non-text characters are passed without change
-        elif key == wx.WXK_UP:
-            self.hist_mark = max(0, self.hist_mark-1)
-            self.SetValue(self.hist_buff[self.hist_mark])
-            self.SetInsertionPointEnd()
-        elif key == wx.WXK_DOWN:
-            self.hist_mark += 1
-            if self.hist_mark >= len(self.hist_buff):
-                self.SetValue('')                
-            else:
-                self.SetValue(self.hist_buff[self.hist_mark])
-            self.SetInsertionPointEnd()            
-        else: 
-            ctrl = event.ControlDown()
-            keycode = event.GetKeyCode()
-            if ctrl:
-                if keycode == 0:
-                    self.SetSelection(0,1)
-                    self.SetInsertionPoint(0)
-                    self.SetValue(entry)
-                    self.SetSelection(0,1)
-                    wx.KeyEvent(wx.WXK_LEFT)
-                    do_skip = False
-                elif keycode == 4:
-                    mark = self.GetSelection()[1]
-                    self.SetValue("%s%s" % (entry[:mark],
-                                            entry[mark+1:]) )
-                    self.SetSelection(mark, mark)
-                elif keycode == 5:
-                    self.SetInsertionPointEnd()
-                elif keycode == 3:
-                    wx.TheClipBoard.Open()
-                    wx.TheClipBoard.SetData(entry)                
-                elif keycode == 22:
-                    tmp_txt = wx.TextDataObject()
-                    wx.TheClipBoard.Open()
-                    wx.TheClipBoard.GetData(tmp_txt)                
-                    wx.TheClipBoard.Close()
-                    self.SetValue(tmp_txt)
-        self.Refresh()
-        if do_skip:
-            event.Skip()
-        return
-        
-    def AddToHistory(self, text=''):
-        if len(text.strip()) > 0:
-            self.hist_buff.append(text)
-            self.hist_mark = len(self.hist_buff)
-            
-    def SaveHistory(self):
-        try:
-            fout = open(self.hist_file,'w')
-        except IOError:
-            print 'Cannot save history ', self.hist_file
-            
-        fout.write("# wxlarch history saved %s\n\n" % time.ctime())
-        fout.write('\n'.join(self.hist_buff[-MAX_HISTORY:]))
-        fout.write("\n")
-        fout.close()
-     
-    def LoadHistory(self):
-        if os.path.exists(self.hist_file):
-            self.hist_buff = []
-            for txt in open(self.hist_file,'r').readlines():
-                stxt = txt.strip()
-                if len(stxt) > 0 and not stxt.startswith('#'):
-                    self.hist_buff.append(txt[:-1])
-
-    def def_onText(self, event=None):
-        if event is None:
-            return 
-        txt = event.GetString()
-        if len(txt.strip()) > 0:
-            self.hist_buff.append(txt)
-            self.hist_mark = len(self.hist_buff)
-           
-        event.Skip()
-
- #################
-
-def makeColorPanel(parent, color):
-    p = wx.Panel(parent, -1)
-    p.SetBackgroundColour(color)
-    return p
-
-BANNER = """
-==================================================
+BANNER = """==================================================
                                         Welcome to Larch
            
   Larch version %s    using python %s  and numpy %s
@@ -170,7 +25,7 @@ BANNER = """
 
 class LarchWxShell(object):
     ps1 = 'Larch>'
-    ps2 = '  ...   >'
+    ps2 = ' ... >'
     def __init__(self, writer=None, prompt=None, output=None, input=None):
         self.larch  = larch.Interpreter()
         self.inptext  = larch.InputText(prompt=self.ps1, interactive=False)
@@ -251,78 +106,69 @@ class MainFrame(wx.Frame):
         self.larch.prompt = self.prompt
         self.larch.output    = self.output       
 
-    def BuildFrame(self, parent=None, **kwds):
-        wx.Frame.__init__(self, parent, -1, size=(600,400), style= wx.DEFAULT_FRAME_STYLE)
+    def InputPanel(self, parent):
+        panel = wx.Panel(parent, -1)
+        pstyle = wx.ALIGN_CENTER|wx.ALIGN_RIGHT
+        self.prompt = wx.StaticText(panel, -1, 'Larch>',
+                                    size = (65,-1),
+                                    style = pstyle)
+        self.input = ReadlineTextCtrl(panel, -1,  '', size=(500,-1),
+                                 historyfile=None, mode='emacs',
+                                 style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER)
         
-        self.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD, False))
+        self.input.Bind(wx.EVT_TEXT_ENTER, self.onText)
+        
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizer.Add(self.prompt,  0, wx.BOTTOM|wx.CENTER)
+        sizer.Add(self.input,   1, wx.ALIGN_LEFT|wx.ALIGN_CENTER|wx.EXPAND)
+        panel.SetSizer(sizer)
+        sizer.Fit(panel)
+        return panel
+        
+    def BuildFrame(self, parent=None, **kwds):
+        wx.Frame.__init__(self, parent, -1, size=(600,400),
+                          style= wx.DEFAULT_FRAME_STYLE)
+        
+        self.SetFont(wx.Font(11, wx.SWISS, wx.NORMAL, wx.BOLD, False))
+        sfont = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD, False)
         sbar = self.CreateStatusBar(2, wx.CAPTION|wx.THICK_FRAME)
+
         self.SetStatusWidths([-2,-1])
         self.SetStatusText("Larch initializing...", 0)
 
         self.Bind(wx.EVT_CLOSE,  self.onClose)
-        self.Bind(wx.EVT_SIZE,  self.onResize)
-
         self.BuildMenus()
 
-        inp_panel = wx.Panel(self, -1)
-        prompt = wx.StaticText(inp_panel, -1, 'Larch>',    size = (65,-1),
-                               style = wx.ALIGN_CENTER|wx.ALIGN_RIGHT|wx.EXPAND)
-
-        input = ReadlineTextCtrl(inp_panel, -1,  '', size=(500,-1),
-                                 historyfile=None, mode='emacs',
-                                 style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER)
+        inp_panel = self.InputPanel(self)
         
-        input.Bind(wx.EVT_TEXT_ENTER, self.onText)
+        nbk_panel = wx.Notebook(self, -1, style=wx.BK_DEFAULT)
+        nbk_panel.SetBackgroundColour('#E9E9AA')
+        self.SetBackgroundColour('#E9EE90')        
         
-        bsizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        bsizer.Add(prompt,  0, wx.BOTTOM|wx.CENTER)
-        bsizer.Add(input,      1, wx.ALIGN_LEFT|wx.ALIGN_CENTER|wx.EXPAND)
-
-        inp_panel.SetSizer(bsizer)
-        bsizer.Fit(inp_panel)        
-        
-        nb_panel = wx.Notebook(self, style=wx.BK_DEFAULT)
-
-        self.notebooks = nb_panel
-
-        output_panel =makeColorPanel(nb_panel, '#E9E9DA')
-        
-        output = wx.TextCtrl(output_panel, -1,  BANNER,
-                             size=(550, 450),
+        output = wx.TextCtrl(nbk_panel, -1,  BANNER,
                              style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
-        output.SetBackgroundColour('#E9E9DA')
+
         output.SetInsertionPointEnd()
-        output.SetFont(wx.Font(11, wx.SWISS, wx.NORMAL, wx.BOLD, False))
-
-        help_panel = makeColorPanel(nb_panel, '#E9E9DA')
-
-        helptext = wx.TextCtrl(help_panel, -1,  '--- HELP for Larch ---',
-                               size=(550,450),
-                               style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
-        helptext.SetBackgroundColour('#E9E9DA')
-        helptext.SetInsertionPointEnd()
-        helptext.SetFont(wx.Font(11, wx.SWISS, wx.NORMAL, wx.BOLD, False))
-
-        nb_panel.AddPage(output_panel, 'Output', select=1)
-        nb_panel.AddPage(help_panel, 'Help')        
-
-
-        mainsizer = wx.BoxSizer(wx.VERTICAL)
-        mainsizer.Add(nb_panel,      1, wx.ALIGN_CENTER|wx.CENTER|wx.EXPAND)
-        mainsizer.Add(inp_panel,     0, wx.ALIGN_LEFT|wx.ALIGN_BOTTOM|wx.EXPAND)
-      
-        self.SetAutoLayout(True)
+        output.SetFont(sfont)
         
-        self.SetSizer(mainsizer)
-        self.Fit()
+        helptext = wx.TextCtrl(nbk_panel, -1,  ' ',
+                               style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
+        
+        nbk_panel.AddPage(output, 'Output', select=1)
+        nbk_panel.AddPage(helptext,   'Help')        
+        
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        opts = dict(flag=wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND,
+                    border=2)
+        sizer.Add(nbk_panel,  1, **opts)
+        sizer.Add(inp_panel,  0, **opts)
+        
+        self.SetSizer(sizer)
         self.Refresh()
 
-        self.input = input
         self.output = output
-        self.prompt = prompt
         self.SetStatusText("Ready", 0)
-
     
     def BuildMenus(self):
         ID_ABOUT = wx.NewId()
@@ -367,22 +213,36 @@ class MainFrame(wx.Frame):
         event.Skip()
         
     def onResize(self, event=None):
-        print 'on size ', event
         size = event.GetSize()
+        nsize = self.notebooks.GetSize()        
+        print 'on size1 ', size, nsize
+        self.notebooks.SetSize(size)        
+        self.notebooks.Refresh()
+        nsize = self.notebooks.GetSize()
+        print 'on size2 ', size, nsize 
+
+        # self.notebooks.SetBestFittingSize()
+        self.notebooks.Refresh()
+        nsize = self.notebooks.GetSize()
+        print 'on size3 ', size, nsize
+        print 'size ',  self.notebooks.Size
+        o = []
+        for i in dir(self.notebooks):
+            if 'ize' in i:
+                o.append(i)
+        print " | ".join(o)
+        
         for k in range(self.notebooks.GetPageCount()):
             p = self.notebooks.GetPage(k)
-            p.SetBestFittingSize()
             try:
-                p.SetMaxSize(size)
                 p.SetSize(size)
             except:
                 print 'cannot set size'
-            print p.SetSize.__doc__
-            print k, size, p
-#             for i in dir(p):
-#                 if i.startswith('Set'):
-#                     print i
-# 
+            p.Refresh()
+            
+#             print p.SetSize.__doc__
+#             print k, size, p
+# # 
             
         event.Skip()
 
