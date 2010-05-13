@@ -13,7 +13,6 @@ import numpy
 
 from wx_utils import ReadlineTextCtrl, makeColorPanel
 
-from N import TestNB
 
 BANNER = """==================================================
                                         Welcome to Larch
@@ -143,12 +142,13 @@ class MainFrame(wx.Frame):
         inp_panel = self.InputPanel(self)
         
         nbk_panel = wx.Notebook(self, -1, style=wx.BK_DEFAULT)
-        nbk_panel.SetBackgroundColour('#E9E9AA')
-        self.SetBackgroundColour('#E9EE90')        
+        nbk_panel.SetBackgroundColour('#E9E9EA')
+        self.SetBackgroundColour('#E9EEE0')        
         
         output = wx.TextCtrl(nbk_panel, -1,  BANNER,
                              style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
 
+        output.CanCopy()
         output.SetInsertionPointEnd()
         output.SetFont(sfont)
         
