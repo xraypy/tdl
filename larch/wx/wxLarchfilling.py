@@ -187,24 +187,27 @@ class FillingTree(wx.TreeCtrl):
         if otype is types.StringType or otype is types.UnicodeType:
             value = repr(obj)
         text += '\n\nValue: ' + value
-        if otype not in SIMPLETYPES:
-            try:
-                text += '\n\nDocstring:\n\n"""' + \
-                        inspect.getdoc(obj).strip() + '"""'
-            except:
-                pass
-        if otype is types.InstanceType:
-            try:
-                text += '\n\nClass Definition:\n\n' + \
-                        inspect.getsource(obj.__class__)
-            except:
-                pass
-        else:
-            try:
-                text += '\n\nSource Code:\n\n' + \
-                        inspect.getsource(obj)
-            except:
-                pass
+        
+        need_doc = True
+        try:
+            text += '\n\nDocstring:\n\n"""' + \
+                    obj.__doc__().strip() + '"""'
+            need_doc = False
+        except:
+            pass
+        if need_doc:
+            if otype is types.InstanceType:
+                try:
+                    text += '\n\nClass Definition:\n\n' + \
+                            inspect.getsource(obj.__class__)
+                except:
+                    pass
+            else:
+                try:
+                    text += '\n\nSource Code:\n\n' + \
+                            inspect.getsource(obj)
+                except:
+                    pass
         self.setText(text)
 
     def getFullName(self, item, partial=''):

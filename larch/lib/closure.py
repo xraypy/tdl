@@ -26,6 +26,9 @@ class Closure:
         return "<function %s>" % (self.func.__name__)
     __str__ = __repr__
 
+    def __doc__(self):
+        return self.func.__doc__
+    
     def __call__(self, *args, **c_kwds):
         if self.func is None:
             return None

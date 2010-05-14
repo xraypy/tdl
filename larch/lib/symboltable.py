@@ -321,9 +321,9 @@ class SymbolTable(Group):
             if sym is None:
                 self.new_group(groupname)
             for key, val in syms.items():
-                print(' :: ', key, type(val))
                 if callable(val):
                     val = Closure(func=val, larch=self.__interpreter)
+                print(' :: ', key, type(val), val.__doc__())
                 self.set_symbol("%s.%s" % (groupname, key), val)
 
         

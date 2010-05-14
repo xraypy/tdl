@@ -9,65 +9,67 @@ class Plotter(MPlot.PlotFrame):
         self.Show()
         self.Raise()
         self.cursor_pos = []
-        # self.plotframe.reportLeftDown = self.customLeftDown
+        print dir(self)
+        self.panel.cursor_callback = self.onCursor
         self.id = id
         self.larch = larch
         if larch is not None:
-            print 'setting Pllotter!'
-            if not '_plotter' in larch.symtable:
-                larch.symtable.newgroup('_plotter')
-            larch.symtable.set_symbol('_plotter.win%i' % id, self)
+            symtable = larch.symtable
+            if not symtable.has_group('_plotter'):
+                symtable.newgroup('_plotter')
+            symtable.set_symbol('_plotter.win%i' % id, self)
         
     def onExit(self,o, **kw):
-        if '_plotter' in self.larch.symtable:
-            self.larch.symtable.del_symbol('_plotter.win%i' % self.id)
-            
-    def customLeftDown(self,event=None,**kw):
-        print 'Plotter left down'
-        if event == None: return                
-        if self.larch is not None:
-            if not '_plotter' in larch.symbtable:
-                larch.symtable.newgroup('_plotter')
-                larch.symtable.set_symbol('_plotter.win%i_x' % self.id, event.xdata)
-                larch.symtable.set_symbol('_plotter.win%i_y' % self.id, event.ydata)
+        symtable = self.larch.symtable
+        if symtable.has_group('_plotter'):
+            try:
+                symtable.del_symbol('_plotter.win%i' % self.id)
+            except:
+                pass
+        self.Destroy()
         
-        self.plotframe.write_message("%f, %f" % (event.xdata,event.ydata), panel=1)
-
+    def onCursor(self,x=None, y=None,**kw):
+        symtable = self.larch.symtable
+        if not symtable.has_group('_plotter'):
+            symtable.newgroup('_plotter')
+        symtable.set_symbol('_plotter.win%i_x' % self.id, x)
+        symtable.set_symbol('_plotter.win%i_y' % self.id, y)
+        
 
 def _getPlotter(win=0, larch=None):
+    """make a plotter"""
     if larch is None:
         return
     plotter = larch.symtable.get_symbol('_plotter.win%i' %win, create=True)
-    print 'get1 ', plotter
     if plotter is None:
-        Plotter(id=win, larch=larch)
+        plotter = Plotter(id=win, larch=larch)
         t0 = time.time()
-        while time.time()-t0 < 10:
+        larch.symtable.set_symbol('_plotter.win%i' %win, plotter)
+        try:
+            plotter = larch.symtable.get_symbol('_plotter.win%i' %win)
+        except:
+            time.sleep(0.5)
             try:
                 plotter = larch.symtable.get_symbol('_plotter.win%i' %win)
             except:
                 pass
-            if plotter is not None:
-                break
-            time.sleep(0.5)
-            print 'get... ', plotter
-    print '_getPlotter - ', plotter
-            
     return plotter
 
 def _plot(x,y, win=0, larch=None, **kws):
-    print 'Plot!! ', win, larch
+    """plot doc"""
     plotter = _getPlotter(win=win, larch=larch)
-    print 'plotter ', plotter
     if plotter is not None:
         plotter.plot(x, y, **kws)    
     
 def _oplot(x,y, win=0, larch=None, **kws):
+    """oplot doc"""
     plotter = _getPlotter(win=win, larch=larch)
     if plotter is not None:
         plotter.oplot(x, y, **kws)
     
 def register():
-    return '_plotter', {'plot':_plot, 'oplot': _oplot}
+    return '_plotter', {'plot':_plot,
+                        'make_plotter':_getPlotter,
+                        'oplot': _oplot}
 
         
