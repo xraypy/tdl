@@ -16,7 +16,7 @@ from wxLarchfilling import Filling
 
 import plotter
 
-PLUGINS = [plotter.register]
+PLUGINS = [plotter.registerPlugin]
 
 BANNER = """==================================================
                                         Welcome to Larch
@@ -37,7 +37,6 @@ class LarchWxShell(object):
         self.output = output
         self.larch.writer = self
         self.symtable.AddPlugins(PLUGINS)
-        self.symtable._sys.searchGroups.append('_plotter')
 
         self.SetPrompt()
 

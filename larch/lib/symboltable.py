@@ -309,9 +309,9 @@ class SymbolTable(Group):
             sym = self._lookup('.'.join(tnam))
         return sym, child
 
-    def AddPlugins(self, pluginlist):
-        for plugin in pluginlist:
-            groupname, syms = plugin()
+    def AddPlugins(self, plugins):
+        for plugin in plugins:
+            groupname, insearch, syms = plugin()
             print( 'Register Plugin! ', groupname, syms)
             sym = None
             try:
@@ -320,13 +320,12 @@ class SymbolTable(Group):
                 pass
             if sym is None:
                 self.new_group(groupname)
+            if insearch:
+                self._sys.searchGroups.append(groupname)
             for key, val in syms.items():
                 if callable(val):
                     val = Closure(func=val, larch=self.__interpreter)
-                print(' :: ', key, type(val), val.__doc__())
                 self.set_symbol("%s.%s" % (groupname, key), val)
-
-        
         
 # if __name__ == '__main__':
 #     symtab = SymbolTable()
