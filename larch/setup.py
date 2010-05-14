@@ -16,7 +16,7 @@ setup(
                    'larch.modules':'modules',
                    'larch.modules':'modules',
                    },
-    packages = ['larch','larch.modules'],
+    packages = ['larch','larch.modules', 'larch.wx', 'larch.wx.mplot'],
     package_data = {'larch.modules':['startup.lar']},
-    data_files  = [('bin',['larch'])],)
+    data_files  = [('bin',['larch', 'wxlarch'])],)
 
