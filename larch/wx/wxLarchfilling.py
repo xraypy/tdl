@@ -14,6 +14,7 @@ import inspect
 
 from wx.py import introspect
 from larch.symboltable import SymbolTable, Group
+from larch.closure import Closure
 
 import keyword
 import sys
@@ -45,7 +46,7 @@ except AttributeError:
 class FillingTree(wx.TreeCtrl):
     """FillingTree based on TreeCtrl."""
     
-    name = 'Filling Tree'
+    name = 'Larch Filling Tree'
     revision = __revision__
 
     def __init__(self, parent, id=-1, pos=wx.DefaultPosition,
@@ -55,26 +56,32 @@ class FillingTree(wx.TreeCtrl):
         """Create FillingTree instance."""
         wx.TreeCtrl.__init__(self, parent, id, pos, size, style)
         self.rootIsNamespace = rootIsNamespace
-        import __main__
-        if rootObject is None:
-            rootObject = __main__.__dict__
-            self.rootIsNamespace = True
-        if rootObject is __main__.__dict__ and rootLabel is None:
-            rootLabel = 'locals()'
-        if not rootLabel:
-            rootLabel = 'Ingredients'
+        self.rootLabel = rootLabel
+        self.static = static
+        self.item = None
+        self.root = None
+        self.setRootObject(rootObject)
+
+    def setRootObject(self, rootObject=None):
+        self.rootObject = rootObject
+        if self.rootObject is None:
+            return
+        if not self.rootLabel:
+            self.rootLabel = 'Larch Data'
         rootData = wx.TreeItemData(rootObject)
-        self.item = self.root = self.AddRoot(rootLabel, -1, -1, rootData)
-        self.SetItemHasChildren(self.root, self.objHasChildren(rootObject))
+        self.item = self.root = self.AddRoot(self.rootLabel, -1, -1,  rootData)
+
+        self.SetItemHasChildren(self.root,  self.objHasChildren(self.rootObject))
         self.Bind(wx.EVT_TREE_ITEM_EXPANDING, self.OnItemExpanding, id=self.GetId())
         self.Bind(wx.EVT_TREE_ITEM_COLLAPSED, self.OnItemCollapsed, id=self.GetId())
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnSelChanged, id=self.GetId())
         self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.OnItemActivated, id=self.GetId())
-        if not static:
+        if not self.static:
             dispatcher.connect(receiver=self.push, signal='Interpreter.push')
 
     def push(self, command, more):
         """Receiver for Interpreter.push signal."""
+        print 'Filling push! ', command, more
         self.display()
 
     def OnItemExpanding(self, event):
@@ -102,7 +109,8 @@ class FillingTree(wx.TreeCtrl):
         item = event.GetItem()
         text = self.getFullName(item)
         obj = self.GetPyData(item)
-        frame = FillingFrame(parent=self, size=(600, 100), rootObject=obj,
+        frame = FillingFrame(parent=self, size=(600, 100),
+                             rootObject=obj,
                              rootLabel=text, rootIsNamespace=False)
         frame.Show()
 
@@ -121,15 +129,14 @@ class FillingTree(wx.TreeCtrl):
         self.ntop = 0
         if isinstance(obj, SymbolTable)   or isinstance(obj, Group):
             return obj._publicmembers()
-
-        if hasattr(obj, 'keys'):
+        if isinstance(obj, (int, float, bool)) or (isinstance(obj, dict) and hasattr(obj, 'keys')):
             return obj
         elif isinstance(obj, (list, tuple)):
             for n in range(len(obj)):
                 key = '[' + str(n) + ']'
                 d[key] = obj[n]
             
-        else:
+        elif not hasattr(obj, '__call__'):
             for key in introspect.getAttributeNames(obj):
                 # Believe it or not, some attributes can disappear,
                 # such as the exc_traceback attribute of the sys
@@ -147,17 +154,20 @@ class FillingTree(wx.TreeCtrl):
         children = self.objGetChildren(obj)
         if not children:
             return
-        keys = children.keys()
+        try:
+            keys = children.keys()
+        except:
+            return
         keys.sort(lambda x, y: cmp(str(x).lower(), str(y).lower()))
         for key in keys:
             itemtext = str(key)
             # Show string dictionary items with single quotes, except
             # for the first level of items, if they represent a
             # namespace.
-            if type(obj) is types.DictType \
-            and type(key) is types.StringType \
-            and (item != self.root \
-                 or (item == self.root and not self.rootIsNamespace)):
+            if (type(obj) is types.DictType \
+                and type(key) is types.StringType \
+                and (item != self.root \
+                     or (item == self.root and not self.rootIsNamespace))):
                 itemtext = repr(key)
             child = children[key]
             data = wx.TreeItemData(child)
@@ -168,10 +178,14 @@ class FillingTree(wx.TreeCtrl):
         item = self.item
         if not item:
             return
+        obj = self.GetPyData(item)
+        if isinstance(obj, Closure):
+            obj = obj.func
+            
         if self.IsExpanded(item):
             self.addChildren(item)
         self.setText('')
-        obj = self.GetPyData(item)
+
         if wx.Platform == '__WXMSW__':
             if obj is None: # Windows bug fix.
                 return
@@ -191,10 +205,16 @@ class FillingTree(wx.TreeCtrl):
         need_doc = True
         try:
             text += '\n\nDocstring:\n\n"""' + \
-                    obj.__doc__().strip() + '"""'
+                    obj.__doc__.strip() + '"""'
             need_doc = False
         except:
-            pass
+            try:
+                text += '\n\nDocstring:\n\n"""' + \
+                        obj.__doc__().strip() + '"""'
+                need_doc = False
+            except:
+                pass
+            
         if need_doc:
             if otype is types.InstanceType:
                 try:
@@ -309,11 +329,18 @@ class Filling(wx.SplitterWindow):
         self.tree.setText = self.text.SetText
 
         # Display the root item.
-        self.tree.SelectItem(self.tree.root)
-        self.tree.display()
+        if self.tree.root is not None:
+            self.tree.SelectItem(self.tree.root)
+            self.tree.display()
 
         self.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnChanged)
 
+    def SetRootObject(self, rootObject=None):
+        self.tree.setRootObject(rootObject)
+        if self.tree.root is not None:        
+            self.tree.SelectItem(self.tree.root)
+            self.tree.display()
+        
     def OnChanged(self, event):
         #this is important: do not evaluate this event=> otherwise, splitterwindow behaves strange
         #event.Skip()

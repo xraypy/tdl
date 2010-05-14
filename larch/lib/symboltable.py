@@ -6,6 +6,11 @@ import os
 import types
 from .closure import Closure
 from . import site_config
+try:
+    import numpy
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
 
 def isgroup(grp):
     "tests if input is a Group"
@@ -281,6 +286,12 @@ class SymbolTable(Group):
                 "cannot create subgroup of non-group '%s'" % grp)
             else:
                 setattr(grp, nam, Group())
+        if HAS_NUMPY and isinstance(value, list):
+            try:
+                v1 = numpy.array(value)
+                value = v1
+            except:
+                pass
         setattr(grp, child, value)
         return getattr(grp, child)        
 
@@ -309,10 +320,9 @@ class SymbolTable(Group):
             sym = self._lookup('.'.join(tnam))
         return sym, child
 
-    def AddPlugins(self, plugins):
+    def AddPlugins(self, plugins, **kw):
         for plugin in plugins:
             groupname, insearch, syms = plugin()
-            print( 'Register Plugin! ', groupname, syms)
             sym = None
             try:
                 sym = self._lookup(groupname, create=False)
@@ -324,7 +334,7 @@ class SymbolTable(Group):
                 self._sys.searchGroups.append(groupname)
             for key, val in syms.items():
                 if callable(val):
-                    val = Closure(func=val, larch=self.__interpreter)
+                    val = Closure(func=val, **kw)
                 self.set_symbol("%s.%s" % (groupname, key), val)
         
 # if __name__ == '__main__':

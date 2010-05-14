@@ -1,4 +1,4 @@
-class Closure:
+class Closure(object):
     """Give a reference to a function with arguments so that it 
     can be called later, optionally changing the argument list.  
 

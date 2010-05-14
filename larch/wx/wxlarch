@@ -29,14 +29,16 @@ BANNER = """==================================================
 class LarchWxShell(object):
     ps1 = 'Larch>'
     ps2 = ' ... >'
-    def __init__(self, writer=None, prompt=None, output=None, input=None):
+    def __init__(self, wxparent=None,   writer=None,
+                 prompt=None, output=None, input=None):
         self.larch  = larch.Interpreter()
         self.inptext  = larch.InputText(prompt=self.ps1, interactive=False)
         self.symtable = self.larch.symtable
         self.prompt = prompt
         self.output = output
         self.larch.writer = self
-        self.symtable.AddPlugins(PLUGINS)
+        self.symtable.AddPlugins(PLUGINS, parent=wxparent,
+                                 larch=self.larch)
 
         self.SetPrompt()
 
@@ -106,10 +108,15 @@ class LarchWxShell(object):
 
 class MainFrame(wx.Frame):
     def __init__(self,  parent=None, **kwds):
-        self.larch = LarchWxShell()
         self.BuildFrame(parent=parent, **kwds)
-        self.larch.prompt = self.prompt
-        self.larch.output    = self.output       
+
+        self.larchshell = LarchWxShell(wxparent=self,
+                                       prompt = self.prompt,
+                                       output  = self.output)
+
+
+        self.datapanel.SetRootObject(self.larchshell.symtable)
+
 
     def InputPanel(self, parent):
         panel = wx.Panel(parent, -1)
@@ -151,24 +158,21 @@ class MainFrame(wx.Frame):
         nbk_panel.SetBackgroundColour('#E9E9EA')
         self.SetBackgroundColour('#E9EEE0')        
         
-        output = wx.TextCtrl(nbk_panel, -1,  BANNER,
+        self.output = wx.TextCtrl(nbk_panel, -1,  BANNER,
                              style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
 
-        output.CanCopy()
-        output.SetInsertionPointEnd()
-        output.SetFont(sfont)
+        self.output.CanCopy()
+        self.output.SetInsertionPointEnd()
+        self.output.SetFont(sfont)
         
-        helptext = wx.TextCtrl(nbk_panel, -1,  ' ',
-                               style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
-        
-        
-        datapanel = Filling(nbk_panel,
-                            rootObject= self.larch.symtable,
-                            rootLabel='main')
+        self.helppanel = wx.TextCtrl(nbk_panel, -1,  ' ',
+                                     style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
 
-        nbk_panel.AddPage(output,      'Output', select=1)
-        nbk_panel.AddPage(datapanel,   'Data')
-        nbk_panel.AddPage(helptext,   'Help')        
+        self.datapanel = Filling(nbk_panel,  rootLabel='main')
+
+        nbk_panel.AddPage(self.output,      'Output', select=1)
+        nbk_panel.AddPage(self.datapanel,   'Data')
+        nbk_panel.AddPage(self.helppanel,   'Help')        
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         opts = dict(flag=wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND,
@@ -179,7 +183,6 @@ class MainFrame(wx.Frame):
         self.SetSizer(sizer)
         self.Refresh()
 
-        self.output = output
         self.SetStatusText("Ready", 0)
     
     def BuildMenus(self):
@@ -215,13 +218,13 @@ class MainFrame(wx.Frame):
 
     def onText(self, event=None):
         text =  event.GetString()
-        self.larch.write(">%s\n" % text)
+        self.larchshell.write(">%s\n" % text)
         self.input.Clear()
         if text.lower() in ('quit', 'exit'):
             self.onClose()
         else:
             self.input.AddToHistory(text)
-            wx.CallAfter(self.larch.execute, text) 
+            wx.CallAfter(self.larchshell.execute, text) 
         event.Skip()
         
     def onResize(self, event=None):
