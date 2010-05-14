@@ -149,7 +149,7 @@ class LarchFrame(wx.Frame):
     def BuildFrame(self, parent=None, **kwds):
         wx.Frame.__init__(self, parent, -1, size=(600,400),
                           style= wx.DEFAULT_FRAME_STYLE)
-        
+        self.SetTitle('WXLarch')
         self.SetFont(wx.Font(11, wx.SWISS, wx.NORMAL, wx.BOLD, False))
         sfont = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD, False)
         sbar = self.CreateStatusBar(2, wx.CAPTION|wx.THICK_FRAME)

@@ -76,12 +76,13 @@ def _getDisplay(win=1, larch=None, parent=None, image=False):
         return
     win = max(1, int(abs(win)))
     
-    symname = '_plotter.plot%i' %win
     title   = 'Larch Plot Display Window %i' % win
+    symname = '_plotter.plot%i' %win
     creator = PlotDisplay
     if image:
         creator = ImageDisplay
         title   = 'Larch Image Display Window %i' % win
+        symname = '_plotter.img%i' %win
     display = larch.symtable.get_symbol(symname, create=True)
     
     if display is None:
