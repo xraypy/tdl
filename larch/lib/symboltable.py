@@ -17,8 +17,14 @@ def isgroup(grp):
     return isinstance(grp, Group)
 
 class Group(object):
-    """container for variables, subgroups, and modules:
-    a lightweight object, with 
+    """Group: a container for variables, modules, and subgroups.
+
+    Methods
+    ----------
+       _subgroups(): return sorted list of subgroups
+       _members():   return sorted list of all members
+       _publicmembers():   return sorted list of 'public' members
+
     """
     def __init__(self, name=None, **kws):
         self.__name__ = name
@@ -73,6 +79,8 @@ class InvalidName:
     pass
     
 class SymbolTable(Group):
+    """Main Symbol Table for Larch.    
+    """
     top_group   = '_main'
     core_groups = ('_sys', '_builtin', '_math')
     __invalid_name = InvalidName()
