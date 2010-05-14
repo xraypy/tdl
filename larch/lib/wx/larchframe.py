@@ -17,13 +17,16 @@ import plotter
 
 PLUGINS = [plotter.registerPlugin]
 
+INFO = """  Larch version %s    using python %s  and numpy %s
+  Copyright M. Newville, T. Trainor (2010)"""  % (larch.__version__,
+                                                  "%i.%i.%i" % (sys.version_info[:3]), numpy.__version__)
+
 BANNER = """==================================================
-                                        Welcome to Larch
-           
-  Larch version %s    using python %s  and numpy %s
-  Copyright M. Newville, T. Trainor (2010)
+                                     Welcome to Larch
+%s
 ==================================================
- """  % (larch.__version__, "%i.%i.%i" % (sys.version_info[:3]), numpy.__version__)
+
+"""  % (INFO)
 
 
 def makeColorPanel(parent, color):
@@ -268,8 +271,9 @@ class LarchFrame(wx.Frame):
         event.Skip()
 
     def onAbout(self, event=None):
-        about_msg =  """wxLarch 
-        Matt Newville <newville@cars.uchicago.edu>"""
+        about_msg =  """wxLarch:
+        %s""" % (INFO)
+            
         dlg = wx.MessageDialog(self, about_msg,
                                "About wxLarch", wx.OK | wx.ICON_INFORMATION)
         dlg.ShowModal()

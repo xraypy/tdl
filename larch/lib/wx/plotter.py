@@ -1,7 +1,7 @@
 import wx
 import time
 
-from mplot import PlotFrame, ImageFrame
+from larch.wx.mplot import PlotFrame, ImageFrame
 
 class PlotDisplay(PlotFrame):
     def __init__(self, parent=None, wid=1, larch=None, **kws):

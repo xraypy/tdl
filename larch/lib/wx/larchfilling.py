@@ -109,7 +109,7 @@ class FillingTree(wx.TreeCtrl):
         item = event.GetItem()
         text = self.getFullName(item)
         obj = self.GetPyData(item)
-        frame = FillingFrame(parent=self, size=(600, 100),
+        frame = FillingFrame(parent=self, size=(500, 500),
                              rootObject=obj,
                              rootLabel=text, rootIsNamespace=False)
         frame.Show()
@@ -365,14 +365,13 @@ class FillingFrame(wx.Frame):
 
     name = 'Filling Frame'
     revision = __revision__
-
-    def __init__(self, parent=None, id=-1, title='PyFilling',
+    def __init__(self, parent=None, id=-1, title='Larch Data Tree',
                  pos=wx.DefaultPosition, size=(600, 400),
                  style=wx.DEFAULT_FRAME_STYLE, rootObject=None,
                  rootLabel=None, rootIsNamespace=False, static=False):
         """Create FillingFrame instance."""
         wx.Frame.__init__(self, parent, id, title, pos, size, style)
-        intro = 'PyFilling - The Tastiest Namespace Inspector'
+        intro = 'Larch Data Tree (borrowed from PyFilling)'
         self.CreateStatusBar()
         self.SetStatusText(intro)
 #         import images
@@ -387,7 +386,6 @@ class FillingFrame(wx.Frame):
 
 class App(wx.App):
     """PyFilling standalone application."""
-
     def OnInit(self):
         wx.InitAllImageHandlers()
         self.fillingFrame = FillingFrame()
