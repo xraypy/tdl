@@ -37,6 +37,7 @@ class ReadlineTextCtrl(wx.TextCtrl):
         self.Bind(wx.EVT_SET_FOCUS, self.onSetFocus)
         self.Bind(wx.EVT_KILL_FOCUS, self.onKillFocus)
         self.__GetMark()
+        self.notebooks = None
 
     def __GetMark(self,  event=None):
         " keep track of cursor position within text"
@@ -86,6 +87,11 @@ class ReadlineTextCtrl(wx.TextCtrl):
             else:
                 self.SetValue(self.hist_buff[self.hist_mark])
             self.SetInsertionPointEnd()            
+        elif key == wx.WXK_TAB:
+            if self.notebooks is not None:
+                self.notebooks.AdvanceSelection()
+                self.SetFocus()w
+                
         elif key == wx.WXK_HOME or (ctrl and key == 1): # ctrl-a
             self.SetInsertionPoint(0)
             self.SetSelection(0,0)
@@ -110,6 +116,14 @@ class ReadlineTextCtrl(wx.TextCtrl):
         elif ctrl and  key == 6: # f  
             mark = self.GetSelection()[1]
             self.SetSelection(mark+1, mark+1)
+        elif ctrl and  key == 8: # h
+            mark = self.GetSelection()[1]
+            self.SetValue("%s%s" % (entry[:mark-1], entry[mark:]))
+            self.SetSelection(mark-1, mark-1)
+        elif ctrl and  key == 11: # k
+            mark = self.GetSelection()[1]
+            self.SetValue("%s" % (entry[:mark]))
+            self.SetSelection(mark, mark)
         elif ctrl and key == 22: # v
             cb_txt = wx.TextDataObject()
             wx.TheClipboard.Open()
@@ -129,6 +143,8 @@ class ReadlineTextCtrl(wx.TextCtrl):
                 wx.TheClipboard.GetData(cb_txt)                
                 wx.TheClipboard.Close()
                 self.SetValue('')
+        elif ctrl:
+            print 'CTRL ', key
         self.Refresh()
         if do_skip:
             event.Skip()

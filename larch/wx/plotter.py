@@ -4,14 +4,14 @@ import wx
 import time
 
 class PlotDisplay(MPlot.PlotFrame):
-    def __init__(self, parent=None, wid=0, larch=None, **kws):
+    def __init__(self, parent=None, wid=1, larch=None, **kws):
         MPlot.PlotFrame.__init__(self, parent=parent, 
                                  exit_callback=self.onExit, **kws)
         self.Show()
         self.Raise()
         self.cursor_pos = []
         self.panel.cursor_callback = self.onCursor
-        self.wid = wid
+        self.wid = int(wid)
         self.larch = larch
         self.symname = '_plotter.plot%i' % self.wid
         if larch is not None:
@@ -38,14 +38,14 @@ class PlotDisplay(MPlot.PlotFrame):
        
 
 class ImageDisplay(MPlot.ImageFrame):
-    def __init__(self, parent=None, wid=0, larch=None, **kws):
+    def __init__(self, parent=None, wid=1, larch=None, **kws):
         MPlot.ImageFrame.__init__(self, parent=parent,
                                   exit_callback=self.onExit, **kws)
         self.Show()
         self.Raise()
         self.cursor_pos = []
         self.panel.cursor_callback = self.onCursor
-        self.wid = wid
+        self.wid = int(wid)
         self.larch = larch
         if larch is not None:
             symtable = larch.symtable
@@ -69,11 +69,13 @@ class ImageDisplay(MPlot.ImageFrame):
         symtable.set_symbol('_plotter.img%i_x' % self.wid, x)
         symtable.set_symbol('_plotter.img%i_y' % self.wid, y)
 
-def _getDisplay(win=0, larch=None, parent=None, image=False):
+def _getDisplay(win=1, larch=None, parent=None, image=False):
     """make a plotter"""
     # print "_getDisplay ", win, image, larch, parent
     if larch is None:
         return
+    win = max(1, int(abs(win)))
+    
     symname = '_plotter.plot%i' %win
     title   = 'Larch Plot Display Window %i' % win
     creator = PlotDisplay
@@ -95,8 +97,8 @@ def _getDisplay(win=0, larch=None, parent=None, image=False):
         display.SetTitle(title)
     return display
 
-def _plot(x,y, win=0, larch=None, parent=None, **kws):
-    """plot(x, y[, win=0], options])
+def _plot(x,y, win=1, larch=None, parent=None, **kws):
+    """plot(x, y[, win=1], options])
 
     Plot 2-D trace of x, y arrays in a Plot Frame, clearing
     any plot currently in the Plot Frame.
@@ -129,7 +131,6 @@ def _plot(x,y, win=0, larch=None, parent=None, **kws):
         autoscale=True,
         refresh=True, 
  
-
     See Also:
     -----------
     oplot
@@ -140,7 +141,7 @@ def _plot(x,y, win=0, larch=None, parent=None, **kws):
     if plotter is not None:
         plotter.plot(x, y, **kws)    
     
-def _oplot(x,y, win=0, larch=None, parent=None, **kws):
+def _oplot(x,y, win=1, larch=None, parent=None, **kws):
     """oplot(x, y[, win=0], options])
 
     Plot 2-D trace of x, y arrays in a Plot Frame, over-plotting
@@ -155,9 +156,12 @@ def _oplot(x,y, win=0, larch=None, parent=None, **kws):
     if plotter is not None:
         plotter.oplot(x, y, **kws)
 
-def _imshow(map, win=0, larch=None, parent=None, **kws):
+def _imshow(map, win=1, larch=None, parent=None, **kws):
     """imshow(map[, options])
+    
+    Display an image for a 2-D array, as a map
 
+    map:
     """
     img = _getDisplay(parent=parent, win=win, larch=larch, image=True)
     if img is not None:

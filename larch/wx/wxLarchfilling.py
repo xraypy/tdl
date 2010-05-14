@@ -1,4 +1,8 @@
-"""Filling is the gui tree control through which a user can navigate
+"""
+
+Larch Filling:  stolen and hacked from PyCrust's Filling module
+
+Filling is the gui tree control through which a user can navigate
 the local namespace or any object."""
 
 __author__ = "Patrick K. O'Brien <pobrien@orbtech.com>"
@@ -76,12 +80,12 @@ class FillingTree(wx.TreeCtrl):
         self.Bind(wx.EVT_TREE_ITEM_COLLAPSED, self.OnItemCollapsed, id=self.GetId())
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnSelChanged, id=self.GetId())
         self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.OnItemActivated, id=self.GetId())
+        self.Bind(wx.EVT_RIGHT_DOWN, self.OnSelChanged, id=self.GetId() )        
         if not self.static:
             dispatcher.connect(receiver=self.push, signal='Interpreter.push')
 
     def push(self, command, more):
         """Receiver for Interpreter.push signal."""
-        print 'Filling push! ', command, more
         self.display()
 
     def OnItemExpanding(self, event):
@@ -101,7 +105,8 @@ class FillingTree(wx.TreeCtrl):
     def OnSelChanged(self, event):
         """Display information about the item."""
         busy = wx.BusyCursor()
-        self.item = event.GetItem()
+        if hasattr(event, 'GetItem'):
+            self.item = event.GetItem()
         self.display()
 
     def OnItemActivated(self, event):
@@ -194,6 +199,7 @@ class FillingTree(wx.TreeCtrl):
         text = ''
         text += self.getFullName(item)
         text += '\n\nType: ' + str(otype)
+
         try:
             value = str(obj)
         except:
@@ -201,7 +207,6 @@ class FillingTree(wx.TreeCtrl):
         if otype is types.StringType or otype is types.UnicodeType:
             value = repr(obj)
         text += '\n\nValue: ' + value
-        
         need_doc = True
         try:
             text += '\n\nDocstring:\n\n"""' + \
@@ -375,8 +380,8 @@ class FillingFrame(wx.Frame):
         intro = 'PyFilling - The Tastiest Namespace Inspector'
         self.CreateStatusBar()
         self.SetStatusText(intro)
-        import images
-        self.SetIcon(images.getPyIcon())
+#         import images
+#         self.SetIcon(images.getPyIcon())
         self.filling = Filling(parent=self, rootObject=rootObject,
                                rootLabel=rootLabel,
                                rootIsNamespace=rootIsNamespace,

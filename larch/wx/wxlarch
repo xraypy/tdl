@@ -114,7 +114,6 @@ class MainFrame(wx.Frame):
                                        prompt = self.prompt,
                                        output  = self.output)
 
-
         self.datapanel.SetRootObject(self.larchshell.symtable)
 
 
@@ -129,6 +128,7 @@ class MainFrame(wx.Frame):
                                  style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER)
         
         self.input.Bind(wx.EVT_TEXT_ENTER, self.onText)
+        self.input.notebooks = self.nbook
         
         sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -151,34 +151,35 @@ class MainFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE,  self.onClose)
         self.BuildMenus()
-
-        inp_panel = self.InputPanel(self)
         
-        nbk_panel = wx.Notebook(self, -1, style=wx.BK_DEFAULT)
-        nbk_panel.SetBackgroundColour('#E9E9EA')
+        nbook = wx.Notebook(self, -1, style=wx.BK_DEFAULT)
+        nbook.SetBackgroundColour('#E9E9EA')
         self.SetBackgroundColour('#E9EEE0')        
         
-        self.output = wx.TextCtrl(nbk_panel, -1,  BANNER,
+        self.output = wx.TextCtrl(nbook, -1,  BANNER,
                              style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
 
         self.output.CanCopy()
         self.output.SetInsertionPointEnd()
         self.output.SetFont(sfont)
         
-        self.helppanel = wx.TextCtrl(nbk_panel, -1,  ' ',
+        self.helppanel = wx.TextCtrl(nbook, -1,  ' ',
                                      style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_READONLY)
 
-        self.datapanel = Filling(nbk_panel,  rootLabel='main')
+        self.datapanel = Filling(nbook,  rootLabel='main')
 
-        nbk_panel.AddPage(self.output,      'Output', select=1)
-        nbk_panel.AddPage(self.datapanel,   'Data')
-        nbk_panel.AddPage(self.helppanel,   'Help')        
+        nbook.AddPage(self.output,      'Output', select=1)
+        nbook.AddPage(self.datapanel,   'Data')
+        nbook.AddPage(self.helppanel,   'Help')        
+
+        self.nbook = nbook
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         opts = dict(flag=wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND,
                     border=2)
-        sizer.Add(nbk_panel,  1, **opts)
-        sizer.Add(inp_panel,  0, **opts)
+
+        sizer.Add(nbook,  1, **opts)
+        sizer.Add(self.InputPanel(self),  0, **opts)
         
         self.SetSizer(sizer)
         self.Refresh()
@@ -277,7 +278,10 @@ class MainFrame(wx.Frame):
             self.input.SaveHistory()
             self.Destroy()
         else:
-            event.Veto()
+            try:
+                event.Veto()
+            except:
+                pass
 
 if __name__ == '__main__':
     app = wx.PySimpleApp()
