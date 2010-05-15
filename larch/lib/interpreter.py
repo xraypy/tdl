@@ -120,6 +120,7 @@ class Interpreter:
     def raise_exception(self, node, msg='', expr=None,
                         fname=None, lineno=-1, py_exc=None):
         "add an exception"
+        # raise
         if self.error is None:
             self.error = []
         if expr  is None:
@@ -136,7 +137,7 @@ class Interpreter:
             etype, evalue = None, None
         else:
             etype, evalue, tback = py_exc
-
+        # print( "RAISE ", msg, tback)
         err = LarchExceptionHolder(node, msg=msg, expr= expr,
                                    fname= fname, lineno=lineno,
                                    py_exc=(etype, evalue) )
@@ -183,10 +184,12 @@ class Interpreter:
         # run the handler:  this will likely generate
         # recursive calls into this interp method.
         try:
+            #print(" Interp NODE ", ast.dump(node))
             ret = handler(node)
             if isinstance(ret, enumerate):
                 ret = list(ret)
             return ret
+
         except:
             self.raise_exception(node, msg='Runtime Error',
                                  expr=expr, fname=fname, lineno=lineno,
@@ -201,14 +204,22 @@ class Interpreter:
         self.lineno = lineno
         self.error = []
         node = self.compile(expr, fname=fname, lineno=lineno)
-        if not self.error:
+        # print("COMPILE ", ast.dump(node))
+        out = None
+        if len(self.error) > 0:
+            self.raise_exception(node, msg='Eval Error', expr=expr,
+                                 fname=fname, lineno=lineno,
+                                 py_exc=sys.exc_info())
+        else:            
+            # print(" -> interp ", node, expr,  fname, lineno)
             out = self.interp(node, expr=expr,
                               fname=fname, lineno=lineno)
-            if len(self.error) > 0:
-                self.raise_exception(node, msg='Eval Error', expr=expr,
-                                     fname=fname, lineno=lineno,
-                                     py_exc=sys.exc_info())
-            return out
+
+        if len(self.error) > 0:
+            self.raise_exception(node, msg='Eval Error', expr=expr,
+                                 fname=fname, lineno=lineno,
+                                 py_exc=sys.exc_info())
+        return out
         
     def dump(self, node, **kw):
         "simple ast dumper"
@@ -655,9 +666,9 @@ class Interpreter:
         this method covers a lot of cases (larch or python, import
         or from-import, use of asname) and so is fairly long.
         """
+        # print("IMPORT MOD ", name, asname, fromlist)
         symtable = self.symtable
         st_sys     = symtable._sys
-        
         for idir in st_sys.path:
             if idir not in sys.path and os.path.exists(idir):
                 sys.path.append(idir)
@@ -677,13 +688,15 @@ class Interpreter:
                 if larchname in os.listdir(dirname):
                     islarch = True
                     modname = os.path.abspath(os.path.join(dirname, larchname))
-                    # print("Found larch module:" , modname)
+                    # print(" isLarch!!", name, modname)
                     # save current module group
                     #  create new group, set as moduleGroup and localGroup
                     symtable.save_frame()
                     st_sys.modules[name] = thismod = Group(name=name)
                     symtable.set_frame((thismod, thismod))
-
+                    
+                    ##thismod = symtable.new_modulegroup(name)
+                    ##print("B ", thismod)
                     text = open(modname).read()
                     inptext = inputText.InputText()
                     inptext.put(text, filename=modname)
@@ -692,13 +705,13 @@ class Interpreter:
                         block, fname, lineno = inptext.get()
                         self.eval(block, fname=fname, lineno=lineno)
                         if self.error:
+                            print( self.error)
                             break
                     symtable.restore_frame()
-            if self.error:
+            if len(self.error) > 0:
                 st_sys.modules.pop(name)
-                thismod = None
+                # thismod = None
                 return
-
             # or, if not a larch module, load as a regular python module
             if not islarch:
                 try:
@@ -716,25 +729,29 @@ class Interpreter:
                
         # now we install thismodule into the current moduleGroup
         # import full module
+        # print("IM: from ", fromlist, asname)
         if fromlist is None:
             if asname is None:
                 asname = name
             parts = asname.split('.')
             asname = parts.pop()
-            top = st_sys.moduleGroup
+            targetgroup = st_sys.moduleGroup
             while len(parts) > 0:
                 subname = parts.pop(0)
                 subgrp  = Group()
-                setattr(top, subname, subgrp)
-                top = subgrp
-            setattr(top, asname, thismod)
+                setattr(targetgroup, subname, subgrp)
+                targetgroup = subgrp
+            setattr(targetgroup, asname, thismod)
         # import-from construct
         else:
+            
             if asname is None:
                 asname = [None]*len(fromlist)
+            targetgroup = st_sys.moduleGroup
             for sym, alias in zip(fromlist, asname):
                 if alias is None:
                     alias = sym
-                setattr(st_sys.moduleGroup, alias, getattr(thismod, sym))
+                setattr(targetgroup, alias, getattr(thismod, sym))
+        # print("DONE")
     # end of import_module
 

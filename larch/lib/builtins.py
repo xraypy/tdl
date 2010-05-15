@@ -102,7 +102,7 @@ def _reload(mod,larch=None,**kw):
         modname = mod
     
     if modname is not None:
-        return larch.import_module(modname,reload=True)
+        return larch.import_module(modname,do_reload=True)
 
 def show_more(text,filename=None,writer=None,pagelength=30,prefix=''):
     """show lines of text in the style of more """

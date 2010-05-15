@@ -13,7 +13,6 @@ BANNER = """  Larch %s  M. Newville, T. Trainor (2009)
   using python %s, numpy %s
 """
 
-
 class shell(cmd.Cmd):
     ps1    = "larch> "
     ps2    = ".....> "

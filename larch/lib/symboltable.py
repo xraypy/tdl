@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 import os
+import sys
 import types
 from .closure import Closure
 from . import site_config
@@ -45,7 +46,7 @@ class Group(object):
     def __setattr__(self, attr, val):
         """set group attributes."""
         self.__dict__[attr] = val
-        
+
     def __dir__(self):
         "return sorted list of names of member"
         return sorted([key for key in list(self.__dict__.keys())
@@ -58,7 +59,7 @@ class Group(object):
         "return sorted list of names of members that are sub groups"
         return sorted([k for k, v in list(self.__dict__.items())
                        if isgroup(v)])
-
+    
     def _members(self):
         "sorted member list"
         return sorted(list(self.__dict__.keys()))
@@ -91,14 +92,18 @@ class SymbolTable(Group):
         self.__interpreter = larch
         self._sys = None
         setattr(self, self.top_group, self)
-
+        
         for gname in self.core_groups:
             setattr(self, gname, Group(name=gname))
 
         self._sys.frames = []
-        self._sys.searchGroups = list(self.core_groups)
-        self._sys.localGroup   = '_main'
-        self._sys.moduleGroup  = '_main'
+        self._sys.searchNames  = []
+        self._sys.searchGroups = []
+        self._sys.localGroup   = self
+        self._sys.moduleGroup  = self
+        self._sys.groupCache  = {'localGroup':None, 'moduleGroup':None,
+                                 'searchNames':None, 'searchGroups': None}
+
         self._sys.path         = ['.']
         
         if site_config.module_path is not None:
@@ -109,6 +114,7 @@ class SymbolTable(Group):
         self._sys.modules      = {'_main':self}
         for gname in self.core_groups:
             self._sys.modules[gname] = getattr(self, gname)
+        self._fix_searchGroups()
     
     def save_frame(self):
         " save current local/module group"
@@ -121,13 +127,88 @@ class SymbolTable(Group):
             lgrp, mgrp = self._sys.frames.pop()
             self._sys.localGroup = lgrp
             self._sys.moduleGroup  = mgrp
+            self._fix_searchGroups()
         except:
             pass
 
     def set_frame(self, groups):
         "set current frame (localGroup, moduleGroup)"
         self._sys.localGroup, self._sys.moduleGroup  = groups
+        self._fix_searchGroups()
         
+    def _fix_searchGroups(self):
+        """resolve list of groups to search for symbol names:
+
+        The variable self._sys.searchGroups holds the list of group
+        names for searching for symbol names.  A user can set this
+        dynamically.  The names need to be absolute (relative to
+        _main).
+
+        The variable self._sys.groupCache['searchGroups'] holds the list of 
+        actual group objects resolved from this name.
+
+        _sys.localGroup,_sys.moduleGroup come first in the search list,
+        followed by any search path associated with that module (from
+        imports for that module)
+        """
+        ##
+        # check (and cache) whether searchGroups needs to be changed.
+        sys = self._sys
+        cache = self._sys.groupCache
+
+        #  print('FIX SG1 ', sys.localGroup   == cache['localGroup'],
+        #         sys.moduleGroup  == cache['moduleGroup'],
+        #         sys.searchGroups == cache['searchNames'])
+
+        if (sys.localGroup   != cache['localGroup'] or
+            sys.moduleGroup  != cache['moduleGroup'] or
+            sys.searchGroups != cache['searchNames']):
+
+            # print('FIX SG2 ', sys.localGroup,
+            # sys.moduleGroup,
+            #       sys.searchGroups, cache['searchNames'])
+            
+            if sys.moduleGroup is None:
+                sys.moduleGroup = self.top_group
+            if sys.localGroup is None:
+                sys.localGroup = self.moduleGroup
+
+            cache['localGroup']  = sys.localGroup 
+            cache['moduleGroup'] = sys.moduleGroup
+
+            if cache['searchNames'] is None:
+                cache['searchNames'] = []
+
+            for gname in sys.searchGroups:
+                if gname not in cache['searchNames']:
+                    cache['searchNames'].append(gname)
+            for gname in self.core_groups:
+                if gname not in cache['searchNames']:
+                    cache['searchNames'].append(gname)                    
+
+            sys.searchGroups = cache['searchNames'][:]
+            #
+            sgroups = []
+            smod_keys = list(self._sys.modules.keys())
+            smod_vals = list(self._sys.modules.values())
+            for gname in sys.searchGroups:
+                grp = None
+                if gname in smod_keys:
+                    grp = self._sys.modules[gname]
+                elif hasattr(self, gname):
+                    gtest = getattr(self, gname)
+                    if isinstance(gtest, Group):
+                        grp = gtest
+                else:
+                    for sgrp in smod_vals:
+                        if hasattr(sgrp, gname):
+                            grp = getattr(grp, gname)
+                if grp is not None and grp not in sgroups:
+                    sgroups.append(grp)
+                        
+            cache['searchGroups'] = sgroups[:]
+        return cache
+
     def list_groups(self, group=None):
         "list groups"
         if group in (self.top_group, None):
@@ -151,49 +232,37 @@ class SymbolTable(Group):
             msg = '%s is not a Subgroup' % group
         return "%s\n" % msg  ### self.__writer("%s\n" % msg)
     
-    def _fix_groups(self, glist=None):
-        groups = []
-        searchGroups = [self._sys.localGroup, self._sys.moduleGroup]
-        if glist is not None:
-            searchGroups.extend(glist)
-
-        for gname in searchGroups:
-            if hasattr(self, gname):
-                g = getattr(self, gname)
-                if g not in groups:
-                    groups.append(g)
-        if self not in groups:
-            groups.append(self)
-        return groups
-            
     def _lookup(self, name=None, create=False):
         """looks up symbol in search path
         returns symbol given symbol name,
         creating symbol if needed (and create=True)"""
 
-        # print(" LOOKUP ", name, create)
-        searchGroups = self._fix_groups(self._sys.searchGroups)
-        # print("==>  search groups ", searchGroups)
-        
+        cache = self._fix_searchGroups()
+
+        searchGroups = [cache['localGroup'], cache['moduleGroup']]
+        searchGroups.extend(cache['searchGroups'])
+
+        if self not in searchGroups:
+            searchGroups.append(self)
+
         parts = name.split('.')
-        # print("PARTS ", name, parts)
         if len(parts) == 1:
             for grp in searchGroups:
                 if hasattr(grp, name):
-                    return  getattr(grp, name)
+                    return getattr(grp, name)
 
         # more complex case: not immediately found in Local or Module Group
+
         parts.reverse()
         top   = parts.pop()
         out   = self.__invalid_name
-
         if top == self.top_group:
             out = self
         else:
             for grp in searchGroups:
-
                 if hasattr(grp, top):
                     out = getattr(grp, top)
+
         if out is self.__invalid_name:
             raise LookupError("cannot locate symbol '%s'" % name)
 
@@ -271,8 +340,9 @@ class SymbolTable(Group):
         return Group(**kw)
 
     def new_group(self, name, **kw):
-        g = Group(**kw)
+        g = Group(__name__ = name, **kw)
         self.set_symbol(name, value=g)
+        return g
         
     def get_symbol(self, sym, create=False):
         "lookup and return a symbol by name"
@@ -280,8 +350,7 @@ class SymbolTable(Group):
 
     def set_symbol(self, name, value=None, group=None):
         "set a symbol in the table"
-       
-        grp = self._fix_groups()[0] # localgroup!!
+        grp = self._fix_searchGroups()['localGroup']
         if group is not None:
             grp = self.get_group(group)
         names = name.split('.')
@@ -300,6 +369,7 @@ class SymbolTable(Group):
                 value = v1
             except:
                 pass
+
         setattr(grp, child, value)
         return getattr(grp, child)        
 
@@ -338,13 +408,18 @@ class SymbolTable(Group):
                 pass
             if sym is None:
                 self.new_group(groupname)
+
+            # print("Add Plugin! ", groupname, insearch, syms)
             if insearch:
                 self._sys.searchGroups.append(groupname)
+                self._fix_searchGroups()
+
             for key, val in syms.items():
                 if callable(val):
                     val = Closure(func=val, **kw)
                 self.set_symbol("%s.%s" % (groupname, key), val)
         
+            
 # if __name__ == '__main__':
 #     symtab = SymbolTable()
 #     symtab.group1 = Group(name='group1')
