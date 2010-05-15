@@ -12,14 +12,14 @@ def ensuremod(larch):
     
 def _WXcd(parent=None, larch=None, **kws):
     """Directory Browser to Change Directory"""
-    dlg = wx.DirDialog(self, message='Choose Directory',
-                       defaultDir = os.getcwd())
+    dlg = wx.DirDialog(parent, message='Choose Directory',
+                       style = wx.DD_DEFAULT_STYLE)
     if dlg.ShowModal() == wx.ID_OK:
         path = dlg.GetPath()
         os.chdir(path)
     return os.getcwd()
 
-def _WXsave(parent=None, larch=None,
+def _WXask_save(parent=None, larch=None, 
             message = 'Save File As', 
             fname=None, choices=None, **k):
     symtable = ensuremod(larch)
@@ -36,7 +36,7 @@ def _WXsave(parent=None, larch=None,
     if '*' not in choices:
         choices.append('*')
     
-    dlg = wx.FileDialog(self, message=message, 
+    dlg = wx.FileDialog(parent, message=message, 
                         defaultDir = os.getcwd(),
                         defaultFile= fname,
                         wildcard= choices,
@@ -49,7 +49,7 @@ def _WXsave(parent=None, larch=None,
 def registerPlugin():
     return ('_shell', True,
             {'gcd': _WXcd,
-             'savefile': _WXsave})
+             'fileprompt': _WXask_save})
 
 
         
