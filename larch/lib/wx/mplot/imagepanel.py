@@ -138,7 +138,10 @@ class ImagePanel(BasePanel):
                                                      self.conf.data[iy,ix])
             self.write_message(msg, panel=0)
             if hasattr(self.cursor_callback , '__call__'):
-                self.cursor_callback(x=event.xdata, y=event.ydata)
+                x, y = None, None
+                val = self.conf.data[ix,iy]
+                self.cursor_callback(ix=ix, iy=iy, val=val)
+                
             
 
     def zoom_OK(self, start,stop):

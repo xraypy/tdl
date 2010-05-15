@@ -13,9 +13,9 @@ import larch
 from readlinetextctrl import ReadlineTextCtrl
 from larchfilling import Filling
 
-import plotter
+from larch.plugins import plotter, shellutils
 
-PLUGINS = [plotter.registerPlugin]
+PLUGINS = [plotter.registerPlugin, shellutils.registerPlugin]
 
 INFO = """  Larch version %s    using python %s  and numpy %s
   Copyright M. Newville, T. Trainor (2010)"""  % (larch.__version__,
@@ -34,7 +34,6 @@ def makeColorPanel(parent, color):
     p.SetBackgroundColour(color)
     return p
 
-
 class LarchWxShell(object):
     ps1 = 'Larch>'
     ps2 = ' ... >'
@@ -48,7 +47,6 @@ class LarchWxShell(object):
         self.larch.writer = self
         self.symtable.AddPlugins(PLUGINS, parent=wxparent,
                                  larch=self.larch)
-
         self.SetPrompt()
 
     def help(self, topic):

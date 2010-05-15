@@ -399,8 +399,9 @@ class SymbolTable(Group):
         return sym, child
 
     def AddPlugins(self, plugins, **kw):
+        """Add a list of plugins"""
         for plugin in plugins:
-            groupname, insearch, syms = plugin()
+            groupname, insearchGroup, syms = plugin()
             sym = None
             try:
                 sym = self._lookup(groupname, create=False)
@@ -409,8 +410,8 @@ class SymbolTable(Group):
             if sym is None:
                 self.new_group(groupname)
 
-            # print("Add Plugin! ", groupname, insearch, syms)
-            if insearch:
+            # print("Add Plugin! ", groupname, insearchGroup, syms)
+            if insearchGroup:
                 self._sys.searchGroups.append(groupname)
                 self._fix_searchGroups()
 

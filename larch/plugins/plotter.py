@@ -1,8 +1,27 @@
+'''
+   Plotting functions for Larch, wrapping the mplot plotting
+   widgets which use matplotlib
+
+Exposed functions here are
+   plot:  display 2D line plot to an enhanced,
+            configurable Plot Frame
+   oplot: overplot a 2D line plot on an existing Plot Frame
+   imshow: display a false-color map from array data on
+           a configurable Image Display Frame.
+'''
 import wx
 import time
-
 from larch.wx.mplot import PlotFrame, ImageFrame
 
+MODNAME = '_plotter'
+
+def ensuremod(larch):
+    if larch is not None:
+        symtable = larch.symtable
+        if not symtable.has_group(MODNAME):
+            symtable.newgroup(MODNAME)
+        return symtable
+    
 class PlotDisplay(PlotFrame):
     def __init__(self, parent=None, wid=1, larch=None, **kws):
         PlotFrame.__init__(self, parent=parent, 
@@ -13,26 +32,24 @@ class PlotDisplay(PlotFrame):
         self.panel.cursor_callback = self.onCursor
         self.wid = int(wid)
         self.larch = larch
-        self.symname = '_plotter.plot%i' % self.wid
-        if larch is not None:
-            symtable = larch.symtable
-            if not symtable.has_group('_plotter'):
-                symtable.newgroup('_plotter')
+        self.symname = '%s.plot%i' % (MODNAME, self.wid)
+        symtable = ensuremod(self.larch)
+        if symtable is not None:
             symtable.set_symbol(self.symname, self)
         
     def onExit(self, o, **kw):
         try:
             symtable = self.larch.symtable
-            if symtable.has_group('_plotter'):
+            if symtable.has_group(MODNAME):
                 symtable.del_symbol(self.symname)
         except:
             pass
         self.Destroy()
 
     def onCursor(self,x=None, y=None,**kw):
-        symtable = self.larch.symtable
-        if not symtable.has_group('_plotter'):
-            symtable.newgroup('_plotter')
+        symtable = ensuremod(self.larch)
+        if symtable is None:
+            return
         symtable.set_symbol('%s_x'  % self.symname, x)
         symtable.set_symbol('%s_y'  % self.symname, y)        
        
@@ -46,28 +63,37 @@ class ImageDisplay(ImageFrame):
         self.cursor_pos = []
         self.panel.cursor_callback = self.onCursor
         self.wid = int(wid)
+        self.symname = '%s.img%i' % (MODNAME, self.wid)
         self.larch = larch
-        if larch is not None:
-            symtable = larch.symtable
-            if not symtable.has_group('_plotter'):
-                symtable.newgroup('_plotter')
-            symtable.set_symbol('_plotter.img%i' % self.wid, self)
+        symtable = ensuremod(self.larch)
+        if symtable is not None:
+            symtable.set_symbol(self.symname, self)
         
     def onExit(self, o, **kw):
         try:
             symtable = self.larch.symtable
-            if symtable.has_group('_plotter'):
-                symtable.del_symbol('_plotter.img%i' % self.wid)
+            if symtable.has_group(MODNAME):
+                symtable.del_symbol(self.symname)
         except:
             pass
         self.Destroy()
         
-    def onCursor(self,x=None, y=None,**kw):
-        symtable = self.larch.symtable
-        if not symtable.has_group('_plotter'):
-            symtable.newgroup('_plotter')
-        symtable.set_symbol('_plotter.img%i_x' % self.wid, x)
-        symtable.set_symbol('_plotter.img%i_y' % self.wid, y)
+    def onCursor(self,x=None, y=None, ix=None, iy=None,
+                 val=None, **kw):
+        symtable = ensuremod(self.larch)
+        if symtable is None:
+            return
+        if x is not None:
+            symtable.set_symbol('%s_x' % self.symname, x)
+        if y is not None:
+            symtable.set_symbol('%s_y' % self.symname, y)            
+        if ix is not None:
+            symtable.set_symbol('%s_ix' % self.symname, ix)
+        if iy is not None:
+            symtable.set_symbol('%s_iy' % self.symname, iy)            
+        if val is not None:
+            symtable.set_symbol('%s_val' % self.symname, val)            
+        
 
 def _getDisplay(win=1, larch=None, parent=None, image=False):
     """make a plotter"""
@@ -77,12 +103,12 @@ def _getDisplay(win=1, larch=None, parent=None, image=False):
     win = max(1, int(abs(win)))
     
     title   = 'Larch Plot Display Window %i' % win
-    symname = '_plotter.plot%i' %win
+    symname = '%s.plot%i' % (MODNAME, win)
     creator = PlotDisplay
     if image:
         creator = ImageDisplay
         title   = 'Larch Image Display Window %i' % win
-        symname = '_plotter.img%i' %win
+        symname = '%s.img%i' % (MODNAME, win)
     display = larch.symtable.get_symbol(symname, create=True)
     
     if display is None:
@@ -169,9 +195,9 @@ def _imshow(map, win=1, larch=None, parent=None, **kws):
         img.display(map, **kws)
     
 def registerPlugin():
-    return ('_plotter', True,
-            {'plot':_plot,
-             'oplot': _oplot,
-             'imshow':_imshow})
+    return (MODNAME, True, {'plot':_plot,
+                            'oplot': _oplot,
+                            'imshow':_imshow}
+            )
 
         
