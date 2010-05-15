@@ -18,10 +18,14 @@ from larch.plugins import plotter, shellutils
 PLUGINS = [plotter.registerPlugin, shellutils.registerPlugin]
 
 INFO = """  Larch version %s    using python %s  and numpy %s
-  Copyright M. Newville, T. Trainor (2010)"""  % (larch.__version__,
-                                                  "%i.%i.%i" % (sys.version_info[:3]), numpy.__version__)
+  Copyright M. Newville, T. Trainor (2010)"""
 
-BANNER = """==================================================
+INFO = INFO % (larch.__version__,
+               "%i.%i.%i" % (sys.version_info[:3]),
+               numpy.__version__)
+
+BANNER = """
+==================================================
                                      Welcome to Larch
 %s
 ==================================================
