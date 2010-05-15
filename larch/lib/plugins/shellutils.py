@@ -42,9 +42,9 @@ def _WXsave(parent=None, larch=None,
                         wildcard= choices,
                         style=wx.SAVE|wx.CHANGE_DIR)
 
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            return path
+    if dlg.ShowModal() == wx.ID_OK:
+        path = dlg.GetPath()
+        return path
     
 def registerPlugin():
     return ('_shell', True,

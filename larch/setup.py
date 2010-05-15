@@ -14,7 +14,6 @@ setup(
     description = 'A data processing macro language for python',
     package_dir = {'larch': 'lib',
                    'larch.modules':'modules',
-                   'larch.plugins':'plugins',
                    },
     packages = ['larch','larch.plugins','larch.modules',
                 'larch.wx', 'larch.wx.mplot'],
