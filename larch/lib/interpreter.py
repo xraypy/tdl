@@ -120,7 +120,6 @@ class Interpreter:
     def raise_exception(self, node, msg='', expr=None,
                         fname=None, lineno=-1, py_exc=None):
         "add an exception"
-        raise
         if self.error is None:
             self.error = []
         if expr  is None:

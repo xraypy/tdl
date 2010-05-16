@@ -118,7 +118,6 @@ class shell(cmd.Cmd):
                     except:
                         pass
                 if self.larch.error:
-                    print(" ERROR " , len(self.larch.error))
                     err = self.larch.error.pop(0)
                     fname, lineno = err.fname, err.lineno
                     sys.stdout.write("%s:\n%s\n" % err.get_error())
