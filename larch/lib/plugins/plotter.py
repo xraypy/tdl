@@ -125,7 +125,8 @@ def _getDisplay(win=1, larch=None, parent=None, image=False):
     return display
 
 def _plot(x,y, win=1, larch=None, parent=None, **kws):
-    """plot(x, y[, win=1], options])
+    """
+    plot(x, y[, win=1], options])
 
     Plot 2-D trace of x, y arrays in a Plot Frame, clearing
     any plot currently in the Plot Frame.
@@ -159,8 +160,9 @@ def _plot(x,y, win=1, larch=None, parent=None, **kws):
         refresh=True, 
  
     See Also:
-    -----------
-    oplot
+    ---------
+
+        oplot
     
     """
     # print '_plot: ', win, larch, parent, kws
@@ -169,7 +171,8 @@ def _plot(x,y, win=1, larch=None, parent=None, **kws):
         plotter.plot(x, y, **kws)    
     
 def _oplot(x,y, win=1, larch=None, parent=None, **kws):
-    """oplot(x, y[, win=0], options])
+    """
+    oplot(x, y[, win=0], options])
 
     Plot 2-D trace of x, y arrays in a Plot Frame, over-plotting
     any plot currently in the Plot Frame.
@@ -184,7 +187,8 @@ def _oplot(x,y, win=1, larch=None, parent=None, **kws):
         plotter.oplot(x, y, **kws)
 
 def _imshow(map, win=1, larch=None, parent=None, **kws):
-    """imshow(map[, options])
+    """
+    imshow(map[, options])
     
     Display an image for a 2-D array, as a map
 

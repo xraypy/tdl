@@ -142,6 +142,8 @@ class Interpreter:
                                    py_exc=(etype, evalue) )
         self._interrupt = ast.Break()
         self.error.append(err)
+        self.symtable._sys.last_error = err
+
         # print("_Raise ", self.error)
         
     # main entry point for Ast node evaluation
@@ -202,6 +204,7 @@ class Interpreter:
         self.fname = fname        
         self.lineno = lineno
         self.error = []
+        
         node = self.compile(expr, fname=fname, lineno=lineno)
         # print("COMPILE ", ast.dump(node))
         out = None
@@ -704,7 +707,7 @@ class Interpreter:
                         block, fname, lineno = inptext.get()
                         self.eval(block, fname=fname, lineno=lineno)
                         if self.error:
-                            print( self.error)
+                            print(self.error)
                             break
                     symtable.restore_frame()
             if len(self.error) > 0:

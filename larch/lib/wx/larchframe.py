@@ -53,9 +53,6 @@ class LarchWxShell(object):
                                  larch=self.larch)
         self.SetPrompt()
 
-    def help(self, topic):
-        print  'help ', topic
-        
     def SetPrompt(self, partial=False):
         if self.prompt is not None:
             if partial:
@@ -114,7 +111,10 @@ class LarchWxShell(object):
                         and err.lineno > 0 and lineno > 0):
                         self.write("%s\n" % (err.get_error()[1]))
             elif ret is not None:
-                self.write("%s\n" % ret)
+                try:
+                    self.write("%s\n" % ret)
+                except:
+                    pass
 
 class LarchFrame(wx.Frame):
     def __init__(self,  parent=None, **kwds):

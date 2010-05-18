@@ -6,12 +6,13 @@ the local namespace or any object."""
 
 __author__ = "Patrick K. O'Brien <pobrien@orbtech.com>"
 __cvsid__ = "$Id: filling.py 37633 2006-02-18 21:40:57Z RD $"
-__revision__ = "$Revision: 37633 $"[11:-2]
+__revision__ = "$Revision: 37633 $"
 
 import wx
+import wx.html as html
 import sys
 import types
-
+from  cStringIO import StringIO
 from wx.py import dispatcher
 from wx.py import editwindow
 
@@ -41,6 +42,29 @@ try:
     COMMONTYPES.append(type(''.__repr__))  # Method-wrapper in version 2.2.x.
 except AttributeError:
     pass
+
+from docutils.core import publish_string
+from docutils.writers.html4css1 import Writer,HTMLTranslator
+
+class HTMLFragmentTranslator( HTMLTranslator ):
+    def __init__( self, document ):
+        HTMLTranslator.__init__( self, document )
+        self.head_prefix = ['','','','','']
+        self.body_prefix = []
+        self.body_suffix = []
+        self.stylesheet = []
+    def astext(self):
+        return ''.join(self.body)
+
+html_fragment_writer = Writer()
+html_fragment_writer.translator_class = HTMLFragmentTranslator
+
+def rst2html(text):
+    try:
+        return publish_string(text, writer = html_fragment_writer )
+    except:
+        return "<br>".join(text.split('\n'))
+    
 
 class FillingTree(wx.TreeCtrl):
     """FillingTree based on TreeCtrl."""
@@ -191,44 +215,35 @@ class FillingTree(wx.TreeCtrl):
                 return
         self.SetItemHasChildren(item, self.objHasChildren(obj))
         otype = type(obj)
-        text = ''
-        text += self.getFullName(item)
-        text += '\n\nType: ' + str(otype)
+        text = []
+        text.append("%s" % self.getFullName(item))
 
-        try:
-            value = str(obj)
-        except:
-            value = ''
-        if otype is types.StringType or otype is types.UnicodeType:
-            value = repr(obj)
-        text += '\n\nValue: ' + value
-        need_doc = True
-        try:
-            text += '\n\nDocstring:\n\n"""' + \
-                    obj.__doc__.strip() + '"""'
-            need_doc = False
-        except:
+        needs_doc = False
+        if isinstance(obj, (str, dict, list, tuple, int, float)):
+            text.append('\nType: %s' % str(otype))
+            text.append('\nValue = %s' % repr(obj))
+        elif hasattr(obj, '__call__'):
+            text.append('\nFunction:')
+            text.append('\n')
+            needs_doc = True
+        else:
+            text.append('\nType: %s' % str(otype))
+            text.append('\nValue = %s' % repr(obj))
+        text.append('\n')
+        if needs_doc:
             try:
-                text += '\n\nDocstring:\n\n"""' + \
-                        obj.__doc__().strip() + '"""'
-                need_doc = False
+                doclines = obj.__doc__.strip().split('\n')
             except:
-                pass
-            
-        if need_doc:
-            if otype is types.InstanceType:
-                try:
-                    text += '\n\nClass Definition:\n\n' + \
-                            inspect.getsource(obj.__class__)
-                except:
-                    pass
-            else:
-                try:
-                    text += '\n\nSource Code:\n\n' + \
-                            inspect.getsource(obj)
-                except:
-                    pass
-        self.setText(text)
+                doclines = ['No documentation found']
+            indent = 0
+            for dline in doclines:
+                if len(dline.strip()) > 0:
+                    indent = dline.index(dline.strip())
+                    break
+            for d in doclines:
+                text.append(d[indent:])
+        text.append('\n')        
+        self.setText('\n'.join(text))
 
     def getFullName(self, item, partial=''):
         """Return a syntactically proper name for item."""
@@ -302,6 +317,31 @@ class FillingText(editwindow.EditWindow):
         self.SetReadOnly(True)
 
 
+class FillingRST(html.HtmlWindow):
+    """FillingText based on Rest doc string!"""
+
+    name = 'Filling Restructured Text'
+
+    def __init__(self, parent, id=-1, pos=wx.DefaultPosition,
+                 size=wx.DefaultSize, style=wx.NO_FULL_REPAINT_ON_RESIZE,
+                 static=False):
+        """Create FillingRST instance."""
+        html.HtmlWindow.__init__(self, parent, id, style=wx.NO_FULL_REPAINT_ON_RESIZE)
+        
+        # Configure various defaults and user preferences.
+        if not static:
+            dispatcher.connect(receiver=self.push, signal='Interpreter.push')
+
+    def push(self, command, more):
+        """Receiver for Interpreter.push signal."""
+        pass
+
+    def SetText(self, text='', **kwds):
+        # html = ['<html><body>',rst2html(text), '</body></html>']
+        self.SetPage(rst2html(text))
+
+
+
 class Filling(wx.SplitterWindow):
     """Filling based on wxSplitterWindow."""
 
@@ -319,7 +359,8 @@ class Filling(wx.SplitterWindow):
                                 rootLabel=rootLabel,
                                 rootIsNamespace=rootIsNamespace,
                                 static=static)
-        self.text = FillingText(parent=self, static=static)
+        self.text = FillingRST(parent=self, static=static)
+        # self.text = FillingText(parent=self, static=static)
         
         wx.FutureCall(1, self.SplitVertically, self.tree, self.text, 200)
         
