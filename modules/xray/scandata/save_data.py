@@ -33,8 +33,12 @@ import types
 import os
 import copy
 import numpy as num
-import tables
 
+try:
+    import tables
+except:
+    print "    ** Warning tables module (hdf interface) cannot be loaded in 'save_data'"
+    
 import data as scandata
 import image_data
 import ctr_data

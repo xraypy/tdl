@@ -1,10 +1,12 @@
-#################################################################################
 """
 Support for Excel files
+
+Notes:
+------
+This module requires win32com module
+
 Note see pyExcelerator at source forge for alternative
 
-Modifications:
---------------
 
 """
 #################################################################################
@@ -17,13 +19,14 @@ import os
 def excel_data(fname,rows,cols,sheet=1, ret_fmt=None,close=True):
     """
     read an excel file
+    
     data = excel_data(fname,rows,cols,sheet=1)
     rows = [start_row,end_row],
     cols = [start_col,end_col]
     ret == None: default return (mixed str and float)
     ret == 'f': ret as all floats, strings and Nones are zeros
     ret == 's': ret as all as strings
-    THIS IS PRETTY SLOW (at lest if excel is not already running?)
+    THIS IS PRETTY SLOW (at least if excel is not already running?)
     """
 
     fname = os.path.abspath(fname)
@@ -88,17 +91,18 @@ def excel_data(fname,rows,cols,sheet=1, ret_fmt=None,close=True):
     return None
 
 #################################################################################
-"""
-Below Derived from:
-_Python Programming on Win32_ by Mark Hammond and Andy Robinson
-"""
-#################################################################################
 
 import win32com.client
 import win32com.client.dynamic
 import os
 
 class Excel:
+    """
+    Excel file class
+    
+    This is Derived from:
+    'Python Programming on Win32' by Mark Hammond and Andy Robinson
+    """
     def __init__(self, filename=None):
         self.xlApp = win32com.client.dynamic.Dispatch('Excel.Application')
         if filename:
@@ -147,7 +151,7 @@ class Excel:
         sht = self.xlBook.Worksheets(sheet)
         sht.Range(sht.Cells(topRow, leftCol), sht.Cells(bottomRow,rightCol)).Value = data
 
-##########
+#################################################################################
 if __name__ == "__main__":
     import os
     fname = os.path.join(os.getcwd(),'test.xls')

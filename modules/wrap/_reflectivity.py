@@ -1,12 +1,15 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu)
-Wrapper for the reflectivity / reflection XSW
-functions in dll
+Wrapper for the reflectivity / reflection XSW functions in _ref.dll
 
-Note for this module to work the directory 'wrap/libs'
-must be in your shell's execution path so the load_library
-command can find _ref.dll (which also needs to find the gsl dll's)
+Authors/Modifications:
+----------------------
+T. Trainor (tptrainor@alaska.edu)
+
+Notes:
+------
+* For this module to work the directory 'wrap/libs'
+  must be in your shell's execution path so the load_library
+  command can find _ref.dll (which also needs to find the gsl dll's)
 
 """
 #######################################################################
@@ -140,7 +143,7 @@ class _Reflectivity:
     def _init_calc_arrays(self):
         """
         create/re-init calc arrays. These arrays are filled in
-        by thte _Reflectivity function in C.  They must be correctly
+        by the _Reflectivity function in C.  They must be correctly
         sized, but can be inited to zeros...
         """
         #

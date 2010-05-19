@@ -1,12 +1,11 @@
-##########################################################################
 """
+Authors/Modifications:
+----------------------
 M. Newville
 
+Notes:
+------
 - module is out of date
-
-Modifications:
---------------
-
 
 """
 ##########################################################################
@@ -19,8 +18,8 @@ from pds.shellutil import datalen
 import ASCIIFile.ASCIIFile as ASCIIFile
 
 ##########################################################################
-def tdl_read_ascii(fname, tdl=None,debug=False, **kw):
-    " read ascii file of tdl code"
+def read_ascii(fname, tdl=None,debug=False, **kw):
+    """ read ascii file of tdl code """
 
     if debug: print 'reading.... ', fname
     if not os.path.exists(fname):
@@ -43,9 +42,12 @@ def tdl_read_ascii(fname, tdl=None,debug=False, **kw):
     for i in f.labels: setvar(i, f.get_array(i))
     if debug: print 'read done.'
     return group
-#
-def tdl_write_ascii(fname,  *arr,**kw):
-    " write ascii file of tdl code -- could be a lot better! "
+
+##########################################################################
+def write_ascii(fname,  *arr,**kw):
+    """
+    write ascii file of tdl code -- could be a lot better!
+    """
     print 'write ascii ', fname, kw
     tdl    = kw['tdl']
     labels = kw.get('label', '')
@@ -103,7 +105,7 @@ def tdl_write_ascii(fname,  *arr,**kw):
         
     f.close()
 
-##########################
+##########################################################################
 title = 'File IO routine'
 
 HelpIO = """

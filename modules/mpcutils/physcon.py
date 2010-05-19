@@ -1,4 +1,3 @@
-##########################################################################
 """
 # physcon Physical constants
 # Note: type physcon.help() (after import physcon)

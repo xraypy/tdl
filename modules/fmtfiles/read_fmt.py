@@ -1,9 +1,9 @@
-##########################################################################
 """
-Tom Trainor (fftpt@uaf.edu ) 
+Read simple formatted files
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+Tom Trainor (trainor@alaska.edu) 
 
 
 """
@@ -13,6 +13,28 @@ import numpy as num
 
 ##########################################################################
 def read_column(fname): 
+    """
+    Read column data from file
+    
+    Parameters:
+    -----------
+    * fname is the filename to read
+
+    Returns:
+    --------
+    * array of data from file
+
+    Examples:
+    ---------
+    >> data = read_column('data.dat')
+
+    data.dat contents:
+    # comments
+    1 2 3
+    4 5 6
+    7 8 9
+
+    """
     f = open(fname)
     lines = f.readlines()
     f.close()
@@ -28,3 +50,4 @@ def read_column(fname):
             data.append(d)
     data = num.array(data)
     return num.transpose(data)
+

@@ -1,50 +1,86 @@
-########################################################################
 """
-T. Trainor (fftpt@uaf.edu)
 Utilities for handling the stiochiometry of chemical compounds
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+T. Trainor (tptrainor@alaska.edu)
+
+Notes:
+------
+This module defines a set of routines for working with
+chemical compounds.  The following are defined:
+* element = a pure chemical element
+* component = a chemical entity described in terms of element stiochiometry
+* species = 
+
+The following shorthand/nomenclature is used in this module:
+* element = elem/El/Z/z, conc = CZ, moles = nZ, mass = mZ, mole frac = fZ
+* component = comp/X, conc = CX, moles = nX, mass = mX, mole frac = fX
+* species = spec/S/s, conc = CS, moles = nS, mass = mS, mole frac = fS
+* material = mat/M/m
 
 
-"""
-########################################################################
-"""
+Examples:
+---------
+# create some chemical components, these can be
+# made up from an arbirtrary stiochiometry
+>>c1 = Component(formula={'Si':1.,'O':2})
+
+# add some more elements/change element stiochiometry
+>>c1.set({'O':4,'H':2})
+>>print c1
+
+# print the stiochiometric coefficient of O
+>>print c1.nuZ('O')
+
+# make another component
+>>c2 = Component()
+>>c2.set({"H":2.,"O":1})
+
+# make a species by combining the components in a given proportion
+>>spec1 = Species(comp=[(c1,2),(c2,4)])
+>>print spec1
+>>print spec1.elements()
+>>print spec1[1]
+>>print spec1.nuZ('O'), spec1.nuZ('Si'), spec1.nuZ('H')
+
+# this computes a species from an expression.  
+>>expr = "{(1.0)[Si_O2]}{(1.232)[Fe2.3454_O11]}{(.12)[H_C.2_Al0.0001203]}"
+>>spec = parse_species_formula(expr)
+
 To Do
 ------
-Note we should use the appropritate terminology, ie molar mass
-rather than formula or molecular weight.  or use wt instead of mw
+* We should use the appropriate terminology, ie molar mass
+  rather than formula or molecular weight.  or use wt instead of mw
 
-Note see the IUCR description of formulas in cif files....
-http://ww1.iucr.org/cif/cifdic_html/1/cif_core.dic/Cchemical_formula.html
+* Note see the IUCR description of formulas in cif files....
+  http://ww1.iucr.org/cif/cifdic_html/1/cif_core.dic/Cchemical_formula.html
 
-Use element class in component
+* Use element class in component
 
-Add charge stiochiometry
+* Add charge stiochiometry
 
-Add more units/conversions.  E.g. allow assigning stioch coeff in terms
-of wt% or ppm and reporting components in mass and vol based units.
+* Add more units/conversions.  E.g. allow assigning stioch coeff in terms
+  of wt% or ppm and reporting components in mass and vol based units.
 
---------------------------------------------------------------------
-Add methods __add__, __sub__, __mul__ etc... so we can do stiochiometric
-arithmetic.  ie would be cool if:
+* Add methods __add__, __sub__, __mul__ etc... so we can do stiochiometric
+  arithmetic.  ie would be cool if:
 
-Al = element('Al',oxid=3,isotope=None)
-Fe = element('Fe',oxid=3)
-O = element('O')
+  Al = element('Al',oxid=3,isotope=None)
+  Fe = element('Fe',oxid=3)
+  O  = element('O')
 
-alumina = 2*Al + 3*O
-hem = 2*Fe + 3*O
-mix = 0.98*alumina + 0.02*hem
+  alumina = 2*Al + 3*O
+  hem = 2*Fe + 3*O
+  mix = 0.98*alumina + 0.02*hem
 
-- notice that these all appear to be formation rxns...
+  all the above expr should evaluate to a species class
 
-- all the above expr should evaluate to a species class
-
-- but we should have a method
+* Should have a method
      species.as_component() 
   which returns a component object having the net formula etc...
-- then add a method to species to change the basis set:
+
+* then add a method to species to change the basis set:
      species.change_basis([comps])
   ie this recomputes stioch coefficients using new set of comps
 
@@ -58,8 +94,10 @@ import element_data
 import physcon as pc
 
 #########################################################################
-# element = elem/El/Z/z, conc = CZ, moles = nZ, mass = mZ, mole frac = fZ
 class Element:
+    """
+    An element
+    """
     def __init__(self, symbol, name, Z, wgt):
         self.sym  = symbol # short symbol
         self.name = name   # long name
@@ -68,22 +106,45 @@ class Element:
         self.ox   = 0.     # oxidation state
 
 #########################################################################
-# component = comp/X, conc = CX, moles = nX, mass = mX, mole frac = fX
 class Component:
     """
-    * component = formula of elements
-    
-    * __getitem__ and __setitem__ operate on element
-      stiochiometric coefficients.
+    A component is a entity built in terms of a formula of elements
 
-    * note we arent currently using the element class, but should add...
+    Notes:
+    ------
+    * __getitem__ and __setitem__ operate on element
+      stiochiometric coefficients.  The stiochiometric
+      coefficients (nu) are moles_of_element / mole_of_component.
+
+    Examples:
+    ---------
+    # create a component
+    >>c = Component(formula={'H':2,'O':1})
+    >>c['H'] = 10
+    >>x = c['H']
+    # we can also modify it by refrence to element Z value
+    >>c[8]=12  
+
+    Todo:
+    -----
+    * we arent currently using the element class, but should add...
     
     """
     #####################################################################
     def __init__(self,**kw):
+        """
+        Initialize.  See init
+        """
         self.init(**kw)
 
     def init(self,formula=None):
+        """
+        (re)init the object
+        
+        Parameters:
+        -----------
+        * formula is a dictionary of {'El',nu} or {Z,nu}
+        """
         self.name      = ''  # computed string name 
         self.formula   = {}  # dict of {'El':nu}
         self.mw        = 0.0 # computed wgt
@@ -91,6 +152,8 @@ class Component:
 
     #####################################################################
     def __repr__(self,):
+        """
+        """
         self.update()
         lout = self.name + ': MW = ' + str(self.mw) + ' g/mol'
         return lout
@@ -99,8 +162,6 @@ class Component:
     def __setitem__(self,el,nu):
         """
         set/add stioch of element
-        el = string symbol or z
-        note nu = moles_of_el / mole_of_component
         """
         if type(el) != types.StringType:
             el = element_data.symbol(el)
@@ -115,9 +176,7 @@ class Component:
     ####################################################################
     def __getitem__(self,el):
         """
-        return stioch of element
-        el = string symbol or z 
-        note nu = moles_of_el / mole_of_component
+        return stiochiometric coefficient of element
         """
         if type(el) != types.StringType:
             el = element_data.symbol(el)
@@ -171,15 +230,18 @@ class Component:
     ####################################################################
     def set(self,formula):
         """
-        formula is a dictionary: {'El':nu}
-        where 'El' is the atomic symbol
-        and nu is the stoichiometric coefficient
+        This methods appends to or modifies the existing formula
 
-        Note nu = moles_of_El / mole_of_component
-        therefore nu may be fractional and are converted to
-        float even if passed as int
+        Paramters:
+        ----------
+        * formula is a dictionary: {'El':nu}
+          where 'El' is the atomic symbol or Z (integer)
+          and nu is the stoichiometric coefficient
+
+          Note nu = moles_of_El / mole_of_component
+          therefore nu may be fractional and are converted to
+          float even if passed as int
         
-        This methods appends new formula units to existing
         """
         if type(formula) == types.StringType:
             formula = {formula:1.}
@@ -201,7 +263,10 @@ class Component:
     def nuZ(self,el):
         """
         return the stoichiometric coefficient
-        of the element given by Z (int or str)
+        
+        Paramters:
+        ----------
+        * el is a string 'El' or integer Z
         """
         if type(el) != types.StringType:
             el = element_data.symbol(el)
@@ -220,18 +285,44 @@ class Component:
         return self.formula.keys()
 
 ########################################################################
-# species = spec/S/s, conc = CS, moles = nS, mass = mS, mole frac = fS
 class Species:
     """
-    * species = chemical compound made up of one or more components
+    A species is a chemical compound made up of one or more components
+
+    Notes:
+    ------
     * __getitem__ and __setitem__ operate on component
-      stiochiometric coefficients.  
+      stiochiometric coefficients.  The stiochiometric
+      coefficients (nu) are moles_of_component / mole_of_species.
+
+    Examples:
+    ---------
+    # create components
+    >>c1 = Component(formula={'H':2,'O':1})
+    >>c2 = Component(formula={'Al':2,'O':3})
+
+    # combine components,
+    # e.g. 4 moles of c1 and 1 mole of c2 per mole of s
+    >>s = Species(comp=[(c1,4),(c2,1)])
+
+    # change the stiochiometry of the 2nd component
+    >>s[1] = 8.2
     """
     ####################################################################
     def __init__(self,**kw):
+        """
+        Initialize.  See init
+        """
         self.init(**kw)
 
     def init(self,comp=[]):
+        """
+        (re)init the object
+        
+        Parameters:
+        -----------
+        * comp is a list of components [(c,nu),(c,nu)]
+        """
         self.name   = ''   # computed name string
         self.comp   = []   # list of (comp,nu)
         self.mw     = 0.0  # computed wieght
@@ -240,6 +331,8 @@ class Species:
 
     ####################################################################
     def __repr__(self,):
+        """
+        """
         self.update()
         lout = self.name + ': MW = ' + str(self.mw) + 'g/mol'
         return lout
@@ -248,7 +341,6 @@ class Species:
     def __setitem__(self,comp,nu):
         """
         set the component stoichiometric coefficent
-        comp name or int idx
         """
         idx = -1
         nu = float(nu)
@@ -264,7 +356,7 @@ class Species:
                     break
         if idx >= 0:
             c  = self.comp[idx][0]
-            self.comp[idx] = (f,nu)
+            self.comp[idx] = (c,nu)
         else:
             # this should convert string to a comp object
             #comp = parse_comp(comp)
@@ -276,7 +368,6 @@ class Species:
     def __getitem__(self,comp):
         """
         return the stoich coeff of the component
-        comp name or int idx
         """
         idx = -1
         if type(comp) != types.StringType:
@@ -327,6 +418,9 @@ class Species:
 
     ####################################################################
     def clear(self,):
+        """
+        clear formula
+        """
         self.comp = []
         self.mw   = 0.0
         self.name = ''
@@ -334,17 +428,18 @@ class Species:
     ####################################################################
     def set(self,comp):
         """
-        comp is a list of [(formula,nu)]
-        where formula is a formula instance and
-        nu is the stoichiometric coefficient
-        note nu may be fractional (and are converted to
-        float even if passed as int)
-        
         This appends new comp units to existing
 
-        Note these are passed by reference, so if you
-        change the components it will change the compound!
+        Parameters:
+        -----------
+        * comp is a list of [(c,nu)]
+          where c is a Component instance and
+          nu is the stoichiometric coefficient
+          note nu may be fractional (and are converted to
+          float even if passed as int)
 
+          Note these are passed by reference, so if you
+          change the components it will change the compound!
         """
         if type(comp) != types.ListType:
             comp = [comp]
@@ -386,6 +481,9 @@ class Species:
 
     ####################################################################
     def elements(self):
+        """
+        return list of elements
+        """
         elem = []
         for (comp,nu) in self.comp:
             for el in comp.formula.keys():
@@ -395,23 +493,38 @@ class Species:
     
     ####################################################################
     def components(self):
+        """
+        return list of components
+        """
         names = []
         for (comp,nu) in self.comp:
             name.append(comp.name)
         return names
 
 ########################################################################
-# material = mat/M/m
 class Material(Species):
     """
-    same as species class except
-    - we assume its a homogeneous material of fixed density.
+    A material is the same as species class except
+    - we assume its homogeneous with a fixed (and specified) density.
     - given a (unit) volume we may also compute total moles etc.
+    
     """
     def __init__(self,**kw):
+        """
+        Initialize.  See init
+        """
         self.init_mat(**kw)
         
     def init_mat(self,comp=[],density=1.0,volume=1.0):
+        """
+        (re)init the object
+        
+        Parameters:
+        -----------
+        * comp is a list of components [(c,nu),(c,nu)]
+        * density is the density in g/cm^3
+        * volume is the total volume of material in cm^3
+        """
         self.density     = density     # density, g/cm^3
         self.vol         = volume      # cm^3
         self.init(comp=comp)
@@ -495,11 +608,16 @@ class Material(Species):
         return moles*pc.N_A    
 
 ###################################################################
-###################################################################
 def parse_species_formula(expr):
     """
-    convert string expr to a component or species object, e.g.
-        {(2)[A1_B2]}
+    convert string expr to a component or species object
+
+    Parameters:
+    -----------
+    * expr is a string expression of the form: {(2)[A1_B2]}
+
+    Todo:
+    -----
     put this and similiar in chem_parse module, and improve
     """
     expr = expr.strip()
@@ -531,8 +649,7 @@ def parse_species_formula(expr):
 
 def parse_comp(compstr):
     """
-    convert string (e.g. Si_O2)
-    to a component object
+    convert string (e.g. Si_O2) to a component object
     """
     if len(compstr) == 0: return None
     items = compstr.split("_")
@@ -560,26 +677,30 @@ def parse_comp(compstr):
         formula.update({el:nu})
     return Component(formula=formula)
 
+###################################################################
 def ideal_gas(p=1.,t=298.15,mw=0.0):
     """
-    compute the gas phase concentration - mole/cm^3
-    and density
-    p in atm
-    t in K
-    mw in g/mole
+    compute the gas phase concentration - mole/cm^3 and density
+
+    Parameters:
+    -----------
+    * p is pressure in atm
+    * t is temperature in K
+    * mw is molecular weight in g/mole
     """
-    m2cm = 10.**-6 #m^-3 to cm^-3
-    a2p = 101.325*(10**3) #pa/atm
+    m2cm = 10.**-6        # m^-3 to cm^-3
+    a2p = 101.325*(10**3) # pa/atm
     p = p*a2p
-    c = p/(pc.R*t) # conc in moles/m^3
-    c = c*m2cm     # conc in moles/cm^3
-    rho = c*mw     # g/cm3
-                   # x 1e3 = kg/m^3
+    c = p/(pc.R*t)        # conc in moles/m^3
+    c = c*m2cm            # conc in moles/cm^3
+    rho = c*mw            # g/cm3
+                          # x 1e3 = kg/m^3
     return (c,rho)
 
 #############################################################
 #############################################################
 def test_1():
+    """ test """
     c1 = Component(formula={'Si':1.00001,'O':2})
     c1.set({'O':2,'H':2})
     print "****"
@@ -598,6 +719,7 @@ def test_1():
     print "****"
 
 def test_2():
+    """ test """
     expr = "{(1.0)[Si_O2]}{(1.232)[Fe2.3454_O11]}{(.12)[H_C.2_Al0.0001203]}"
     spec = parse_species_formula(expr)
     print spec

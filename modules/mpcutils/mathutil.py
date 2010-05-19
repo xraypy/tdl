@@ -1,18 +1,16 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu)
 Simple math addons and wrappers
 
-Modifications:
---------------
-- minimize and random from original tdl, written by Matt Newville
+Authors/Modifications:
+----------------------
+T. Trainor (tptrainor@alaska.edu)
+M. Newville (newville@cars.uchicago.edu)
 
-"""
-#######################################################################
-"""
-Todo
+* minimize and random from original tdl
 
- - peak fit
+Todo:
+-----
+* peak fit
  
 """
 #######################################################################
@@ -22,7 +20,6 @@ import numpy as num
 import scipy
 
 #######################################################################
-# some simple stuff
 def ave(x):
     """
     average of an array
@@ -91,6 +88,7 @@ def cartesian_mag(v):
     """
     Calculate the norm of a vector defined in
     a cartesian basis.
+    
     This should give same as num.linalg.norm
     """
     m = num.sqrt(num.dot(v,v))
@@ -99,8 +97,9 @@ def cartesian_mag(v):
 def cartesian_angle(u,v):
     """
     Calculate angle between two vectors defined in
-    a cartesian basis.  Reuslt is always between
-    0 and 180 degrees
+    a cartesian basis.
+
+    Result is always between 0 and 180 degrees
     """
     uv = num.dot(u,v)
     um = cartesian_mag(u)
@@ -115,24 +114,31 @@ def cartesian_angle(u,v):
 def minimize(f,x,y,params,*args,**kws):
     """
     Simple wrapper around scipy.optimize.leastsq
-      f is the function to be optimized
-      x is a vector of independant varibles (floats) - the abscissa
-      y is the corresponding vector of known/dependant values - the ordinate
-      params is a tuple of doubles which are to be optimized.
-      args and kws are additional arguments for f
 
-    use:
-         params = minimize(f,x,y,params,*args,**kw)
+    Parameters:
+    -----------
+    * f is the function to be optimized
+    * x is a vector of independant varibles (floats) - the abscissa
+    * y is the corresponding vector of known/dependant values - the ordinate
+    * params is a tuple of doubles which are to be optimized.
+    * args and kws are additional arguments for f
+
+    Notes:
+    ------
+    >>params = minimize(f,x,y,params,*args,**kw)
+
     where
-         ycalc = f(x,*args,**kw)
+        ycalc = f(x,*args,**kw)
     and
-         args should be all single valued (floats)
+        args should be all single valued (floats)
 
-    E.g. Define a function and optimize (a,b)
-    def fun(x,a,b,c,d=1):
-       ...calc y... 
-       return y
-    (a,b) = minimize(f,x,yobs,(a,b),c,d=10)
+    Examples:
+    ---------
+    # Define a function and optimize (a,b)
+    >>def fun(x,a,b,c,d=1):
+    >>   ...calc y... 
+    >>   return y
+    >>(a,b) = minimize(f,x,yobs,(a,b),c,d=10)
     
     """
     from scipy.optimize import leastsq
@@ -157,7 +163,6 @@ def minimize(f,x,y,params,*args,**kws):
         #return residual
         return (YY-yc)
     ###########################################
-    
     # make sure params is a tuple
     params = tuple(params)
     args   = args + (kws,)
@@ -171,8 +176,8 @@ def minimize(f,x,y,params,*args,**kws):
 #######################################################################
 def random_seed(x=None):
     """
-    wrap numpy random seed
-    Seds the random number generator
+    wrapper for numpy random seed
+    Seeds the random number generator
     """
     if x is None:
         return num.random.seed()
@@ -185,9 +190,16 @@ def random_seed(x=None):
 def random(a=1,b=1,c=1,npts=1,distribution='normal',**kw):
     """
     wrapper for numpy random distributions
+
+    Parameters:
+    -----------
+    * a,b,c are default arguments for the dist functions
+      e.g. NR.normal a = mean, b = stdev of the distrobution
+    * npts is the number of points
+    
+    Outputs:
+    --------
     returns npts random numbers.
-    a,b,c are default arguments for the dist functions
-    e.g. NR.normal a = mean, b = stdev of the distrobution
     """ 
     NR = num.random
     if   distribution == 'binomial':        return NR.binomial(a,b,size=npts)
@@ -219,16 +231,15 @@ def random(a=1,b=1,c=1,npts=1,distribution='normal',**kw):
     elif distribution == 'uniform':         return NR.uniform(a,b,size=npts)
     elif distribution == 'wald':            return NR.wald(a,b,size=npts)
     elif distribution == 'weibull':         return NR.weibull(a,b,size=npts)
-#######################################################################
-
-#######################################################################
-# Peaks
-#######################################################################
 
 #######################################################################
 def gauss(x, xcen, fwhm, mag):
     """
-    calculate a gaussian profile:
+    Calculate a gaussian profile:
+
+    Notes:
+    ------
+    Computes the following
        y = mag * exp( (x-xcen)**2 / (2 * sig**2))
     note the fwhm is related to sigma by:
        sigma = fwhm/2.35482
@@ -247,15 +258,17 @@ def gauss(x, xcen, fwhm, mag):
         return y
     a =   ( x - xcen )  / ( 0.600561 * fwhm ) 
     y =   mag *  num.exp( -1. * (a**2.) ) 
-
     return(y)
 
 #######################################################################
 def lor( x, xcen, fwhm, mag):
     """
-    calculate a lorentzian profile:
-       y = mag * sigma**2 / (sigma**2 + (x-xcen)**2))
-       y = mag / (1 + ( (x-xcen)/sigma )**2 )
+    calculate a lorentzian profile
+
+    Notes:
+    ------
+    y = mag * sigma**2 / (sigma**2 + (x-xcen)**2))
+    y = mag / (1 + ( (x-xcen)/sigma )**2 )
     """
     if (fwhm == 0.0): return(0.0)
     a =   ( x - xcen )  / ( 0.5 * fwhm ) 
@@ -264,10 +277,13 @@ def lor( x, xcen, fwhm, mag):
 
 #######################################################################
 def voigt( x, xcen, fwhm, mag, *args):
-#def voigt( x, xcen, fwhm, mag, flor):
     """
     Calculate a psuedo-voigt profile:
-       y = flor*lor + (1-flor)*gauss
+
+    Notes:
+    ------
+    y = flor*lor + (1-flor)*gauss
+    
     This approximates the voigt-profile (which is a convolution of
     a gaussian and lorentzian)
 
@@ -284,6 +300,9 @@ def voigt( x, xcen, fwhm, mag, *args):
 
 #######################################################################
 class Peak:
+    """
+    Peak class
+    """
     def __init__(self,npeaks=0):
         """
         self.bgr_params[0],   lin bgr offset
@@ -352,13 +371,18 @@ class Peak:
 class LinReg:
     """
     Equations for calculating linear regression
+
+    Notes:
+    ------
+    Regression model is based on equation of line
       y = mx + b
     x and y should be simple double arrays
-    call as:
+
+    Examples:
+    ---------
     >>lr = LinReg(x,y,plot=True)
 
-    ###
-    Note also see the linear regression funciton
+    Note also see the linear regression function
     in scipy (=> stats.linregress), for example:
     >>from scipy.stats import linregress
     >>m = 1.4
@@ -449,8 +473,8 @@ class LinReg:
     ########################################################
     def calc_x(self,y):
         """
-         given cal data calc x given y
-         x = (y-b)/m
+        given cal data calc x given y
+        x = (y-b)/m
         """
         m = self.m
         b = self.b
@@ -460,9 +484,9 @@ class LinReg:
     def calc_x_err(self,y):
         """
         calc x given y
-         x = (y-b)/m
-         this function also computes the error
-         and allows for y to be from several measurements
+        x = (y-b)/m
+        this function also computes the error
+        and allows for y to be from several measurements
         """
         m     = self.m
         b     = self.b

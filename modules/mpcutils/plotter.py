@@ -1,11 +1,10 @@
-##########################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
 Simple wrapper functions and classes
 around some of matplotlib.pyplot
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+Tom Trainor (tptrainor@alaska.edu)
 
 """
 ################################################################################

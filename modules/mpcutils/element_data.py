@@ -1,6 +1,5 @@
-##########################################################################
 """
-Elements
+Element data
 
 
 Modifications:
@@ -25,6 +24,7 @@ atomic_symbols = [None,
    'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa',
    'U',  'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm']
 
+# these are standard atomic wieghts in g/mole
 atomic_mass = {
     "H":1.00794,    "He":4.002602,  "Li":6.941,     "Be":9.012182,
     "B":10.811,     "C":12.0107,    "N":14.0067,    "O":15.9994,
@@ -61,15 +61,16 @@ def number(symbol):
     """
     Returns the atomic number of an element, given its atomic symbol 
   
-    Inputs:
-        symbol: The atomic symbol of the element whose atomic number is being
-                requested.  This is a 1 or 2 character string, e.g. 'H', 'Si',
-                etc.  It is case insensitive and leading or trailing blanks
-                are ignored.
+    Parameters:
+    -----------
+    * symbol is the atomic symbol of the element whose atomic number is being
+      requested.  This is a 1 or 2 character string, e.g. 'H', 'Si',
+      etc.  It is case insensitive and leading or trailing blanks are ignored.
 
-    Outputs:
-        This function returns the atomic number of the input element.  If an
-        invalid atomic symbol is input then the function returns 0.
+    Returns:
+    --------
+    * Returns the atomic number of the input element.  If an
+      invalid atomic symbol is input then the function returns 0.
     """
     try:
         return atomic_symbols.index(symbol.title())
@@ -82,14 +83,14 @@ def symbol(z):
     This function returns the atomic symbol of an element, given its atomic
     number.
     
-    Inputs:
-        z: The atomic number of the element whose atomic symbol is being
-            requested.  
+    Parameters:
+    -----------
+    * z is the atomic number of the element  
 
-    Outputs:
-        This function returns the atomic symbol of the input element as a
-        string.  If Z is an invalid atomic number then the function returns 
-        None.
+    Returns:
+    --------
+    * Returns the atomic symbol of the input element as a string.
+      If Z is an invalid atomic number then the function returns None.
     """
     try:
         return atomic_symbols[int(z)]
@@ -98,6 +99,14 @@ def symbol(z):
 
 #################################################################################
 def amu(el):
+    """
+    Return the atomic mass of an element
+
+    Parameters:
+    -----------
+    * el is the atomic number or symbol 
+
+    """
     if type(el) == types.StringType:
         el = el.title()
     else:

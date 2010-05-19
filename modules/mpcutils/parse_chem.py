@@ -1,10 +1,14 @@
 """
 A chemical formula parser.
 
-Modifications:
---------------
- - initially from:
-   http://mail.python.org/pipermail/tutor/1999-March/000083.html
+Authors/Modifications:
+----------------------
+* initially from:
+  http://mail.python.org/pipermail/tutor/1999-March/000083.html
+
+Todo:
+-----
+* Complete and test. 
 
 """
 #################################################################
