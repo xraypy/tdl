@@ -5,17 +5,17 @@ Startup tdl
 ##############################################################
 import sys
 args = sys.argv[1:]
-ast = False
+pds = True
 if len(args) > 0:
-    #print args[0].lower()
-    if args[0].lower() == 'ast':
-        print 'ast'
-        ast = True
+    if args[0].lower() == 'pds':
+        pds = True
         args.pop(0)
 
-if ast:
-    from astlib.shell import shell
-    shell(debug=True, scripts = args).cmdloop()
+if pds:
+    #from pds.lib.shell import main
+    import pds
+    pds.lib.main(args)
 else:
-    from pds.shell import main
-    main(args)
+    #from larch.shell import shell
+    #shell(debug=True, scripts = args).cmdloop()
+    pass

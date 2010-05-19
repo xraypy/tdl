@@ -203,7 +203,7 @@ class Shell(_NumShell):
         """
         
         # Builtins
-        from pds.builtins import __pdsbuiltins__
+        from builtins import __pdsbuiltins__
         self.interp.symbol_table.data["__pds__"] = __pdsbuiltins__
         
         # add module functions to __builtins__
@@ -786,7 +786,7 @@ def show_usage():
     sys.exit(1)
     
 #####################################################################################
-def main(arg):
+def main(arg=''):
     """
     Startup the shell program
     """
@@ -813,30 +813,45 @@ def main(arg):
             show_usage()
         
     #################################################################
-    # Import and set default paths:
-    #   pds path is the path of the pds directory
-    #   lib_path is the parent directory of pds
-    #   mods_path is either lib_path/modules or lib_path
+    # Import and set default paths
+    # Assume the following layout:
+    #      host_path/pds
+    #      host_path/pds/lib
+    #      host_path/pds/startup.pds
+    #      host_path/modules
+    #            or
+    #      host_path/pds/modules
+    # Define the following
+    #   lib_path is the directory of pds.lib
+    #   pds_path is the path of the pds directory
+    #   host_path is the path containing pds directory
+    #   mods_path is either pds_path/modules or pds_path
     # Additional paths should be set in the startup files
     #################################################################
     tmp = globals()
+    # host_path/pds/lib
     __path__  = os.path.abspath(tmp['__file__'])
-    pds_path  = os.path.dirname(__path__)
-    lib_path  = os.path.split(pds_path)[0]
-    mods_path = os.path.join(lib_path,"modules")
+    lib_path  = os.path.dirname(__path__)
+    # host_path/pds
+    pds_path  = os.path.split(lib_path)[0]
+    # host_path
+    host_path = os.path.split(pds_path)[0]
+    # host_path/modules
+    mods_path = os.path.join(host_path,"modules")
     if not os.path.exists(mods_path):
         mods_path = lib_path
 
     # Set Python Path
     if verbose:
         print ' == pds paths:'
-        print '    pds_path   = %s  ' % pds_path
         print '    lib_path   = %s  ' % lib_path
+        print '    pds_path   = %s  ' % pds_path
+        print '    host_path  = %s  ' % host_path
         if os.path.exists(mods_path):
             print '    mods_path  = %s  ' % mods_path
     set_path('.',recurse=False,verbose=verbose)
-    set_path(pds_path,recurse=False,verbose=verbose)
     set_path(lib_path,recurse=False,verbose=verbose)
+    set_path(pds_path,recurse=False,verbose=verbose)
     set_path(mods_path,recurse=True,verbose=verbose)
 
     ##############################################################

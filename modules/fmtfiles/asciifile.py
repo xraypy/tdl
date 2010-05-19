@@ -14,7 +14,7 @@ import os
 import sys
 import types
 
-from pds.shellutil import datalen
+from pds.lib.shellutil import datalen
 import ASCIIFile.ASCIIFile as ASCIIFile
 
 ##########################################################################

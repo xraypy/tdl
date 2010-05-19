@@ -17,8 +17,8 @@ import copy
 import numpy as num
 from matplotlib import pyplot
 
-from   pds.shellutil import Menu, show_more 
-from   pds.shellutil import get_tf, get_yn, get_int, get_flt
+from   pds.lib.shellutil import Menu, show_more 
+from   pds.lib.shellutil import get_tf, get_yn, get_int, get_flt
 from   plotter import cursor
 import image_data
 import data

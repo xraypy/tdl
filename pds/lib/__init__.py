@@ -1,3 +1,3 @@
 ##
 import shell
-start = shell.main
+main = shell.main
