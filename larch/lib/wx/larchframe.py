@@ -112,7 +112,7 @@ class LarchWxShell(object):
                         self.write("%s\n" % (err.get_error()[1]))
             elif ret is not None:
                 try:
-                    self.write("%s\n" % ret)
+                    self.write("%s\n" % repr(ret))
                 except:
                     pass
 
