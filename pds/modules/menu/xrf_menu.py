@@ -1,10 +1,10 @@
-#######################################################################
 """
-T. Trainor (tptrainor@alaska.edu)
-Functions for interactive xrf 
+Functions for interactive analysis of xrf data
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+T. Trainor (tptrainor@alaska.edu)
+
 
 """
 #######################################################################

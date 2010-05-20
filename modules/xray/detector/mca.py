@@ -1,11 +1,11 @@
 """
-Mark Rivers, GSECARS
 This module defines a device-independent MultiChannel Analyzer (MCA) class.
 
-Modifications:
---------------
-- See http://cars9.uchicago.edu/software/python/index.html
-- Modified for Tdl, tpt
+Authors/Modifications:
+----------------------
+Mark Rivers, GSECARS
+* See http://cars9.uchicago.edu/software/python/index.html
+* Modified for Tdl, tpt
 
 """
 ########################################################################
@@ -22,35 +22,37 @@ class Mca:
     """
     MultiChannel Analyzer (MCA) class 
         
-    Fields:
-        self.name        = 'mca'  # Name of the mca object
-        self.nchans      = 2048   # number of mca channels
-        self.data        = None   # MCA data 
-        self.channels    = None   # MCA channels value 
+    Attributes:
+    -----------
+    * self.name        = 'mca'  # Name of the mca object
+    * self.nchans      = 2048   # number of mca channels
+    * self.data        = None   # MCA data 
+    * self.channels    = None   # MCA channels value 
 
-        # Counting parameters
-        self.start_time   = ''    # Start time and date, a string
-        self.live_time    = 0.    # Elapsed live time in seconds
-        self.real_time    = 0.    # Elapsed real time in seconds
-        self.read_time    = 0.    # Time that the Mca was last read in seconds
-        self.total_counts = 0.    # Total counts between the preset start and stop channels
-        self.input_counts = 0.    # Actual total input counts (eg given by detector software)
-                                  # Note total_counts and input counts ARE NOT time normalized
-                                  #
-        self.tau          = -1.0  # Factor for deadtime/detector saturation calculations, ie
-                                  #     ocr = icr * exp(-icr*tau)
-        self.icr_calc     = -1.0  # Calculated input count rate from above expression
-        self.cor_factor   = 1.0   # Calculated correction factor based on icr,ocr,lt,rt
-                                  # data_corrected = data * cor_factor
-                                  #
-        # Calibration parameters
-        self.offset       = 0.    # Offset
-        self.slope        = 1.0   # Slope
-        self.quad         = 0.    # Quadratic
-        self.units        = 'keV' # Calibration units, a string
-        self.two_theta    = 0.    # 2-theta of this Mca for energy-dispersive diffraction
+    # Counting parameters
+    * self.start_time   = ''    # Start time and date, a string
+    * self.live_time    = 0.    # Elapsed live time in seconds
+    * self.real_time    = 0.    # Elapsed real time in seconds
+    * self.read_time    = 0.    # Time that the Mca was last read in seconds
+    * self.total_counts = 0.    # Total counts between the preset start and stop channels
+    * self.input_counts = 0.    # Actual total input counts (eg given by detector software)
+                                # Note total_counts and input counts ARE NOT time normalized
+                                #
+    * self.tau          = -1.0  # Factor for deadtime/detector saturation calculations, ie
+                                #     ocr = icr * exp(-icr*tau)
+    * self.icr_calc     = -1.0  # Calculated input count rate from above expression
+    * self.cor_factor   = 1.0   # Calculated correction factor based on icr,ocr,lt,rt
+                                # data_corrected = data * cor_factor
+                                #
+    # Calibration parameters
+    * self.offset       = 0.    # Offset
+    * self.slope        = 1.0   # Slope
+    * self.quad         = 0.    # Quadratic
+    * self.units        = 'keV' # Calibration units, a string
+    * self.two_theta    = 0.    # 2-theta of this Mca for energy-dispersive diffraction
 
     Notes:
+    ------
     If input_counts are read from the data file then there is no need for tau
     values (and hence icr_calc is not used) - ie we assume the detector
     provides the icr value. 
@@ -88,7 +90,14 @@ class Mca:
 
     ###############################################################################
     def __init__(self,data=None,channels=None, **kws):
-        """ Initialize the MCA structure """
+        """
+        Initialize the MCA structure
+
+        Parameters:
+        -----------
+        * data are the counts per channel
+        * channels are the corresponding channel numbers
+        """
         self.det_type    = "MCA"
         self.name        = 'mca'  # Name of the mca object
         self.nchans      = 2048   # number of mca channels
@@ -128,6 +137,10 @@ class Mca:
     def init_params(self, mca_params={}):
         """
         set/reset parameters based on key word arguments
+
+        Parameters:
+        ----------
+        These can be any attribute of the class
         """
         for key in mca_params.keys():
             setattr(self,key,mca_params[key])
@@ -150,9 +163,12 @@ class Mca:
     ########################################################################
     def init_data(self, data=None, channels=None):
         """
-        Inputs:
-            data: A numpy array of data (counts).
-            channels: Array of channel numbers
+        Init or reinit the data
+        
+        Parameters:
+        -----------
+        * data: A numpy array of data (counts).
+        * channels: Array of channel numbers
         """
         if data:
             self.data = num.asarray(data,dtype=num.int)
@@ -175,7 +191,8 @@ class Mca:
     ########################################################################
     def update_correction(self,tau=None):
         """
-        Update the deadtime correction 
+        Update the deadtime correction
+        
         if tau == None just recompute,
         otherwise assign a new tau and recompute
         """
@@ -224,9 +241,11 @@ class Mca:
     def get_data(self,correct=True):
         """
         Returns the data (counts) from the Mca
+        
         Note if correct == True the corrected data is returned. However,
         this does not (re)compute the correction factor, therefore, make
-        sure the correction factor is up to date before requesting corrected data...
+        sure the correction factor is up to date before requesting
+        corrected data...
         """
         if correct == True:
             d = self.cor_factor * self.data

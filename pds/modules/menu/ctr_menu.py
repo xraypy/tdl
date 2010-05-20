@@ -68,7 +68,18 @@ CTR_DESCR = ["Plot structure factors",
 def ctr_menu(ctr,scans=None,I=None,Inorm=None,Ierr=None,
              corr_params=None,scan_type=None):
     """
-    Interactively inspect/integrate CtrData 
+    Interactively inspect/integrate CtrData
+
+    Parameters:
+    -----------
+    * ctr is a ctr data object
+    * scans is a [list] of scan data objects
+    * I, Inorm, Ierr are string tags corresponding to
+      the values from the scandata object to used in computing
+      structure factors
+    * corr_params is a (optional) dictionary of correction parameters
+    * scan_type is the type of scan (e.g. 'image')
+    
     """
     #if not isinstance(ctr,ctr_data.CtrData):
     #    print "Error CtrData object required"

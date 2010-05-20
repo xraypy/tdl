@@ -1,12 +1,12 @@
-########################################################################
 """
-Mark Rivers, GSECARS
 Read/Write CARS mca/med files
 
-Modifications:
---------------
-- See http://cars9.uchicago.edu/software/python/index.html
-- Modified for Tdl, tpt
+
+Authors/Modifications:
+----------------------
+Mark Rivers, GSECARS
+* See http://cars9.uchicago.edu/software/python/index.html
+* Modified for Tdl, tpt
 
 """
 
@@ -27,10 +27,11 @@ class Environment:
     things like motor positions, temperature, anything that describes the
     experiment.
 
-    Fields:
-        .name         # A string name of this parameter, e.g. "13IDD:m1"
-        .description  # A string description of this parameter, e.g. "X stage"
-        .value        # A string value of this parameter,  e.g. "14.223"
+    Attributes:
+    -----------
+    * name         # A string name of this parameter, e.g. "13IDD:m1"
+    * description  # A string description of this parameter, e.g. "X stage"
+    * value        # A string value of this parameter,  e.g. "14.223"
     """
     def __init__(self, name='', value='', description=''):
         self.name        = name
@@ -41,7 +42,7 @@ class Environment:
 def read_med_files(file_prefix,start=0,end=100,nfmt=3,
                    bad_mca_idx=[],total=True,align=True,correct=True,tau=None):
     """
-    Read multiple files given prefix, stanrt and end numbers and fmt len
+    Read multiple files given prefix, start and end numbers and fmt len
     """
     med = []
     format = '%' + str(nfmt) + '.' + str(nfmt) + 'd'
@@ -60,14 +61,17 @@ def read_med(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None):
     from the Med object which makes sense to store permanently, but does
     not contain all of the internal state information for the Med.
 
-    Notes
-    - If the file includes "Environment data" these wil lbe included
+    Parameters:
+    -----------
+    * file: The name of the disk file to read.
+
+    Notes:
+    ------
+    * If the file includes "Environment data" these wil lbe included
       in the returned object as med.environment
-    - If the file includes ROI's the will be included with the mca's
+    * If the file includes ROI's the will be included with the mca's
       in the returned object as med.mca[i].rois
 
-    Inputs:
-        file: The name of the disk file to read.
     """
     # read the file
     r = read_ascii_file(file)
@@ -104,7 +108,7 @@ def read_med(file,bad_mca_idx=[],total=True,align=True,correct=True,tau=None):
 def read_mca_files(file_prefix,start=0,end=100,nfmt=3,
                    detector=0,tau=None):
     """
-    Read multiple files given prefix, stanrt and end numbers and fmt len
+    Read multiple files given prefix, start and end numbers and fmt len
     """
     data = []
     format = '%' + str(nfmt) + '.' + str(nfmt) + 'd'
@@ -122,15 +126,17 @@ def read_mca(file, detector=0, tau=None):
     If the data file has multiple detectors then the detector
     keyword can be used to specify which detector data to return.
 
+    Parameters:
+    * file: The name of the disk file to read.
+    * detector: Index of detector to read
+
     Notes.
-    - If the file includes "Environment data" these wil lbe included
+    ------
+    * If the file includes "Environment data" these wil lbe included
       in the returned object as mca.environment
-    - If the file includes ROI's the will be included with the mca's
+    * If the file includes ROI's the will be included with the mca's
       in the returned object as mca.rois
 
-    Inputs:
-     file: The name of the disk file to read.
-     detector: Index of detector to read
     """
     r = read_ascii_file(file)
     if r == None: return None
@@ -152,24 +158,28 @@ def read_mca(file, detector=0, tau=None):
 def read_ascii_file(file):
     """
     Reads a disk file.  The file is a tagged ASCII format.
+
     The file contains the information from the Mca object which it makes sense
     to store permanently, but does not contain all of the internal state
     information for the Mca.  This procedure reads files written with
     write_ascii_file().
 
-    Inputs:
-        file: The name of the disk file to read.
+    Parameters:
+    -----------
+    * file: The name of the disk file to read.
             
     Outputs:
-        Returns a dictionary of the following type:
-        r['n_detectors'] = n_detectors
-        r['mca'] = [Mca()]
-        r['rois'] = [Roi.Roi()]
-        r['environment'] = [Environment]
+    --------
+    * Returns a dictionary of the following type:
+      r['n_detectors'] = n_detectors
+      r['mca'] = [Mca()]
+      r['rois'] = [Roi.Roi()]
+      r['environment'] = [Environment]
         
     Example:
-        m = read_ascii_file('mca.001')
-        m['elapsed'][0].real_time
+    --------
+    >>m = read_ascii_file('mca.001')
+    >>m['elapsed'][0].real_time
     """
     try:
         fp = open(file, 'r')
@@ -304,12 +314,14 @@ def write_file(detector, file):
     """
     Writes Mca or Med objects to a disk file.
     
-    Inputs:
-        detector: An med or mca object 
-        file: The name of the disk file to write.
+    Parameters:
+    -----------
+    * detector: An med or mca object 
+    * file: The name of the disk file to write.
             
     Example:
-        write_file(mca,'mca.001')
+    --------
+    >>write_file(mca,'mca.001')
     """
     # Make sure detector is type MED for simplicity...
     try:
@@ -330,16 +342,17 @@ def write_file(detector, file):
 #######################################################################
 def write_ascii_file(med, file):
     """
-    Writes Med data to a disk file.  The file 
-    format is a tagged ASCII format.  The file contains the information 
-    which it makes sense to store permanently, but 
+    Writes Med data to a disk file.
+    
+    The file format is a tagged ASCII format.  The file contains  
+    the information which it makes sense to store permanently, but 
     does not contain all of the internal state information for the detector.  
     Files written with this routine can be read with read_ascii_file().
 
-
-    Inputs:
-        med: Instance of Med object
-        file: The name of the disk file to write.
+    Parameters:
+    -----------
+    * med: Instance of Med object
+    * file: The name of the disk file to write.
     """
     # Get raw (uncorrected) data as a list, 
     data = []
@@ -442,12 +455,13 @@ def increment_filename(old_file):
     characters in the extension.
    
     Examples:
-       print increment_filename('test.001')
-          test.002
-       print increment_filename('test')
-          test
-       print increment_filename('file.1')
-          file.2
+    ---------
+    >>print increment_filename('test.001')
+      test.002
+    >>print increment_filename('test')
+      test
+    >>print increment_filename('file.1')
+      file.2
     """
     dot = old_file.rfind('.')
     if (dot == -1): return old_file

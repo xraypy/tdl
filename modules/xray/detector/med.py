@@ -1,23 +1,20 @@
-########################################################################
 """
-Mark Rivers, GSECARS
 Methods for Multi-element detectors
 
-Modifications:
---------------
-- See http://cars9.uchicago.edu/software/python/index.html
-- Modified for Tdl, tpt
+Authors/Modifications:
+----------------------
+Mark Rivers, GSECARS
+* See http://cars9.uchicago.edu/software/python/index.html
+* Modified for Tdl, tpt
 
-"""
-########################################################################
-"""
-
+Notes:
+------
 Conventions for Med.get_data and Med.get_energy:
- - If Med.total == True the returned array will be dim: [1, nchans]
- - If Med.total == False the returned array will be dim: [n_detectors, nchans]
+ * If Med.total == True the returned array will be dim: [1, nchans]
+ * If Med.total == False the returned array will be dim: [n_detectors, nchans]
                    bad det's are zeros
- - If Med.align == True the first good detector will be used as the energy reference
- - If Med.correct == True deadtime corrections will be applied on Med.get_data()
+ * If Med.align == True the first good detector will be used as the energy reference
+ * If Med.correct == True deadtime corrections will be applied on Med.get_data()
  
 """
 
@@ -35,29 +32,29 @@ class Med:
     """
     The MED class --> collection of Mca objects.
 
-    Keywords:
-    bad_mca_idx: A list of bad mca's, data will be zeros.  An empty
-               list (default) means all the detectors are ok.
-               Note detector indexing starts at zero!
+    Attributes:
+    -----------
+    * bad_mca_idx: A list of bad mca's, data will be zeros.  An empty
+      list (default) means all the detectors are ok.
+      Note detector indexing starts at zero!
 
-    total: Set this keyword to return the sum of the spectra from all
-           of the Mcas as a 1-D numeric array.
+    * total: Set this keyword to return the sum of the spectra from all
+      of the Mcas as a 1-D numeric array.
         
-    align: Set this keyword to return spectra which have been shifted and
-           and stretched to match the energy calibration parameters of the
-           first (good) detector.  This permits doing arithmetic on a
-           "channel-by-channel" basis. This keyword can be used alone
-           or together with the TOTAL keyword, in which case the data
-           are aligned before summing.
+    * align: Set this keyword to return spectra which have been shifted and
+      and stretched to match the energy calibration parameters of the
+      first (good) detector.  This permits doing arithmetic on a
+      "channel-by-channel" basis. This keyword can be used alone
+      or together with the TOTAL keyword, in which case the data
+      are aligned before summing.
            
-    correct:
-        True means to apply deadtime correction, false ignores it
+    * correct: True means to apply deadtime correction, false ignores it
 
-    tau:  mca deadtime tau values
-           None --> recompute correction factor
-           []   --> Turn off correction, ie set taus to -1
-           single value (or single valued list) --> assign to all mcas
-           list (or array) --> assign to individual mcas
+    * tau:  mca deadtime tau values
+        None --> recompute correction factor
+        []   --> Turn off correction, ie set taus to -1
+        single value (or single valued list) --> assign to all mcas
+        list (or array) --> assign to individual mcas
 
     """
     ########################################################################
@@ -77,6 +74,8 @@ class Med:
     def __init__(self,name='med',mca=[],**kws):
         """
         initialize by passing in list of mcas
+
+        The kw arguments correspond to object attributes        
         """
         self.det_type    = "MED"
         self.name        = name
@@ -216,10 +215,11 @@ class Med:
         Returns the data as a 2-D numeric array
                 
         Outputs:
-            This function returns a long 2-D array of counts dimensioned
-            [n_detectors, nchans]
+        --------
+        * This function returns a long 2-D array of counts dimensioned
+          [n_detectors, nchans]
             
-            If the "total" keyword is set then the array dimensions are [1,nchans]
+          If the "total" keyword is set then the array dimensions are [1,nchans]
         """
         # see how many channels, all mcas must be same length!!
         temp = self.mca[0].get_data()

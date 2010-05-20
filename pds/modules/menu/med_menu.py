@@ -1,10 +1,9 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu)
-Functions for interactive med 
+Functions for interactive analysis of med data
 
-Modifications:
---------------
+Authors/Modifications:
+-----------------------
+T. Trainor (tptrainor@alaska.edu)
 
 """
 #######################################################################
@@ -18,6 +17,10 @@ import med_data
 def med_menu(data):
     """
     Interactively inspect med's
+
+    Parameters:
+    -----------
+    * data is ScanData or MedScan object
     """
     options = """
 ###################

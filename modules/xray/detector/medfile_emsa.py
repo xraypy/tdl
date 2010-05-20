@@ -1,11 +1,10 @@
-########################################################################
 """
-Read/Write EMSA detector files
+Read EMSA detector files
 
 This module is out of data and needs updating...
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
 
 """
 #########################################################################
@@ -23,12 +22,15 @@ from med import Med
 ##########################################################################
 def read_med(file):
     """
-    Reads a disk file into an Med object. The file contains the information
-    from the Med object which it makes sense to store permanently, but does
+    Reads a disk file into an Med object.
+
+    The file contains the information from the Med object
+     which it makes sense to store permanently, but does
     not contain all of the internal state information for the Med.
 
-    Inputs:
-        file: The name of the disk file to read.
+    Parameters:
+    -----------
+    * file: The name of the disk file to read.
     """
     r = read_ascii_file(file)
 
@@ -50,32 +52,34 @@ def read_med(file):
 
     return med
 
-
-
 ########################################################################
 def read_ascii_file(file):
     """
     Reads a disk file.  The file format is a tagged ASCII format.
+    
     The file contains the information from the Mca object which it makes sense
     to store permanently, but does not contain all of the internal state
     information for the Mca.  This procedure reads files written with
     write_ascii_file().
 
-    Inputs:
-        file: The name of the disk file to read.
+    Parameters:
+    -----------
+    * file: The name of the disk file to read.
             
     Outputs:
-        Returns a dictionary of the following type:
-        'n_detectors': int,
-        'calibration': [McaCalibration()],
-        'elapsed':     [McaElapsed()],
-        'rois':        [[McaROI()]]
-        'data':        [numpy.array]
-        'environment': [[McaEnvironment()]]
+    --------
+    * Returns a dictionary of the following type:
+      'n_detectors': int,
+      'calibration': [McaCalibration()],
+      'elapsed':     [McaElapsed()],
+      'rois':        [[McaROI()]]
+      'data':        [numpy.array]
+      'environment': [[McaEnvironment()]]
         
     Example:
-        m = read_ascii_file('mca.001')
-        m['elapsed'][0].real_time
+    --------
+    >>m = read_ascii_file('mca.001')
+    >>m['elapsed'][0].real_time
     """
     try:
         fp = open(file, 'r')

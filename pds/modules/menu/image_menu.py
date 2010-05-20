@@ -1,13 +1,9 @@
-#######################################################################
 """
+Menu function to handle interactive image processing
+
+Authors/Modifications:
+----------------------
 Tom Trainor (tptrainor@alaska.edu)
-
-Menu function to handle interactive
-image processing
-
-Modifications:
---------------
-
 
 """
 #######################################################################
@@ -75,6 +71,13 @@ def image_menu(imdata,scan_pnt=None):
     """
     Interactively inspect/integrate images in ScanData or a
     ImageScan object
+
+    Parameters:
+    -----------
+    * imdata is either an ImageScan or ScanData object
+    * scan_pnt is an integer value for a point to integrate
+      None indicates start at the first point
+
     """
     #if isinstance(imdata,data.ScanData):
     if hasattr(imdata,'get_positioner'):
@@ -294,7 +297,7 @@ IMG_BGR_PARAMS = {'bgrflag':0,
 
 def bgr_menu(bgr_params=IMG_BGR_PARAMS):
     """
-    Get bgr options
+    Get background options
     """
     prompt   = 'Select option >'
 

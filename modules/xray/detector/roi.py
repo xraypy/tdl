@@ -1,13 +1,12 @@
-########################################################################
 """
-Mark Rivers, GSECARS
 This module defines a region of interest class
 and utility functions.  Needs some more work.
 
-Modifications:
---------------
-- See http://cars9.uchicago.edu/software/python/index.html
-- Modified for Tdl, tpt
+Authors/Modifications:
+-----------------------
+Mark Rivers, GSECARS
+* See http://cars9.uchicago.edu/software/python/index.html
+* Modified for Tdl, tpt
 
 """
 ########################################################################
@@ -20,25 +19,28 @@ import mca_calib as calib
 class Roi:
     """
     Class that defines a Region-Of-Interest (ROI)
-    Fields
-        .left      # Left channel 
-        .right     # Right channel 
-        .label     # Name of the ROI
-        .bgr_width # Number of channels to use for background subtraction
 
-        # Computed
-        .total     # Total counts
-        .net       # Net (bgr subtr) counts
-        .center    # Centroid  
-        .width      # Width
+    Attributes:
+    -----------
+    * left      # Left channel 
+    * right     # Right channel 
+    * label     # Name of the ROI
+    * bgr_width # Number of channels to use for background subtraction
+
+    # Computed
+    * total     # Total counts
+    * net       # Net (bgr subtr) counts
+    * center    # Centroid  
+    * width     # Width
     """
     def __init__(self, left=0., right=0., label='', bgr_width=3):
         """
-        Keywords:
-            left      # Left limit in index/channels numbers
-            right     # Right limit in index/channels numbers
-            label     # Name of the ROI
-            bgr_width # Number of channels to use for background subtraction
+        Parameters:
+        -----------
+        * left      Left limit in index/channels numbers
+        * right     Right limit in index/channels numbers
+        * label     Name of the ROI
+        * bgr_width Number of channels to use for background subtraction
         """
         self.left      = int(left)
         self.right     = int(right)
@@ -62,7 +64,9 @@ class Roi:
     ######################################################################################
     def __cmp__(self, other):
         """
-        Comparison operator.  The .left field is used to define ROI ordering
+        Comparison operator.
+
+        The .left field is used to define ROI ordering
         """ 
         return (self.left - other.left)
 
@@ -70,8 +74,10 @@ class Roi:
     def update_counts(self, data):
         """
         Calc the total and net.
-        Arguments:
-            data: num array or list of data.
+        
+        Parameters:
+        -----------
+        * data: num array or list of data.
         """
         # Computed values....
         self.total  = 0
@@ -115,21 +121,22 @@ def find_roi(mca, left, right, energy=False):
     This procedure finds the index number of the ROI with a specified
     left and right channel number.
 
-    Inputs:
-        mca: mca object
-        left: Left channel number (or energy) of this ROI
-        right: Right channel number (or energy) of this ROI
-        
-    Keywords:
-        energy: Set this flag to True to indicate that Left and Right are
-                in units of energy rather than channel number.
+    Parameters:
+    -----------
+    * mca: mca object
+    * left: Left channel number (or energy) of this ROI
+    * right: Right channel number (or energy) of this ROI
+    * energy: Set this flag to True to indicate that Left and Right are
+      in units of energy rather than channel number.
             
     Output:
-        Returns the index of the specified ROI,
-        -1 if the ROI was not found.
+    -------
+    * Returns the index of the specified ROI,
+      -1 if the ROI was not found.
         
     Example:
-        index = find_roi(mca, 100, 200)
+    --------
+    >>index = find_roi(mca, 100, 200)
     """
     l = left
     r = right
@@ -152,16 +159,19 @@ def find_roi_label(mca, label=None):
     This procedure finds the index number of the ROI with a specified
     label.
 
-    Inputs:
-        mca: mca object
-        label: String label of ROI
+    Parameters:
+    -----------
+    * mca: mca object
+    * label: String label of ROI
             
     Output:
-        Returns the index of the specified ROI,
-        -1 if the ROI was not found.
+    -------
+    * Returns the index of the specified ROI,
+      -1 if the ROI was not found.
         
     Example:
-        index = find_roi(mca,label="Fe ka")
+    --------
+    >>index = find_roi(mca,label="Fe ka")
     """
     if label == None: return -1
     index = 0
@@ -175,12 +185,14 @@ def delete_roi(mca, index):
     """
     This procedure deletes the specified region-of-interest from the MCA.
 
-    Inputs:
-        mca: mca object
-        index:  The index of the ROI to be deleted, range 0 to len(mca.rois)
+    Parameters:
+    -----------
+    * mca: mca object
+    * index:  The index of the ROI to be deleted, range 0 to len(mca.rois)
         
     Example:
-      delete_roi(mca,2)
+    --------
+    >>delete_roi(mca,2)
     """
     del mca.rois[index]
 
@@ -189,12 +201,12 @@ def update_rois(mca, bgr_width=3,correct=True):
     """
     Update the rois.
 
-    Keywords:
-        bgr_width:
-            Set this keyword to set the width of the background region on either
-            side of the peaks when computing net counts.  The default is 3.
-        correct:
-            Set to True to deadtime correct the data
+    Parameters:
+    -----------
+    * bgr_width: Set this keyword to set the width of the background region on either
+      side of the peaks when computing net counts.  The default is 3.
+
+    * correct: Set to True to deadtime correct the data
     """
     # Sort ROIs.  This sorts by left channel.
     mca.rois.sort()
@@ -207,23 +219,27 @@ def get_rois(mca, bgr_width=3,correct=True):
     """
     Returns a tuple ([total], [net]).
 
-    Keywords:
-        bgr_width:
-            Set this keyword to set the width of the background region on either
-            side of the peaks when computing net counts.  The default is 3.
-        correct:
-            Set to True to deadtime correct the data
-    Outputs:
-         total:  List of the total counts in each ROI.
-         net:    List of the net counts in each ROI.
+    Parameters:
+    -----------
+    * bgr_width: Set this keyword to set the width of the background region on either
+      side of the peaks when computing net counts.  The default is 3.
 
-         The dimension of each list is NROIS, where NROIS
-         is the number of currently defined ROIs for this MCA.  It returns
-         and empty list for both if NROIS is zero.
+    * correct: Set to True to deadtime correct the data
+
+    Outputs:
+    --------
+    * total:  List of the total counts in each ROI.
+
+    * net:    List of the net counts in each ROI.
+
+    The dimension of each list is NROIS, where NROIS
+    is the number of currently defined ROIs for this MCA.  It returns
+    and empty list for both if NROIS is zero.
          
     Example:
-        total, net = mca.get_roi_counts(bgr_width=3)
-        print 'Net counts = ', net
+    --------
+    >>total, net = mca.get_roi_counts(bgr_width=3)
+    >>print 'Net counts = ', net
     """
     total = []
     net = []
@@ -236,22 +252,25 @@ def get_rois(mca, bgr_width=3,correct=True):
 ########################################################################
 def get_rois_dict(mca, bgr_width=3,correct=True):
     """
-    Returns a tuple of dictionarie: (total,net) where total and net are
+    Returns a tuple of dictionary: (total,net) where total and net are
     {'lbl',cts...}
 
-    Keywords:
-        bgr_width:
-            Set this keyword to set the width of the background region on either
-            side of the peaks when computing net counts.  The default is 1.
-        correct:
-            Set to True to deadtime correct the data
+    Parameters:
+    -----------
+    * bgr_width: Set this keyword to set the width of the background region on either
+      side of the peaks when computing net counts.  The default is 1.
+
+    * correct: Set to True to deadtime correct the data
             
     Outputs:
-         total:  Dictionary of total counts in each ROI.
-         net:    Dictionary of net counts in each ROI.
+    --------
+    * total:  Dictionary of total counts in each ROI.
+
+    * net:    Dictionary of net counts in each ROI.
          
     Example:
-        (total,net) = get_rois_dict(mca, bgr_width=3)
+    --------
+    >>(total,net) = get_rois_dict(mca, bgr_width=3)
     """
     total = {}
     net  = {}
@@ -268,10 +287,11 @@ def med_get_rois(med, bgr_width=3,correct=True):
     Returns the net and total counts for each Roi in each Mca in the Med.
 
     Outputs:
-        Returns a tuple (total, net).  total and net are lists of lists
-        containing the total and net counts in each ROI.  The length of the
-        outer list is self.n_detectors, the length of the total and net lists
-        list for each Mca is the number of ROIs defined for that Mca.
+    --------
+    * Returns a tuple (total, net).  total and net are lists of lists
+      containing the total and net counts in each ROI.  The length of the
+      outer list is self.n_detectors, the length of the total and net lists
+      list for each Mca is the number of ROIs defined for that Mca.
     """
     total = []
     net = []
@@ -287,8 +307,9 @@ def med_get_rois_dict(med, bgr_width=3,correct=True):
     Returns the net and total counts for each Roi in each Mca in the Med.
 
     Outputs:
-        Returns a list of dictionaries.  The list is of length num detectors
-        each entry in the list holds a dictionary of {'lbl:(total, net),...}
+    --------
+    * Returns a list of dictionaries.  The list is of length num detectors
+      each entry in the list holds a dictionary of {'lbl:(total, net),...}
     """
     total = []
     net = []
@@ -303,8 +324,10 @@ def med_add_roi(med, roi):
     """
     This procedure adds an ROI to each Mca in the Med.
 
-    Inputs:
-        roi: A single Mca ROI to be added.
+    Parameters:
+    -----------
+    * med: an med object
+    * roi: A single Mca ROI to be added.
     """
     for mca in med.mca:
         if not hasattr(mca,'rois'):
@@ -317,8 +340,9 @@ def med_delete_roi(med, index):
     This procedure deletes the ROI at position "index" from each Mca in the
     Med.
 
-    Inputs:
-        index:  The index number of the ROI to be deleted.
+    Parameters:
+    -----------
+    * index:  The index number of the ROI to be deleted.
     """
     for mca in med.mca:
         mca.rois.pop(index)
@@ -329,15 +353,18 @@ def med_copy_rois(med, source_mca=0):
     This procedure copies the ROIs defined for one Mca in the Med to all of
     the other Mcas.
 
-    Inputs:
-        source_mca: The index number of the Mca from which the ROIs are to
-                    be copied.  This number ranges from 0 to self.n_detectors-1.
-                    The default is the first Mca (index=0).
-            
-        Note: the ROIs are copied by their position
-                in energy rather than in channels. This is very useful when 
-                copying ROIs when the calibration parameters for each Mca in 
-                the Med are not identical.
+    Parameters:
+    -----------
+    * source_mca: The index number of the Mca from which the ROIs are to
+      be copied.  This number ranges from 0 to self.n_detectors-1.
+      The default is the first Mca (index=0).
+
+    Notes:
+    ------
+    The ROIs are copied by their position
+    in energy rather than in channels. This is very useful when 
+    copying ROIs when the calibration parameters for each Mca in 
+    the Med are not identical.
     """
     if energy == True:
         units = "keV"
@@ -376,7 +403,6 @@ def med_copy_rois(med, source_mca=0):
 #--> from XRF
 #########################################################################
 def get_rois(self,background_width=1,correct=True):
-
     # if total we could calc rois for the total...
     if self.total:
         ret = {}
@@ -393,9 +419,7 @@ def get_rois(self,background_width=1,correct=True):
 
 #########################################################################
 def set_roi(self,label,lrn=[],mca=[],units='keV'):
-
     if mca == []: mca = range(self.med.n_detectors)
-
     # delete rois
     for i in mca:
         d = int(i)

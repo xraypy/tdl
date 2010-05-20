@@ -1,16 +1,14 @@
-########################################################################
 """
-Mark Rivers, GSECARS
 MultiChannel Analyzer (MCA) Energy calibration.
 
-Modifications:
---------------
-- See http://cars9.uchicago.edu/software/python/index.html
-- Modified for Tdl, tpt
+Authors/Modifications:
+----------------------
+Mark Rivers, GSECARS
+* See http://cars9.uchicago.edu/software/python/index.html
+* Modified for Tdl, tpt
 
-"""
-########################################################################
-"""
+Notes:
+------
 Compute channel to energy conversions and visa-versa
 for multi-channel analyzer.
 
@@ -45,12 +43,14 @@ def channel_to_energy(channels, offset=0.0, slope=1.0, quad=0.0):
     Converts channels to energy using the current calibration values
     for the Mca.  
 
-    Inputs:
-        channels: The channel numbers to be converted to energy.  This can be
-                  a single number or a sequence of channel numbers.
+    Parameters:
+    -----------
+    * channels: The channel numbers to be converted to energy.  This can be
+      a single number or a sequence of channel numbers.
             
     Outputs:
-        This function returns the equivalent energy for the input channels.
+    --------
+    * This function returns the equivalent energy for the input channels.
     """
     c  = num.asarray(channels,dtype=num.double)
     if quad != 0.:
@@ -63,9 +63,11 @@ def energy_idx(energy,emin=-1.,emax=-1.):
     """
     Get the indicies of the energy array for emin and emax:
 
-    idx = energy_idx(energy,3.2,7.1)
-    en  = energy[idx]
-    dat = data[idx]
+    Example:
+    --------
+    >>idx = energy_idx(energy,3.2,7.1)
+    >>en  = energy[idx]
+    >>dat = data[idx]
     """
     # find emin
     if emin >= 0.0:
@@ -92,17 +94,18 @@ def energy_to_channel(energy, offset=0.0, slope=1.0, quad=0.0, clip=0):
     """
     Converts energy to channel numbers for an Mca.  
 
-    Inputs:
-        energy: The energy values to be converted to channels. This can be a
-                single number or a sequence energy values.
+    Parameters:
+    -----------
+    * energy: The energy values to be converted to channels. This can be a
+      single number or a sequence energy values.
             
-    Keywords:
-        clip: Set this flag to >0 to clip the returned values to be between
-              0 and clip (inclusive).  The default is not to clip.
+    * clip: Set this flag to >0 to clip the returned values to be between
+      0 and clip (inclusive).  The default is not to clip.
             
     Outputs:
-        This function returns the closest equivalent channel for the
-        input energy.  
+    --------
+    * This function returns the closest equivalent channel for the
+      input energy.  
         
     """
     if (quad == 0.0):
@@ -132,21 +135,25 @@ def channel_to_d(channels,two_theta=0.0, offset=0.0, slope=1.0, quad=0.0):
     """
     Converts channels to "d-spacing" 
 
-    Inputs:
-        channels: The channel numbers to be converted to "d-spacing".
-                  This can be a single number or a list of channel numbers.
+    Parameters:
+    -----------
+    * channels: The channel numbers to be converted to "d-spacing".
+      This can be a single number or a list of channel numbers.
             
     Outputs:
-        This function returns the equivalent "d-spacing" for the input channels.
-        The output units are in Angstroms.
+    --------
+    * This function returns the equivalent "d-spacing" for the input channels.
+      The output units are in Angstroms.
         
-    Restrictions:
-        This function assumes that the units of the energy calibration are keV
-        and that the units of "two-theta" are degrees.
+    Notes:
+    ------
+    This function assumes that the units of the energy calibration are keV
+    and that the units of "two-theta" are degrees.
         
     Example:
-        channels = [100,200,300]
-        d = mca.channel_to_d(channels)
+    --------
+    >>channels = [100,200,300]
+    >>d = mca.channel_to_d(channels)
     """
     e = channel_to_energy(channels,offset=offset, slope=slope, quad=quad)
     return 12.398 / (2. * e * num.sin(two_theta*num.pi/180.))
@@ -157,20 +164,22 @@ def d_to_channel(d, two_theta=0.0, offset=0.0, slope=1.0, quad=0.0, clip=0):
     """
     Converts "d-spacing" to channels
 
-    Inputs:
-        d:  The "d-spacing" values to be converted to channels.
-            This can be a single number or an array of values.
+    Parameters:
+    -----------
+    * d:  The "d-spacing" values to be converted to channels.
+      This can be a single number or an array of values.
             
-    Keywords:
-        clip: Set this flag to 1 to clip the returned values to be between
-              0 and nchans-1.  The default is not to clip.
+    * clip: Set this flag to 1 to clip the returned values to be between
+      0 and nchans-1.  The default is not to clip.
             
     Outputs:
-        This function returns the closest equivalent channel for the input
-        "d-spacing". 
+    --------
+    * This function returns the closest equivalent channel for the input
+      "d-spacing". 
         
     Example:
-        channel = d_to_channel(1.598)
+    --------
+    >>channel = d_to_channel(1.598)
     """
     e = 12.398 / (2. * d * num.sin(two_theta*num.pi/180./2.))
     return energy_to_channel(e,offset=offset, slope=slope, quad=quad, clip=clip)
