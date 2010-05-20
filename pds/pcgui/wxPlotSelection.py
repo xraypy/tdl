@@ -22,7 +22,7 @@ import wx
 import os
 
 from   wxUtil import wxUtil
-from   pds.shellutil import PrintExceptErr
+from   pds.lib.shellutil import PrintExceptErr
 import numpy as num
 
 #############################################################################

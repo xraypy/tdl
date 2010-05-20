@@ -121,8 +121,17 @@ def _import_pyplot(backend="TkAgg",verbose=True):
     # do we need this??
     # ie plotting works without below line
     # but this lets us grab tk if needed...
-    pyplot.plot_root = PLOT_ROOT 
-    # import plotter
+    pyplot.plot_root = PLOT_ROOT
+    
+    # add cmapnames to pyplot if not defined
+    if not hasattr(pyplot.cm, "cmapnames"):
+        cmapnames = []
+        for c in dir(matplotlib.cm):
+            if isinstance(matplotlib.cm.__dict__[c], matplotlib.colors.Colormap):
+                cmapnames.append(c)
+        pyplot.cm.cmapnames = cmapnames
+
+    # import plotter and add to pyplot
     try:
         import plotter
         pyplot.plotter    = plotter.plotter

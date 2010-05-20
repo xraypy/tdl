@@ -17,6 +17,7 @@ import time
 import numpy as num
 
 from   wxUtil import wxUtil
+from   pds.lib.shellutil import mod_import
 import interface_model
 
 #########################################################################

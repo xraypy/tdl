@@ -13,6 +13,8 @@ from PythonCard import model
 import wx, string, sys, os, time
 from wx import stc
 
+from pds.lib.shellutil import mod_import
+
 #######################################################################
 class menuApps:
     

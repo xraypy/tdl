@@ -815,17 +815,13 @@ def main(arg=''):
     #################################################################
     # Import and set default paths
     # Assume the following layout:
-    #      host_path/pds
-    #      host_path/pds/lib
-    #      host_path/pds/startup.pds
-    #      host_path/modules
+    #   pds_path = host_path/pds
+    #   lib_path = host_path/pds/lib
+    #   startup  = host_path/pds/startup.pds
+    #   mod_path = host_path/modules
     #            or
-    #      host_path/pds/modules
-    # Define the following
-    #   lib_path is the directory of pds.lib
-    #   pds_path is the path of the pds directory
-    #   host_path is the path containing pds directory
-    #   mods_path is either pds_path/modules or pds_path
+    #   mods_path = host_path/pds/modules
+    #
     # Additional paths should be set in the startup files
     #################################################################
     tmp = globals()
@@ -901,12 +897,13 @@ def main(arg=''):
         # pds gets started from within the wxGui
         # looks like dir gets reset when call application
         work_dir = os.getcwd()
-        from wxgui import wxShell
+        from pcgui import wxShell
         wxShell.intro     = None
         wxShell.debug     = debug
         wxShell.files     = files
         wxShell.args      = args
-        rsrc_path         = os.path.join(mods_path,'wxgui')
+        #rsrc_path         = os.path.join(mods_path,'wxgui')
+        rsrc_path         = os.path.join(pds_path,'pcgui')
         wxShell.rsrc_path = rsrc_path
         rsrc = os.path.join(rsrc_path,'wxShell.rsrc.py')
         gui  = wxShell.model.Application(wxShell.wxShell, aFileName=rsrc)

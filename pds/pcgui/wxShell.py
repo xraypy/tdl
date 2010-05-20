@@ -1,13 +1,33 @@
 #!/usr/bin/python
-######################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
 GUI shell program
+
+Authors/Modifications:
+----------------------
+Tom Trainor (tptrainor@alaska.edu)
+
+
+Notes:
+-----
 This should normally be run from the pds script
 to set up paths correctly
 
-Modifications:
---------------
+Note this module fails with wx2.8 (works fine with wx2.6).
+In the later versions hitting enter in a field acts like a tab
+in the old version - so moved focus from one widget to another.
+That resulted in the 'enter' key never getting picked up by the
+Process_Event method.  This is due to a change in the default
+behaviour of wx in the latter versions.  The fix is to edit the
+following in the PythonCard module to add wx.WANTS_CHAR and
+remove wx.TAB_TRAVERSAL from the style argument to
+wx.Panel.__init__() and wx.Frame.__init__():
+
+* model.py, line 671:
+    'style | wx.NO_FULL_REPAINT_ON_RESIZE | wx.WANTS_CHARS,'
+* model.py, line 1345:
+    'style=wx.WANTS_CHARS,'
+* widget.py, line 427:
+    'style=wx.WANTS_CHARS | wx.NO_FULL_REPAINT_ON_RESIZE)'
 
 """
 #######################################################################
@@ -15,10 +35,10 @@ Modifications:
 from   PythonCard import model, dialog
 import wx, string, sys, os, time
 from   wx import stc
-
 from   wxUtil import wxUtil
 from   app_menu import menuApps
-import pds.shell
+import pds
+from   pds.lib.shellutil import mod_import
 
 #######################################################################
 
@@ -32,7 +52,7 @@ rsrc_path = '.'
 class wxShell(model.Background,menuApps,wxUtil):
 
     def on_initialize(self, event):
-
+        
         # including sizer setup, do it here
         self.setupSizers()
 
@@ -264,69 +284,40 @@ class wxShell(model.Background,menuApps,wxUtil):
     ###########################################################
     #             EVENTS                                      #
     ###########################################################
-    #def on_ShellCmd_textUpdate(self, event):
-    #    print "textUpdate", event.keyCode, "\n"
-    #def on_ShellCmd_keyUp(self, event):
-    #    print "keyUp", event.keyCode, "\n"
-    #def on_ShellCmd_keyPress(self, event):
-    #    print "keyPress", event.keyCode, "\n"
 
-    """
-    # Use below to test other key bindings
-    def _init_keys(self):
-        #wx.EVT_KEY_DOWN(self.components.ShellCmd, self._hit_enter)
-        #wx.EVT_KEY_UP(self.components.ShellCmd, self._hit_enter)
-        wx.EVT_CHAR(self.components.ShellCmd, self._hit_enter)
-        #wx.EVT_CHAR(self.components.ShellText, self._hit_enter)
-        #wx.EVT_KEY_DOWN(self.components.ShellCmd2, self._hit_enter)
-
-    def _hit_enter(self,event):
-        #keyCode = event.GetKeyCode()
-        self.Process_Event(event)
-    """
-        
     def on_ShellCmd_keyDown(self, event):
         #print "keyDown", event.keyCode, "\n"
-        # print wx.WXK_RETURN
-        # print event.shiftDown, event.controlDown, event.altDown
-        #sys.__stdout__.write(str(event.keyCode))
-        #sys.__stdout__.write(str(wx.WXK_RETURN))
+        #print event.shiftDown, event.controlDown, event.altDown
         self.Process_Event(event)
 
     def Process_Event(self, event):
         """
-        Note this fails with wX2.8.  In the later versions
-        hitting enter in a field acts like a tab, so the
-        event never even makes it here.
-        This works fine with wx2.6
         """
-        keyCode = event.GetKeyCode()
         #print dir(event)
-        #keyCode = event.keyCode
+        keyCode = event.GetKeyCode()
         #print keyCode
-
+        
         #if keyCode == wx.WXK_CONTROL:
-        # 372 is enter on the numeric keypad
-        if (keyCode == wx.WXK_RETURN) or (keyCode == 372):
+        # 372 (old) 310 (new) is enter on the numeric keypad
+        if (keyCode == wx.WXK_RETURN) or (keyCode == wx.WXK_NUMPAD_ENTER):
             self.input_text = self.components.ShellCmd.text
             #self.input_text = self.components.ShellCmd2.text
-
             self.input_text = self.input_text + '\n'
             #tmp = self.prompt + self.input_text
             tmp = self.input_text
             self.PostLineToShellText(tmp)
             self.components.ShellCmd.text = ''
             self.isreading = False
-
-        elif keyCode == 317: # uparrow
+        # uparrow, 317 in old wx, 315 in newer: 
+        elif keyCode == wx.WXK_UP: 
             self.cmd_idx=self.cmd_idx+1
             if self.cmd_idx > self.cmd_count-1:
                 self.cmd_idx = self.cmd_count -1
             self.components.ShellCmd.text = self.cmd_history[self.cmd_idx]
             #self.components.ShellCmd.setInsertionPointEnd()
             self.cmd_from_hist=True
-
-        elif keyCode == 319: # downarrow
+        # downarrow, 319 in old wx, 317 in new
+        elif keyCode == wx.WXK_DOWN: 
             self.cmd_idx=self.cmd_idx+-1
             if self.cmd_idx<0:
                 self.cmd_idx=0
@@ -378,6 +369,44 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.panel.SetAutoLayout( 1 )
         self.panel.Layout()
         self.visible = True
+
+    #####################################################
+    """
+    # some tests
+
+    #def on_ShellCmd_textUpdate(self, event):
+    #    print "textUpdate", event.keyCode, "\n"
+    #def on_ShellCmd_keyUp(self, event):
+    #    print "keyUp", event.keyCode, "\n"
+    #def on_ShellCmd_keyPress(self, event):
+    #    print "keyPress", event.keyCode, "\n"
+
+    # Use below to test other key bindings
+    def _init_keys(self):
+        #wx.EVT_KEY_DOWN(self.components.ShellCmd, self._hit_enter)
+        #wx.EVT_KEY_UP(self.components.ShellCmd, self._hit_enter)
+        #wx.EVT_CHAR(self.components.ShellCmd, self._hit_enter)
+        #wx.EVT_CHAR(self.components.ShellText, self._hit_enter)
+        #wx.EVT_KEY_DOWN(self.components.ShellCmd2, self._hit_enter)
+
+    def _hit_enter(self,event):
+        #keyCode = event.GetKeyCode()
+        #print keyCode
+        #print dir(self)
+        #print self.WindowStyle
+        #print self.WindowStyleFlag
+        # print wx.WXK_RETURN
+        #sys.__stdout__.write(str(event.keyCode))
+        #sys.__stdout__.write(str(wx.WXK_RETURN))
+        self.Process_Event(event)
+
+    # global key down event
+    #def on_keyDown(self,event):
+    #    keycode = event.GetKeyCode()
+    #    #print 'on keydown'
+    #    #print keycode
+    #    self.Process_Event(event)
+    """
 
 ################################################################
 if __name__ == '__main__':

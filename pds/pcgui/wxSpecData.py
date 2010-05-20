@@ -20,6 +20,7 @@ import numpy as num
 from matplotlib import pyplot
 
 from wxUtil import wxUtil
+from pds.lib.shellutil import mod_import
 import scandata 
 
 ############################################################################

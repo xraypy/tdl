@@ -4,7 +4,7 @@
     {'type':'Background',
           'name':'tdl_wxGUI_bgTemplate',
           'title':u'PDS',
-          'size':(633, 411),
+          'size':(633, 408),
           'statusBar':1,
           'style':['resizeable'],
 

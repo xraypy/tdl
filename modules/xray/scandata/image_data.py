@@ -216,9 +216,10 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
         img = ndimage.rotate(img,rotangle)
     if cmap != None:
         if type(cmap) == types.StringType:
-            if cmap in pyplot.cm.cmapnames:
+            #if cmap in pyplot.cm.cmapnames:
+            try:
                 cmap = getattr(pyplot.cm,cmap)
-            else:
+            except:
                 cmap = None
     if im_max != None:
         if im_max < 1: im_max = None

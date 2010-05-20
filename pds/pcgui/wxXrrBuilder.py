@@ -18,6 +18,7 @@ import time
 import numpy as num
 
 from   wxUtil import wxUtil
+from   pds.lib.shellutil import mod_import
 from   mpcutils import compound
 import interface_model
 

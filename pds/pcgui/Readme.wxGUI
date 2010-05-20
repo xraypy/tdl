@@ -4,6 +4,21 @@
    Both these packages need to be installed in the usual
    python site-packages directory for this to work.
 
+ * Note these modules fail with wx2.8 (work fine with wx2.6).
+   In the later versions hitting enter in a field acts like a tab
+   in the old version - so moved focus from one widget to another.
+   This is due to a change in the default behaviour of wx in the
+   latter versions.  The fix is to edit the following in the PythonCard
+   module to add wx.WANTS_CHAR and remove wx.TAB_TRAVERSAL from the style
+   argument to wx.Panel.__init__() and wx.Frame.__init__():
+
+   * model.py, line 671:
+      'style | wx.NO_FULL_REPAINT_ON_RESIZE | wx.WANTS_CHARS,'
+   * model.py, line 1345:
+      'style=wx.WANTS_CHARS,'
+   * widget.py, line 427:
+      'style=wx.WANTS_CHARS | wx.NO_FULL_REPAINT_ON_RESIZE)'
+
  * The data used to render a window/set its properties are in
    the .rscr.py files. These define the various "components" that
    can then be handled in the wrapping class

@@ -14,7 +14,7 @@ if len(args) > 0:
 if pds:
     #from pds.lib.shell import main
     import pds
-    pds.lib.main(args)
+    pds.main(args)
 else:
     #from larch.shell import shell
     #shell(debug=True, scripts = args).cmdloop()

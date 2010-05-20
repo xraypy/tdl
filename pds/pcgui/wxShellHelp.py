@@ -15,7 +15,7 @@ import os
 import types
 
 from  wxUtil import wxUtil
-from  pds.shell import HELP_STR, HELP_USE_STR
+from  pds.lib.shell import HELP_STR, HELP_USE_STR
 
 ########################################################################
 
