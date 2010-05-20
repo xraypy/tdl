@@ -5,7 +5,7 @@ Simple python shell program
 Authors / Modifications:
 ------------------------
 Tom Trainor (tptrainor@alaska.edu ), 6-10-2006 
-- modified from tdl-0.2
+- modified from tdl-0.2: Matt Newville (newvile@cars.uchicago.edu)
 - major revision 10/08 TPT
 
 More information can be found at:
@@ -815,12 +815,11 @@ def main(arg=''):
     #################################################################
     # Import and set default paths
     # Assume the following layout:
-    #   pds_path = host_path/pds
-    #   lib_path = host_path/pds/lib
-    #   startup  = host_path/pds/startup.pds
-    #   mod_path = host_path/modules
-    #            or
+    #   pds_path  = host_path/pds
+    #   lib_path  = host_path/pds/lib
+    #   startup   = host_path/pds/startup.pds
     #   mods_path = host_path/pds/modules
+    #   mods_path = host_path/modules
     #
     # Additional paths should be set in the startup files
     #################################################################
@@ -833,9 +832,8 @@ def main(arg=''):
     # host_path
     host_path = os.path.split(pds_path)[0]
     # host_path/modules
-    mods_path = os.path.join(host_path,"modules")
-    if not os.path.exists(mods_path):
-        mods_path = lib_path
+    mods_path = [os.path.join(host_path,"modules")]
+    mods_path.append(os.path.join(pds_path,"modules"))
 
     # Set Python Path
     if verbose:
@@ -843,12 +841,14 @@ def main(arg=''):
         print '    lib_path   = %s  ' % lib_path
         print '    pds_path   = %s  ' % pds_path
         print '    host_path  = %s  ' % host_path
-        if os.path.exists(mods_path):
-            print '    mods_path  = %s  ' % mods_path
     set_path('.',recurse=False,verbose=verbose)
     set_path(lib_path,recurse=False,verbose=verbose)
     set_path(pds_path,recurse=False,verbose=verbose)
-    set_path(mods_path,recurse=True,verbose=verbose)
+    for m in mods_path:
+        if os.path.exists(m):
+            if verbose:
+                print '    mods_path  = %s  ' % m
+            set_path(m,recurse=True,verbose=verbose)
 
     ##############################################################
     # startup  files:
