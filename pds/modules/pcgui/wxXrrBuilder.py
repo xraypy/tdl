@@ -1,11 +1,5 @@
 """
 This should be run as a child window from wxGUI
-
-Authors/Modifications:
-----------------------
-Tom Trainor (tptrainor@alaska.edu)
-
-
 """
 ########################################################################
 

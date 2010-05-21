@@ -3,8 +3,9 @@ Methods to handle generic background determination
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
-
+*  Tom Trainor (tptrainor@alaska.edu)
+*  The polynomial background model follows closley 
+   the XRF background code by Mark Rivers
 
 """
 #######################################################################
@@ -21,8 +22,18 @@ def linear_background(data,nbgr=0):
     """
     Calculate a linear background of the data based on the endpoints
 
-    Note we assume that the data is on an evenly spaced grid so no
-    abscica is used in calculating the background line
+    Parameters:
+    -----------
+    * data is the data to be fit.  We assume that the data is on an
+      evenly spaced grid so no abscica is used in calculating the
+      background line. If your data has uneven spacing then you
+      should use a spline to regrid it before calling this routine
+    * ngr is the number of end points to use in the fit.
+
+    Example:
+    --------
+    >>bgr = linear_background(data,nbgr=3)
+    
     """
     ndat = len(data)
     if nbgr <= 0:
@@ -42,32 +53,21 @@ def linear_background(data,nbgr=0):
 def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
                compress=1,debug=False):
     """
-    Calculate the background for a given line, y.
+    Calculate the background under a curve.
 
-    This is a simplified form of the algorithm used for fitting
-    XRF backgrounds (see Kajfosz and Kwiatek (1987) Nuc.
-    Instr. Meth. in Phys. Res., B22, 78-81)
-
-    At each data point (i) a calculated polynomial is brought up from underneath
-    untill its first contact with any data point within the polynomial range
-    (+/-width).  The distance between the apex of the polynomial (which occurs
-    at point i) and zero is taken as the background for point i.
-
-    This algorithm also allows for the inclusion of a linear background
-    based on the end points.
-
-    Note we assume that data is on a uniform
-    grid, ie delta_x steps between data values are all the same,
-    therefore no abscissa is passed in here.
-    (therefore you might need to spline your data to a
-    uniform grid for this algo to work!)
-
-    * data is the data (ie y-data or ordinate).  
+    Parameters:
+    -----------
+    * data is the data (ie y-data or ordinate) to be fit.
+      We assume that the data is on an
+      evenly spaced grid so no abscica is used in calculating the
+      background line. If your data has uneven spacing then you
+      should use a spline to regrid it before calling this routine
 
     * nbgr is the number of end points to use for calculation of a linear
       background.  This part of the background is removed from the data
       before polynomials are adjusted.  We then add it back to the polynomial
       sum so the total background returned from this function includes both
+      if nbgr is zero no linear background is applied.  
       
     * width is the polynomial (half) width in units of steps
       in y.  If pow = 0.5, width is the radius of a circle.
@@ -92,7 +92,22 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     * debug is a flag (True/False) to indicate if additional debug arrays
       should be calculated
     
-    Note given the polynomial:
+    Notes:
+    ------
+    This is a simplified form of the algorithm used for fitting
+    XRF backgrounds (see Kajfosz and Kwiatek (1987) Nuc.
+    Instr. Meth. in Phys. Res., B22, 78-81)
+
+    At each data point (i) a calculated polynomial is brought up from underneath
+    untill its first contact with any data point within the polynomial range
+    (+/-width).  The distance between the apex of the polynomial (which occurs
+    at point i) and zero is taken as the background for point i.
+
+    This algorithm also allows for the inclusion of a linear background
+    based on the end points.
+
+    Note on computing the polynomial based on the width:
+    Given the polynomial:
         poly    = (r**2. - delx**2)**pow  - (r**2.)**pow
     calc
         d^2(poly)/dx^2 = 0
@@ -102,7 +117,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     If we assume that the 'width' argument corresponds to this
     delx_max_slope, then we can calc r for the polynomial as:
         r = width*sqrt(2*pow-1)
-    (if pow<=1/2 just use r = width)
+    If pow<=1/2 the we just use r = width
 
     """
     # make sure pow is positive
@@ -149,7 +164,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     
     # loop through each point
     # NOTE this loop is the bottleneck
-    # in the backgorund calculations!
+    # in the background calculations!
     # We should speed up this loop.  
     #delta = num.zeros(len(poly))
     n = (npoly-1)/2
@@ -267,13 +282,20 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
 ############################################################
 def compress_array(array, compress):
     """
-    Compresses an 1-D array by the integer factor "compress".
+    Compresses a 1-D array by the integer factor "compress".
 
     Returns:
     --------
     * newarray is the compressed array
     * rem is the number of end points that were not
-      compressed (ie compression has to be by integer divisor).  
+      compressed (ie compression has to be by integer divisor).
+
+    Notes:
+    ------
+    Because compression needs to be an integer factor, not all
+    points in the array will be compressed.  We simply resize the
+    input array by chopping off the end so that its length becomes
+    integer divisible by the compress factor.
     """
     compress = int(compress)
     alen = len(array)
@@ -289,10 +311,15 @@ def compress_array(array, compress):
 def expand_array(array, expand, sample=0, rem=0):
     """
     Expands an 1-D array by the integer factor "expand".
-    
-    if 'sample' is 1 the new array is created with sampling,
-    if 0 then the new array is created via interpolation (default)
-    Temporary fix until the equivalent of IDL's 'rebin' is found.
+
+    Parameters:
+    -----------
+    * array is the array to be expanded
+    * expand is the expansion factor
+    * sample is the sampling flag. if 'sample' is 1 the new array is
+      created with sampling (ie no interpolation), if 0 then the new
+      array is created via interpolation (default)
+    * rem is not used... 
     """
 
     alen = len(array)
@@ -300,7 +327,6 @@ def expand_array(array, expand, sample=0, rem=0):
     if (sample == 1): return num.repeat(array, expand)
 
     kernel = num.ones(expand)/float(expand)
-    # The following mimic the behavior of IDL's rebin when expanding
     temp = num.convolve(num.repeat(array, expand), kernel, mode=2)
     # Discard the first "expand-1" entries
     temp = temp[expand-1:]
@@ -317,7 +343,7 @@ if __name__ == '__main__':
     from mpcutils.mathutil import gauss
     # generate a curve
     npts = 135
-    x = num.array(range(npts))
+    x   = num.array(range(npts))
     g1  = gauss(x, npts/2., 5., 300)
     g2  = gauss(x, npts/2., 30., 100)
     r = num.random.normal(size=npts)

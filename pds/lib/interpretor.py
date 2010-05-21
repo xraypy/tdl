@@ -3,7 +3,7 @@ Simple python interpretor.
 
 Authors/Modifications:
 ----------------------
-T. Trainor (trainor@alaska.edu), 10-2008  
+* T. Trainor (trainor@alaska.edu), 10-2008  
 
 Description:
 ------------

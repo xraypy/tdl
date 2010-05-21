@@ -1,27 +1,28 @@
 """
-Functions for extracting ctr data from ScanData objects.
+Functions/Objects for extracting ctr data from ScanData objects.
 
 Authors / Modifications:
 ------------------------
-T. Trainor (tptrainor@alaska.edu)
-Frank Heberling (Frank.Heberling@kit.edu)
+* T. Trainor (tptrainor@alaska.edu)
+* Frank Heberling (Frank.Heberling@kit.edu)
 
 Notes:
 ------
+The CTR data object takes as an argument ScanData objects
+and a bunch of parameters that define how the data is
+to be integrated and processed to generate CTR structure
+factors.  The key references for how the geometric
+corrections are applied include:
 
-
-
-References:
------------
- * E. Vlieg, J. Appl. Cryst. (1997). 30, 532-543
- * C. Schlepuetz et al, Acta Cryst. (2005). A61, 418-425
+* E. Vlieg, J. Appl. Cryst. (1997). 30, 532-543
+* C. Schlepuetz et al, Acta Cryst. (2005). A61, 418-425
 
 Todo:
 -----
- * Averaging/merging and merge statistics
- * Corrections for rocking scans
- * Add normalized F plots  - divide by |Fctr|,
-    * need to pass delta_H, delta_K for non-rational surfaces...
+* Averaging/merging and merge statistics
+* Integrations/Corrections for rocking scans
+* Add normalized F plots  - divide by |Fctr|
+  (need to pass delta_H, delta_K for non-rational surfaces)
 
 """
 ##############################################################################
@@ -63,58 +64,80 @@ class CtrData:
     """
     CTR data
 
-    scans = list of scan data instances
-
-    I = string label corresponding to the intensity array, ie
-        let y be the intensity, then y = scan[I]
-
-    Inorm=string label corresponding to the normalization intensity array, ie
-        norm = scan[Inorm], where the normalized intensity is taken as
-           ynorm= y/norm
-
-    Ierr = string label corresponding to the intensity error array, ie
-        y_err = scan[Ierr].  We assume these are standard deviations 
-        of the intensities (y).
-        
-      Note when the data are normalized we assume the statistics of norm 
-        go as norm_err = sqrt(norm).  Therefore the error of normalized
-        data is
-           ynorm_err = ynorm * sqrt( (y_err/y)^2 + (norm_err/(norm))^2 )
-                     = ynorm * sqrt( (y_err/y)^2 + 1/norm )
-        If its assumed that y_err = sqrt(y) then the expression could be
-        simplified futher, but we wont make that assumption since there
-        may be other factors that determine how yerr was calculated.  
-
-    Ibgr = string label corresponding to background intensity array
-
-    corr_params = a dictionary containing the necessary information for
-                  data corrections.
-        corr_params['geom'] = Type of goniometer geometry ('psic' is default)
-        corr_params['beam_slits'] = dictionary describing the beam slits,e.g.
-                                    {'horz':.6,'vert':.8}
-        corr_params['det_slits'] = dictionary describing the beam slits,e.g.
-                                    {'horz':.6,'vert':.8}
-        corr_params['sample'] = a dictionary describing the sample shape.
-                                {'dia':0,'angles':{},'polygon':[]}
-                                if dia >=0 then assume a round sample.
-                                Otherwise use polygon/angles
-                                If all are None, then no sample correction is
-                                computed
-        corr_params['scale'] = scale factor to multiply by all the intensity
-                               values. e.g.  if Io ~ 1million cps
-                               then using 1e6 as the scale makes the normalized
-                               intensity close to cps.  ie y = scale*y/norm
-
-        See the Correction class for more info...
-
-    scan_type = Type of scans (e.g. 'image', 'phi', etc..)
-    
+    Attributes:
+    -----------
+    * bad is a list of index values of points flagged as 'bad'
+    * scan is a list holding all the scan data ojects
+    * scan_index is a list (possibly of tuples) that given the
+      scan index corresponding to a data point. see the get_scan method
+    * labels is a dictionary of lists of the string labels
+      for 'I','Inorm','Ierr','Ibgr'
+    * corr_params = list of correction parameter dictionaries
+    * scan_type list of string flags for scan type
+    * H     = array of H values
+    * K     = array of K values
+    * L     = array of L values
+    * I     = array of integrated intensities
+    * Inorm = array of normalization values
+    * Ierr  = array of intensity errors
+    * Ibgr  = array of intensity backgrounds
+    * ctot  = array of total correction factors
+    * F     = array of structure factor magnitudes
+    * Ferr  = array of structure factor error bars
     """
     ##########################################################################
     def __init__(self,scans=[],I='I',Inorm='io',Ierr='Ierr',
                  Ibgr='Ibgr',corr_params={},scan_type='image'):
         """
-        Constructor.
+        Initialize the object.
+
+        Parameters:
+        -----------
+        * scans = list of scan data instances
+
+        * I = string label corresponding to the intensity array, ie
+          let y be the intensity, then y = scan[I]
+
+        * Inorm=string label corresponding to the normalization intensity array, 
+          ie, norm = scan[Inorm], where the normalized intensity is taken as
+          ynorm= y/norm
+
+        * Ierr = string label corresponding to the intensity error array, ie
+          y_err = scan[Ierr].  We assume these are standard deviations 
+          of the intensities (y).
+        
+          Note when the data are normalized we assume the statistics of norm 
+          go as norm_err = sqrt(norm).  Therefore the error of normalized
+          data is
+            ynorm_err = ynorm * sqrt( (y_err/y)^2 + (norm_err/(norm))^2 )
+                      = ynorm * sqrt( (y_err/y)^2 + 1/norm )
+          If its assumed that y_err = sqrt(y) then the expression could be
+          simplified futher, but we wont make that assumption since there
+          may be other factors that determine how yerr was calculated.  
+
+        * Ibgr = string label corresponding to background intensity array
+
+        * corr_params = a dictionary containing the necessary information for
+          data corrections.
+          corr_params['geom'] = Type of goniometer geometry ('psic' is default)
+          corr_params['beam_slits'] = dictionary describing the beam slits,e.g.
+                                      {'horz':.6,'vert':.8}
+          corr_params['det_slits'] = dictionary describing the beam slits,e.g.
+                                     {'horz':.6,'vert':.8}
+          corr_params['sample'] = a dictionary describing the sample shape.
+                                  {'dia':0,'angles':{},'polygon':[]}
+                                  if dia >=0 then assume a round sample.
+                                  Otherwise use polygon/angles
+                                  If all are None, then no sample correction is
+                                  computed
+          corr_params['scale'] = scale factor to multiply by all the intensity
+                                 values. e.g.  if Io ~ 1million cps
+                                 then using 1e6 as the scale makes the normalized
+                                 intensity close to cps.  ie y = scale*y/norm
+
+          See the Correction class for more info...
+
+        * scan_type = Type of scans (e.g. 'image', 'phi', etc..)
         
         """
         self.fig    = None
@@ -152,7 +175,10 @@ class CtrData:
 
     ##########################################################################
     def __save__(self,):
-        """ """
+        """
+        this is called by the pickler so we can delete stuff
+        we dont want to pickle
+        """
         del self.cursor
         self.cursor = None
 
@@ -160,12 +186,17 @@ class CtrData:
     def append_scans(self,scans,I=None,Inorm=None,Ierr=None,Ibgr=None,
                      corr_params=None,scan_type=None):
         """
-        scans is a list of scan data objects.
+        Append new scan data
 
-        The rest of the arguments (defined above)
-        should be the same for each scan in the list.
+        Parameters:
+        -----------
+        * scans is a list of scan data objects.
 
-        For any argument with None passed we use previous vals...
+        * The rest of the arguments (defined in __init__)
+          should be the same for each scan in the list.
+
+        For any argument with None passed we use previous defined
+        values - based on the last exisiting data point.  
         """
         if type(scans) != types.ListType:
             scans = [scans]
@@ -252,26 +283,26 @@ class CtrData:
     def integrate_point(self,idx,**kw):
         """
         (Re)-integrate an individual structure factor point.
-        
-        idx is the index number of the point
+
+        Parameters:
+        -----------
+        * idx is the index number of the point
 
         If scan type is image use the following kw arguments
         (if the argument is not passed the existing value is used,
-        ie just use these to update parameters)
-        #
-        bad        = True/False flags point as bad or not
-        #
-        roi        = image roi
-        rotangle   = image rotation angle
-        bgr_params = image background parameters
-        plot       = True/False to show integration plot 
-        fig        = Fig number for plot
-        # 
-        I          = Intensity label
-        Inorm      = Intensity norm label
-        Ierr       = Intensity error label
-        Ibgr       = Intensity background label
-        corr_params = CTR correction parameters
+        ie just use these to update/change parameters)
+        
+        * bad        = True/False flags point as bad or not
+        * roi        = image roi
+        * rotangle   = image rotation angle
+        * bgr_params = image background parameters
+        * plot       = True/False to show integration plot 
+        * fig        = Fig number for plot
+        * I          = Intensity label
+        * Inorm      = Intensity norm label
+        * Ierr       = Intensity error label
+        * Ibgr       = Intensity background label
+        * corr_params = CTR correction parameters
         
         """
         if idx not in range(len(self.L)): return
@@ -340,7 +371,16 @@ class CtrData:
     ##########################################################################
     def plot(self,fig=None,num_col=2,cursor=True,verbose=True,spnt=None):
         """
-        Plot the raw structure factor data
+        Plot the structure factor data vs L
+
+        Parameters:
+        -----------
+        * fig is the figure number to plot to
+        * num_col is the number of plot columns
+        * cursor is a flag to indicate cursor updates
+        * verbose is a flag to indicate if cursor clicks
+          should also print info
+        * spnt is point index to plot in red
         """
         hksets  = sort_data(self)
         nset    = len(hksets)
@@ -384,7 +424,17 @@ class CtrData:
     ##########################################################################
     def plot_I(self,fig=None,num_col=2,cursor=True,verbose=True,spnt=None):
         """
-        Plot the raw intensities
+        Plot the raw intensities vs L
+
+        Parameters:
+        -----------
+        * fig is the figure number to plot to
+        * num_col is the number of plot columns
+        * cursor is a flag to indicate cursor updates
+        * verbose is a flag to indicate if cursor clicks
+          should also print info
+        * spnt is point index to plot in red
+        
         """
         hksets  = sort_data(self)
         nset    = len(hksets)
@@ -463,9 +513,13 @@ class CtrData:
         """
         Plot the raw data for a selected point
 
-        idx = point index.
-        if idx = None, then uses last cursor click
-        fig = fig number
+        Parameters:
+        -----------
+        * idx = point index.
+          if idx = None, then uses last cursor click
+        * fig = fig number
+        * show_int is a flag for showing integration plot for images
+        * cmap is the color map for images
         """
         if idx == None:
             idx = self.get_idx()
@@ -482,10 +536,12 @@ class CtrData:
     ##########################################################################
     def get_idx(self):
         """
-        Get point index from plot selection
-        
-        ie  L = ctr.L[point_idx]
-        etc.
+        Get point index from last plot selection
+
+        Example:
+        -------
+        >>idx = ctr.get_idx()
+        >>L = ctr.L[idx]
         """
         if self.cursor == None:
             return None
@@ -511,9 +567,15 @@ class CtrData:
     ##########################################################################
     def get_scan(self,idx=None):
         """
-        Get scan from point index
+        Get scan from point index (idx)
 
-        Returns (scan,point)
+        If idx is None it uses the last plot selection        
+
+        Returns:
+        --------
+        * tuple of (scan,point) where scan is the
+          scan data object and point is the point
+          in the scan (for image/stationary scans)
         """
         if idx == None:
             idx = self.get_idx()
@@ -531,7 +593,7 @@ class CtrData:
     ##########################################################################
     def get_points(self,fig=None):
         """
-        get index value of points from plot
+        get index value of points from the plot zoom
         """
         if self.cursor == None:
             return None
@@ -585,6 +647,12 @@ def sort_data(ctr,hkdecimal=3):
 
     Assume H,K define a set with a range of L values
     All arrays should be of len npts. 
+
+    Parameters:
+    -----------
+    * ctr is a ctr data object
+    * hkdecimal is the number of precision to round H and K
+      values to for sorting.  
 
     """
     # round H and K to sepcified precision
@@ -728,7 +796,6 @@ def get_params(ctr,point):
     """
     Return relevant parameters from a specified point
     of a ctr object.  ie use to copy parameters...
-    
     """
     intpar = {}
     corrpar = {}
@@ -901,7 +968,9 @@ class CtrCorrectionPsic:
     """
     Data point operations / corrections for Psic geometry
 
-    Note: All correction factors are defined such that the
+    Notes:
+    ------
+    All correction factors are defined such that the
     measured data is corrected by multiplying times
     the correction: 
       Ic  = Im*ct
@@ -918,24 +987,24 @@ class CtrCorrectionPsic:
       ct = prod_i(1/Xi) = prod_i(ci)
       ci = 1/Xi
       
-    If there is an error or problem in the routine for a sepcific
+    If there is an error or problem in the routine for a specific
     correction factor, (e.g. divide by zero), the routine should
     return a zero.  This way the corrected data is zero'd....
 
-    The correction factors depend on the goniometer geometry
-     gonio = gonio_psic.Psic instance
+    * The correction factors depend on the goniometer geometry
+      gonio = gonio_psic.Psic instance
 
-    The slits settings are needed.  Note if using a large area detector
-    you may pass det_slits = None and just spill off will be computed
-       beam_slits = {'horz':.6,'vert':.8}
-       det_slits = {'horz':20.0,'vert':10.5}
-    these are defined wrt psic phi-frame:
-       horz = beam/detector horz width (total slit width in lab-z,
-              or the horizontal scattering plane)
-       vert = detector vert hieght (total slit width in lab-x,
-              or the vertical scattering plane)
+    * The slits settings are needed.  Note if using a large area detector
+      you may pass det_slits = None and just spill off will be computed
+        beam_slits = {'horz':.6,'vert':.8}
+        det_slits = {'horz':20.0,'vert':10.5}
+      these are defined wrt psic phi-frame:
+        horz = beam/detector horz width (total slit width in lab-z,
+               or the horizontal scattering plane)
+        vert = detector vert hieght (total slit width in lab-x,
+               or the vertical scattering plane)
 
-    A sample description is needed.
+    * A sample description is needed.
       sample = {}
         sample['dia'] = is taken as the diameter of a round sample
                         mounted on center. if dia<=0 then we either use
@@ -949,36 +1018,48 @@ class CtrCorrectionPsic:
                   the sample.  They should be given in general lab
                   frame coordinates.
 
-         angles = {'phi':0.,'chi':0.,'eta':0.,'mu':0.}
-             are the instrument angles at which the sample
-             vectors were determined.
+        angles = {'phi':0.,'chi':0.,'eta':0.,'mu':0.}
+                 are the instrument angles at which the sample
+                 vectors were determined.
 
-      Note: the lab frame coordinate systems is defined such that:
-        x is vertical (perpendicular, pointing to the ceiling of the hutch)
-        y is directed along the incident beam path
-        z make the system right handed and lies in the horizontal scattering plane
-          (i.e. z is parallel to the phi axis)
+    Note: the lab frame coordinate systems is defined such that:
+    x is vertical (perpendicular, pointing to the ceiling of the hutch)
+    y is directed along the incident beam path
+    z make the system right handed and lies in the horizontal scattering plane
+    (i.e. z is parallel to the phi axis)
 
-        The center (0,0,0) of the lab frame is the rotation center of the instrument.
+    The center (0,0,0) of the lab frame is the rotation center of the instrument.
 
-        If the sample vectors are given at the flat phi and chi values and with
-        the correct sample hieght (sample Z set so the sample surface is on the
-        rotation center), then the z values of the sample vectors will be zero.
-        If 2D vectors are passed we therefore assume these are [x,y,0].  If this
-        is the case then make sure:
-            angles = {'phi':flatphi,'chi':flatchi,'eta':0.,'mu':0.}
+    If the sample vectors are given at the flat phi and chi values and with
+    the correct sample hieght (sample Z set so the sample surface is on the
+    rotation center), then the z values of the sample vectors will be zero.
+    If 2D vectors are passed we therefore assume these are [x,y,0].  If this
+    is the case then make sure:
+    angles = {'phi':flatphi,'chi':flatchi,'eta':0.,'mu':0.}
 
-        The easiest way to determine the sample coordinate vectors is to take a picture
-        of the sample with a camera mounted such that is looks directly down the omega
-        axis and the gonio angles set at the sample flat phi and chi values and
-        eta = mu = 0. Then find the sample rotation center and measure the position
-        of each corner (in mm) with up being the +x direction, and downstream
-        being the +y direction.  
+    The easiest way to determine the sample coordinate vectors is to take a picture
+    of the sample with a camera mounted such that is looks directly down the omega
+    axis and the gonio angles set at the sample flat phi and chi values and
+    eta = mu = 0. Then find the sample rotation center and measure the position
+    of each corner (in mm) with up being the +x direction, and downstream
+    being the +y direction.  
 
-    Note need to add attenuation parameters.  
+    Note this routine does not correct for attenuation factors.  
     
     """
     def __init__(self,gonio=None,beam_slits={},det_slits=None,sample={}):
+        """
+        Initialize
+
+        Parameters:
+        -----------
+        * gonio is a goniometer instance used for computing reciprocal
+          lattice indicies and psuedo angles from motor angles
+        * beam_slits are dictionary defining the incident beam aperature
+        * det_slits are a dictionary defining the detector aperature
+        * sample is a dictionary describing the sample geometry
+        (see the instance documentation for more details)
+        """
         self.gonio      = gonio
         if self.gonio.calc_psuedo == False:
             self.gonio.calc_psuedo = True
@@ -1023,6 +1104,7 @@ class CtrCorrectionPsic:
     def lorentz_scan(self):
         """
         Compute the Lorentz factor for a generic scan
+        
         Note this is approximate. In general for bulk xrd
         with single crystals lorentz factor is defined as:
           L = 1/sin(2theta)
@@ -1041,6 +1123,7 @@ class CtrCorrectionPsic:
         """
         Compute the dl of the rod intercepted by the detector.
         (this correction only applies for rocking scans)
+        
         This can be (roughly) approximated from:
           dl = dl_o * cos(beta)
           where dl_o is the detector acceptance at beta = 0
@@ -1089,6 +1172,7 @@ class CtrCorrectionPsic:
     def active_area(self,plot=False,fig=None):
         """
         Compute active area correction (c_a = A_beam/A_int)
+        
         Use to correct scattering data for area effects,
         including spilloff, i.e.
            Ic = Im * ca = Im/A_ratio 
@@ -1170,7 +1254,7 @@ def test1():
                             det_slits=det_slits,sample=sample)
     ct = cor.ctot_stationary(plot=True)
 
-##########################################################################
+##############################################################################
 if __name__ == "__main__":
     """
     test 

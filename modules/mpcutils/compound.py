@@ -3,7 +3,7 @@ Utilities for handling the stiochiometry of chemical compounds
 
 Authors/Modifications:
 ----------------------
-T. Trainor (tptrainor@alaska.edu)
+* T. Trainor (tptrainor@alaska.edu)
 
 Notes:
 ------

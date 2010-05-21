@@ -3,8 +3,8 @@ Numerical/plotting features for shell program
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu), 11-08
-Initial ideas from old tdl NumImports module by Matt Newville
+* Tom Trainor (tptrainor@alaska.edu), 11-08
+* Initial ideas from old tdl NumImports module by Matt Newville
 
 Notes:
 ------

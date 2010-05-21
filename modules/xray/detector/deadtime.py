@@ -3,7 +3,7 @@ Deadtime calculations
 
 Authors/Modifications:
 ----------------------
-T. Trainor (tptrainor@alaska.edu), 6-10-2006 
+* T. Trainor (tptrainor@alaska.edu), 6-10-2006 
 
 Description:
 ------------

@@ -3,7 +3,7 @@ Menu function to handle interactive ctr data processing.
 
 Authors / Modifications:
 ------------------------
-Tom Trainor (tptrainor@alaska.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
 
 """

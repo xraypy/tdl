@@ -3,7 +3,7 @@ Read simple formatted files
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (trainor@alaska.edu) 
+* Tom Trainor (trainor@alaska.edu) 
 
 
 """

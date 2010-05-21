@@ -1,14 +1,9 @@
 """
 wX Utilities Class
 
-Authors / Modifications:
-------------------------
-T. Trainor (fftpt@uaf.edu) 6-10-2006  
-
-
 Todo:
 ----
-- make sure this can make various GUI's run
+* make sure this can make various GUI's run
   independant of starting wxGUI....
 
 """

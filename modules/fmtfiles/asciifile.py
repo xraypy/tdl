@@ -1,11 +1,11 @@
 """
 Authors/Modifications:
 ----------------------
-M. Newville
+* M. Newville
 
 Notes:
 ------
-- module is out of date
+* module is out of date
 
 """
 ##########################################################################

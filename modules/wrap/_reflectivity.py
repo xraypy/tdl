@@ -3,7 +3,7 @@ Wrapper for the reflectivity / reflection XSW functions in _ref.dll
 
 Authors/Modifications:
 ----------------------
-T. Trainor (tptrainor@alaska.edu)
+* T. Trainor (tptrainor@alaska.edu)
 
 Notes:
 ------

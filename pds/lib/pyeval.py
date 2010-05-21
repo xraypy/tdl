@@ -3,8 +3,8 @@ Simple python interpretor functions
 
 Authors / Modifications:
 ------------------------
-T. Trainor (tptrainor@alaska.edu) 10-6-2008  
-- Original version: numeval.py from data_shell_2 (6-1-2004)
+* T. Trainor (tptrainor@alaska.edu) 10-6-2008  
+* Original version: numeval.py from data_shell_2 (6-1-2004)
 
 Description:
 ------------ 

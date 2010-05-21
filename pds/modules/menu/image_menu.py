@@ -3,7 +3,7 @@ Menu function to handle interactive image processing
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
 """
 #######################################################################

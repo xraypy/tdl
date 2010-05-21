@@ -1,11 +1,10 @@
-##############################################################################
 """
-T. Trainor (fftpt@uaf.edu)
 Functions for operating on / working with
 med's in scandata
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+* T. Trainor (tptrainor@alaska.edu)
 
 """
 ##############################################################################

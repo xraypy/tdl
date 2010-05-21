@@ -3,9 +3,9 @@ Utilities for shell programs
 
 Authors/Modifications:
 ---------------------
-M. Newville (2006)
-Modified from tdl-revision 226 for use with pds
-shell program Tom Trainor (tptrainor@alaska.edu)
+* M. Newville (2006)
+* Modified from tdl-revision 226 for use with pds
+  shell program Tom Trainor (tptrainor@alaska.edu)
 
 """
 ##########################################################################

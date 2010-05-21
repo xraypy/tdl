@@ -3,9 +3,9 @@ Methods to handle image processing
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
-Frank Heberling (Frank.Heberling@ine.fzk.de)
-Matt Newville (newville@cars.uchicago.edu)
+* Tom Trainor (tptrainor@alaska.edu)
+* Frank Heberling (Frank.Heberling@ine.fzk.de)
+* Matt Newville (newville@cars.uchicago.edu)
 
 Notes:
 ------
@@ -14,13 +14,12 @@ Simple integrations and plotting
 
 Todo:
 -----
- - Improve /speedup image background determination
+* Improve /speedup image background determination
 
-"""
-#######################################################################
-"""
-Note issue with organization of PIL/Image modules when
-try to build exe.  Therefore, just do import of Image
+Notes:
+------
+There is an issue with organization of PIL/Image modules when
+try to build an exe.  Therefore, just do import of Image
 inside the functions that need it (read_file)
 
 Also, note in older versions of PIL:
@@ -89,7 +88,7 @@ def read(file):
 #######################################################################
 def read_files(file_prefix,start=0,end=100,nfmt=3):
     """
-    read files
+    read files that have a numerical suffix
     """
     images  = []
     format = '%' + str(nfmt) + '.' + str(nfmt) + 'd'
@@ -185,21 +184,23 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
     """
     show image
     
-    * arguments:
-       img              # the image array to be displayed
-       fig = None       # Figure to plot to
-       figtitle = ''    # Title
-       cmap = None      # Colormap.  None uses default
-                        # you can pass a string name if its in pyplot.cm.colormaps
-                        # or you can pass explicitly the colormap
-       verbose = False  # Print some fig statistics
-       im_max  = None   # Max intensity value
-       rotangle = 0.0   # Rotation angle in degrees ccw
-       roi = None       # Plot an roi -> [x1,y1,x2,y2]
-    * examples:
-       >>>image_plot(im,fig=1,figtitle='Image',cmap='hot')
-       >>>image_plot(im,fig=1,figtitle='Image',cmap=pyplot.cm.Spectral)
-       
+    Parameters:
+    -----------
+    * img              # the image array to be displayed
+    * fig = None       # Figure to plot to
+    * figtitle = ''    # Title
+    * cmap = None      # Colormap.  None uses default
+                       # you can pass a string name if its in pyplot.cm.colormaps
+                       # or you can pass explicitly the colormap
+    * verbose = False  # Print some fig statistics
+    * im_max  = None   # Max intensity value
+    * rotangle = 0.0   # Rotation angle in degrees ccw
+    * roi = None       # Plot an roi -> [x1,y1,x2,y2]
+
+    Examples:
+    ---------
+    >>image_plot(im,fig=1,figtitle='Image',cmap='hot')
+    >>image_plot(im,fig=1,figtitle='Image',cmap=pyplot.cm.Spectral)
     """
     if verbose:
         print '-----'
@@ -301,12 +302,14 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
     Calc the integral after image is summed down 'c'olumns
     or across 'r'ows.
     
-    This returns (I,Ierr,Ibgr):
-      I = the integrated background subtracted intensity
-      Ierr = the standard deviation (std_dev) of I.  
+    Returns:
+    --------
+    * tuple (I,Ierr,Ibgr)
+    * I = the integrated background subtracted intensity
+    * Ierr = the standard deviation (std_dev) of I.  
              Assume that the errors follow counting statistics:
-                err = std_dev = sqrt(variance) = sqrt(signal)
-      Ibgr = the background intensity
+             err = std_dev = sqrt(variance) = sqrt(signal)
+    * Ibgr = the background intensity
     
     """
     # get line sum
@@ -337,6 +340,8 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,tangent=False,
     """
     Calculate a 2D background for the image.
 
+    Parameters:
+    -----------
     * image is the (hopefully clipped) image data
 
     * lineflag ('c' or 'r') corresponds to to direction which is
@@ -435,6 +440,9 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,tangent=False,
 
 ################################################################################
 class ImageAna:
+    """
+    Analyze images
+    """
     def __init__(self,image,roi=[],rotangle=0.0,
                  bgrflag=1,
                  cnbgr=5,cwidth=0,cpow=2.,ctan=False,
@@ -442,8 +450,10 @@ class ImageAna:
                  nline=1,filter=False,compress=1,
                  plot=True,fig=None,figtitle=''):
         """
-        Analyze images
-        
+        Initialize
+
+        Parameters:
+        -----------
         * image is the image data
 
         * roi is the 'peak' roi = [x1,y1,x2,y2]
@@ -626,7 +636,7 @@ class ImageAna:
     ############################################################################
     def plot(self,fig=None):
         """
-        make fancy 4-panel plot
+        make fancy 4-panel plot. fig is figure number to plot to
         """
         if self.integrated == False:
             self.integrate()
@@ -736,6 +746,21 @@ class ImageScan:
     """
     def __init__(self,image=[],rois=None,rotangle=None,bgr_params=None,
                  archive=None):
+        """
+        Initialize
+
+        Parameters:
+        -----------
+        * image is a list of images (2d arrays)
+        * rois is a list of roi values
+        * rotangle is a list of rotangles
+        * bgr_params is a list of backgorund params
+        * archive is a dictionary with archive info
+          archive['file'] = file name for image archive
+          archive['path'] = path for image archive
+          archive['setname'] = set name for image archive
+          archive['descr'] = description of data for image archive
+        """
         if type(image) != types.ListType: image = [image]
         if archive != None:
             file    = archive.get('file','images.h5')
@@ -866,7 +891,12 @@ class ImageScan:
                   bad_points=[],plot=False,fig=None):
         """
         integrate images
-        roi  = [x1,y1,x2,y2]
+
+        Parameters:
+        -----------
+        * idx are the indicies to integrate
+        * other parameters are same as on __init__ and can
+          be updated here or pass as None to use existing values.
         """
         # make sure arrays exist:
         if self._is_init()==False:

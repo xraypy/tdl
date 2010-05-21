@@ -1,14 +1,13 @@
 """
-Scan Data
+Class to store and operate on generic 'scan data'
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
-Notes:
-------
-Class to store and operate on generic 'scan data'
-
+Todo:
+-----
+* Check on the merge and append methods
 """
 #######################################################################
 
@@ -24,44 +23,51 @@ import save_data
 #######################################################################
 class ScanData:
     """
-    ScanData Class holds:
-    name = scan name
-    dims ->[npts1] for a 1-d scan
-           [npts1,npts2] for a 2-d scan
-            where npts1 is the outer loop
-            and npts2 is for the inner loop
-    scalers = {'io':[],'i1':[]}  -> each array has dims = dims
-    positioners  = {'E':[]}      -> these may be single values,
-                                    or same size as scalers
-    primary_axis = ['E']         -> if multi-dim, list of outer, inner
-    primary_det  = 'i1'          -> use for default plotting
-    state = {}                   -> dictionary of additional state information
+    Very simple container that holds scan data.
 
-    If read in the object may also have the following:    
-      med = MedScan object, holds one med instance per point
-      xrf = XrfScan object, holds one xrf instance per point
-      image = ImageScan object, holds one image instance per point
+    Attributes:
+    -----------
+    * name = scan name
+    * dims ->[npts1] for a 1-d scan
+             [npts1,npts2] for a 2-d scan
+             where npts1 is the outer loop
+             and npts2 is for the inner loop
+    * scalers = {'io':[],'i1':[]}  -> each array has dims = dims
+    * positioners  = {'E':[]}      -> these may be single values,
+                                      or same size as scalers
+    * primary_axis = ['E']         -> if multi-dim, list of outer, inner
+    * primary_det  = 'i1'          -> use for default plotting
+    * state = {}                   -> dictionary of additional state information
 
-    On initialization pass
-       name='',
-       dims=[],
-       scalers={},
-       positioners={},
-       primary_axis=[],
-       primary_det=None,
-       state={},
-       med=[], list of med objects
-       xrf=[], list of xrf objects
-       xrf_lines=None, list of lines
-       image=[], list of images
-       image_rois=None, list of rois
+    The object may also have the following:    
+    * med = MedScan object, holds one med instance per point
+    * xrf = XrfScan object, holds one xrf instance per point
+    * image = ImageScan object, holds one image instance per point
+
     """
     ################################################################
     def __init__(self,name='',dims=[],scalers={},positioners={},
                  primary_axis=[],primary_det=None,state={},
                  med=None,xrf=None,xrf_lines=None,
                  image=None,image_rois=None):
-        
+        """
+        Initialize
+
+        Parameters:
+        -----------
+        * name=''
+        * dims=[]
+        * scalers={}
+        * positioners={}
+        * primary_axis=[]
+        * primary_det=None
+        * state={}
+        * med=[] list of med objects
+        * xrf=[] list of xrf objects
+        * xrf_lines=None list of lines
+        * image=[] list of images
+        * image_rois=None list of rois
+        """
         self.name         = name
         self.dims         = dims
         self.primary_axis = primary_axis
@@ -213,6 +219,7 @@ class ScanData:
 def append(data1,data2,sort=True):
     """
     Append 2 ScanData instances
+    
     This works for one dimensional data
 
     Note check how this works.  only append arrays of full length
@@ -504,16 +511,23 @@ def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
     """
     Do a deadtime fit to data
 
-      x = linear axis.  ie this should be proportional
-          to the real input count.  default = 'io'
-      y = 'Med'
-      norm='Seconds'
-      offset=True
-      display=True
+    Parameters:
+    * data is a scan data object - in general this should be a
+      'deadtime scan' 
+    * x = linear axis.  ie this should be proportional
+      to the real input count.  default = 'io'
+    * y = 'Med' of the axis to use as ocr
+    * norm='Seconds'
+    * offset=True
+    * display=True
 
-    returns the deadtime tau values.  
+    returns:
+    --------
+    * the deadtime tau values.  
 
-    Note make sure normalization is checked carefully
+    Notes:
+    ------
+    make sure normalization is checked carefully
     e.g. ocr from the med is cps, to compare vs io should
     normalize io/count_time
     

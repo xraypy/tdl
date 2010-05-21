@@ -3,7 +3,7 @@ Functions for interactive analysis of xrf data
 
 Authors/Modifications:
 ----------------------
-T. Trainor (tptrainor@alaska.edu)
+* T. Trainor (tptrainor@alaska.edu)
 
 
 """

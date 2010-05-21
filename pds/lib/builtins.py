@@ -3,8 +3,8 @@ Builtin functions for pds
 
 Authors/Modifications:
 ----------------------
-- T. Trainor, M. Newville
-- Modified from tdl r259 for use with pds shell program
+* T. Trainor, M. Newville
+* Modified from tdl r259 for use with pds shell program
 
 """
 #####################################################################

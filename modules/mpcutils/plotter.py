@@ -4,7 +4,7 @@ around some of matplotlib.pyplot
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
 """
 ################################################################################

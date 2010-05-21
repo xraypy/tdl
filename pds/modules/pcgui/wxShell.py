@@ -4,7 +4,7 @@ GUI shell program
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
 
 Notes:

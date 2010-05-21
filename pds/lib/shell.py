@@ -4,9 +4,9 @@ Simple python shell program
 
 Authors / Modifications:
 ------------------------
-Tom Trainor (tptrainor@alaska.edu ), 6-10-2006 
-- modified from tdl-0.2: Matt Newville (newvile@cars.uchicago.edu)
-- major revision 10/08 TPT
+* Tom Trainor (tptrainor@alaska.edu ), 6-10-2006 
+* modified from tdl-0.2: Matt Newville (newvile@cars.uchicago.edu)
+* major revision 10/08 TPT
 
 More information can be found at:
 http://cars.uchicago.edu/ifeffit/tdl/docs/pds

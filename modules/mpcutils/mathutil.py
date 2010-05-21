@@ -3,9 +3,8 @@ Simple math addons and wrappers
 
 Authors/Modifications:
 ----------------------
-T. Trainor (tptrainor@alaska.edu)
-M. Newville (newville@cars.uchicago.edu)
-
+* T. Trainor (tptrainor@alaska.edu)
+  M. Newville (newville@cars.uchicago.edu)
 * minimize and random from original tdl
 
 Todo:

@@ -1,15 +1,6 @@
-#######################################################################
 """
-Tom Trainor (fftpt@uaf.edu)
 Pylab plotter GUI
 
-Modifications:
---------------
-
-
-"""
-#######################################################################
-"""
 Todo
 - move the plot_cmd to the plotter module
   so we can call without the GUI....

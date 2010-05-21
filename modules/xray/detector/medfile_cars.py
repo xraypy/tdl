@@ -4,7 +4,7 @@ Read/Write CARS mca/med files
 
 Authors/Modifications:
 ----------------------
-Mark Rivers, GSECARS
+* Mark Rivers, GSECARS
 * See http://cars9.uchicago.edu/software/python/index.html
 * Modified for Tdl, tpt
 
