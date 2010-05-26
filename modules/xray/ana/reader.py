@@ -1,15 +1,17 @@
 """
-Reading 'scan data'
+Read 'scan data'
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
 
 Todo:
 -----
-- add escan files, ascii_scan files ....
-
+* add escan files, ascii_scan files ....
+* use the 'geo' parameter to allow spec
+  files from vairous beamlines / various
+  gonio geometries to be used
 """
 #######################################################################
 
@@ -29,15 +31,25 @@ import med_data
 ########################################################################
 def spec_scan(spec,sc_num,geo='PSIC_APS_S13'):
     """
-    Return scan data instance from a specfile / scan number
+    Return a ScanData instance from a specfile / scan number
     
-    spec can be a specfile instance or string file name
-    sc_num is the scan number
+    * spec can be a specfile instance or string file name
+    * sc_num is the scan number
+    * geo is a geometry label that helps the reader parse gonio
+      angles depending on the particular beamline / geometry
+      used for data collection.  
 
-    Note that a vector A is appended to the state info.  This
+    Notes:
+    ------
+    The vector A is appended to the state info.  This
     is the set of essential gonio angles at the start of the scan
     These are defined based on the 'geo' label and are geometry/
     beamline specific
+
+    Example:
+    --------
+    >>s = spec_scan('datafile.spc',12)
+    >>plot(s['phi'],s['bicron'])
     
     """
     # Define to make sure we get things sorted correclty. 
@@ -98,39 +110,41 @@ def spec_scan(spec,sc_num,geo='PSIC_APS_S13'):
 ########################################################################
 def spectra_scan(spectra,**kw):
     """
-    Return scan data instance holding a series of spectra.
+    Return ScanData instance holding a series of spectra.
 
-    spectra = string path name (maybe prefix)
-              or list of filenames
+    Parameters:
+    -----------
+    * spectra = string path name (maybe a prefix)
+      or list of filenames
 
     Keywords and defaults:
-        med  = True -> return med's
-        xrf  = False -> return xrf's
-        sd   = True
-              If sd == True then is returns a scan data object
-              Note it will create a dummy axis: x = num.arange(len(med))
-              Otherwise either (XrfScan), (MedScan) or (XrfScan,MedScan)
-              are returned depending on the med and xrf flags
+    * med  = True -> return med's
+    * xrf  = False -> return xrf's
+    * sd   = True
+      If sd == True then this fcn returns a scan data object
+      Note it will create a dummy axis: x = num.arange(len(med))
+      Otherwise either (XrfScan), (MedScan) or (XrfScan,MedScan)
+      are returned depending on the med and xrf flags
 
-        # files
-        start   =  -1
-        end     =  -1
-        nfmt    =  3
-        fmt     = 'CARS'
+    # files --> see the read function in med_data.py 
+    * start   =  -1
+    * end     =  -1
+    * nfmt    =  3
+    * fmt     = 'CARS'
 
-        # For med data --> see med_data.py for more details
-        bad_mca_idx = []
-        total   = True
-        align   = True
-        correct = True
-        tau     = None
+    # For med data --> see med_data.py for more details
+    * bad_mca_idx = []
+    * total   = True
+    * align   = True
+    * correct = True
+    * tau     = None
 
-        # For xrf data --> see xrf_data.py for more details
-        det_idx = 0
-        emin    = -1.
-        emax    = -1.
-        xrf_params = {}
-        lines      = None
+    # For xrf data --> see xrf_data.py for more details
+    * det_idx = 0
+    * emin    = -1.
+    * emax    = -1.
+    * xrf_params = {}
+    * lines      = None
     
     """
     if kw.has_key('sd'): sd = kw.pop('sd')
@@ -245,8 +259,8 @@ def _read_spectra(fname,**kw):
 ########################################################################
 def _spectra_range(self,fname):
     """
-    Finds the range of of numbered spectrum files. fmt assumed:
-       fname.nnn
+    Finds the range of numbered spectrum files.
+    assume the fmt of files is: fname.nnn
     """
     fname = fname + ".*"
     files = glob(fname)
@@ -268,25 +282,30 @@ def image_scan(image,**kw):
     """
     Return scan data instance holding a series of images.
 
-    image = string path name (maybe prefix)
-            or list of filenames
+    Parameters:
+    -----------
+    * image = string path name (maybe prefix)
+      or list of filenames
 
     Keywords and defaults:
-        sd   = True
-              If sd == True then is returns a scan data object
-              Note it will create a dummy axis: x = num.arange(len(image))
-              Otherwise a ImageScan instance is returned
+    * sd   = True
+      If sd == True then is returns a scan data object
+      Note it will create a dummy axis: x = num.arange(len(image))
+      Otherwise a ImageScan instance is returned
 
-        # files
-        start = -1
-        end   = -1
-        nfmt  = 3
-        fmt   = 'tif'
-        
-        # for image data
-        rois  = None
-        #rotangle = None
-        #bgrpar = None
+    # files
+    * start = -1
+    * end   = -1
+    * nfmt  = 3
+    * fmt   = 'tif'
+    
+    # for image data
+    * rois  = None
+    * archive is a dictionary with archive info
+      archive['file'] = file name for image archive
+      archive['path'] = path for image archive
+      archive['setname'] = set name for image archive
+      archive['descr'] = description of data for image archive
 
     Examples:
     >>s = image_scan('Image_file_pfx',start=0,end=5)
@@ -347,8 +366,8 @@ def _read_image(fname,**kw):
 ########################################################################
 def _image_range(fname):
     """
-    Finds the range of of numbered image files. fmt assumed:
-       fname_nnn.tif
+    Finds the range of numbered spectrum files.
+    assume the fmt of files is: fname.nnn
     """
     fname = fname + "_*.tif"
     files = glob(fname)
@@ -367,33 +386,64 @@ def _image_range(fname):
 ########################################################################
 class Reader:
     """
-    Use the reader to read data that should all be treated the same.
-    Therefore we assume that if we read spectra, they all have the same
+    Use the reader to read data files and return ScanData objects.
+    
+    The purpose of the reader is to hold parameters so that
+    the data is processed in the same manner for each file/scan
+    that is read.that should all be treated the same.
+    
+    For example we assume that if we read spectra, they all have the same
     set of params (bad dets', taus, etc..).  Same with images.
 
     This class knows about the following data/file types:
-     * spec files
-     * escan (to be added)
-     * med file (CARS and other fmts)
-     * xrf data
-     * images 
-     * other (ie ssrl files, old spec and super etc..)
+    * spec files
+    * escan (to be added)
+    * med file (CARS and other fmts)
+    * xrf data
+    * images 
+    * other (ie ssrl files, old spec and super etc.. to be added)
 
-    Arguments for initialization:
-     * spec = spec files, string or list of strings
-     * spec_path = string path for spec file locations
-     * escan_path = string path for escan file locations
-     * spectra_path = string path for med or xrf file locations
-     * image_path = string path for image file locations
+    Attributes:
+    -----------
+    # Spec
+    * spec_path is the path to locate spec files
+    * spec_files is a list of spec files
+    * spec_params is a dicitonary: {'image': False,'xrf':False,'med':False}
+
+    # escan
+    * escan_path is the path to locate escan files
+    * escan_files is a list of escan files
+
+    # med/xrf parameters
+    * spectra_path is the path to locate spectra files
+    * spectra_params is a dictionary:
+      {'bad_mca_idx':[],'total':True,'align':True,
+       'correct':True,'tau':None,'det_idx':0,
+       'emin':-1.0,'emax':-1.0,'xrf_params':{},
+       'lines':None,'fmt':'CARS','nfmt':3}
+
+    # image parameters
+    * image_path path to locate image files
+    * image_params is a dictionary:
+      {'rois':None,'fmt':'tif','nfmt':3,'archive':None}
 
     Examples:
-     >>r = scandata.Reader(spec='spec_file.spc')
-     >>s1 = r.spec_scan(1,image=True)
-
+    ---------
+    >>r = scandata.Reader(spec='spec_file.spc')
+    >>s1 = r.spec_scan(1,image=True)
     """
     ########################################################################
     def __init__(self,spec=None,spec_path=None,escan_path=None,
                  spectra_path=None,image_path=None):
+        """
+        Parameters:
+        -----------
+        * spec = spec files, string or list of strings
+        * spec_path = string path for spec file locations
+        * escan_path = string path for escan file locations
+        * spectra_path = string path for med or xrf file locations
+        * image_path = string path for image file locations
+        """
         # Spec
         self.spec_path       = spec_path
         self.spec_files      = []
@@ -420,6 +470,7 @@ class Reader:
 
     ########################################################################
     def __repr__(self):
+        """display"""
         lout = "Spec Files:"
         for s in self.spec_files:
             lout = "%s\n  %s, first=%i, last=%i" % (lout,s.fname,s.min_scan,s.max_scan)
@@ -442,8 +493,17 @@ class Reader:
     ########################################################################
     def med_scan(self,fname,start=-1,end=-1,path=None):
         """
-        Read (collection) of med files into a scan data object
+        Read (a collection of) med files into a scan data object
 
+        Parameters:
+        -----------
+        * fname is the file name or prefix (or list of file names)
+        * start and end are the initial and final numbers of
+          file suffix if they are formatted numerically
+        * path updates the med path setting
+
+        Note:
+        -----
         The data has a dummy axis: x = num.arange(len(med))
         """
         if path: self.spectra_path = path
@@ -464,9 +524,20 @@ class Reader:
     ########################################################################
     def xrf_scan(self,fname,start=-1,end=-1,path=None,med=True):
         """
-        Read (collection) of xrf files into a scan data object
+        Read (a collection of) xrf files into a scan data object
 
-        Note this data object holds both xrf and med data by default.
+        Parameters:
+        -----------
+        * fname is the file name or prefix (or list of file names)
+        * start and end are the initial and final numbers of
+          file suffix if they are formatted numerically
+        * path updates the med path setting
+        * med is a flag that if True results in the ScanData object
+          holding both med and xrf instances
+
+        Notes:
+        -----
+        This data object holds both xrf and med data by default.
         The data has dummy axis: x = num.arange(len(xrf))
         """
         if path: self.spectra_path = path
@@ -491,11 +562,18 @@ class Reader:
     ########################################################################
     def image_scan(self,fname,start=-1,end=-1,path=None):
         """
-        Read (collection) of image files into a scan data object
+        Read (a collection of) image files into a scan data object
 
-        Note makes a dummy axis:
-           x = num.arange(len(image))
+        Parameters:
+        -----------
+        * fname is the file name or prefix (or list of file names)
+        * start and end are the initial and final numbers of
+          file suffix if they are formatted numerically
+        * path updates the image path setting
 
+        Note:
+        -----
+        The data has a dummy axis: x = num.arange(len(med))
         """
         if path: self.image_path = path
         if self.image_path != None:
@@ -510,16 +588,31 @@ class Reader:
 
     ########################################################################
     def escan(self,fname):
+        """
+        not yet implemented
+        """
         pass
     
     ########################################################################
     def ascii_scan(self,fname):
+        """
+        not yet implemented
+        """
         pass
 
     ########################################################################
     def read_spec(self,spec,path=None):
         """
-        add a spec file (or files)
+        Add a spec file (or files) to the reader
+
+        The spec files are read and cached by the
+        reader instance.  See list_spec and spec_scan
+        for more information 
+
+        Paramters:
+        ----------
+        * spec is a string file name (or list of file names)
+        * path updates the spec path setting
         """
         if path != None: self.spec_path = path
         if type(spec) == types.StringType: spec = [spec]
@@ -531,7 +624,7 @@ class Reader:
     ########################################################################
     def list_spec(self, show=True):
         """
-        return a list of spec file scans
+        Return a list of spec file scans
         """
         sc_list = []
         for s in self.spec_files:
@@ -548,12 +641,30 @@ class Reader:
         """
         Get data from a spec scan
 
-        Arguments:
-            scan  = spec scan number
-            file  = spec file name (default = current file)
-            med   = read med files, True/False (default False)
-            xrf   = read xrf files, True/False (default False)
-            image = read image files, True/False (default False)
+        Parameters:
+        -----------
+        * scan  = spec scan number
+        * file  = spec file name (default = first file read in)
+        * med   = read med files, True/False (default False)
+        * xrf   = read xrf files, True/False (default False)
+        * image = read image files, True/False (default False)
+
+        Notes:
+        ------
+        When spec files are read in (see read_spec) they get appended
+        to a list. To access them using this method pass in the file
+        name and scan number.  If the file has been updated since last read,
+        it will be re-read.  If you have only read in a single file, or you
+        want a scan from the first file read in then you dont need to
+        supply the file argument.  If you would like to resort the list
+        of spec files you can use something like the following to move the
+        third file to the top of the list:
+        >>reader.spec_files.insert(0,reader.spec_files.pop(2))
+
+        Also note that if you are reading med/xrf or image files and an
+        explicit path has not been set, then one will be computed using
+        an assumed path relative to the spec files.  See the
+        _spec_spectr_path and _spec_image_path methods
         """
         if med!=None: self.spec_params['med'] = med
         if xrf!=None: self.spec_params['xrf'] = xrf
@@ -656,18 +767,18 @@ class Reader:
     def _spec_spectra_path(self,spec,scan):
         """
         Compute path for spectra associated with spec scan
-        Note this is IDC 13 specific!
+        
+        Notes:
+        ------
+        * This is IDC 13 specific!
+            if self.spectra_path == None:
+              fpfx = spec_path/xrf_files/spec_pfx/nnn/spec_file.spc_nnn
+            else:
+              fpfx = self.spectra_path/spec_file.spc_nnn
+          With nnn = scan number
 
-        if self.spectra_path == None:
-            fpfx = spec_path/xrf_files/spec_pfx/nnn/spec_file.spc_nnn
-        else:
-            fpfx = self.spectra_path/spec_file.spc_nnn
-
-        With nnn = scan number
-
-        Note the read function will add '.point_number' to all
-        the file names...
-
+        * The read function will add '.point_number' to all
+          the file names...
         """
         sc_num = '%03d' % int(scan)
         fpfx = "%s_%s" % (spec.fname, sc_num)
@@ -683,17 +794,18 @@ class Reader:
     def _spec_image_path(self,spec,scan):
         """
         Compute path for spectra associated with spec scan
-        Note this is IDC 13 specific!
+        
+        Notes:
+        ------
+        * This is IDC 13 specific!
+            if self.spectra_path == None:
+              fpfx = spec_path/images/spec_pfx/Snnn/spec_file.spc_Snnn
+            else:
+              fpfx = image_path/spec_file.spc_Snnn
+          With nnn = scan number
 
-        if self.spectra_path == None:
-            fpfx = spec_path/images/spec_pfx/Snnn/spec_file.spc_Snnn
-        else:
-            fpfx = image_path/spec_file.spc_Snnn
-
-        With nnn = scan number
-
-        Note the read function will add '_point_num.tif' to all
-        the file names...
+        * The read function will add '_point_num.tif' to all
+          the file names...
         """
         sc_num = '%03d' % int(scan)
         fpfx = "%s_S%s" % (spec.fname, sc_num)

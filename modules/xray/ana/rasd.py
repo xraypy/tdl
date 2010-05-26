@@ -3,7 +3,7 @@ Function for extracting RASD data from spec "raxr" scans
 
 Authors/Modifications:
 ----------------------
-Frank Heberling (Frank.Heberling@kit.edu)
+* Frank Heberling (Frank.Heberling@kit.edu)
 
 Notes:
 ------
@@ -57,8 +57,9 @@ from image_menu import image_menu
 #############################################################################
 def rasd(spec_path,spec,first_scan,last_scan):
     """
-    Merges all the hklscans of a spec "raxr" scan to one RASDData object containing images and info from the
-    spec file, integrates the images interactively (as a ScanData object), calculates polarization + lorentz correction
+    Merges all the hklscans of a spec "raxr" scan to one RASDData object
+    containing images and info from the spec file, integrates the images
+    interactively (as a ScanData object), calculates polarization + lorentz correction
     factors, plots the RASD wiggle, and writes the Information into a .rsd file.
     """
     spec_file = Reader(spec, spec_path)
@@ -89,7 +90,11 @@ def rasd(spec_path,spec,first_scan,last_scan):
 #############################################################################
 class RasdData:
     def __init__(self,scans=[]):
-        #
+        """
+        Parameters:
+        -----------
+        * scans = list of ScanData objects
+        """
         self.H    = 0
         self.K    = 0
         self.L    = 0
@@ -119,6 +124,9 @@ class RasdData:
 
     ##############################################################################
     def append_rasd(self, scans):
+        """
+        append scans
+        """
         self.H    = scans[0].scalers['H'][0]
         self.K    = scans[0].scalers['K'][0]
         self.L    = scans[0].scalers['L'][0]

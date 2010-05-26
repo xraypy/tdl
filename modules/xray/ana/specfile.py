@@ -3,13 +3,11 @@ Class to handle spec files
 
 Authors/Modifications:
 ----------------------
-Matt Newville (newville@cars.uchicago.edu)
-Tom Trainor (tptrainor@alaska.edu)
-
+* Matt Newville (newville@cars.uchicago.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
 Notes on the spec format:
 -------------------------
-
 An example scan would look like the following:
 
 {{{
@@ -42,15 +40,15 @@ An example scan would look like the following:
 -0.000113467 0.000280176 6.56     0.0011     0.0004    -0.1344   178.1634    53.6970    27.1283  26.664   27.033  25760 56408 52766 0 0 0 0 0 300.004 29
 }}}
 
- * #S indicates a new scan and gives scan number, and scan command
- * #D gives time and data
- * #T gives count time
- * #G0,#G1,#G3,#G4 give geometry data and are described below
- * #Q gives the HKL value at the start of the scan
- * #P0,#P1,#P2,#P3 give the motor settings at the start of the scan
- * Other tags such as ATTEN, ENERGY etc may be added by the user
- * #L gives labels of the variables recorded during the scan
- * Then the scan data
+* #S indicates a new scan and gives scan number, and scan command
+* #D gives time and data
+* #T gives count time
+* #G0,#G1,#G3,#G4 give geometry data and are described below
+* #Q gives the HKL value at the start of the scan
+* #P0,#P1,#P2,#P3 give the motor settings at the start of the scan
+* Other tags such as ATTEN, ENERGY etc may be added by the user
+* #L gives labels of the variables recorded during the scan
+* Then the scan data
 
 The P arrays have corresponding motor labels.  Somewhere in the file
 (at the top for sure, then later if they ever get redefined) there
@@ -82,7 +80,17 @@ import types
 
 #######################################################################
 class SpecFile:
+    """
+    A spec file
+    """
     def __init__(self, fname):
+        """
+        Initialize
+
+        Parameters:
+        -----------
+        * fname is the specfile name (including full path)
+        """
         self.path, self.fname = os.path.split(fname)
         self.max_scan = 0
         self.min_scan = 0
@@ -93,6 +101,7 @@ class SpecFile:
         self.read()
 
     def __repr__(self):
+        """ display """
         self.read()
         lout = "Spec file: %s" % self.fname
         lout = "%s\nPath: %s" % (lout, os.path.join(self.path))
@@ -102,6 +111,12 @@ class SpecFile:
         return lout
 
     def read(self):
+        """
+        Read the specfile
+
+        This will re-read the file if its time stamp
+        has changed since the last read
+        """
         try:
             fname = os.path.join(self.path, self.fname)
             if os.path.getmtime(fname) != self._mtime:
@@ -118,6 +133,9 @@ class SpecFile:
             self._ok = False
 
     def _summarize(self):
+        """
+        summarize
+        """
         lineno = 0
         (mnames,cmnd,date,xtime,Gvals,q,Pvals,atten,energy,lab) = (None,None,None,None,None,None,None,None,None,None)
         (index, ncols, n_sline) = (0,0,0)
@@ -180,18 +198,30 @@ class SpecFile:
             if (k < self.min_scan): self.min_scan = k
 
     def scan_min(self):
+        """
+        get the minimum scan number
+        """
         self.read()
         return self.min_scan
 
     def scan_max(self):
+        """
+        get the max scan number
+        """
         self.read()
         return self.max_scan
 
     def nscans(self):
+        """
+        get the number of scans
+        """
         self.read()
         return len(self._summary)
 
     def _check_range(self,i):
+        """
+        check if scan number is in range
+        """
         self.read()
         j = True
         if ((i > self.max_scan) or (i < self.min_scan)): j = False
@@ -203,6 +233,9 @@ class SpecFile:
 
     #def get_summary(self,sc_num):
     def scan_info(self,sc_num):
+        """
+        return the scan info in a dictionary
+        """
         self.read()
         for s in self._summary:
             if (sc_num == s['index']):
@@ -210,6 +243,9 @@ class SpecFile:
         return None
     
     def scan_data(self, sc_num):
+        """
+        return just the column data from the scan 
+        """
         self.read()
         s = self.scan_info(sc_num)
         if (s == None): return None
@@ -226,6 +262,9 @@ class SpecFile:
         return dat
 
     def scan_dict(self, sc_num):
+        """
+        return scan information and data in a dictionary 
+        """
         self.read()
         sc_dict = {'file':self.fname,
                    'index':sc_num,
@@ -281,6 +320,9 @@ class SpecFile:
         return sc_dict
 
     def list_scans(self):
+        """
+        return a list of scans in the file 
+        """
         self.read()
         sc_list = [] 
         for s in self._summary:
@@ -299,7 +341,7 @@ class SpecFile:
 Some notes on spec G array
 --------------------------
 
-The following code snipet from spec's standard.mac
+The following code snipet from spec standard.mac
 shows how the #G lines in the data file are defined 
 
 {{{

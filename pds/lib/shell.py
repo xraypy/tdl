@@ -173,7 +173,7 @@ class Shell(_NumShell):
         # Builtin commands
         self.pds_commands  = {'quit':self.do_quit,
                               'exit':self.do_quit,
-                              'EOF':self.do_quit,
+                              #'EOF':self.do_quit,
                               'show':self.do_show,
                               'help':self.do_help,
                               'load':self.do_load,
@@ -276,7 +276,8 @@ class Shell(_NumShell):
                     try:
                         line = raw_input(prompt)
                     except EOFError:
-                        line = 'EOF'
+                        #line = 'EOF'
+                        line = 'quit'
                 else:
                     #line = raw_input(self.prompt)
                     self.stdout.write(prompt)
@@ -284,7 +285,8 @@ class Shell(_NumShell):
                     line = self.stdin.readline()
                     #if not len(line):
                     if line == None:
-                        line = 'EOF'
+                        #line = 'EOF'
+                        line = 'quit'
                     else:
                         line = line[:-1] # chop \n
             # exec the line
@@ -299,7 +301,7 @@ class Shell(_NumShell):
         If not blank then
             If a shell command: pass to shell
         Inspect the first token of command line and checks:
-            If special quit keywords return quit: (quit, exit, EOF)
+            If special quit keywords return quit: (quit, exit)
             If in list of command keywords: repack as function and exec
         Otherwise exec via interpretor
 

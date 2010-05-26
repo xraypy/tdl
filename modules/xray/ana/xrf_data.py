@@ -1,18 +1,14 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu)
-Xrf methods for data handling and fitting
+Methods for fitting a collection of xrf data
 
-Modifications:
---------------
+Authors/Modifications:
+-----------------------
+* T. Trainor (tptainor@alaska.edu)
 
-"""
-########################################################################
-"""
-Todo
-
-- Improve documentation
-- Test!
+Todo:
+----
+* Improve documentation
+* Test!
 
 """
 ########################################################################
@@ -35,11 +31,19 @@ def read(file,bad_mca_idx=[],total=True,align=True,correct=True,
          xrf_params={},lines=None,fmt='CARS'):
     """
     Read detector files
+
+    Examples:
+    ---------
     >>m = xrf.read(file="file_name",bad_mca_idx=[],
                    total=True,align=True,tau=None)
 
-    if xrf_params == None: returns a list of med objects
-    otherwise: returns a list of xrf objects (default)
+    Notes:
+    ------
+    * xrf_params should have the same format as returned
+      by Xrf.get_params
+    
+    * if xrf_params == None: returns a list of med objects
+      otherwise: returns a list of xrf objects (default)
 
     """
     med = med_data.read(file,bad_mca_idx=bad_mca_idx,total=total,
@@ -54,9 +58,15 @@ def read_files(prefix,start=0,end=100,nfmt=3,bad_mca_idx=[],
                total=True,align=True,correct=True,tau=None,det_idx=0,
                emin=-1.0,emax=-1.0,xrf_params={},lines=None,fmt='CARS'):
     """
-    Read multiple files
-    if xrf_params == None: returns a list of med objects
-    otherwise: returns a list of xrf objects (default)
+    Read multiple detector files
+
+    Notes:
+    ------
+    * xrf_params should have the same format as returned
+      by Xrf.get_params
+    
+    * if xrf_params == None: returns a list of med objects
+      otherwise: returns a list of xrf objects (default)
     """
     med = med_data.read_files(prefix,start=start,end=end,nfmt=nfmt,
                               bad_mca_idx=bad_mca_idx,total=total,
@@ -73,8 +83,10 @@ def med2xrf(med,xrf_params={},lines=None,det_idx=0,emin=-1.,emax=-1.):
     Given an med object (or list of med objects) return a
     new xrf object (or list of xrf objects).
     
-    Note xrf_params should have the same format as returned
-    by Xrf.get_params
+    Notes:
+    ------
+    * xrf_params should have the same format as returned
+      by Xrf.get_params
     """
     if type(med) == types.ListType:
         xrf = []
@@ -88,6 +100,9 @@ def med2xrf(med,xrf_params={},lines=None,det_idx=0,emin=-1.,emax=-1.):
     return xrf
 
 def _med2xrf(med,xrf_params={},lines=None,det_idx=0,emin=-1.,emax=-1.):
+    """
+    med2xrf
+    """
     # Xrf just fits one data/energy array    
     if med.total == True:
         det_idx=0
@@ -135,13 +150,17 @@ def fit(xrf,xrf_params={},use_prev_fit=False,fit_init=-1,guess=False,verbose=Tru
     """
     Given a (list of) xrf objects fit them all
 
-    fit_init: the index of the first scan in the list to fit
-              it will be used as the seed value for fitting
-              all the xrf objects restarting at index zero.
-    use_prev_fit: if True then use index-1 as seed parameters
-
-    If fit_init >-1 and use_prev_fit=True then fit_init will only
-    be used as the seed for fitting the first index only.
+    Parameters:
+    -----------
+    * xrf_params should have the same format as returned
+      by Xrf.get_params
+    * fit_init: the index of the first scan in the list to fit
+      it will be used as the seed value for fitting
+      all the xrf objects restarting at index zero.
+    * use_prev_fit: if True then use index-1 as seed parameters
+    * If fit_init >-1 and use_prev_fit=True then fit_init will only
+      be used as the seed for fitting the first index only.
+    * if guess is true the initial amplitudes will be guessed from the data
     """
     if type(xrf) != types.ListType:
         xrf = [xrf]
@@ -185,10 +204,13 @@ def peak_areas(xrf,line):
 #################################################################################
 def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
     """
-    Plot options:
-    d = 'Data', 'Data-Bgr'
-    f = 'Fit', 'Bgr', 'Fit-Bgr', 'Fit and Bgr'
-    p = 'Peaks', 'Peaks+Bgr'
+    Plot data
+    
+    Parameters:
+    -----------
+    * d = 'Data', 'Data-Bgr'
+    * f = 'Fit', 'Bgr', 'Fit-Bgr', 'Fit and Bgr'
+    * p = 'Peaks', 'Peaks+Bgr'
     """
     tiny = 1.e-6
 
@@ -258,10 +280,18 @@ def xrf_plot(xrf,d='Data',f='Fit',p=None,ylog=True,xlog=False,hold=False):
 
 ##############################################################################
 class XrfScan:
+    """
+    Class to hold a collection of xrf's associated with a scan
+    ie one xrf spectrum per scan point
+    """
     def __init__(self,xrf=[],lines=None):
         """
-        Class to hold a collection of xrf's associated with a scan
-        ie one xrf spectrum per scan point
+        Initialize
+
+        Parameters:
+        -----------
+        * xrf is a list of xrf objects
+        * lines is list of xrf lines to fit
         """
         if type(xrf) != types.ListType: xrf = [xrf]
         self.xrf   = xrf
@@ -275,7 +305,7 @@ class XrfScan:
     ################################################################
     def get_xrf(self,pnt=0):
         """
-        get xrf
+        get xrf for a given point
         """
         pnt = int(pnt)
         if self.xrf == []:
@@ -319,7 +349,7 @@ class XrfScan:
 
     ################################################################
     def fit(self,xrf_params={},use_prev_fit=False,fit_init=-1,
-                guess=False,verbose=True):
+            guess=False,verbose=True):
         """
         fit xrf
         """

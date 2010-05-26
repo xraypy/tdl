@@ -68,7 +68,7 @@ class CtrData:
     -----------
     * bad is a list of index values of points flagged as 'bad'
     * scan is a list holding all the scan data ojects
-    * scan_index is a list (possibly of tuples) that given the
+    * scan_index is a list (possibly of tuples) that give the
       scan index corresponding to a data point. see the get_scan method
     * labels is a dictionary of lists of the string labels
       for 'I','Inorm','Ierr','Ibgr'
@@ -167,7 +167,7 @@ class CtrData:
 
     ##########################################################################
     def __repr__(self,):
-        """ """
+        """ display """
         lout = "CTR DATA\n"
         lout = "%sNumber of scans = %i\n" % (lout,len(self.scan))
         lout = "%sNumber of structure factors = %i\n" % (lout,len(self.L))

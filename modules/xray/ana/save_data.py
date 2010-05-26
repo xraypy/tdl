@@ -3,18 +3,23 @@ Saving and restoring data objects
 
 Authors/Modifications:
 ----------------------
-Tom Trainor (tptrainor@alaska.edu)
+* Tom Trainor (tptrainor@alaska.edu)
 
 Notes:
 ------
+This module will allow writing scan data to
+an hdf file, and read it back in.  This makes
+the data portable ie readable outside python,
+and provides a means to use disk files for
+caching certain data types like images so they dont
+have to be stored in memory.  
 
-Structure hdf files as follows:
+The hdf files are structured as follows:
 root/scan_data/...
 root/image_data/...
-root/med_data/...
-root/xrf_data/...
-root/ctr_data/...
-
+root/med_data/...  
+root/xrf_data/...  
+root/ctr_data/...  
 
 Examples:
 --------
@@ -23,9 +28,11 @@ Examples:
 
 Todo:
 -----
-- work in progress
-- have to do med and xrf
-
+* work in progress, have moslty completed writing ScanData, ImageData
+  and CtrData to file.  
+* have to do writing of med and xrf
+* have to make read methods that will read the files and return the
+  appropriate class instances.  
 """
 ################################################################################
 
@@ -65,6 +72,9 @@ def get_file(fname,path=None):
         print "Unable to get hdf file %s", fname
 
 def list_file(fname,path=None,display=True):
+    """
+    list file contents
+    """
     h = get_file(fname,path=path)
     if h == None: return
     ll = []
@@ -79,6 +89,9 @@ def list_file(fname,path=None,display=True):
 
 ################################################################################
 def calc_next_setname(names):
+    """
+    calculate the next set name
+    """
     if len(names) == 0:
         return 'S000'
     idx = []
@@ -93,6 +106,9 @@ def calc_next_setname(names):
 
 ################################################################################
 def _cleanup():
+    """
+    make sure any open files are closed
+    """
     import sys
     xx, yy, zz = sys.exc_info()
     sys.excepthook(xx,yy,zz)
@@ -346,6 +362,9 @@ def _write_scan(h,data,setname,overwrite=True):
 
 ################################################################################
 def _write_image(h,data,setname,overwrite=True):
+    """
+    write image data
+    """
     if not hasattr(h.root,'image_data'):
         h.createGroup(h.root,'image_data',"Image Data")
     if hasattr(h.root.image_data,setname):
@@ -371,11 +390,17 @@ def _write_image(h,data,setname,overwrite=True):
 
 ################################################################################
 def _write_med(h,data,setname,overwrite=True):
+    """
+    write med
+    """
     if not hasattr(h.root,'med'):
         h.createGroup(h.root,'med',"MED Data")
 
 ################################################################################
 def _write_xrf(h,data,setname,overwrite=True):
+    """
+    write xrf
+    """
     if not hasattr(h.root,'xrf'):
         h.createGroup(h.root,'xrf',"XRF Data")
 
@@ -463,12 +488,18 @@ def _image_data(imdata):
 
 ################################################################################
 def _med_data(data):
+    """
+    med data
+    """
     # need same for med and xrf
     med = None
     return med
 
 ################################################################################
 def _xrf_data(data):
+    """
+    xrf data
+    """
     xrf = None
     return xrf
 
@@ -485,6 +516,9 @@ def read_scandata(file,setname,path=None):
 
 ################################################################################
 def _read_scan(h,setname):
+    """
+    read
+    """
     data = {}
     try:
         grp = '/scan_data/' + setname

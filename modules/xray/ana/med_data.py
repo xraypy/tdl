@@ -93,7 +93,12 @@ def med_plot(data,scan_pnt=0,hold=False,ylog=True):
     """
     plot med spectra
 
-    data is a ScanData or MedScan object    
+    Parameters:
+    -----------
+    * data is a ScanData or MedScan object
+    * scan_pnt is the scan point to plot
+    * hold will preserve the previous plot to overplot
+    * ylog = True put the data on a log scale
     """
     tiny = 1.e-9
     en = data.med[scan_pnt].get_energy()
@@ -129,6 +134,7 @@ class MedScan:
     def __init__(self,med=[],**kws):
         """
         Parameters:
+        -----------
         * med is a list of med objects
 
         The remaining (optional) keyword parameters are applied to
