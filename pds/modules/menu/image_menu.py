@@ -17,7 +17,7 @@ from   pds.lib.shellutil import Menu, show_more
 from   pds.lib.shellutil import get_tf, get_yn, get_int, get_flt
 from   plotter import cursor
 import image_data
-import data
+import scan_data as data
 
 ########################################################################
 IMG_HEADER = """

@@ -1,149 +1,143 @@
-#######################################################################
 """
-Mark Rivers, GSECARS
 Fit a spectrum to a set of Gaussian peaks.  
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+* Mark Rivers, October 21, 1998.
+  This is the latest re-write of a routine which has a long history, begun
+  at X-26 at the NSLS.  The original version was written in a program called
+  SPCALC, and was then ported to IDL.
+  These early versions used IMSL for the least-squares routine.  The port to
+  CURVEFIT, so that no external software package is required, was done in
+  1998.
 
- * Mark Rivers, October 21, 1998.
-    This is the latest re-write of a routine which has a long history, begun
-    at X-26 at the NSLS.  The original version was written in a program called
-    SPCALC, and was then ported to IDL.
-    These early versions used IMSL for the least-squares routine.  The port to
-    CURVEFIT, so that no external software package is required, was done in
-    1998.
+* Mark Rivers, Nov. 12, 1998.
+  Significant re-write to use MPFITFUN in place of CURVEFIT
 
- * Mark Rivers, Nov. 12, 1998.
-    Significant re-write to use MPFITFUN in place of CURVEFIT
+* Mark Rivers, Feb. 1, 2001.
+  Changed amplitude ratio calculation so that the AREA of the two peaks
+  has the specified ratio, rather than the AMPLITUDE.  This is done by
+  adjusting the constrained ratio by the relative peak widths.
 
- * Mark Rivers, Feb. 1, 2001.
-    Changed amplitude ratio calculation so that the AREA of the two peaks
-    has the specified ratio, rather than the AMPLITUDE.  This is done by
-    adjusting the constrained ratio by the relative peak widths.
+* Mark Rivers, Sept 18, 2002.
+  Converted from IDL to Python.
 
- * Mark Rivers, Sept 18, 2002.
-    Converted from IDL to Python.
+* Mark Rivers, Sept 25., 2002 
+  Previously several fields in the peaks could be clobbered if a
+  peak was outside the energy range of the spectrum.  Added new .ignore
+  field to McaPeak to work around this problem and use that field here.
 
- * Mark Rivers, Sept 25., 2002 
-    Previously several fields in the peaks could be clobbered if a
-    peak was outside the energy range of the spectrum.  Added new .ignore
-    field to McaPeak to work around this problem and use that field here.
+* See http://cars9.uchicago.edu/software/python/index.html
 
- * See http://cars9.uchicago.edu/software/python/index.html
+* TPT: update for tdl
+  use numpy and new mpfit
 
- * TPT: update for tdl
-    use numpy and new mpfit
- 
-"""
-########################################################################
-"""
+Notes:
+------
+In general a Gaussian peak has 3 adjustable parameters: position 
+(or energy), sigma (or FWHM), and amplitude (or area).  For many
+applications, however, not all of these parameters should be
+adjustable during the fit.  For example, in XRF analysis the energy of
+the peaks is known, and should not be optimized.  However, the overall
+energy calibration coefficients for the entire spectrum, which relate
+channel number to energy, might well be optimized during the fit.
+Similarly, the FWHM of XRF peaks are not independent, but rather
+typically follow a predictable detector response function:
+     FWHM = A + B*sqrt(energy)
+Finally, even the amplitude of an XRF peak might not be a free
+parameter, since, for example one might want to constrain the K-beta 
+peak to be a fixed fraction of the K-alpha.  Such constraints allow 
+one to fit overlapping K-alpha/K-beta peaks with much better accuracy.
+
+This procedure is designed to be very flexible in terms of which
+parameters are fixed and which ones are optimized.  The constraints are
+communicated via the Fit and Peaks structures.
+
+The energy of each channel is assumed to obey the relation: 
+     energy = energy_offset + (channel * energy_slope)
+
+These parameters control the fit for peaks whose energy is fixed, 
+rather than being a fit parameter.
+If Fit.energy_flag is 1 then these energy calibration coefficients
+will be optimized during the fitting process. If it is 0 then these
+energy calibration coefficients are assumed to be correct and are not 
+optimized.  Not optimizing the energy calibration coefficients can 
+both speed up the fitting process and lead to more stable results when 
+fitting small peaks.  This function does a sanity check and will not
+optimize these energy calibration coefficients unless at least 2 peaks
+have their .energy_flag field set to 0, so that they use these global
+calibration coefficients.
+
+The FWHM of the peaks is assumed to obey the relation:
+     fwhm = fwhm_offset + (fwhm_slope * sqrt(energy))
+These parameters control the fit for peaks whose FWHM is neither fixed 
+nor a fit parameter.
+
+If Fit.fwhm_flag is 1 then these coefficients will be optimized during
+the fitting process. If it is 0 then the specified coefficients are 
+assumed to be correct and are not optimized. Not optimizing the FWHM
+coeffcients can both speed up the fitting process and lead to more 
+stable results when fitting very small peaks. This function does a 
+sanity check and will not optimize these FWHM calibration coefficients 
+unless at least 2 peaks have their .fwhm_flag field set to 0, so that 
+they use these global calibration coefficients.
+
+This function also optimizes the following parameters:
+     - The amplitudes of all peaks whose .ampl_factor field is 0
+     - The energies of all peaks whose .energy_flag field is 1
+     - The FWHM of all peaks whose .fwhm_flag field is 1
+
+The parameter which is the minimized during the fitting process is 
+chi**2, defined as:
+                                             2
+    2            y_obs[i]    -     y_pred[i]
+chi  = sum (  ---------------------------- )
+          i              sigma[i]
+
+where y_obs[i] is the observed counts in channel i, y_pred is the
+predicted counts in channel i, and sigma[i] is the standard deviation
+of y_obs[i].
+
+This function assumes that:
+
+sigma[i] = y_obs[i] ** chi_exponent
+
+e.g. that the standard deviation in each channel is equal to the counts
+in the channel to some power. For photon counting spectra where Poisson
+statistics apply chi_exponent=0.5. Setting chi_exponent=0.0 (default)
+will set all of the sigma[i] values to 1., and the fit
+would then be minimizing the sum of the squares of the residuals. This
+should tend to result in a better fit for the large peaks in a spectrum
+and a poorer fit for the smaller peaks. Setting chi_exponent=1.0 will
+result in a minimization of the sum of the squares of the relative error
+in each channel. This should tend to weight the fit more strongly toward
+the small peaks.
+
+If .ampl_factor for a peak is 0., then the amplitude of the peak is a 
+fit parameter. If the amplitude_factor is non-zero then the amplitude 
+of this peak is not a fit parameter, but rather is constrained to
+be equal to the amplitude of the last previous peak in the array which 
+had an amplitude factor of zero, times the amplitude_factor. This can 
+be used, for instance, fit K-alpha and K-beta x-ray lines when the 
+alpha/beta ratio is known, and one wants to add this known constraint 
+to the fitting process.
+For example:
+     peaks = replicate({mca_peak}, 3)
+     # Fe Ka is the "reference" peak
+     peaks[0].initial_energy=6.40 & peaks[0].ampl_factor=0.0 
+     # Si-Ka escape peak is 3% of Fe Ka at 4.66 keV
+     peaks[1].initial_energy=4.66 & peaks[1].ampl_factor=0.03
+     # Fe-Kb is 23% of Fe Ka
+     peaks[2].initial_energy=7.06 & peaks[2].ampl_factor=0.23
+In this example the amplitude of the Fe-Ka peak will be fitted, but the
+amplitudes of the escape peak and the Fe-Kb peak are constrained to
+be fixed fractions of the Fe-Ka peak.  The reference peak is always the
+closest preceding peak in the array for which ampl_factor is 0.
+
 Todo:
- - check fitting: bgr handled correctly for all options?
- - check _fit_peaks: is this correct way/place to apply weights
-"""
-#######################################################################
-"""
-Procedure:
-    In general a Gaussian peak has 3 adjustable parameters: position 
-    (or energy), sigma (or FWHM), and amplitude (or area).  For many
-    applications, however, not all of these parameters should be
-    adjustable during the fit.  For example, in XRF analysis the energy of
-    the peaks is known, and should not be optimized.  However, the overall
-    energy calibration coefficients for the entire spectrum, which relate
-    channel number to energy, might well be optimized during the fit.
-    Similarly, the FWHM of XRF peaks are not independent, but rather
-    typically follow a predictable detector response function:
-         FWHM = A + B*sqrt(energy)
-    Finally, even the amplitude of an XRF peak might not be a free
-    parameter, since, for example one might want to constrain the K-beta 
-    peak to be a fixed fraction of the K-alpha.  Such constraints allow 
-    one to fit overlapping K-alpha/K-beta peaks with much better accuracy.
-
-    This procedure is designed to be very flexible in terms of which
-    parameters are fixed and which ones are optimized.  The constraints are
-    communicated via the Fit and Peaks structures.
-
-    The energy of each channel is assumed to obey the relation: 
-         energy = energy_offset + (channel * energy_slope)
-
-    These parameters control the fit for peaks whose energy is fixed, 
-    rather than being a fit parameter.
-    If Fit.energy_flag is 1 then these energy calibration coefficients
-    will be optimized during the fitting process. If it is 0 then these
-    energy calibration coefficients are assumed to be correct and are not 
-    optimized.  Not optimizing the energy calibration coefficients can 
-    both speed up the fitting process and lead to more stable results when 
-    fitting small peaks.  This function does a sanity check and will not
-    optimize these energy calibration coefficients unless at least 2 peaks
-    have their .energy_flag field set to 0, so that they use these global
-    calibration coefficients.
-
-    The FWHM of the peaks is assumed to obey the relation:
-         fwhm = fwhm_offset + (fwhm_slope * sqrt(energy))
-    These parameters control the fit for peaks whose FWHM is neither fixed 
-    nor a fit parameter.
-    If Fit.fwhm_flag is 1 then these coefficients will be optimized during
-    the fitting process. If it is 0 then the specified coefficients are 
-    assumed to be correct and are not optimized. Not optimizing the FWHM
-    coeffcients can both speed up the fitting process and lead to more 
-    stable results when fitting very small peaks. This function does a 
-    sanity check and will not optimize these FWHM calibration coefficients 
-    unless at least 2 peaks have their .fwhm_flag field set to 0, so that 
-    they use these global calibration coefficients.
-
-    This function also optimizes the following parameters:
-         - The amplitudes of all peaks whose .ampl_factor field is 0
-         - The energies of all peaks whose .energy_flag field is 1
-         - The FWHM of all peaks whose .fwhm_flag field is 1
-
-    The parameter which is the minimized during the fitting process is 
-    chi**2, defined as:
-                                                 2
-        2            y_obs[i]    -     y_pred[i]
-    chi  = sum (  ---------------------------- )
-              i              sigma[i]
-
-    where y_obs[i] is the observed counts in channel i, y_pred is the
-    predicted counts in channel i, and sigma[i] is the standard deviation
-    of y_obs[i].
-
-    This function assumes that:
-
-    sigma[i] = y_obs[i] ** chi_exponent
-
-    e.g. that the standard deviation in each channel is equal to the counts
-    in the channel to some power. For photon counting spectra where Poisson
-    statistics apply chi_exponent=0.5. Setting chi_exponent=0.0 (default)
-    will set all of the sigma[i] values to 1., and the fit
-    would then be minimizing the sum of the squares of the residuals. This
-    should tend to result in a better fit for the large peaks in a spectrum
-    and a poorer fit for the smaller peaks. Setting chi_exponent=1.0 will
-    result in a minimization of the sum of the squares of the relative error
-    in each channel. This should tend to weight the fit more strongly toward
-    the small peaks.
-
-    If .ampl_factor for a peak is 0., then the amplitude of the peak is a 
-    fit parameter. If the amplitude_factor is non-zero then the amplitude 
-    of this peak is not a fit parameter, but rather is constrained to
-    be equal to the amplitude of the last previous peak in the array which 
-    had an amplitude factor of zero, times the amplitude_factor. This can 
-    be used, for instance, fit K-alpha and K-beta x-ray lines when the 
-    alpha/beta ratio is known, and one wants to add this known constraint 
-    to the fitting process.
-    For example:
-         peaks = replicate({mca_peak}, 3)
-         # Fe Ka is the "reference" peak
-         peaks[0].initial_energy=6.40 & peaks[0].ampl_factor=0.0 
-         # Si-Ka escape peak is 3% of Fe Ka at 4.66 keV
-         peaks[1].initial_energy=4.66 & peaks[1].ampl_factor=0.03
-         # Fe-Kb is 23% of Fe Ka
-         peaks[2].initial_energy=7.06 & peaks[2].ampl_factor=0.23
-    In this example the amplitude of the Fe-Ka peak will be fitted, but the
-    amplitudes of the escape peak and the Fe-Kb peak are constrained to
-    be fixed fractions of the Fe-Ka peak.  The reference peak is always the
-    closest preceding peak in the array for which ampl_factor is 0.
-
+-----
+* check fitting: bgr handled correctly for all options?
+* check _fit_peaks: is this correct way/place to apply weights
 
 """
 ########################################################################
@@ -162,28 +156,32 @@ SIGMA_TO_FWHM = 2.35482
 class XrfPeak:
     """
     Class defining a single xrf peak.
-    The following inputs may be set by kw argument.
-        self.label          = ""      # Peak label
-        self.ignore         = False   # Don't fit peak
-        self.energy         = 0.      # Peak energy
-        self.energy_flag    = 1       # Flag for fitting energy
-                                      #   0 = Optimize energy
-                                      #   1 = Fix energy 
-        self.fwhm           = 0.      # Peak FWHM
-        self.fwhm_flag      = 1       # Flag for fitting FWHM
-                                      #   0 = Optimize FWHM
-                                      #   1 = Fix FWHM to global curve
-                                      #   2 = Fix FWHM to input value
-        self.ampl           = 0.      # Peak amplitude
-        self.ampl_factor    = 0.      # Fixed amplitude ratio to previous peak
-                                      #   0.  = Optimize amplitude of this peak
-                                      #   >0. = Fix amplitude to this value relative
-                                      #         to amplitude of previous free peak
-                                      #  -1.0 = Fix amplitude at 0.0
-        self.max_sigma      = 8.      # Max sigma for peak contribution
+
+    Attributes:
+    -----------
+    The following may be set by kw argument on intialization.
+    * label          = ""      # Peak label
+    * ignore         = False   # Don't fit peak
+    * energy         = 0.      # Peak energy
+    * energy_flag    = 1       # Flag for fitting energy
+                               #   0 = Optimize energy
+                               #   1 = Fix energy 
+    * fwhm           = 0.      # Peak FWHM
+    * fwhm_flag      = 1       # Flag for fitting FWHM
+                               #   0 = Optimize FWHM
+                               #   1 = Fix FWHM to global curve
+                               #   2 = Fix FWHM to input value
+    * ampl           = 0.      # Peak amplitude
+    * ampl_factor    = 0.      # Fixed amplitude ratio to previous peak
+                               #   0.  = Optimize amplitude of this peak
+                               #   >0. = Fix amplitude to this value relative
+                               #         to amplitude of previous free peak
+                               #  -1.0 = Fix amplitude at 0.0
+    * max_sigma      = 8.      # Max sigma for peak contribution
     """
     ###########################################################################
     def __repr__(self):
+        """ display """
         lout = 'Xrf Peak:  Label = %s, Ignore = %s\n' % (self.label, str(self.ignore))
         lout = lout + '   energy    = %10.3f, flag = %i\n' % (self.energy, self.energy_flag)
         lout = lout + '   fwhm      = %10.3f, flag = %i\n' % (self.fwhm, self.fwhm_flag)
@@ -193,6 +191,29 @@ class XrfPeak:
 
     ###########################################################################
     def __init__(self,**kws):
+        """
+        Parameters:
+        -----------
+        The following may be set by kw argument on intialization.
+        * label          = ""      # Peak label
+        * ignore         = False   # Don't fit peak
+        * energy         = 0.      # Peak energy
+        * energy_flag    = 1       # Flag for fitting energy
+                                   #   0 = Optimize energy
+                                   #   1 = Fix energy 
+        * fwhm           = 0.      # Peak FWHM
+        * fwhm_flag      = 1       # Flag for fitting FWHM
+                                   #   0 = Optimize FWHM
+                                   #   1 = Fix FWHM to global curve
+                                   #   2 = Fix FWHM to input value
+        * ampl           = 0.      # Peak amplitude
+        * ampl_factor    = 0.      # Fixed amplitude ratio to previous peak
+                                   #   0.  = Optimize amplitude of this peak
+                                   #   >0. = Fix amplitude to this value relative
+                                   #         to amplitude of previous free peak
+                                   #  -1.0 = Fix amplitude at 0.0
+        * max_sigma      = 8.      # Max sigma for peak contribution
+        """
         self.label          = ""      # Peak label
         self.ignore         = False   # Don't fit peak
         self.energy         = 0.      # Peak energy
@@ -217,6 +238,9 @@ class XrfPeak:
     
     ###########################################################################
     def init(self,params=None):
+        """
+        Reinit parameters
+        """
         if params:
             keys = params.keys()
             if 'label' in keys:       self.label       = str(params['label'])
@@ -251,9 +275,16 @@ class XrfPeak:
     def calc(self, energy, compute_area=True):
         """
         Calculate the gaussian line shape.
-        Inputs:  energy
-        Output:  counts
-            Returns a num array containing the predicted counts.
+
+        Parameters:
+        -----------
+        * energy is an array of energy values
+        * compute_area is a flag to indicate if
+          peak areas should be determined
+
+        Output:
+        -------
+        * Returns a num array containing the predicted counts.
         """
 
         sigma = self.fwhm/SIGMA_TO_FWHM
@@ -270,12 +301,20 @@ class XrfPeak:
         """
         Calculate the gaussian line shape only within energy range that it
         makes a significant contribution.
-        Inputs: energy
-        Output: (counts, (idx_min,idx_max))
-            Returns a num array containing the predicted counts.
-            The array is limited in length to only the range that the peak makes
-            a significant contribution.  The (idx_min, idx_max) tuple are the indicies
-            of the energy array corresponding to the peak limits
+        
+        Parameters:
+        -----------
+        * energy is an array of energy values
+        * compute_area is a flag to indicate if
+          peak areas should be determined
+
+        Outputs: 
+        --------
+        * (counts, (idx_min,idx_max))
+        * Returns a num array containing the predicted counts.
+          The array is limited in length to only the range that the peak makes
+          a significant contribution.  The (idx_min, idx_max) tuple are the indicies
+          of the energy array corresponding to the peak limits
         """
         (idx_min, idx_max) = self._en_range(energy)
         sigma = self.fwhm/SIGMA_TO_FWHM
@@ -324,78 +363,45 @@ class XrfPeak:
 class XrfSpectrum:
     """
     Class defining an xrf spectrum.
-    Fields:
-        self.data                  = []        # Data to be fit
-        self.channels              = []        # Corresponding channel numbers
-        self.peaks                 = []        # List of XrfPeak instances
-        self.bgr                   = None      # Background model, see xrf_bgr module
-                                               #   if none, we'll assume here that the data
-                                               #   has been background subtracted
-        ### Parameters 
-        self.energy_offset         =  0.       # Energy calibration offset (keV)
-        self.energy_slope          =  1.       # Energy calibration slope 
-        self.energy_flag           =  0        # Energy flag
-                                               #   0 = Optimize energy calibration coefficients
-                                               #   1 = Fix energy calibration coefficients
-        self.fwhm_offset           =  0.15     # FWHM model offset (keV)
-        self.fwhm_slope            =  0.       # FWHM model slope
-        self.fwhm_flag             =  0        # Fwhm flag
-                                               #   0 = Optimize FWHM coefficients
-                                               #   1 = Fix FWHM coefficients
-        self.chi_exp               =  0.       # Exponent of data for weights
-                                               #   w = 1/y**chi_exp
-                                               #   0.0 = ones
-                                               #   0.5 = sqrt (poisson stats)
-        self.max_eval              =  0        # Maximum number of function evaluations
-                                               # Default sets this to 0 which
-                                               # does not limit the number of function 
-                                               # evaluations
-        self.max_iter              =  20       # Maximum number of iterations
-        self.tolerance             =  1.e-4    # Convergence tolerance. The fitting
-                                               # process will stop when the value of 
-                                               # chi**2 changes by a relative amount
-                                               # less than tolerance on two successive 
-                                               # iterations. 
-    #################################################################################
-    init and __init__ functions can take parameters dictionary with the following
-    (same as returned by get_params)
-    
-    parameters = {'fit':fit_par,'bgr':bgr_par,'pk':peak_par}
 
-    fit_par = {'energy_offset':XrfSpectrum.energy_offset,
-               'energy_slope': XrfSpectrum.energy_slope,
-               'energy_flag':  XrfSpectrum.energy_flag,
-               'fwhm_offset':  XrfSpectrum.fwhm_offset,
-               'fwhm_slope':   XrfSpectrum.fwhm_slope,
-               'fwhm_flag':    XrfSpectrum.fwhm_flag,
-               'chi_exp':      XrfSpectrum.chi_exp,
-               'max_eval':     XrfSpectrum.max_eval,
-               'max_iter':     XrfSpectrum.max_iter,
-               'tolerance':    XrfSpectrum.tolerance}
-
-    bgr_par = {'bottom_width':      Background.bottom_width,
-               'bottom_width_flag': Background.bottom_width_flag,
-               'top_width':         Background.top_width,
-               'top_width_flag':    Background.top_width_flag,
-               'exponent':          Background.exponent,
-               'tangent':           Background.tangent,
-               'compress':          Background.compress}
-
-    peak_par = [peak_par[0],peak_par[1],etc...]
-    peak_par[i] = {'label':       XrfPeak.label,  
-                   'ignore':      XrfPeak.ignore,
-                   'energy':      XrfPeak.energy,
-                   'energy_flag': XrfPeak.energy_flag,
-                   'fwhm':        XrfPeak.fwhm,
-                   'fwhm_flag':   XrfPeak.fwhm_flag,
-                   'ampl':        XrfPeak.ampl,
-                   'ampl_factor': XrfPeak.ampl_factor,
-                   'max_sigma':   XrfPeak.max_sigma,
-                   'area':        XrfPeak.area}
+    Attributes:
+    -----------
+    * data                  = []        # Data to be fit
+    * channels              = []        # Corresponding channel numbers
+    * peaks                 = []        # List of XrfPeak instances
+    * bgr                   = None      # Background model, see xrf_bgr module
+                                        #   if none, we'll assume here that the data
+                                        #   has been background subtracted
+    ### Parameters 
+    * energy_offset         =  0.       # Energy calibration offset (keV)
+    * energy_slope          =  1.       # Energy calibration slope 
+    * energy_flag           =  0        # Energy flag
+                                        #   0 = Optimize energy calibration coefficients
+                                        #   1 = Fix energy calibration coefficients
+    * fwhm_offset           =  0.15     # FWHM model offset (keV)
+    * fwhm_slope            =  0.       # FWHM model slope
+    * fwhm_flag             =  0        # Fwhm flag
+                                        #   0 = Optimize FWHM coefficients
+                                        #   1 = Fix FWHM coefficients
+    * chi_exp               =  0.       # Exponent of data for weights
+                                        #   w = 1/y**chi_exp
+                                        #   0.0 = ones
+                                        #   0.5 = sqrt (poisson stats)
+    * max_eval              =  0        # Maximum number of function evaluations
+                                        # Default sets this to 0 which
+                                        # does not limit the number of function 
+                                        # evaluations
+    * max_iter              =  20       # Maximum number of iterations
+    * tolerance             =  1.e-4    # Convergence tolerance. The fitting
+                                        # process will stop when the value of 
+                                        # chi**2 changes by a relative amount
+                                        # less than tolerance on two successive 
+                                        # iterations. 
     """
 
     ###########################################################################
     def __repr__(self):
+        """ display """
         lout = 'Xrf Spectrum Fit Statistics:\n'
         lout = lout + '   nchan   = %i\n' % self.nchan 
         lout = lout + '   npeaks  = %i\n' % self.npeaks 
@@ -424,6 +430,49 @@ class XrfSpectrum:
     
     ################################################################################
     def __init__(self,data=None,chans=None,params={},guess=True):
+        """
+        parameters is a dictionary with the following
+        (same as returned by get_params)
+
+        Parameters:
+        -----------
+        * data is the experimental array of counts
+
+        * chans is the corresponding set of channel numbers
+        
+        * parameters = {'fit':fit_par,'bgr':bgr_par,'pk':peak_par}
+
+        * fit_par = {'energy_offset':XrfSpectrum.energy_offset,
+                     'energy_slope': XrfSpectrum.energy_slope,
+                     'energy_flag':  XrfSpectrum.energy_flag,
+                     'fwhm_offset':  XrfSpectrum.fwhm_offset,
+                     'fwhm_slope':   XrfSpectrum.fwhm_slope,
+                     'fwhm_flag':    XrfSpectrum.fwhm_flag,
+                     'chi_exp':      XrfSpectrum.chi_exp,
+                     'max_eval':     XrfSpectrum.max_eval,
+                     'max_iter':     XrfSpectrum.max_iter,
+                     'tolerance':    XrfSpectrum.tolerance}
+
+        * bgr_par = {'bottom_width':      Background.bottom_width,
+                     'bottom_width_flag': Background.bottom_width_flag,
+                     'top_width':         Background.top_width,
+                     'top_width_flag':    Background.top_width_flag,
+                     'exponent':          Background.exponent,
+                     'tangent':           Background.tangent,
+                     'compress':          Background.compress}
+
+        * peak_par = [peak_par[0],peak_par[1],etc...]
+          peak_par[i] = {'label':       XrfPeak.label,  
+                         'ignore':      XrfPeak.ignore,
+                         'energy':      XrfPeak.energy,
+                         'energy_flag': XrfPeak.energy_flag,
+                         'fwhm':        XrfPeak.fwhm,
+                         'fwhm_flag':   XrfPeak.fwhm_flag,
+                         'ampl':        XrfPeak.ampl,
+                         'ampl_factor': XrfPeak.ampl_factor,
+                         'max_sigma':   XrfPeak.max_sigma,
+                         'area':        XrfPeak.area}
+        """
         # data
         self.data                  = []        # Data to be fit
         self.channels              = []        # Corresponding channel numbers
@@ -474,13 +523,14 @@ class XrfSpectrum:
         """
         Set/Reset data and parameters.
 
+        Notes:
+        ------
         Should be safe to pass data/chans = None and not change if already set
 
         Note params here are assumed to be the same as output by get_params 
 
-        Note default guess = False ==>  do not
-        guess at peak parameters.  Therefore, pass guess=True
-        to have routine guess at peak params
+        Note default guess = False ==>  do not guess at peak parameters.
+        Therefore, pass guess=True to have routine guess at peak params
         """
         ###### set data
         if data != None:

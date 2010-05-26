@@ -12,7 +12,7 @@
 ##################################################
 
 ## ScanData module
-import ana
+import ana, xtal
 
 ## Import menus
 import menu

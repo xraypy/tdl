@@ -122,16 +122,20 @@ class Psic:
     assuming the sample is mounted such that (001) plane
     is perpendicular to the eta and phi rot axes
     (ie c-axis is parrallel to the eta and phi rot axes)
-    and that the b-axis is parrallel to the nu and mu rot axes
+    and that the b-axis is parallel to the nu and mu rot axes
     (ie parrallel to the lab frame Z)
 
     """
     ###################################################
     def __init__(self,a=10.,b=10.,c=10.,alpha=90.,beta=90.,gamma=90.,lam=1.0):
         """
-        Initialize by passing a,b,c in angstroms 
-        alpha, beta, gamma in degrees,
-        and lambda in angstroms
+        Initialize
+
+        Parameters:
+        -----------
+        * a,b,c in angstroms 
+        * alpha, beta, gamma in degrees,
+        * lambda in angstroms
         """
         # set lattice and lambda
         self.lattice = Lattice(a,b,c,alpha,beta,gamma,lam)
@@ -175,6 +179,7 @@ class Psic:
 
     ###################################################
     def __repr__(self,):
+        """ display """
         lout = self.lattice.__repr__()
         lout = "%sPrimary:\n   h=%3.2f,k=%3.2f," % (lout,self.or0['h'][0],self.or0['h'][1])
         lout = "%sl=%3.2f, lam=%6.6f\n" % (lout,self.or0['h'][2],self.or0['lam'])
@@ -214,9 +219,11 @@ class Psic:
         """
         Update lattice parameters and lambda
 
-        abc are in angstroms, angles are in degrees,
-        lam is in angstroms
-
+        Parameters:
+        -----------
+        * a,b,c in angstroms 
+        * alpha, beta, gamma in degrees,
+        * lambda in angstroms
         """
         self.lattice.update(a=a,b=b,c=c,alpha=alpha,
                             beta=beta,gamma=gamma,lam=lam)
@@ -240,9 +247,14 @@ class Psic:
         """
         Set / adjust the primary orientation reflection
 
-        Angles are in degrees, lam is in angstroms
-        If lam = None, then lambda defined for the lattice
-        is used.
+        Parameters:
+        -----------
+        * h is the hkl array of the reflection
+        * the rest of the parameters are motor angles
+          in degrees,
+        * lam is the wavelength in angstroms
+          If lam = None, then lambda defined for the lattice
+          is used.
         """
         if h!=None:     self.or0['h'] = num.array(h,dtype=float)
         if phi!=None:   self.or0['phi']=float(phi)
@@ -259,9 +271,14 @@ class Psic:
         """
         Set / adjust the secondary orientation reflection
 
-        Angles are in degrees, lam is in angstroms
-        If lam = None, then lambda defined for the lattice
-        is used.
+        Parameters:
+        -----------
+        * h is the hkl array of the reflection
+        * the rest of the parameters are motor angles
+          in degrees,
+        * lam is the wavelength in angstroms
+          If lam = None, then lambda defined for the lattice
+          is used.
         """
         if h!=None:     self.or1['h'] = num.array(h,dtype=float)
         if phi!=None:   self.or1['phi']=float(phi)
@@ -292,7 +309,6 @@ class Psic:
         Note dont really ever use B by itself.  so we
         should combine this and above to calc_UB and
         just store UB??
-        
         """
         # use these, note they are used below on vectors
         # defined in the cartesian lab frame basis
@@ -380,6 +396,8 @@ class Psic:
         Calculate the hkl values of the vector that is in the
         diffraction condition for the given set of angles.  
 
+        Notes:
+        ------
         Solve for hphi using Z and lab frame Q:
            hphi = inv(Z) * Q / (2*pi)
         then calc h from
@@ -414,7 +432,9 @@ class Psic:
         the chi and phi settings that align this
         vector with the eta axis.
 
-        For example this algorith is used
+        Notes:
+        ------
+        This algorith is used, for example, 
         to compute the surface normal from the (flat) chi and
         (flat) phi angles that leave an optical reflection in
         a fixed position during an eta rotation 
@@ -463,7 +483,10 @@ class Psic:
     def _update_psuedo(self):
         """
         Compute psuedo angles
-        Note use this to compute psuedo angles rather than
+        
+        Note:
+        -----
+        use this to compute psuedo angles rather than
         individual calls.  ie some psuedo angles depend on others
         so its important that the calc are executed in the correct
         order.  Also important is that _calc_h is called before this...
@@ -485,7 +508,9 @@ class Psic:
     def _calc_tth(self):
         """
         Calculate 2Theta, the scattering angle
-        
+
+        Notes:
+        ------
         This should be the same as:
           (ki,kr) = calc_kvecs(nu,delta,lambda)
            tth = cartesian_angle(ki,kr)
@@ -506,6 +531,8 @@ class Psic:
         of the reference vector n = nm.  Note nm is
         normalized.  
 
+        Notes:
+        ------
         The reference vector n is given in recip
         lattice indicies (hkl)
         """
@@ -572,6 +599,8 @@ class Psic:
         Calc beta, ie exit angle, or angle btwn k_r and the
         plane perp to the reference vector n
 
+        Notes:
+        ------
         beta = arcsind(2*sind(tth/2)*cosd(tau)-sind(alpha))
         """
         # calc normalized kr
@@ -590,6 +619,8 @@ class Psic:
         Calc tau, this is the angle btwn n and the scattering-plane
         defined by ki and kr.  ie the angle between n and Q
 
+        Notes:
+        ------
         Can also calc from:
          tau = acos( cosd(alpha) * cosd(tth/2) * cosd(naz - qaz) ...
                     + sind(alpha) * sind(tth/2) ) 
@@ -602,6 +633,8 @@ class Psic:
         calc psi, this is the azmuthal angle of n wrt Q. 
         ie for tau != 0, psi is the rotation of n about Q
 
+        Notes:
+        ------
         Note this must be calc after tth,tau, and alpha!
         """
         tau   = self.pangles['tau']
@@ -630,7 +663,10 @@ class Psic:
         """
         calc omega, this is the angle between Q and the plane
         which is perpendicular to the axis of the chi circle.
-        note for nu=mu=0 this is the same as the four circle def:
+
+        Notes:
+        ------
+        For nu=mu=0 this is the same as the four circle def:
         omega = 0.5*TTH - TH, where TTH is the detector motor (=del)
         and TH is the sample circle (=eta).  Therefore, for 
         mu=nu=0 and del=0.5*eta, omega = 0, which means that Q
@@ -673,7 +709,6 @@ def spec_psic_G(G):
     Parse essential lattice and OR data
     from the spec G array for psic geometry
     See specfile.py for details.
-    
     """
     #azimuthal reference vector, n (hkl)
     n = num.array(G[3:6],dtype=float)
@@ -704,6 +739,8 @@ def _spec_or_angles(angles,calc_kappa=False):
     Angles defined by spec for the OR's.
     See specfile.py
 
+    Notes:
+    ------
     Assume the following.
     
     If parsing angles from the P array:
@@ -762,6 +799,8 @@ def calc_Z(phi=0.0,chi=0.0,eta=0.0,mu=0.0):
     Calculate the psic goniometer rotation matrix Z
     for the 4 sample angles. Angles are in degrees
 
+    Notes:
+    ------
     Z is the matrix that rotates a vector defined in the phi frame
     ie a vector defined with all angles zero => vphi.  After rotation
     the lab frame coordinates of the vector => vm are given by:
@@ -816,6 +855,8 @@ def calc_D(nu=0.0,delta=0.0):
     Calculate the detector rotation matrix.
     Angles are in degrees
 
+    Notes:
+    ------
     D is the matrix that rotates a vector defined in the phi frame
     ie a vector defined with all angles zero => vphi.  After rotation
     the lab frame coordinates of the vector => vm are given by:
@@ -844,13 +885,17 @@ def calc_D(nu=0.0,delta=0.0):
 def beam_vectors(h=1.0,v=1.0):
     """
     Compute the beam apperature vectors in lab frame
-    
-    The slit settings, defined wrt psic phi-frame:
-       h = beam horz width (total slit width in lab-z,
-           or the horizontal scattering plane)
-       v = beam vert hieght (total slit width in lab-x,
-           or the vertical scattering plane)
 
+    Parameters:
+    -----------
+    * h = beam horz width (total slit width in lab-z,
+      or the horizontal scattering plane)
+    * v = beam vert hieght (total slit width in lab-x,
+      or the vertical scattering plane)
+
+    Notes:
+    ------
+    The slit settings, defined wrt psic phi-frame
     Assume these are centered on the origin
     """
     # beam vectors, [x,y,z], in lab frame
@@ -870,16 +915,19 @@ def beam_vectors(h=1.0,v=1.0):
 def det_vectors(h=1.0,v=1.0,nu=0.0,delta=0.0):
     """
     Compute detector apperature vectors in lab frame
-    
-    The slit settings, defined wrt psic phi-frame:
-       h = detector horz width (total slit width in lab-z,
-           or the horizontal scattering plane)
-       v = detector vert hieght (total slit width in lab-x,
-           or the vertical scattering plane)
 
+    Parameters:
+    -----------
+    * h = detector horz width (total slit width in lab-z,
+      or the horizontal scattering plane)
+    * v = detector vert hieght (total slit width in lab-x,
+      or the vertical scattering plane)
+
+    Notes:
+    ------
+    The slit settings, defined wrt psic phi-frame
     Assume these are centered on the origin, then rotated
     by del and nu
-
     """
     # detector vectors, [x,y,z] in lab frame
     # note rotation of the vectors...
@@ -901,20 +949,24 @@ def det_vectors(h=1.0,v=1.0,nu=0.0,delta=0.0):
 ##########################################################################
 def sample_vectors(sample,angles={},gonio=None):
     """
-    sample = [[x,y,z],[x,y,z],[x,y,z],....]
-             is a list of vectors that describe the shape of
-             the sample.  They should be given in general lab
-             frame coordinates.
+    Parameters:
+    -----------
+    * sample = [[x,y,z],[x,y,z],[x,y,z],....]
+      is a list of vectors that describe the shape of
+      the sample.  They should be given in general lab
+      frame coordinates.
 
-    angles = {'phi':0.,'chi':0.,'eta':0.,'mu':0.}
-             are the instrument angles at which the sample
-             vectors were determined.
-    
+    * angles = {'phi':0.,'chi':0.,'eta':0.,'mu':0.}
+      are the instrument angles at which the sample
+      vectors were determined.
+
+    Notes:
+    ------
     The lab frame coordinate systems is defined such that:
-        x is vertical (perpendicular, pointing to the ceiling of the hutch)
-        y is directed along the incident beam path
-        z make the system right handed and lies in the horizontal scattering plane
-          (i.e. z is parallel to the phi axis)
+    x is vertical (perpendicular, pointing to the ceiling of the hutch)
+    y is directed along the incident beam path
+    z make the system right handed and lies in the horizontal scattering plane
+    (i.e. z is parallel to the phi axis)
 
     The center (0,0,0) of the lab frame is the rotation center of the instrument.
 

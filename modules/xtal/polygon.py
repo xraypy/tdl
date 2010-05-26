@@ -1,22 +1,18 @@
-##########################################################################
 """
-Tom Trainor (tptrainor@alaska.edu)
+Generalized Polygon Computations
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+* Tom Trainor (tptrainor@alaska.edu)
 
-"""
-##########################################################################
-"""
-Notes
+Todo:
+-----
+* Make sure this handles polygons with centers off the
+  origin, ie correclty handle arbitrary origin shifts
 
-Make sure this handles polygons with centers off the
-origin, ie correclty handle arbitrary origin shifts
-
-Add some more polygon calcs
+* Add some more polygon calcs
   - compute center
   - determine type (simple, complex etc)
-
 """
 ##########################################################################
 

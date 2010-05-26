@@ -1,18 +1,13 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu)
 Xrf class for data handling and fitting
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+* T. Trainor (tptrainor@alaska.edu)
 
-"""
-########################################################################
-"""
 Todo
-
-- Improve documentation
-- Test!
+----
+* Improve documentation
 
 """
 ########################################################################
@@ -28,50 +23,55 @@ from   xtab import xrf_lookup
 #################################################################################
 class Xrf(xrf_peaks.XrfSpectrum):
     """
-    Xrf subclasses XrfSpectrum and includes the following data:
-    
-    parameters = {'fit':fit_par,'bgr':bgr_par,'pk':peak_par}
+    Xrf is a subclass of XrfSpectrum, and includes
+    information for fitting
 
-    fit_par = {'energy_offset':XrfSpectrum.energy_offset,
-               'energy_slope': XrfSpectrum.energy_slope,
-               'energy_flag':  XrfSpectrum.energy_flag,
-               'fwhm_offset':  XrfSpectrum.fwhm_offset,
-               'fwhm_slope':   XrfSpectrum.fwhm_slope,
-               'fwhm_flag':    XrfSpectrum.fwhm_flag,
-               'chi_exp':      XrfSpectrum.chi_exp,
-               'max_eval':     XrfSpectrum.max_eval,
-               'max_iter':     XrfSpectrum.max_iter,
-               'tolerance':    XrfSpectrum.tolerance}
+    Attributes:
+    -----------
+    * parameters = {'fit':fit_par,'bgr':bgr_par,'pk':peak_par}
 
-    bgr_par = {'bottom_width':      Background.bottom_width,
-               'bottom_width_flag': Background.bottom_width_flag,
-               'top_width':         Background.top_width,
-               'top_width_flag':    Background.top_width_flag,
-               'exponent':          Background.exponent,
-               'tangent':           Background.tangent,
-               'compress':          Background.compress}
+    * fit_par = {'energy_offset':XrfSpectrum.energy_offset,
+                 'energy_slope': XrfSpectrum.energy_slope,
+                 'energy_flag':  XrfSpectrum.energy_flag,
+                 'fwhm_offset':  XrfSpectrum.fwhm_offset,
+                 'fwhm_slope':   XrfSpectrum.fwhm_slope,
+                 'fwhm_flag':    XrfSpectrum.fwhm_flag,
+                 'chi_exp':      XrfSpectrum.chi_exp,
+                 'max_eval':     XrfSpectrum.max_eval,
+                 'max_iter':     XrfSpectrum.max_iter,
+                 'tolerance':    XrfSpectrum.tolerance}
 
-    peak_par = [peak_par[0],peak_par[1],etc...]
-    peak_par[i] = {'label':       XrfPeak.label,  
-                   'ignore':      XrfPeak.ignore,
-                   'energy':      XrfPeak.energy,
-                   'energy_flag': XrfPeak.energy_flag,
-                   'fwhm':        XrfPeak.fwhm,
-                   'fwhm_flag':   XrfPeak.fwhm_flag,
-                   'ampl':        XrfPeak.ampl,
-                   'ampl_factor': XrfPeak.ampl_factor,
-                   'max_sigma':   XrfPeak.max_sigma,
-                   'area':        XrfPeak.area}
+    * bgr_par = {'bottom_width':      Background.bottom_width,
+                 'bottom_width_flag': Background.bottom_width_flag,
+                 'top_width':         Background.top_width,
+                 'top_width_flag':    Background.top_width_flag,
+                 'exponent':          Background.exponent,
+                 'tangent':           Background.tangent,
+                 'compress':          Background.compress}
+
+    * peak_par = [peak_par[0],peak_par[1],etc...]
+      peak_par[i] = {'label':       XrfPeak.label,  
+                     'ignore':      XrfPeak.ignore,
+                     'energy':      XrfPeak.energy,
+                     'energy_flag': XrfPeak.energy_flag,
+                     'fwhm':        XrfPeak.fwhm,
+                     'fwhm_flag':   XrfPeak.fwhm_flag,
+                     'ampl':        XrfPeak.ampl,
+                     'ampl_factor': XrfPeak.ampl_factor,
+                     'max_sigma':   XrfPeak.max_sigma,
+                     'area':        XrfPeak.area}
     """
     #########################################################################
     def init_bgr(self,params={}):
         """
         Reset bgr parameters. 
             
-        Inputs:
-            params = {bottom_width=4.,top_width=0.,
-                      exponent=2, tangent=0, compress=4}
-        see xrf_bgr.py for more details            
+        Parameters:
+        -----------
+        * params = {bottom_width=4.,top_width=0.,
+                    exponent=2, tangent=0, compress=4}
+
+        see xrf_bgr.py for more details 
         """
         self.bgr = xrf_bgr.Background(**params)
 
@@ -81,7 +81,8 @@ class Xrf(xrf_peaks.XrfSpectrum):
     def set_bgr(self,params={}):
         """
         Set background parameters
-        See Bgr module 
+        
+        see xrf_bgr.py for more details 
         """
         if self.bgr:
             self.bgr.init(params=params)
@@ -94,16 +95,16 @@ class Xrf(xrf_peaks.XrfSpectrum):
         """
         Reset all peaks based on line identifiers.
         All peak parameters are defaults.
-        
-        lines:
-            A list of xrf lines to be fit. The elements of the list
-            should be strings such as ['Mn ka', 'Fe ka', 'Fe kb'] and/or
-            a list of numbers eg. ['Mn ka', 'Fe ka', 7.12]
-            See xrf_lookup.py for more details.
 
-        guess:
-            If guess is true the peak amplitude and fwhm will be estimated
-            
+        Parameters:
+        -----------
+        * lines: A list of xrf lines to be fit. The elements of the list
+          should be strings such as ['Mn ka', 'Fe ka', 'Fe kb'] and/or
+          a list of numbers eg. ['Mn ka', 'Fe ka', 7.12]
+          See xrf_lookup.py for more details.
+
+        * guess: If guess is true the peak amplitude and fwhm will
+          be estimated
         """
         self.peaks = []
         for line in lines:
@@ -116,18 +117,15 @@ class Xrf(xrf_peaks.XrfSpectrum):
         """
         Create a new peak given an xrf line
 
-        Inputs:
-        
-        line:
-            Can be either a string representation of the line e.g. 'Mn ka',
-            'Fe ka', 'Fe kb' (see xrf_lookup.py) or an energy (as float).
+        Parameters:
+        -----------
+        * line: Can be either a string representation of the line e.g. 'Mn ka',
+          'Fe ka', 'Fe kb' (see xrf_lookup.py) or an energy (as float).
             
-        guess:
-            If guess is true the peak amplitude and fwhm will be estimated
+        * guess: If guess is true the peak amplitude and fwhm will
+          be estimated
 
-        kws:
-            Passed to peak
-
+        * kws: Passed to peak
         """
         # create peak_params dict
         peak_params = {}
@@ -200,14 +198,10 @@ class Xrf(xrf_peaks.XrfSpectrum):
     #########################################################################
     def set_peak(self,label,params={}):
         """
-        Inputs:
-        
-        label:
-            String label for the peak.
-
-        peak_params:
-            Dictionary of peak parameters
-            
+        Parameters:
+        -----------
+        * label: String label for the peak.
+        * peak_params: Dictionary of peak parameters
         """
         idx = self._peak_idx(label)
         if idx < 0: return
@@ -218,8 +212,10 @@ class Xrf(xrf_peaks.XrfSpectrum):
     def _set_peak(self,idx=0,params={}):
         """
         Set peak parameters for the specified peak
-        pk_idx:
-            Integer index of the peak (see _peak_idx).  
+
+        Parameters:
+        -----------
+        * idx: Integer index of the peak (see _peak_idx).  
         """
         if not idx in range(len(self.peaks)): return
         self.peaks[idx].init(params=params)

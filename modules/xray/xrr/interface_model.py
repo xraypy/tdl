@@ -1,35 +1,26 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu)
 Calculate reflectivity / reflection FY as
 a function of interface composition
 
-Modifications:
---------------
+Authors/Modifications:
+----------------------
+* T. Trainor (tptrainor@alaska.edu)
 
-
-"""
-#######################################################################
-"""
-Todo
+Todo:
 -----
-
-- Check carefully:
+* Check carefully:
   * Pass by ref between slab and ref??  ie arrays getting updated!
   * follow all update flags.... make sure we're efficient!
 
-- Test distro functions
+* Test distro functions
   * setting dist params...
   * test idx ranges (speed up)...
 
-- Add doc!!!
+* Add more doc!!!
 
-============
+* Add plotting specific component/element profiles.  
 
-- Add plotting specific component/element profiles.  
-
-----------------------------------------------------
-- Fitting/modeling (single and mult spectra)
+* Fitting/modeling (single and mult spectra)
   * new class holds:
         [{'params':{},'R':[],'FY':[]}, ...]
         params = {'energy':10000,'fyidx':'Fe','fyenergy':'Fe Ka',etc}
@@ -53,14 +44,12 @@ Todo
            src = "%s=%f" % (var, param[0])
            eval(src)
 
---------------------------------------------------------------
-
-- Allow constructing stiochiometry of species from wt% numbers
+* Allow constructing stiochiometry of species from wt% numbers
   ==> see species.set in compound.py
   
-- Add an I/z/theta matrix generation and plotting routine...
+* Add an I/z/theta matrix generation and plotting routine...
 
-- Create a text file dump (and read) of ref object?
+* Create a text file dump (and read) of ref object?
 
 """
 #######################################################################
@@ -82,11 +71,27 @@ class Layer(compound.Material):
     """
     #######################################################################
     def __init__(self,**kw):
+        """
+        Parameters:
+        ----------
+        * comp is a list of components [(c,nu),(c,nu)]
+        * density is the density in g/cm^3
+        * thickness is the layer thickness in angstroms
+        * roughness is the layer roughness in angstroms
+        """
         self.init_layer(**kw)
         
     #######################################################################
     def init_layer(self,comp=[],density=1.0,roughness=0.0,
                    thickness=100.,area=1.0):
+        """
+        Parameters:
+        ----------
+        * comp is a list of components [(c,nu),(c,nu)]
+        * density is the density in g/cm^3
+        * thickness is the layer thickness in angstroms
+        * roughness is the layer roughness in angstroms
+        """
         self.roughness  = roughness   # rms, angstroms
         self.thickness  = thickness   # angstroms
         self.area       = area        # cm^2
@@ -96,6 +101,7 @@ class Layer(compound.Material):
 
     #######################################################################
     def _compute_vol(self):
+        """ compute volume """
         z = self.thickness  # angstroms
         a = self.area       # cm^2
         v = z*(1.0e-8)*a
@@ -105,8 +111,9 @@ class Layer(compound.Material):
 class DistParams:
     """
     Class for component distribution parameters
+
+    The distribution parameters for each layer follow:    
        dist = {'type':'box','zst':10.0,'zen':100,'CX':1.0}
-    etc..
     """
     ########################################################################
     def __init__(self, name=''):
@@ -137,6 +144,7 @@ class DistParams:
 
     #######################################################################
     def __repr__(self,):
+        """ display """
         lout = '\n** Comp = %s, (norm= %s, scale_to_norm =%s)\n' % (self.cname,
                                                                    repr(self.norm),
                                                                    repr(self.scale_to_norm))
@@ -201,41 +209,51 @@ class DistParams:
 class Slab:
     """
     Create slab model
+
+    Notes:
+    ------
     * Conventions / indexing chemistry
-     - The list self.comp holds component objects.  The list self.distpar
-       holds the corresponding distibution parameters. ie distpar[j] are the
-       dist parameters for comp[j]
+      The list self.comp holds component objects.  The list self.distpar
+      holds the corresponding distibution parameters. ie distpar[j] are the
+      dist parameters for comp[j]
 
     * Arrray references
-     - Note we try to handle the arrays:
-           self.d, self.rho, self.sigma, self.fZ, self.elem_z
-       such that thier reference (to thier memory location)
-       does not change after calling init().  i.e. these arrays
-       are used by the Reflectivity module in C, and if we're careful
-       we can avoid having to reassign these all the time...
+      Note we try to handle the arrays:
+          self.d, self.rho, self.sigma, self.fZ, self.elem_z
+      such that thier reference (to thier memory location)
+      does not change after calling init().  i.e. these arrays
+      are used by the Reflectivity module in C, and if we're careful
+      we can avoid having to reassign these all the time...
        
-    * Conventions / indexing slabs
-     - Note that we do not slabify layer[0] and layer[nlayer-1]
-       (ie not divied up and not included in mass balance).
-     - However, they are included as the first and last entry of z, d etc.
-       and thier components are part of total component list
-     - Conventions for z:
-       * z values are for the bottom of each slab
-       * all d's are positive (layer thicknesses)
-       * Therefore:  self.z + self.d = top of each slab
-     - Note self.delta is the target slab size.  However, 
-       actuals d's are adjusted to ensure that layers maintain
-       the correct total thickness
-     - If delta <= 0, slabs are same thickness as layers
-     - If delta > 0 , we turn off roughness at top of
-       any interface layer.
-     - To index slabs according to original layer use:
-       self.z[num.where(self.zidx==layer_idx)]
+    * Conventions / indexing slabs:
+      Note that we do not slabify layer[0] and layer[nlayer-1]
+      (ie not divied up and not included in mass balance).
+      However, they are included as the first and last entry of z, d etc.
+      and thier components are part of total component list
+
+      Conventions for z:
+      z values are for the bottom of each slab
+      all d's are positive (layer thicknesses)
+      Therefore:  self.z + self.d = top of each slab
+      
+      Note self.delta is the target slab size.  However, 
+      actuals d's are adjusted to ensure that layers maintain
+      the correct total thickness
+      If delta <= 0, slabs are same thickness as layers
+      If delta > 0 , we turn off roughness at top of
+      any interface layer.
+      To index slabs according to original layer use:
+      self.z[num.where(self.zidx==layer_idx)]
        
     """
     ########################################################################
     def __init__(self,layer=[],delta=10.):
-
+        """
+        Parameters:
+        -----------
+        * layer is a list of layer objects
+        * delta (angstroms) is the slab thickness
+        """
         ###
         self.layer  = layer   # list of layer objects
         self.delta  = delta   # delta for slabify (if <0 slabs = layers)
@@ -264,6 +282,7 @@ class Slab:
 
     ########################################################################
     def __repr__(self,):
+        """ display """
         lout = "**** Slab Model ****\n"
         lout = "%s - components = %s\n" % (lout, repr(self.list_comps()) )
         lout = "%s - elements   = %s\n" % (lout, repr(self.list_elements()) )
@@ -288,10 +307,10 @@ class Slab:
     def _init_comp(self):
         """
         Get all the:
-        - unique components
-        - list of elements
-        - total 'interface' volume
-        - distparam objects and component totals
+        * unique components
+        * list of elements
+        * total 'interface' volume
+        * distparam objects and component totals
           (component totals are just for the interface region!!)
         """
         self.comp    = []   # list of components (component objects), len = numX
@@ -361,8 +380,11 @@ class Slab:
     def _comp_idx(self,comp):
         """
         Get component index.
-        - This should work for both self.comp and self.distpar lists
-        - comp maybe a string (comp name) or integer (comp index)
+        This should work for both self.comp and self.distpar lists
+
+        Parameters:
+        -----------
+        * comp maybe a string (comp name) or integer (comp index)
         """
         cidx = -1
         if type(comp) == types.StringType:
@@ -386,18 +408,19 @@ class Slab:
     ########################################################################
     def _init_z(self,):
         """
-        - Conventions:
-          * z values are for the bottom of each slab
-          * all d's are positive (layer thicknesses)
-        - Therefore:
+        Notes:
+        ------
+        * z values are for the bottom of each slab
+        * all d's are positive (layer thicknesses)
+          Therefore:
           self.z + self.d = top of each slab
-        - Note self.delta is the target slab size.  however, 
+        * Note self.delta is the target slab size.  however, 
           this is adjusted to ensure that layers maintain
           the correct total thickness
-        - If delta <= 0, slabs are same thickness as layers
-        - If delta > 0 , we turn off roughness at top of
+        * If delta <= 0, slabs are same thickness as layers
+        * If delta > 0 , we turn off roughness at top of
           any interface layer.
-        - To index use: self.z[num.where(self.zidx==layer)]
+        * To index use: self.z[num.where(self.zidx==layer)]
         """
         self.z      = []    # z-values, len=numz
         self.zidx   = []    # which layer z belongs to, len=numz
@@ -540,8 +563,14 @@ class Slab:
     def add_dpar(self,comp,dist={},norm=None,scale=None,init=False):
         """
         Add a distribution parameter for the component comp
-        - comp maybe a string (comp name) or integer (comp index)
-        - If init==True, the interface dist is cleared for this comp
+
+        Parameters:
+        -----------
+        * comp maybe a string (comp name) or integer (comp index)
+        * dist is set of distribution parameters
+        * norm is flag for distribution normalization
+        * scale is flag for distribution scaling
+        * If init==True, the interface dist is cleared for this comp
           before adding the new dist (top and subs unaffected)
         """
         cidx = self._comp_idx(comp)
@@ -560,8 +589,14 @@ class Slab:
     def set_dpar(self,comp,dist=None,didx=0,norm=None,scale=None,):
         """
         Edit a distribution parameter for the component comp
-        - comp maybe a string (comp name) or integer (comp index)
-        - didx is the index of the interface distro
+
+        Parameters:
+        -----------
+        * comp maybe a string (comp name) or integer (comp index)
+        * dist is set of distribution parameters
+        * didx is the index of the interface distro
+        * norm is flag for distribution normalization
+        * scale is flag for distribution scaling
         """
         cidx = self._comp_idx(comp)
         if cidx == -1: return
@@ -578,7 +613,10 @@ class Slab:
     def calc_dist(self,):
         """
         Compute the concentration distribution of all components
-        Note density constraints are applied after computing concetrations
+        
+        Notes:
+        ------
+        density constraints are applied after computing concetrations
           if self.rhoflag == 0 no density normalization
           if self.rhoflag == 1 normalize to substrate density
           if self.rhoflag == 2 normalize to top density
@@ -587,7 +625,6 @@ class Slab:
         Note we are trying to keep the memory locations of 
         self.fZ and self.rho fixed in the calc.  
         """
-        
         # reset self.CX, assume array sizes havent changed
         # compute self.CX
         self.CX.fill(0.0)
@@ -657,7 +694,9 @@ class Slab:
     ########################################################################
     def _calc_dist(self,cidx):
         """
-        Note all (interface) distributions are assumed to be of form:
+        Notes:
+        ------
+        All (interface) distributions are assumed to be of form:
            CX[cidx][zrange]= CX[cidx][zrange] + dist['CX']*f(z[zrange])
           
         ie the total component distribution is a sum over indidual dists
@@ -669,7 +708,6 @@ class Slab:
         if self.distpar[cidx].norm == 1  mass balance is conserved
         if self.distpar[cidx].norm == 2  normalize to substrate concentration
         if self.distpar[cidx].norm == 3  normalize to top concentration
-
         """
         # gather all params
         dpar = [self.distpar[cidx].subs]
@@ -752,10 +790,12 @@ class Slab:
         """
         Get indicies for distro. These index z array as:
             zz[idxmin:idxmax+1]
-        Note
-            interface='i' means constrained to between subs/top
-            interface='s' means subs
-            interface='t' means top
+
+        Notes:
+        -------
+        interface='i' means constrained to between subs/top
+        interface='s' means subs
+        interface='t' means top
         """
         numz = len(self.z)
         #
@@ -898,9 +938,12 @@ class Slab:
     def _comp_mb(self,cidx):
         """
         Compute component mass bal (moles)
-        Ignore substrate and top
-        Note conc are in mole/cm^3, d is in angstroms, 
-        and we assume unit area = 1cm^2
+        
+        Notes:
+        ------
+        * The substrate and top are ignored
+        * The conc are in mole/cm^3, d is in angstroms, 
+          and we assume unit area = 1cm^2
         """
         xx = self.CX[cidx] * self.d
         mb = xx[1:-1].sum()*1.e-8
@@ -910,7 +953,8 @@ class Slab:
     def comp_mb(self,show=True):
         """
         Compute component mass (mole) balance change
-         relative to original model
+        relative to original model
+
         Ignore substrate and top
         """
         ncomp = len(self.comp)
@@ -936,7 +980,13 @@ class Slab:
     ########################################################################
     def plot(self,ty='density',bar=True,hold=False):
         """
-        note hold only works with line plots
+        Make a plot
+
+        Parameters:
+        -----------
+        * ty is the plot type ('density', 'comp', 'el', 'frac')
+        * bar is a bar plot flag
+        * hold is the plot hold flag and only works with line plots
         """
         from matplotlib import pyplot
         zmin = num.min(self.z)
@@ -1023,8 +1073,12 @@ class Model:
     #######################################################################
     def __init__(self,substrate=None,layers=[],top=None,theta=[],params={}):
         """
-        substrate and top are Layer instances
-        layers is a list of Layer instances
+        Parameters:
+        -----------
+        * substrate and top are Layer instances
+        * layers is a list of Layer instances
+        * theta is an array of angles (degrees)
+        * params is a list of reflectivity/FY parameters
         """
         self.ref    = None
         self.slab   = None
@@ -1056,6 +1110,7 @@ class Model:
         
     #######################################################################
     def __repr__(self,):
+        """ display """
         lout = "==== Interface Model ====\n"
         idx = range(len(self.layer))
         idx.reverse()
@@ -1101,7 +1156,11 @@ class Model:
     def slabify(self,delta=10.):
         """
         Generate a 'slab' model from layers
-        use delta <= 0 for just slabs...
+
+        Parameters:
+        -----------
+        * delta is the slab thickness
+          use delta <= 0 for just slabs...
         """
         self.slab = Slab(self.layer,delta=delta)
         self._initR = True
@@ -1223,6 +1282,8 @@ class Model:
     def plot(self,ty='calc',fignum=True,bar=True,hold=False,FYflag=True,
              Rdat=None,FYdat=None):
         """
+        Parameters:
+        -----------
         ty = 'calc' for R and/ or FY calc
         ty = 'density' for density
         ty = 'comp' for component concentration
@@ -1243,6 +1304,7 @@ class Model:
             self.slab.plot(ty=ty,bar=bar,hold=hold)
 
     def _plot_calc(self,hold=False,FYflag=True,Rdat=None,FYdat=None):
+        """ plot """
         from matplotlib import pyplot
         if hold == False:
             pyplot.clf()

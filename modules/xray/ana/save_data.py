@@ -23,12 +23,12 @@ root/ctr_data/...
 
 Examples:
 --------
->>scandata.save(ctr,file='ctr.h5')
->>ctr = scandata.restore(file='ctr.h5',name='ctr')
+>>write_ctrdata(ctr,file='ctr.h5')
+>>ctr = read_ctrdata(file='ctr.h5',name='ctr')
 
 Todo:
 -----
-* work in progress, have moslty completed writing ScanData, ImageData
+* work in progress, have mostly completed writing ScanData, ImageData
   and CtrData to file.  
 * have to do writing of med and xrf
 * have to make read methods that will read the files and return the
@@ -46,7 +46,7 @@ try:
 except:
     print "    ** Warning tables module (hdf interface) cannot be loaded in 'save_data'"
     
-import data as scandata
+import scan_data
 import image_data
 import ctr_data
 
@@ -409,7 +409,7 @@ def _scan_data(data):
     """
     Turn a scan data object into dictionary of arrays
     """
-    if not isinstance(data,scandata.ScanData):
+    if not isinstance(data,scan_data.ScanData):
         print "Warning data is not a ScanData instance"
     d = {}
     d['name'] = data.name

@@ -1,16 +1,12 @@
-##########################################################################
 """
-Tom Trainor (tptrainor@alaska.edu) 
-lattice calcs
+Lattice calcs
 
-Modifications:
---------------
-- convert matlab to python, Kunal Tanwar
-- Convert classes, TPT
+Authors/Modifications:
+-----------------------
+* Tom Trainor (tptrainor@alaska.edu) 
+* convert matlab to python, Kunal Tanwar
+* Convert classes, TPT
 
-"""
-##########################################################################
-"""
 Notes on Convention and Generalized Transforms
 ----------------------------------------------
 The set of basis vectors that defines the real lattice are
@@ -152,13 +148,18 @@ class Lattice:
     """
     def __init__(self,a=10.,b=10.,c=10.,alpha=90.,beta=90.,gamma=90.,lam=1.5406):
         """
-        Initialize by passing a,b,c in angstroms 
-        alpha, beta, gamma in degrees,
-        and lambda in angstroms (default lambda is Cu Ka1)
+        Initialize
+
+        Parameters:
+        -----------
+        * a,b,c in angstroms 
+        * alpha, beta, gamma in degrees,
+        * lambda in angstroms (default lambda is Cu Ka1)
         """
         self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma,lam=lam)
 
     def __repr__(self,):
+        """ display """
         lout = "a=%6.5f, b=%6.5f, c=%6.5f" % (self.a, self.b, self.c)
         lout = "%s, alpha=%6.5f,beta=%6.5f,gamma=%6.5f\n" % (lout,
                                                              self.alpha,
@@ -204,8 +205,8 @@ class Lattice:
     def _calc_g(self):
         """
         Calculate the metric tensors and recip lattice params
-           self.g  = real space metric tensor
-           self.gr = recip space metric tensor
+        self.g  = real space metric tensor
+        self.gr = recip space metric tensor
         """
         (a,b,c,alp,bet,gam) = self.cell()
         # real metric tensor
@@ -225,9 +226,14 @@ class Lattice:
     def vol(self,recip=False):
         """
         Calculate the cell volume.
-          If recip == False, this is the real space vol in ang**3
+
+        Parameters:
+        -----------
+        * If recip == False, this is the real space vol in ang**3
           If recip == True, this is the recip space vol in ang**-3
 
+        Notes:
+        ------
         V_real  = sqrt(determiant(g))
         V_recip = sqrt(determiant(inv(g)))
 
@@ -242,9 +248,13 @@ class Lattice:
         
     def dot(self,u,v,recip=False):
         """
-        Calculate dot product of two vectors
-          If u and v are real space vectors, use recip = False
-          If u and v are recip space vectors, use recip = True
+        Calculate dot product of two vectors (u,v)
+
+        Notes:
+        ------
+        * If u and v are real space vectors, use recip = False
+        * If u and v are recip space vectors, use recip = True
+
         Note u and v are assumed to be normal numpy arrays
         (ie not matrix objects)
 
@@ -262,9 +272,13 @@ class Lattice:
 
     def mag(self,v,recip=False):
         """
-        Calculate the norm of a vector
-          If v is real space vector, use recip = False
-          If v is recip space vector, use recip = True
+        Calculate the norm of a vector (v)
+
+        Notes:
+        ------
+        * If v is real space vector, use recip = False
+        * If v is recip space vector, use recip = True
+
         Note v is assumed to be normal numpy array
         (ie not matrix objects)
         """
@@ -273,9 +287,13 @@ class Lattice:
 
     def angle(self,u,v,recip=False):
         """
-        Calculate the angle between two vectors
-          If u and v are real space vectors, use recip = False
-          If u and v are recip space vectors, use recip = True
+        Calculate the angle between two vectors (u,v)
+
+        Notes:
+        ------
+        * If u and v are real space vectors, use recip = False
+        * If u and v are recip space vectors, use recip = True
+
         Note u and v are assumed to be normal numpy arrays
         (ie not matrix objects)
         """
@@ -321,7 +339,9 @@ class Lattice:
     def tth(self,hkl,lam=None):
         """
         Calculate 2Theta for given [h,k,l] and wavelength
-        
+
+        Notes:
+        ------
         If lam is None the default lambda will be used (Cu Ka1)
         If you pass in lam, this will change the default for
         subsequent calls
@@ -376,9 +396,16 @@ class LatticeTransform:
     """
     def __init__(self,lattice,Va=None,Vb=None,Vc=None,shift=None):
         """
-        Initialize with a Lattice instance.
-        All transforms are defined with respect to this
-        lattice, ie this is the original unprimed lattice
+        Initialize
+
+        Parameters:
+        ----------
+        * lattice is a Lattice instance.
+          All transforms are defined with respect to this
+          lattice, ie this is the original unprimed lattice
+        * Va, Vb, Vc are the lattice vectors that define the
+          a',b',c' coordinate system (rotation and contraction)
+        * shift is the lattice shift vector 
         """
         self.lattice = lattice
         self.Va    = num.array([1.,0.,0.])
@@ -390,12 +417,18 @@ class LatticeTransform:
     def basis(self,Va=None,Vb=None,Vc=None,shift=None):
         """
         Define new basis vectors.
-        Va, Vb and Vc should define the a',b',c' lattice
-        vectors of the new basis (rotation/dialation part).
-        Shift describes an origin shift of the new lattice
-        (ie take the new basis defined by Va,Vb,Vc then
-        apply the shift vector)
-        
+
+        Paratmers:
+        ----------
+        * Va, Vb and Vc should define the a',b',c' lattice
+          vectors of the new basis (rotation/dialation part).
+          
+        * Shift describes an origin shift of the new lattice
+          (ie take the new basis defined by Va,Vb,Vc then
+          apply the shift vector)
+
+        Notes:
+        ------
         All the vectors should be defined in terms of fractional
         coordinate indicies in the original basis, for example:
            a' = x1*a + y1*b + z1*c 
@@ -411,6 +444,7 @@ class LatticeTransform:
         self._update(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
 
     def _update(self,Va=None,Vb=None,Vc=None,shift=None):
+        """ update """
         if Va != None: self.Va = num.array(Va,dtype=float)
         if Vb != None: self.Vb = num.array(Vb,dtype=float)
         if Vc != None: self.Vc = num.array(Vc,dtype=float)

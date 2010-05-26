@@ -50,9 +50,9 @@ import types
 import pylab
 import numpy as Num
 from   reader import Reader
-from   data import ScanData
+from   scan_data import ScanData
 import image_data
-from image_menu import image_menu
+from   image_menu import image_menu
 
 #############################################################################
 def rasd(spec_path,spec,first_scan,last_scan):

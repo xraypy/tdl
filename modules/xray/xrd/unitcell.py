@@ -1,12 +1,10 @@
 #!/usr/bin/python
-##########################################################################
 """
-Matt Newville
 Unit cell calculations
 
-Modifications:
---------------
-
+Authors/Modifications:
+----------------------
+* Matt Newville (newville@cars.uchicago.edu)
 
 """
 ##########################################################################
@@ -24,6 +22,8 @@ class UnitCell:
     
     """
     def __init__(self):
+        """
+        """
         self.titles  = []
         self.atoms   = []
         self.hkl     = num.zeros(3)
@@ -39,13 +39,15 @@ class UnitCell:
 
 
     def do_ifeffit(self,cmd):
-        " execute ifefit command "
+        """ execute ifefit command """
         # print cmd
         self.iff.ifeffit(cmd)
 
     def read_p1(self,file='p1.inp'):
-        """read a p1.inp file, filling internal data.
-        returns 0 on success, 1 on failure."""
+        """
+        read a p1.inp file, filling internal data.
+        returns 0 on success, 1 on failure.
+        """
         self.filename = file
         try:
             f = open(self.filename,'r')
@@ -135,7 +137,9 @@ class UnitCell:
 
 
     def get_structure_factor(self,use_diffkk=1):
-        """ calculate structure factor"""
+        """
+        calculate structure factor
+        """
         sfact = 0.
         if (self.__file_read == 0):
             print 'need to read a p1.inp file before structure factor calc.'

@@ -1,5 +1,8 @@
-##
+"""
+Package for fitting of individual energy
+dispersive xrf spectra
+"""
 import xrf_model
-Xrf        = xrf_model.Xrf
+Xrf = xrf_model.Xrf
 
 

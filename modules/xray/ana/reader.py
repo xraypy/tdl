@@ -21,7 +21,7 @@ import os, copy
 import numpy as num
 
 from   specfile import SpecFile
-from   data import ScanData
+from   scan_data import ScanData
 from   detector import med
 from   xrf import xrf_model
 import image_data

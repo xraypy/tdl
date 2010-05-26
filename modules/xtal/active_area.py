@@ -5,13 +5,12 @@ Authors/Modifications:
 ----------------------
 Tom Trainor (tptrainor@alaska.edu)
 
-
 Notes:
 ------
 These area are based on completley geometric projections.  ie we assume
 that the beam is perfectly parrallel (no divergence)
 
-Note would be interesting if we could set the detector polygon from an 
+It would be interesting if we could set the detector polygon from an 
 arbirary set of pixels (e.g. roi) on image detector... especially if 
 shifted off center (or better off center relative to a specific hkl)
 """
@@ -33,39 +32,48 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
                 beam=[],det=None,sample=1.,plot=False,fig=None):
     """
     Calc the area of overlap of beam, sample and detector
-    surface polygon projections.  Return:
-        A_beam = total area of the beam projection into the surface plane
-        A_int = area of sample illuminated within the detector projection 
-    Use to correct scattering data for area effects, including spilloff, i.e.
-        A_ratio = A_int/A_beam 
-        Ic = I/A_ratio,   I = Idet/Io
+    surface polygon projections.
 
-    nm is the surface normal vector, defined in the laboratory frame.
+    Parameters:
+    -----------
+    * nm is the surface normal vector, defined in the laboratory frame.
 
-    ki and kr are vectors defined in the lab frame parallel to the
-    incident beam and diffracted beam directions respectively
-    (magnitudes are arbitrary)
+    * ki and kr are vectors defined in the lab frame parallel to the
+      incident beam and diffracted beam directions respectively
+      (magnitudes are arbitrary)
 
-    beam, det and sample are lists that hold the the lab-frame (3D) 
-    vectors defining the beam apperature, detector apperature
-    and sample shape 
+    * beam, det and sample are lists that hold the the lab-frame (3D) 
+      vectors defining the beam apperature, detector apperature
+      and sample shape 
     
-    If det = None then we ignore it and just compute spill-off correction
+      If det = None then we ignore it and just compute spill-off correction
 
-    If sample is a single number we take it as the diamter of a round sample
-    mounted flat. Otherwise sample hould be a list of lab frame vectors that 
-    describes the sample polygon.
+      If sample is a single number we take it as the diamter of a round sample
+      mounted flat. Otherwise sample hould be a list of lab frame vectors that 
+      describes the sample polygon.
 
-    If sample == None, then we assume the sample is infinite in size    
-    
+      If sample == None, then we assume the sample is infinite in size    
+
+    *  If plot = True then makes plot
+
+    Note:
+    -----
     The lab frame coordinate systems is defined such that:
         x is vertical (perpendicular, pointing to the ceiling of the hutch)
         y is directed along the incident beam path
         z make the system right handed and lies in the horizontal scattering plane
-          (i.e. z is parallel to the phi axis)
+         (i.e. z is parallel to the phi axis)
     The center (0,0,0) of the lab frame is the rotation center of the instrument.
 
-    If plot = True then makes plot
+
+    Output:
+    -------
+    * A_beam = total area of the beam projection into the surface plane
+    * A_int = area of sample illuminated within the detector projection 
+
+    Use to correct scattering data for area effects, including spilloff, i.e.
+      A_ratio = A_int/A_beam 
+      Ic = I/A_ratio,   I = Idet/Io
 
     """
     # Calc surf system transformation matrix
@@ -137,14 +145,19 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
         (A_beam,A_int) = _area_round(beam_poly,det_poly,diameter=sample,plot=plot,fig=fig)
     else:
         (A_beam,A_int) = _area_polygon(beam_poly,det_poly,sam_poly,plot=plot,fig=fig)
-    return (A_beam,A_int)
+    return (A_beam, A_int)
 
 #########################################################################
 def _area_round(beam_poly,det_poly,diameter=None,plot=False,fig=None):
     """
-    compute areas for round sample of fixed diameter
-    if det_poly = None, then just compute the beam and
-    sample overlap ie A_int/A_beam = spill fraction
+    Compute areas for round sample of fixed diameter
+
+    Parameters:
+    -----------
+    * beam_pol is the beam polygon
+    * det_poly is the detector polygon
+      if det_poly = None, then just compute the beam and
+      sample overlap ie A_int/A_beam = spill fraction
     """
     if plot:
         if fig != None: pyplot.figure(fig)
@@ -183,9 +196,14 @@ def _area_round(beam_poly,det_poly,diameter=None,plot=False,fig=None):
 #########################################################################
 def _area_polygon(beam_poly,det_poly,sam_poly,plot=False,fig=None):
     """
-    compute areas for polgon sample
-    if det_poly = None, then just compute the beam and
-    sample overlap ie A_int/A_beam = spill fraction
+    Compute areas for polgon sample
+
+    Parameters:
+    -----------
+    * beam_pol is the beam polygon
+    * det_poly is the detector polygon
+      if det_poly = None, then just compute the beam and
+      sample overlap ie A_int/A_beam = spill fraction
     """
     if plot:
         if fig != None: pyplot.figure(fig)
@@ -229,11 +247,15 @@ def calc_surf_transform(nm):
         xs is defined to make it a right handed orthonormal set
            (and is therefore in the surface plane)
 
-    nm is the surface normal vector, defined in the 
-    laboratory m-frame (i.e. pointing in an arbitrary
-    direction for a particular gonio setting)
-    - see gonio_psic.py for more details.
+    Parameters:
+    -----------
+    * nm is the surface normal vector, defined in the 
+      laboratory m-frame (i.e. pointing in an arbitrary
+      direction for a particular gonio setting)
+      - see gonio_psic.py for more details.
 
+    Notes:
+    ------
     The surface transform is defined as follows:
         |e_xs|      |e_x|              |vx|     
         |e_ys| = F* |e_y|    and   F = |vy|   

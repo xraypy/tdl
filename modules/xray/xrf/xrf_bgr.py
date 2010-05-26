@@ -1,20 +1,13 @@
-#######################################################################
 """
-Mark Rivers, GSECARS
 Methods for fitting background in energy dispersive xray spectra
 
-Modifications:
---------------
-- See http://cars9.uchicago.edu/software/python/index.html
+Authors/Modifications:
+----------------------
+* Mark Rivers, GSECARS
+* See http://cars9.uchicago.edu/software/python/index.html
 
-"""
-########################################################################
-"""
-Todo:
- - fix compress so works for arbitrary factor
-"""
-########################################################################
-"""
+Notes:
+------
 This function fits a background to an MCA spectrum. The background is
 fitted using an enhanced version of the algorithm published by
 Kajfosz, J. and Kwiatek, W .M. (1987)  "Non-polynomial approximation of
@@ -131,6 +124,12 @@ Inputs to calc
         Slope for the conversion from channel number to energy.
         Ie the slope from calibration
 
+Todo:
+-----
+* fix compress so works for arbitrary factor
+  (see ana.background)
+* get rid of bottom width and top width flags
+  no reason to optimize these...
 """
 
 #############################################################################
@@ -142,21 +141,25 @@ import numpy as num
 class Background:
     """
     Class defining a spectrum background
-    The following inputs may be set by kw argument.
-        self.bottom_width      = 4.0   # Bottom width
-        self.bottom_width_flag = 0     # Bottom width flag
-                                       # 0 = Optimize
-                                       # 1 = Fixed
-        self.top_width         = 0.0   # Top width
-        self.top_width_flag    = 0     # Top width flag
-                                       # 0 = Optimize
-                                       # 1 = Fixed
-        self.exponent          = 2     # Exponent
-        self.tangent           = False # Tangent flag
-        self.compress          = 4     # Compress
+
+    Attributes:
+    -----------
+    These may be set by kw argument upon initialization.
+    * bottom_width      = 4.0   # Bottom width
+    * bottom_width_flag = 0     # Bottom width flag
+                                # 0 = Optimize
+                                # 1 = Fixed
+    * top_width         = 0.0   # Top width
+    * top_width_flag    = 0     # Top width flag
+                                # 0 = Optimize
+                                # 1 = Fixed
+    * exponent          = 2     # Exponent
+    * tangent           = False # Tangent flag
+    * compress          = 4     # Compress
     """
     #########################################################################
     def __repr__(self):
+        """ display """
         lout = 'Xrf Background Parameters:\n'
         lout = lout + '   bottom_width      = %f\n' % self.bottom_width
         lout = lout + '   bottom_width_flag = %i\n' % self.bottom_width_flag
@@ -169,6 +172,22 @@ class Background:
 
     ##########################################################################
     def __init__(self,**kws):
+        """
+        Parameters:
+        -----------
+        These may be set by kw argument upon initialization.
+        * bottom_width      = 4.0   # Bottom width
+        * bottom_width_flag = 0     # Bottom width flag
+                                    # 0 = Optimize
+                                    # 1 = Fixed
+        * top_width         = 0.0   # Top width
+        * top_width_flag    = 0     # Top width flag
+                                    # 0 = Optimize
+                                    # 1 = Fixed
+        * exponent          = 2     # Exponent
+        * tangent           = False # Tangent flag
+        * compress          = 4     # Compress
+        """
         self.bgr               = []      # Background
 
         # Parameters
@@ -188,6 +207,9 @@ class Background:
 
     ###########################################################################
     def init(self,params=None):
+        """
+        init based on keyword parameters
+        """
         # reset bgr array
         self.bgr = []
 
@@ -219,6 +241,9 @@ class Background:
 
     ##################################################################################
     def get_params(self,):
+        """
+        Return a dictionary of parameters
+        """
         bgr_params = {'bottom_width':self.bottom_width,
                       'bottom_width_flag':self.bottom_width_flag,
                       'top_width':self.top_width,
@@ -231,8 +256,12 @@ class Background:
     ##################################################################################
     def calc(self, data, slope=1.0):
         """
-        compute bgr for data
-        slope is the slope of conversion channels to energy
+        compute background
+
+        Parameters:
+        -----------
+        * data is the spectrum
+        * slope is the slope of conversion channels to energy
         """
         REFERENCE_AMPL=100.
         TINY = 1.E-20
@@ -356,6 +385,9 @@ class Background:
 
     ##################################################################################
     def _update(self,parameters):
+        """
+        update for fitting
+        """
         if len(parameters) != 2:
             raise "Wrong number of parameters in background"
         self.bottom_width = parameters[0]
@@ -364,7 +396,8 @@ class Background:
 ############################################################
 def compress_array(array, compress):
    """
-   Compresses an 1-D array by the integer factor "compress".  
+   Compresses an 1-D array by the integer factor "compress".
+   
    Temporary fix until the equivalent of IDL's 'rebin' is found.
    """
 
@@ -379,7 +412,8 @@ def compress_array(array, compress):
 ############################################################
 def expand_array(array, expand, sample=0):
    """
-   Expands an 1-D array by the integer factor "expand".  
+   Expands an 1-D array by the integer factor "expand".
+   
    if 'sample' is 1 the new array is created with sampling,
    if 0 then the new array is created via interpolation (default)
    Temporary fix until the equivalent of IDL's 'rebin' is found.

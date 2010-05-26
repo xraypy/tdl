@@ -1,136 +1,133 @@
-#######################################################################
 """
-T. Trainor (fftpt@uaf.edu)
 Calculate reflectivity / reflection XSW
 
-Note for this module to work correctly you need to ensure that
- - Ifeffit is installed on the system, and the Ifeffit/bin
-   directory is in the systems search path
- - The wrap/libs directory must also be in the systems path
-   so that _ref.dll can be loaded
-   (which also needs to find the gsl dll's)
+Authors/Modifications:
+----------------------
+* T. Trainor (tptrainor@alaska.edu)
 
 
-Modifications:
---------------
+Notes:
+------
+For this module to work correctly you need to ensure that:
+* Ifeffit is installed on the system, and the Ifeffit/bin
+  directory is in the systems search path
+* The wrap/libs directory must also be in the systems path
+  so that _ref.dll can be loaded
+  (which also needs to find the gsl dll's)
 
-"""
-#######################################################################
-"""
-* Notes on the calculation:
-*
-* This model calculates the electric field intensity at any point 
-* within a multilayer structure as a function of incidence angle, and 
-* the Reflectivity and fluorescent yield profile.
-*
-* We assume that the multilayer has 'nlayers' and each layer 
-* within the model has a homogeneous composition and density.
-* Hence composition and density variations are modeled by 
-* discrete layers with different properties.
-*
-* The functions/data structures assume j = 'nlayers - 1' is the top layer,
-* which should generally be modelled as air/vaccum, and j = 0 is the substrate.
-*
-* For e.g. a 4 layer model (nlayers=4) would have:
-*
-*
-*               Air
-*          j = nlayers -1 = 3          
-* -------------------------------- interface 2
-*          j = nlayers -2 = 2
-* -------------------------------- interface 1
-*          j = nlayers -3 = 1
-* -------------------------------- interface 0 
-*          j = nlayers -4 = 0
-*             Substrate
-*                 |
-*                 |
-*                \ /
-*               -inf
-* ---------------------------------
-*  
-***************************************************
-* We use the following conventions:
-***************************************************
-*
-* The layer thickness are in angstroms and the 
-* array is indexed as:
-*   d[3] = Air layer thickness (Layer 3)
-*   d[2] = Layer 2 thickness
-*   d[1] = Layer 1 thickness
-*   d[0] = Substrate thickness (Layer 0)
-*
-* Note that the thickness of the Air and Substrate layers are arbitraty 
-* for the calculation of the field intensity and Reflectivity.
-* The specified layer thicknesses for these layers currently determine how 
-* deep in the layer (ie distance away from the interface) to calculate the 
-* field intensity for fluorescent yield calculations.  Note if the calc
-* parameter pdepth is passed, d[0] is also ignored in the FY calcs,
-* rather the depth is calculated as a multiple of the penetration depth...
-*
-* The densities are in g/cm^3: 
-*   rho[3] = Air layer density (Layer 3)
-*   rho[2] = Layer 2 density
-*   rho[1] = Layer 1 density
-*   rho[0] = Substrate density (Layer 0)
-*
-* The compositions are given as the elemental stiochiometric 
-* coefficients, or mole fractions.  The are given as:
-*   comp[k][j] = fraction of element k in layer j 
-*
-* The element Z's are passed in the array (len = nelem)
-*   elem_z[k] = Z of element k  
-*
-* We also require that fp and fpp are passed in 
-* (which we assume are calculated for the incident energy)
-* These arrays are of len = nelem:
-*   fp[k]  = f prime (electrons/atom) of element k
-*   fpp[k] = f double prime (electrons/atom) of element k
-*
-* The amu array (len=nelem) are the elements atomic masses:
-*   amu[k] = mass of element k (g/mole)
-*
-* The mu_at array (len=nelem) are the atomic mass absorption coefficients
-* (cm^2/g) at the fluorescence energy (ie used to calc the fluorescence attenuation)
-*   mu_at[k] = mass absorption coefficient of element k (cm^2/atom)
-*
-* Note these are related to the atomic cross sections and scattering factors via:
-*   sig_at = 2*r_e*lambda*(fpp+coh+incoh) --> cm^2/atom
-*   mu_at = (Na/A)*sig_at
-*
-* Therefore for a given layer (density rho (g/cm^3)) and formula weight (MW):
-*   mu_t =  10^-8 *(rho/MW) * Sum( A[k] * mu_at[k] * x[k])
-*   att  = exp(-mu_t*thickness)
-*
-* The calculations also allow the inclusion of interface roughness through 
-* a simple Debye-Waller type model.  Note that in the above model there are
-* 3 interfaces.  Therefore the 'sigma' array should have three values, each 
-* being the rms roughness value in angstroms:
-*   sigma[0] = layer0/layer1 interface roughness
-*   sigma[1] = layer1/layer2 interface roughness
-*   sigma[2] = layer2/layer3 interface roughness
-*
-* Note that the Debye-Waller model fails for high values of 
-* sigma (e.g. > 20 angstroms).  For rougher interfaces, or for 
-* rapidly varying compsition distributions, the best way to model these 
-* is by generating a discretized model with many homogeneous layers
-* that approximates the continuous distribution (e.g. density or composition
-* profiles that follow an erf distribution)
-*
-* Refs
-* 1. Bartels et. al., Acta Cryst (1986) A42 539-545.
-* 2. de Boer, PRB (1991) V44 498-511
-* 3. Krol et al, PRB (1988) V38 8579-8592
-* 4. Vidal and Vincent, Applied Optics (1984) V23 1794-1801
-* 5. Trainor, Templeton and Eng, J Electron Spec Rel Phenom (2006) V150, 66-85
-*
-* For information about scattering factors see (e.g.)
-* 6. Chantler, et al. (2005), X-Ray Form Factor, 
-* 7. Attenuation and Scattering Tables (version 2.1): 
-*    http://physics.nist.gov/ffast 
-* 8. Chantler, C.T., J. Phys. Chem. Ref. Data V29, 597-1048 (2000) 
-* 9. Chantler, C.T., J. Phys. Chem. Ref. Data V24, 71-643 (1995).
-*
+Notes on the calculation:
+-------------------------
+This model calculates the electric field intensity at any point 
+within a multilayer structure as a function of incidence angle, and 
+the Reflectivity and fluorescent yield profile.
+
+We assume that the multilayer has 'nlayers' and each layer 
+within the model has a homogeneous composition and density.
+Hence composition and density variations are modeled by 
+discrete layers with different properties.
+
+The functions/data structures assume j = 'nlayers - 1' is the top layer,
+which should generally be modelled as air/vaccum, and j = 0 is the substrate.
+
+For e.g. a 4 layer model (nlayers=4) would have:
+
+
+               Air
+          j = nlayers -1 = 3          
+ -------------------------------- interface 2
+          j = nlayers -2 = 2
+ -------------------------------- interface 1
+          j = nlayers -3 = 1
+ -------------------------------- interface 0 
+          j = nlayers -4 = 0
+             Substrate
+                 |
+                 |
+                \ /
+               -inf
+ ---------------------------------
+  
+We use the following conventions:
+
+The layer thickness are in angstroms and the 
+array is indexed as:
+    d[3] = Air layer thickness (Layer 3)
+    d[2] = Layer 2 thickness
+    d[1] = Layer 1 thickness
+    d[0] = Substrate thickness (Layer 0)
+
+Note that the thickness of the Air and Substrate layers are arbitraty 
+for the calculation of the field intensity and Reflectivity.
+The specified layer thicknesses for these layers currently determine how 
+deep in the layer (ie distance away from the interface) to calculate the 
+field intensity for fluorescent yield calculations.  Note if the calc
+parameter pdepth is passed, d[0] is also ignored in the FY calcs,
+rather the depth is calculated as a multiple of the penetration depth...
+
+The densities are in g/cm^3: 
+    rho[3] = Air layer density (Layer 3)
+    rho[2] = Layer 2 density
+    rho[1] = Layer 1 density
+    rho[0] = Substrate density (Layer 0)
+
+The compositions are given as the elemental stiochiometric 
+coefficients, or mole fractions.  The are given as:
+    comp[k][j] = fraction of element k in layer j 
+
+The element Z's are passed in the array (len = nelem)
+    elem_z[k] = Z of element k  
+
+We also require that fp and fpp are passed in 
+(which we assume are calculated for the incident energy)
+These arrays are of len = nelem:
+    fp[k]  = f prime (electrons/atom) of element k
+    fpp[k] = f double prime (electrons/atom) of element k
+
+The amu array (len=nelem) are the elements atomic masses:
+    amu[k] = mass of element k (g/mole)
+
+The mu_at array (len=nelem) are the atomic mass absorption coefficients
+(cm^2/g) at the fluorescence energy (ie used to calc the fluorescence attenuation)
+    mu_at[k] = mass absorption coefficient of element k (cm^2/atom)
+
+Note these are related to the atomic cross sections and scattering factors via:
+    sig_at = 2*r_e*lambda*(fpp+coh+incoh) --> cm^2/atom
+    mu_at = (Na/A)*sig_at
+
+Therefore for a given layer (density rho (g/cm^3)) and formula weight (MW):
+    mu_t =  10^-8 *(rho/MW) * Sum( A[k] * mu_at[k] * x[k])
+    att  = exp(-mu_t*thickness)
+
+The calculations also allow the inclusion of interface roughness through 
+a simple Debye-Waller type model.  Note that in the above model there are
+3 interfaces.  Therefore the 'sigma' array should have three values, each 
+being the rms roughness value in angstroms:
+    sigma[0] = layer0/layer1 interface roughness
+    sigma[1] = layer1/layer2 interface roughness
+    sigma[2] = layer2/layer3 interface roughness
+
+Note that the Debye-Waller model fails for high values of 
+sigma (e.g. > 20 angstroms).  For rougher interfaces, or for 
+rapidly varying compsition distributions, the best way to model these 
+is by generating a discretized model with many homogeneous layers
+that approximates the continuous distribution (e.g. density or composition
+profiles that follow an erf distribution)
+
+References:
+-----------
+1) Bartels et. al., Acta Cryst (1986) A42 539-545.
+2) de Boer, PRB (1991) V44 498-511
+3) Krol et al, PRB (1988) V38 8579-8592
+4) Vidal and Vincent, Applied Optics (1984) V23 1794-1801
+5) Trainor, Templeton and Eng, J Electron Spec Rel Phenom (2006) V150, 66-85
+
+For information about scattering factors see (e.g.)
+6) Chantler, et al. (2005), X-Ray Form Factor, 
+7) Attenuation and Scattering Tables (version 2.1): 
+   http://physics.nist.gov/ffast 
+8) Chantler, C.T., J. Phys. Chem. Ref. Data V29, 597-1048 (2000) 
+9) Chantler, C.T., J. Phys. Chem. Ref. Data V24, 71-643 (1995).
+
 """
 ###############################################################################
 
@@ -154,15 +151,25 @@ DEFAULT_PARAMS = {'energy':10000.,'wconv':0.01,
 ###############################################################################
 class RefModel(_reflectivity._Reflectivity):
     """
-    Note we go through all this initialization stuff
-    in order to ensure that the arrays/data are appropriate
-    to pass to the c library.  See _reflectivity._Reflectivity
+    Reflectivity model
+    
+    See _reflectivity._Reflectivity for details
+    regarding the initialization - we need to make 
+    sure that the arrays/data are appropriate
+    to pass to the c library.  
     """
     def __init__(self,d=[],rho=[],sigma=[],comp=[],elem_z=[],theta=[],params={}):
         """
-        Valid kw args:
-        d, rho, sigma, comp, elem_z, theta --> all num arrays, dtype = double
-        params --> dictionary
+        Parameters:
+        -----------
+        All these should be num arrays, dtype = double
+        * d array of layer thicknesses (angstroms)
+        * rho array of corresponding densities (g/cm^3)
+        * sigma array of interface roughnesses (angstroms)
+        * comp is the composition array
+        * elem_z are the Z values of each element in the model
+        * theta array of theta values (degrees)
+        * params is a dictionary of model parameters (see set_params)
         """
         self.iff = Ifeffit(screen_echo = 0)
         self.nlayer    = 0
@@ -188,6 +195,7 @@ class RefModel(_reflectivity._Reflectivity):
                    elem_z=None, theta=None):
         """
         Initialize/modify model data and arrays.
+        
         Note that arrays should be passed in as numpy arrays, and will
         be assigned by reference!! See _reflectivity._init_model for
         array creation
@@ -240,20 +248,22 @@ class RefModel(_reflectivity._Reflectivity):
     ##########################################################
     def set_params(self,**params):
         """
-        # calc_params[0] = energy (eV)
-        # calc_params[1] = wconv (degrees)
-        # calc_params[2] = slen  (mm)
-        # calc_params[3] = bvert (mm)
-        # calc_params[4] = bhorz (mm)
-        # calc_params[6] = aflag 
-        # calc_params[6] = fyidx
-        # calc_params[7] = fyenergy (eV)
-        # calc_params[8] = adet  (deg)
-        # calc_params[9] = tnorm (deg)
-        # calc_params[10] = rflag
-        # calc_params[11] = delz (ang)
-        # calc_params[12] = pdepth
-        # calc_params[13] = rscale
+        Parameters:
+        -----------
+        * energy (eV) is the incident energy        # calc_params[0]
+        * wconv (degrees) is the concolution width  # calc_params[1] 
+        * slen  (mm) is the sample length           # calc_params[2] 
+        * bvert (mm) is the vertical beam dim       # calc_params[3] 
+        * bhorz (mm) is the horizontal beam dim     # calc_params[4] 
+        * aflag is a flag for area calcs            # calc_params[6]  
+        * fyidx is the index of the element for FY  # calc_params[6]
+        * fyenergy (eV) is the energy of FY         # calc_params[7]  
+        * adet  (deg) is the angle of the detector  # calc_params[8]  
+        * tnorm (deg) is the theta for normalizatio # calc_params[9]  
+        * rflag is the roughness flag               # calc_params[10]  
+        * delz (ang) is the delta z for integration # calc_params[11]  
+        * pdepth is the substrate FY clac flag      # calc_params[12]  
+        * rscale is a scale factor for reflectivity # calc_params[13]  
         """
         if len(params) == 0: return
         if params.has_key('energy'):
@@ -300,7 +310,8 @@ class RefModel(_reflectivity._Reflectivity):
     ##########################################################
     def init_energy(self,):
         """
-        change the incident energy of the calc
+        Change the incident energy of the calc
+
         get fp,fpp from ifeffit for index of refraction calcs
         """
         if len(self.fp) != self.nelem:
@@ -327,8 +338,8 @@ class RefModel(_reflectivity._Reflectivity):
     ##########################################################
     def init_fy(self,):
         """
-        Get fpp from ifeffit and use this to est mu_atomic 
-        for fy. This will be a decent estimate for high z and E
+        Get fpp from ifeffit and use this to est mu_atomic for fy.
+        This will be a decent estimate for high z and E
         however, these are approx since we are ignoring
         coherent and incoherent scattering cross sections
         to computing total (ie this is photoeffect only)
@@ -354,7 +365,6 @@ class RefModel(_reflectivity._Reflectivity):
                 mu  = con*fpp/(fy_energy*self.amu[j])
                 #
                 self.mu_at[j] = mu
-
         self._init_fy = False
 
     ##########################################################
@@ -405,11 +415,13 @@ class RefModel(_reflectivity._Reflectivity):
 
     ##########################################################
     def make_mole_fractions(self):
+        """
+        make composition into mole fractions
+        """
         self.comp = self.comp / self.comp.sum(0)
         return
 
 
-############################################################################
 ############################################################################
 ############################################################################
 def test():
