@@ -23,12 +23,26 @@ from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
 from mathutil import cartesian_mag, cartesian_angle
 
-#######################################################################
+#########################################################################
 def inner_polygon(poly1,poly2):
     """
     Given two polygons find the new polygon made up from
     the inner intersections of the two
-    The returned polygon is sorted.  
+
+    Parameters:
+    -----------
+    * poly1 and poly2 are polygons defined by 3 or more
+      2D vectors (ie points in an xy plane)
+
+    Outputs:
+    --------
+    * The returned polygon is sorted.
+
+    Example:
+    --------
+    >>poly1 = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[0.,.5],[1.,-1.]]
+    >>poly2 = [[0.5,2.], [-0.5,2.], [-0.5,-2.],[0.5,-2.]]
+    >>inner = polygon.inner_polygon(poly1,poly2)
     """
     npts1 = len(poly1)
     npts2 = len(poly2)
@@ -78,7 +92,12 @@ def inner_polygon(poly1,poly2):
 #######################################################################
 def is_inner(point,poly):
     """
-    is the point inside the polygon
+    Is the point inside the polygon
+
+    Parameters:
+    -----------
+    * point is a [x,y] pair
+    * poly is a list of 3 or more [x,y] pairs defining a polygon
     """
     npts = len(poly)
     p1 = [0.,0.]
@@ -101,22 +120,24 @@ def is_inner(point,poly):
 def line_intercept(p1,p2,p3,p4):
     """
     Compute the point of intersection of the 2 lines defined
-    by p1-p2 and p3-p4.  The p's are assumed to be 2D
-    in-plane vectors (ie [x,y])
+    by p1-p2 and p3-p4.
 
-    Return ([x,y],flag).
+    Parameters:
+    -----------
+    * The p's are 2D in-plane vectors (ie [x,y])
 
-    [x,y] = None if the lines do not intersect.  
-
-    flag = 0 if the intercept is outside the
-              extent of the 2 lines
-              (or no intercept)
-    flag = 1 if the intercept is in bounds,
-             i.e. within the limits of the two lines
-    flag = 2 if the intercept corresponds to the
-             terminus of one of the lines. ie the end
-             of one line is on the other line
-             (inclusive of end points on end points)
+    Output: ([x,y],flag)
+    -------
+    * [x,y] is the point of intersection or
+      None if the lines do not intersect.  
+    * flag = 0 if the intercept is outside the
+      extent of the 2 lines (or no intercept)
+    * flag = 1 if the intercept is in bounds,
+      i.e. within the limits of the two lines
+    * flag = 2 if the intercept corresponds to the
+      terminus of one of the lines. ie the end
+      of one line is on the other line
+      (inclusive of end points on end points)
     """
     # Note if vertical line m = None and b holds x-val
     (m1,b1) = line_param(p1,p2)
@@ -178,9 +199,21 @@ def line_intercept(p1,p2,p3,p4):
 ###################################################################
 def line_param(v1,v2):
     """
-    Calc the params for straight line from two vectors
+    Calc the params for straight line defined from two vectors
     (this is defined for the in-plane (2D) case)
-    i.e. compute the equation of a line, y = m*x + b
+
+    Parameters:
+    -----------
+    * v1 and v2 are 2D vectors ([x,y])
+
+    Outputs: (m,b)
+    --------
+    * m is the line slope
+    * b is the line y-intercept
+
+    Notes:
+    ------
+    This computes the equation of a line, y = m*x + b,
     that passes through the surface point defined by v1 and v2.
     This gives back m and b.  If the line is vertical the returned
     slope (m) = None and b = x-value of the line
@@ -199,11 +232,20 @@ def line_param(v1,v2):
 ##################################################################
 def poly_area(polygon,sort=True):
     """
-    Compute the area of a polygon defined
-    by a list of points (xy pairs). This assumes the 
-    points define a complete/enclosed polygon
-    (therefore a min of 3 points).
-    
+    Compute the area of a polygon
+
+    Parameters:
+    -----------
+    * polygon is a list of points (xy pairs).
+      This assumes the points define a complete/
+      enclosed polygon (therefore a min of 3 points).
+
+    * sort is a flag to indictate if the points
+      should be sorted by thier angles relative to
+      the x-axis
+
+    Notes:
+    ------
     The points do not need to be in a particular order,
     this algorithm sorts them accoding to the angle
     with respect to the x-axis and then computes the
@@ -236,9 +278,15 @@ def poly_area(polygon,sort=True):
 ##################################################################
 def sort_points(*pts):
     """
-    given a sequence of [x,y] points
-    sort them according to angle (ccw w/r/t x-axis)
-    return sorted list of points and angles
+    Sort points according to angle (ccw w/r/t x-axis)
+
+    Parameters:
+    -----------
+    * a sequence of [x,y] points
+
+    Outputs: (points, angles)
+    --------
+    * return sorted list of points and angles
     """
     npts = len(pts)
     points = []
@@ -266,8 +314,8 @@ def sort_points(*pts):
 ##################################################################
 def segment_area(p1,p2):
     """
-    Compute the in-plane area of the half the 
-    polygon defined by the origin and two points.
+    Compute the in-plane area of the polygon defined
+    by the origin and two points (p1 and p2).
     """
     # this uses cross product
     # which computes the full area of
@@ -277,7 +325,7 @@ def segment_area(p1,p2):
     #p1 = num.array([p1[0],p1[1],0.])
     #p2 = num.array([p2[0],p2[1],0.])
     #a = 0.5*cartesian_mag(num.cross(p1,p2))
-    # This is result of cross product
+    # This is the result of the cross product operation:
     a = (p1[0]*p2[1])**2. + (p2[0]*p1[1])**2. - (2.*p1[0]*p2[0]*p1[1]*p2[1])
     a = 0.5 * num.sqrt(a)
     return a
@@ -286,10 +334,13 @@ def segment_area(p1,p2):
 def poly_area_num(polygon,diameter=None,num_int=100,plot=False):
     """
     Numerically compute the area of a polygon
-    
-    If diameter != None the area is that inside the given diameter
-    wrt to the center of the polygon
-    
+
+    Parameters:
+    -----------
+    * polygon is a list of [x,y] points defining the shape
+    * if diameter != None the area is that inside the given diameter
+      wrt to the center of the polygon
+    * num_int is the number of divisions to use in the integration
     """
     npts = len(polygon)
     if npts < 3: return 0.
@@ -371,7 +422,7 @@ def poly_area_num(polygon,diameter=None,num_int=100,plot=False):
 ##################################################################
 def poly_y_intercepts(polygon):
     """
-    find all the y intercepts of the polygon  
+    find all the y-axis intercepts of the polygon  
     """
     npts = len(polygon)
     polygon = num.array(polygon)
@@ -432,7 +483,10 @@ def plot_polygon(polygon,**kw):
 def plot_points(points,**kw):
     """
     plot a bunch of in-plane ([x,y]) points
-    points is a list or tupe of [x,y] pairs
+
+    Parameters:
+    -----------
+    * points is a list or tupe of [x,y] pairs
     """
     try:
         fmt = kw.pop('fmt')

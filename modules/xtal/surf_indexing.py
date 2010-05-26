@@ -1,12 +1,15 @@
-##########################################################################
 """
-Tom Trainor (fftpt@uaf.edu ) 
 Surface indexing
 
-Modifications:
---------------
- - clean up and convert to class
+Authors/Modifications:
+-----------------------
+* Tom Trainor (tptrainor@alaska.edu)
 
+Todo:
+-----
+* clean up and convert to class
+* use space group to generate from bulk
+  assymetric unit
 """
 
 ##########################################################################
@@ -17,10 +20,20 @@ import xtal_calc
 ##########################################################################
 def inplane_vectors(hkl, cell):
     """
-    * inplane_vectors(hkl,cell):
-      calculate a number of lattice vectors lying in plane (hkl) of a lattice defined by
-      cell. All the vectors are sorted according to their magnitudes given in column 4
-      of the output. The first three column's give coefficients of the vector.
+    Calculate in-plane lattice vectors
+
+    Parameters:
+    -----------
+    * hkl defines the plane
+    * cell defines the lattice (a,b,c,alpha,beta,gamma)
+
+    Output:
+    -------
+    The first three column's of the output give coefficients of the
+    in plane vectors.
+    
+    All the vectors are sorted according to their magnitudes given 
+    in column 4 of the output. 
     """
     #calculate surface vectors for a given hkl plane through origin
     V_tmp=[]
@@ -46,9 +59,17 @@ def inplane_vectors(hkl, cell):
 ##########################################################################
 def slab_repeat_vectors(hkl,cell):
     """
-    * slab_repeat_vectors(hkl,cell):
-      calculate a number of possible slab repeat vectors by given (hkl) and cell sorted
-      by the angle they make with surface normal that points into bulk
+    calculate a number of possible slab repeat vectors
+
+    Parameters:
+    -----------
+    * hkl defines the plane
+    * cell defines the lattice (a,b,c,alpha,beta,gamma)
+
+    Output:
+    -------
+    * list of vectors sorted by the angle they make with surface
+      normal that points into the bulk
     """
     # calculate number of possible slap repeat vectors
     g = g_matx(cell)
@@ -81,8 +102,11 @@ def slab_repeat_vectors(hkl,cell):
 ##########################################################################
 def basis_transformation_matrix(Va,Vb,Vc):
     """
-    * basis_transformation_matrix(Va,Vb,Vc):
-      transform to a basis defined by Va, Vb, and Vc,
+    Compute the surface transformation
+    
+    Transform to a basis defined by Va, Vb, and Vc,
+
+    Note redo this to use lattice.LatticeTransform
 
     returns matrix MGFN,
     where MGFN[0] = M, M transforms the basis,
@@ -164,10 +188,8 @@ def basis_transformation_matrix(Va,Vb,Vc):
 ##########################################################################
 def calc_surf_cell(F,bulk_name,cell):
     """
-    * calc_surf_cell(F,bulk_name,cell):
-      calculate a big sur file from the bulk structure file, the extension of the new
-      file is .surf, and it needs to filtered by hand to get the fractional coordinates
-                                      
+    calculate a big sur file from the bulk structure file, the extension of the new
+    file is .surf, and it needs to filtered by hand to get the fractional coordinates
     """
     # calculate the big surface cell
     # read bulk file

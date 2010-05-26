@@ -1,23 +1,17 @@
-##########################################################################
 """
-Tom Trainor (tptrainor@alaska.edu) 
-structure generator
+Crystal structure generator
 
-Modifications:
---------------
-- 
+Authors/Modifications:
+----------------------
+* Tom Trainor (tptrainor@alaska.edu) 
 
-"""
-##########################################################################
-"""
-Todo
-
- - Include dictionary of space groups from the international tables
-
- - Reading cif files and others (maybe seperate module)
+Todo:
+-----
+* Include dictionary of space groups from the international tables
+* Handle 2D plane group operations (include dictionary of plane groups) 
+* Reading cif files and others (maybe seperate module)
    - e.g. get xyz file from fit and par files
-
- - Structure analysis and bond valence calcs (seperate module...)
+* Structure analysis and bond valence calcs (seperate module...)
  
 """
 ##########################################################################
@@ -29,19 +23,29 @@ import types
 ##########################################################################
 class PositionGenerator:
     """
-    class to generate atomic positions given symmetry operations
+    Class to generate equivalent positions given symmetry operations
     """
     def __init__(self):
+    """ init """
         self.ops = []
 
     ###########################################################    
     def add_op(self,sym='x,y,z',shift=''):
         """
-        add a new symmetry operator for generating positions
-        sym and shift are strings with comma delimeted set of
-        characters that defines the opertions.  e.g.
+        Add a new symmetry operator for generating positions
+
+        Parameters:
+        ----------
+        * sym and shift are strings with comma delimeted set of
+          characters that defines the opertions.  e.g.
           sym = "x,y,z", shift = "0,0,0"
           sym = "-y,z,x+y", shift = "1/2,1/2,0"
+
+        Example:
+        --------
+        >>sym1 = "x,y,z"
+        >>shift1 = "1/2, 1/2, 0"
+        >>p.add_op(sym=sym1,shift=shift1)
         """
         #check shift
         if len(shift) > 0:
@@ -69,7 +73,7 @@ class PositionGenerator:
     ###########################################################    
     def _make_seitz_matrix(self,x,y,z):
         """
-        generate augmented (seitz) matrix given
+        Generate augmented (seitz) matrix given
         string symbols for x,y,z, coordinates
         """
         def _vec(sym):
@@ -116,7 +120,19 @@ class PositionGenerator:
     ###########################################################    
     def copy(self,x,y,z,reduce=True,rem_dups=True):
         """
-        given x,y,z coordinates, calc all sym copies
+        Calc all sym copies of a position
+
+        Parameters:
+        -----------
+        * x,y,z are fractional coordinates
+        * reduce is flag to indicate that all
+          positions must be in bounds  0 to 1
+        * rem_dups is a flag to indicate if duplicates
+          should be removed
+
+        Outputs:
+        --------
+        * list of vectors of symmetry copy positions
         """
         v0 = num.array([float(x),float(y),float(z),1.0])
         vectors = []
@@ -171,10 +187,10 @@ def _test1():
     """
     C2/m
     """
-    sym1 = "x,y,z"
-    sym2 = "-x,y,-z"
-    sym3 = "-x,-y,-z"
-    sym4 = "x,-y,z"
+    sym1   = "x,y,z"
+    sym2   = "-x,y,-z"
+    sym3   = "-x,-y,-z"
+    sym4   = "x,-y,z"
     shift0 = "0,0,0"
     shift1 = "1/2, 1/2, 0"
     p = PositionGenerator()
