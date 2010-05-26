@@ -17,6 +17,7 @@ from .util import LarchExceptionHolder, Procedure, DefinedVariable
 from .closure import Closure
 
 __version__ = '0.9.3'
+
 OPERATORS = {ast.Is:     lambda a, b: a is b,
              ast.IsNot:  lambda a, b: a is not b,
              ast.In:     lambda a, b: a in b,
@@ -46,6 +47,13 @@ OPERATORS = {ast.Is:     lambda a, b: a is b,
              ast.UAdd:   lambda a: +a,
              ast.USub:   lambda a: -a}
 
+def iscallable(obj):
+    return hasattr(obj, '__call__')
+
+if sys.version_info[0] == 2:
+    def iscallable(obj):
+        return callable(obj) or hasattr(obj, '__call__')
+        
 class Interpreter:
     """larch program compiler and interpreter.
   This module compiles expressions and statements to AST representation,
@@ -589,7 +597,7 @@ class Interpreter:
         # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
 
-        if not hasattr(func, '__call__'):
+        if iscallable(func):
             msg = "'%s' is not callable!!" % (func)
             self.raise_exception(node, msg=msg, py_exc=sys.exc_info())
 
