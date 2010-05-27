@@ -81,8 +81,8 @@ This can be customized via the startup files:
    HOMEPATH/.pds
 
 You can determine the values for these paths using the following:
->>show -a __pds__.__path__   # INSTALL_PATH
->>show -a __home__           # HOMEPATH
+pds>show __pds__.__path__   # INSTALL_PATH
+pds>show __home__           # HOMEPATH
 
 ** Syntax
 Command line syntax is the same as at the typical python interpretor prompt
@@ -96,7 +96,7 @@ The list of commands (and other loaded objects) are displayed by typing
 'show' at the command line. Commands can be exectuted from the
 command line as:
 
-  pds>command arg1, arg2
+pds>command arg1, arg2
 
 When you exectute a command the command name and arguments get 'caught'
 before being sent to the python interpretor.  They are exectuted
@@ -111,7 +111,6 @@ in one of two ways, depending on how the command was defined:
     repacked into a function call and sent to the interpretor.
     Type 'help addcmd' and 'help alias' for more information on how to
     create these.
-
 
 More information on pds and the overall project can be found at:
 http://cars9.uchicago.edu/ifeffit/tdl/Docs/Pds

@@ -25,8 +25,9 @@ class PositionGenerator:
     """
     Class to generate equivalent positions given symmetry operations
     """
+    ###########################################################    
     def __init__(self):
-    """ init """
+        """ init """
         self.ops = []
 
     ###########################################################    
