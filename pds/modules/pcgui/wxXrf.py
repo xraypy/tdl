@@ -38,7 +38,7 @@ class wxXrf(model.Background, wxUtil):
         self.init_shell()
 
         # Make sure scandata is loaded
-        self.exec_line("import scandata")
+        self.exec_line("import ana")
 
         # init all the menus
         self.init_shell_list_items()
@@ -106,7 +106,7 @@ class wxXrf(model.Background, wxUtil):
         self.exec_line(line)
         for path in result.paths:
             path = path.replace("\\","\\\\")
-            line = '__temp__ = scandata.xrf_data.read("%s")' % (path)
+            line = '__temp__ = ana.xrf_data.read("%s")' % (path)
             self.exec_line(line)
             line = "%s.append(__temp__)" % (var_name)
             self.exec_line(line)

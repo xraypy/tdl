@@ -9,7 +9,7 @@ Authors / Modifications:
 * major revision 10/08 TPT
 
 More information can be found at:
-http://cars.uchicago.edu/ifeffit/tdl/docs/pds
+http://cars9.uchicago.edu/ifeffit/tdl/Docs/Pds
 
 """
 ##########################################################################
@@ -834,6 +834,7 @@ def main(arg=''):
     host_path = os.path.split(pds_path)[0]
     # host_path/modules
     mods_path = [os.path.join(host_path,"modules")]
+    # host_path/pds/modules
     mods_path.append(os.path.join(pds_path,"modules"))
 
     # Set Python Path
@@ -904,7 +905,7 @@ def main(arg=''):
         wxShell.files     = files
         wxShell.args      = args
         #rsrc_path         = os.path.join(mods_path,'wxgui')
-        rsrc_path         = os.path.join(pds_path,'pcgui')
+        rsrc_path         = os.path.join(pds_path,'modules','pcgui')
         wxShell.rsrc_path = rsrc_path
         rsrc = os.path.join(rsrc_path,'wxShell.rsrc.py')
         gui  = wxShell.model.Application(wxShell.wxShell, aFileName=rsrc)

@@ -14,7 +14,7 @@ import numpy as num
 from matplotlib import pyplot
 
 from wxUtil import wxUtil
-import scandata
+import ana as scandata 
 import ctr_data
 import image_data
 
@@ -172,7 +172,7 @@ class wxCtrData(model.Background, wxUtil):
         self.init_shell()
 
         # Make sure Scan Data is loaded
-        self.exec_line("import scandata")
+        self.exec_line("import ana")
 
         # init all the menus
         self.init_shell_items()

@@ -15,7 +15,7 @@ from matplotlib import pyplot
 
 from wxUtil import wxUtil
 from pds.lib.shellutil import mod_import
-import scandata 
+import ana as scandata 
 
 ############################################################################
 
@@ -36,7 +36,7 @@ class wxSpecData(model.Background, wxUtil):
         self.init_shell()
 
         # Make sure Scan Data is loaded
-        self.exec_line("import scandata")
+        self.exec_line("import ana")
 
         # init all the menus
         self.init_ShellItems()
@@ -619,7 +619,7 @@ class wxSpecData(model.Background, wxUtil):
         #s = "%s.spectra_params['tau'] = scandata.fit_deadtime(%s,"
         #s = s % (reader_name, var_name)
         #s = s + "x='io',y='Med',norm='Seconds')"
-        s = "%s = scandata.fit_deadtime(%s,"  % (tau_name, var_name)
+        s = "%s = ana.scan_data.fit_deadtime(%s,"  % (tau_name, var_name)
         s = s + "x='%s',y='Med',norm='%s')" % (x, norm)
         #print s
         self.exec_line(s)
@@ -700,7 +700,7 @@ class wxSpecData(model.Background, wxUtil):
         hold = str(self.components.MedHold.checked)
         ylog = str(self.components.MedYlog.checked)
         pnt = int(self.components.ScanPnt.stringSelection)
-        s = "scandata.med_data.med_plot(%s.med,scan_pnt=%s,hold=%s,ylog=%s)" % (var_name,
+        s = "ana.med_data.med_plot(%s.med,scan_pnt=%s,hold=%s,ylog=%s)" % (var_name,
                                                                                 str(pnt),
                                                                                 hold,
                                                                                 ylog)
@@ -716,7 +716,7 @@ class wxSpecData(model.Background, wxUtil):
         pyplot.figure(3)
         pyplot.clf()
         pnt = int(self.components.ScanPnt.stringSelection)
-        s = "scandata.image_data.image_plot(%s.image.image[%s]" % (var_name,str(pnt))
+        s = "ana.image_data.image_plot(%s.image.image[%s]" % (var_name,str(pnt))
         if self.components.ColorMap.stringSelection.strip()!='':
             cmap = self.components.ColorMap.stringSelection.strip()
             s = "%s,cmap='%s'" % (s,cmap)
