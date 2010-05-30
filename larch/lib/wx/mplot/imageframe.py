@@ -9,8 +9,8 @@ import matplotlib.cm as colormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 
-from imagepanel import ImagePanel
-from baseframe import BaseFrame
+from .imagepanel import ImagePanel
+from .baseframe import BaseFrame
 from colors import rgb2hex
 ColorMap_List = ('gray', 'jet', 'hsv', 'Reds', 'Greens', 'Blues', 'hot',
                  'cool', 'copper', 'spring', 'summer', 'autumn', 'winter',
@@ -29,7 +29,7 @@ class ImageFrame(BaseFrame):
                  exit_callback=None, config_on_frame=True,
                  **kwds):
         self.exit_callback = exit_callback
-        self.title  = 'Image Display Frame'
+        self.title  = 'Image Display Frame(Larch)'
         self.size = size
         self.config_on_frame = config_on_frame
         show_config_popup = not config_on_frame

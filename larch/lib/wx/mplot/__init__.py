@@ -67,10 +67,10 @@ and provides these basic methods:
 __version__  = '0.9.1'
 __date__     = '10-May-2010'
 
-from plotframe import PlotFrame
-from plotpanel import PlotPanel
-from imagepanel import ImagePanel
-from imageframe import ImageFrame
-from multiframe import MultiPlotFrame
-from plotapp  import PlotApp
+from .plotframe import PlotFrame
+from .plotpanel import PlotPanel
+from .imagepanel import ImagePanel
+from .imageframe import ImageFrame
+from .multiframe import MultiPlotFrame
+from .plotapp  import PlotApp
 

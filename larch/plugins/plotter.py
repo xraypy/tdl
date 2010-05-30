@@ -49,6 +49,7 @@ class PlotDisplay(PlotFrame):
     def onCursor(self,x=None, y=None,**kw):
         symtable = ensuremod(self.larch)
         if symtable is None:
+
             return
         symtable.set_symbol('%s_x'  % self.symname, x)
         symtable.set_symbol('%s_y'  % self.symname, y)        
@@ -125,11 +126,9 @@ def _getDisplay(win=1, larch=None, parent=None, image=False):
     return display
 
 def _plot(x,y, win=1, larch=None, parent=None, **kws):
-    """
-    plot(x, y[, win=1], options])
+    """plot(x, y[, win=1], options])
 
-    Plot 2-D trace of x, y arrays in a Plot Frame, clearing
-    any plot currently in the Plot Frame.
+    Plot 2-D trace of x, y arrays in a Plot Frame, clearing any plot currently in the Plot Frame.
 
     Parameters:
     --------------
@@ -156,9 +155,7 @@ def _plot(x,y, win=1, larch=None, parent=None, **kws):
         dy: array for error bars in y (must be same size as y!)
         yaxis='left'??
         use_dates 
-        autoscale=True,
-        refresh=True, 
- 
+
     See Also:
     ---------
 
@@ -171,11 +168,9 @@ def _plot(x,y, win=1, larch=None, parent=None, **kws):
         plotter.plot(x, y, **kws)    
     
 def _oplot(x,y, win=1, larch=None, parent=None, **kws):
-    """
-    oplot(x, y[, win=0], options])
-
-    Plot 2-D trace of x, y arrays in a Plot Frame, over-plotting
-    any plot currently in the Plot Frame.
+    """oplot(x, y[, win=0], options])
+    
+    Plot 2-D trace of x, y arrays in a Plot Frame, over-plotting any plot currently in the Plot Frame.
 
     See Also:
     -----------
@@ -187,12 +182,11 @@ def _oplot(x,y, win=1, larch=None, parent=None, **kws):
         plotter.oplot(x, y, **kws)
 
 def _imshow(map, win=1, larch=None, parent=None, **kws):
-    """
-    imshow(map[, options])
+    """imshow(map[, options])
     
     Display an image for a 2-D array, as a map
 
-    map:
+    map: 2-dimensional array for map
     """
     img = _getDisplay(parent=parent, win=win, larch=larch, image=True)
     if img is not None:

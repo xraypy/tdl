@@ -26,11 +26,13 @@ def _fileprompt(parent=None, larch=None,
                 mode='open', multi=True, 
                 message = None, 
                 fname=None, choices=None, **kws):
-    """ bring up File Browser for opening or saving file.
-    Returns name of file.
+    """Bring up File Browser for opening or saving file.
+    Returns name of selected file.
 
     options:
        mode:  one of 'open' or 'save'
+       message: text to display in top window bar
+       
     """
     symtable = ensuremod(larch)
     if fname is None:

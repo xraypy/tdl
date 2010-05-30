@@ -216,19 +216,18 @@ class FillingTree(wx.TreeCtrl):
         self.SetItemHasChildren(item, self.objHasChildren(obj))
         otype = type(obj)
         text = []
-        text.append("%s" % self.getFullName(item))
+        text.append("%s\n" % self.getFullName(item))
 
         needs_doc = False
         if isinstance(obj, (str, dict, list, tuple, int, float)):
-            text.append('\nType: %s' % str(otype))
-            text.append('\nValue = %s' % repr(obj))
+            text.append('Type: %s' % str(otype))
+            text.append('Value = %s' % repr(obj))
         elif hasattr(obj, '__call__'):
-            text.append('\nFunction:')
-            text.append('\n')
+            text.append('Function:')
             needs_doc = True
         else:
-            text.append('\nType: %s' % str(otype))
-            text.append('\nValue = %s' % repr(obj))
+            text.append('Type: %s' % str(otype))
+            text.append('Value = %s' % repr(obj))
         text.append('\n')
         if needs_doc:
             try:
@@ -359,8 +358,8 @@ class Filling(wx.SplitterWindow):
                                 rootLabel=rootLabel,
                                 rootIsNamespace=rootIsNamespace,
                                 static=static)
-        self.text = FillingRST(parent=self, static=static)
-        # self.text = FillingText(parent=self, static=static)
+        # self.text = FillingRST(parent=self, static=static)
+        self.text = FillingText(parent=self, static=static)
         
         wx.FutureCall(1, self.SplitVertically, self.tree, self.text, 200)
         
