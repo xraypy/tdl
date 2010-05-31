@@ -81,7 +81,7 @@ class LarchWxShell(object):
                 if arg.startswith("'") and arg.endswith("'"): arg = arg[1:-1]
                 if arg.startswith('"') and arg.endswith('"'): arg = arg[1:-1]
                 text  = "help(%s)"% (repr(arg))
-                print 'Show help: ', text
+                print 'Would Show help: ', text
             if text.startswith('!'):
                 return os.system(text[1:])
             else:
@@ -96,7 +96,6 @@ class LarchWxShell(object):
 
         while len(self.inptext) > 0:
             block, fname, lineno = self.inptext.get()
-
             ret = self.larch.eval(block,
                                   fname=fname, lineno=lineno)
             
@@ -123,7 +122,6 @@ class LarchWxShell(object):
 class LarchFrame(wx.Frame):
     def __init__(self,  parent=None, **kwds):
         self.BuildFrame(parent=parent, **kwds)
-
         self.larchshell = LarchWxShell(wxparent=self,
                                        prompt = self.prompt,
                                        output  = self.output)
@@ -245,23 +243,19 @@ class LarchFrame(wx.Frame):
     def onResize(self, event=None):
         size = event.GetSize()
         nsize = self.notebooks.GetSize()        
-        print 'on size1 ', size, nsize
         self.notebooks.SetSize(size)        
         self.notebooks.Refresh()
         nsize = self.notebooks.GetSize()
-        print 'on size2 ', size, nsize 
 
         # self.notebooks.SetBestFittingSize()
         self.notebooks.Refresh()
         nsize = self.notebooks.GetSize()
-        print 'on size3 ', size, nsize
-        print 'size ',  self.notebooks.Size
-        o = []
-        for i in dir(self.notebooks):
-            if 'ize' in i:
-                o.append(i)
-        print " | ".join(o)
-        
+        #         o = []
+        #         for i in dir(self.notebooks):
+        #             if 'ize' in i:
+        #                 o.append(i)
+        #         print " | ".join(o)
+
         for k in range(self.notebooks.GetPageCount()):
             p = self.notebooks.GetPage(k)
             try:

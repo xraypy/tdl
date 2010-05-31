@@ -212,7 +212,7 @@ class Interpreter:
         self.fname = fname        
         self.lineno = lineno
         self.error = []
-        
+
         node = self.compile(expr, fname=fname, lineno=lineno)
         # print("COMPILE ", ast.dump(node))
         out = None
@@ -561,7 +561,7 @@ class Interpreter:
     #
     def on_excepthandler(self, node): # ('type', 'name', 'body')
         "exception handler..."
-        print("except handler %s / %s " % (node.type, ast.dump(node.name)))
+        # print("except handler %s / %s " % (node.type, ast.dump(node.name)))
         return (self.interp(node.type), node.name, node.body)
     
     def on_tryexcept(self, node):    # ('body', 'handlers', 'orelse')
