@@ -597,7 +597,7 @@ class Interpreter:
         # ('func', 'args', 'keywords', 'starargs', 'kwargs')
         func = self.interp(node.func)
 
-        if iscallable(func):
+        if not iscallable(func):
             msg = "'%s' is not callable!!" % (func)
             self.raise_exception(node, msg=msg, py_exc=sys.exc_info())
 

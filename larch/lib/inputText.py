@@ -194,11 +194,17 @@ class InputText:
             if txt.startswith('#end'): txt = '&end%s\n' % txt[4:]
 
             txt   = strip_comments(txt)
+            # thiskey, word2 = (txt.split() + [''])[0:2]
+            words = txt.split(' ', 1)
+            thiskey = words.pop(0)
+            word2 = ''
+            if len(words) > 0:
+                word2 = words[0].replace(',', ' ').split()[0]
 
-            thiskey, word2 = (txt.split() + ['',''])[0:2]
+            if thiskey.endswith(':'):
+                thiskey = thiskey[:-1]
+
             prefix,oneliner = '',False
-
-            if thiskey.endswith(':'): thiskey = thiskey[:-1]
 
             if thiskey in startkeys:
                 # check for defined variables
@@ -263,24 +269,25 @@ class InputText:
         self._fifo  = [[],[]]
         
     def __isCommand(self,key,word2):
-        """ decide if a keyword, and second one might be of the form
-          'command arg'
+        """ decide if a keyword and next word are of the form
+          'command arg, ...'
         which will get translated to
-          'command(arg,....)'
+          'command(arg, ...)'
         to allow 'command syntax' 
         """
-        # print(" __isCommand = ", key, word2)
-        if (key in self.friends or
+        # this could be in one long test, but we simplify:
+        # first test key:
+        if (not isValidName(key) or
+            key in self.friends or  
             key.startswith('#') or
             len(key)<1 or len(word2)<1):
             return False
 
-        return (isValidName(key) and
-                (isValidName(word2) or
-                 isNumber(word2) or
-                 isLiteralStr(word2))
-                )
-            
+        # next test word2
+        return (isValidName(word2) or
+                isNumber(word2) or
+                isLiteralStr(word2) )
+    
     def __isComplete(self,text):
         """returns whether input text is a complete:
         that is: does not contains unclosed parens or quotes
