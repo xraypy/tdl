@@ -46,18 +46,20 @@ PYTHON_KEY_WORDS = ['and','as','del','for','is','raise',
                     'def','finally','in','print']
 PYTHON_KEY_WORDS.sort()
 
+TEXT_WIDTH=62
+
 ##########################################################################
 HELP_STR =  """\n
 ***************************** HELP ******************************
 ===The following help options are available at the command line:
->help              # Help options
->help -u           # General useage notes
->help name         # Provide help on specified object
+>>help              # Help options
+>>help -u           # General useage notes
+>>help name         # Provide help on specified object
 
 ===To list data and variables, use the show command: 
->show              # List defined data/functions
->show name         # Detailed list
->help show         # For more show options
+>>show              # List defined data/functions
+>>show name         # Detailed list
+>>help show         # For more show options
 *****************************************************************\n
 """
 
@@ -634,8 +636,11 @@ class Shell(_NumShell):
     ##############################################################
     def do_help(self,arg):
         """
-        \rhelp: display help.
-        \rrun '>help' to display options
+        Display help.
+
+        Example:
+        --------
+        >>help     # displays help options
         """
         if arg == None or len(arg) == 0:
             #print self.help_str
@@ -664,16 +669,17 @@ class Shell(_NumShell):
     #############################################################
     def do_show(self,arg):
         """
-        \rshow:  list functions and variables.
-        \r Options:
-        \r >show -ath group
-        \r  -a = show all (include symbols with '_' in list)
-        \r  -b = show builtins (defined in __builtins__ dictionary).  Note this option
-        \r       trumps tunnel and args (ie -t and other args are ignored).  
-        \r  -t = tunnel, display attributes within a class instance or module.
-        \r       Note modules are only displayed with one level of tunneling
-        \r       (ie -t option is ignored if a module is passed as an argument).
-        \r       However, this will tunnel on all class instances.
+        List functions and variables.
+
+        Options:  >>show -ath group
+        --------
+        -a = show all (include symbols with names that have a leading '_' )
+        -b = show builtins (defined in __builtins__ ).  Note this option
+             trumps tunnel (ie -t is ignored).  
+        -t = tunnel, display attributes within a class instance or module.
+             Note modules are only displayed with one level of tunneling
+             (ie -t option is ignored if a module is passed as an argument).
+             However, this will tunnel on all class instances.
         """
         tunnel=False
         skip=True
@@ -700,7 +706,7 @@ class Shell(_NumShell):
         print "\n***** Builtins ******"
         # show python keywords
         print "\n==== Python Key Words ===="
-        print show_list(PYTHON_KEY_WORDS,textwidth=82)
+        print show_list(PYTHON_KEY_WORDS,textwidth=TEXT_WIDTH)
         # get builtins
         d = self.interp.symbol_table.list_builtins(_skip=_skip)
         self._print_show(d)
@@ -724,7 +730,7 @@ class Shell(_NumShell):
             tmp = self.commands.keys()
             tmp = tmp + self.pds_commands.keys()
             tmp.sort()
-            print show_list(tmp,textwidth=82)
+            print show_list(tmp,textwidth=TEXT_WIDTH)
 
         if ty == 'var':
             tmp = self.interp.symbol_table.get_symbol(symbol)
@@ -748,19 +754,19 @@ class Shell(_NumShell):
         if d == None: return
         if len(d['mod'])> 0:
             print "\n==== Modules ===="
-            print show_list(d['mod'],textwidth=82)
+            print show_list(d['mod'],textwidth=TEXT_WIDTH)
         if len(d['fnc'])> 0:
             print "\n==== Functions / Classes ===="
-            print show_list(d['fnc'],textwidth=82)
+            print show_list(d['fnc'],textwidth=TEXT_WIDTH)
         if len(d['ins'])> 0:
             print "\n==== Instances ===="
-            print show_list(d['ins'],textwidth=82)
+            print show_list(d['ins'],textwidth=TEXT_WIDTH)
         if len(d['var'])> 0:
             print "\n==== Variables ===="
-            print show_list(d['var'],textwidth=82)
+            print show_list(d['var'],textwidth=TEXT_WIDTH)
         if len(d['oth'])> 0:
             print "\n==== Other Python Objects ===="
-            print show_list(d['oth'],textwidth=82)
+            print show_list(d['oth'],textwidth=TEXT_WIDTH)
         print "\n"
         return
 
@@ -778,7 +784,7 @@ def show_usage():
     print '-d:  debug on'
     print '-v:  verbose'
     print '-x:  non-interactive execution'
-    print 'Examples (combine the various options):'
+    print 'Examples (combining the various options):'
     print '>pds -v                  #verbose startup'
     print '>pds -vd                 #verbose startup and debug on'
     print '>pds -w                  #use wx GUI'
