@@ -238,10 +238,12 @@ def append(data1,data2,sort=True):
         print "Warning primary axis doesnt match "
     if data2.primary_det != data1.primary_det:
         print "Warning primary detector doesnt match "
-    if data1.xrf_lines != data2.xrf_lines:
-        print "Warning xrf lines dont match"
-    if data1.image_rois != data2.image_rois:
-        print "Warning image rois dont match"
+    if hasattr(data1,'xrf'):
+        if data1.xrf.lines != data2.xrf.lines:
+            print "Warning xrf lines dont match"
+    if hasattr(data1,'image'):
+        if data1.image_rois != data2.image_rois:
+            print "Warning image rois dont match"
 
     # init
     data3 = ScanData()
