@@ -928,10 +928,10 @@ class ImageScan:
         if bgr_params!=None:
             if type(bgr_params) == types.DictType:
                 for j in idx:
-                    self.bgrpar[j] = bgr_params
+                    self.bgrpar[j] = copy.copy(bgr_params)
             elif len(bgr_params) == len(idx):
                 for j in idx:
-                    self.bgrpar[j] = bgr_params[j]
+                    self.bgrpar[j] = copy.copy(bgr_params[j])
         # do integrations
         for j in idx:
             if j not in bad_points:
