@@ -10,4 +10,4 @@ standing wave (and other related) data.
 from reader       import Reader
 from scan_data    import ScanData 
 from ctr_data     import CtrData
-from rasd         import RasdData
+from rasd_data    import RasdData

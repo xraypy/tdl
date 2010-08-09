@@ -871,6 +871,7 @@ class ImageScan:
         if len(self.peaks) > 0:
             if len(self.peaks['I']) == len(self.image):
                 init = True
+            else: init = False
         else:
             init = False
         return init

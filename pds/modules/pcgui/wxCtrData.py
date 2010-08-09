@@ -983,7 +983,7 @@ class wxCtrData(model.Background, wxUtil):
         try:
             ncol = int(ncol)
         except:
-            ncol = 2
+            ncol = 1
         ctr = self.get_ctr()
         if ctr == None: return
         point = int(self.components.PointNum.text)
