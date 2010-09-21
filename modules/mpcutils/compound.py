@@ -122,7 +122,7 @@ class Component:
     >>c = Component(formula={'H':2,'O':1})
     >>c['H'] = 10
     >>x = c['H']
-    # we can also modify it by refrence to element Z value
+    # we can also modify it by reference to element Z value
     >>c[8]=12  
 
     Todo:
@@ -307,6 +307,10 @@ class Species:
 
     # change the stiochiometry of the 2nd component
     >>s[1] = 8.2
+
+    # you can pass the formula directly.
+    # this just creates each element as a component.  
+    >>s = Species(formula={'H':2,'O':1.})
     """
     ####################################################################
     def __init__(self,**kw):
@@ -315,7 +319,7 @@ class Species:
         """
         self.init(**kw)
 
-    def init(self,comp=[]):
+    def init(self,comp=[],formula=None):
         """
         (re)init the object
         
@@ -327,6 +331,13 @@ class Species:
         self.comp   = []   # list of (comp,nu)
         self.mw     = 0.0  # computed wieght
         if len(comp) > 0:
+            self.set(comp)
+        elif formula != None:
+            comp = []
+            for el in formula.keys():
+                c = Component(formula={el:1.})
+                comp.append((c,formula[el]))
+            #print comp
             self.set(comp)
 
     ####################################################################
@@ -399,7 +410,7 @@ class Species:
     ####################################################################
     def _calc_mw(self,):
         """
-        compute molecular wieght
+        compute molecular wieght (g/mol)
         """
         mw = 0.0
         for (comp,nu) in self.comp:
@@ -697,6 +708,28 @@ def ideal_gas(p=1.,t=298.15,mw=0.0):
                           # x 1e3 = kg/m^3
     return (c,rho)
 
+def ppm_to_molar(spec,ppm):
+    """
+    given a ppm concentration of a species
+    compute the molar concentration (assuming aqueous
+    system and 1kg/L water density
+    """
+    ppm = float(ppm)
+    C = ppm * (1.0e-3)
+    C = C / spec.mw
+    return C
+
+def molar_to_ppm(spec,molar):
+    """
+    given a molar concentration of a species
+    compute the ppm concentration (assuming aqueous
+    system and 1kg/L water density)
+    """
+    molar = float(molar)
+    ppm = molar * (1.0e3)
+    ppm = ppm * spec.mw
+    return ppm
+
 #############################################################
 #############################################################
 def test_1():
@@ -724,8 +757,17 @@ def test_2():
     spec = parse_species_formula(expr)
     print spec
 
+def test_3():
+    """ test """
+    s = Species(formula={'Na':2.,'S':1.,'O':4.})
+    print s
+    C = ppm_to_molar(s,10000.)
+    print C
+    ppm = molar_to_ppm(s,C)
+    print ppm
+
 #############################################################
 if __name__ == "__main__":
     #test_1()
-    test_2()
+    test_3()
     
