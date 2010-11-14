@@ -20,6 +20,8 @@ import med_data
 import xrf_data
 import save_data
 
+from detector import deadtime
+
 #######################################################################
 class ScanData:
     """
@@ -544,7 +546,7 @@ def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
     
     if y == 'Med':
         # this is cps, therefore dont apply norm
-        yfit_arr = data.med_ocr()
+        yfit_arr = data.med.ocr()
     else:
         yfit_arr = data[y]
         if norm != None:
@@ -566,7 +568,7 @@ def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
 
     # update med taus...
     if y == 'Med':
-        data.med_update_tau(tau)
+        data.med.update_tau(tau)
     else:
         # for scaler calc correction
         # and post as y_c
@@ -579,7 +581,7 @@ def fit_deadtime(data,x='io',y='Med',norm='Seconds',offset=True,display=True):
         if y == 'Med':
             for j in range(npts):
                 for k in range(ndet):
-                    cts = data.med[j].mca[k].get_data(correct=True)
+                    cts = data.med.med[j].mca[k].get_data(correct=True)
                     ycorr_arr[k][j] = cts.sum()
             if norm != None:
                 for k in range(ndet):
@@ -600,6 +602,7 @@ def _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off):
     compute a corrected y and plot
     (for med compute by summing corrected data )
     """
+    from matplotlib import pyplot
     pyplot.clf()
     pyplot.subplot(2,1,1)
 
@@ -617,7 +620,8 @@ def _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off):
             offset = False
         ycal = deadtime.calc_ocr(params,xfit,offset)
         pyplot.plot(xfit,ycal,'r-')
-        
+    pyplot.ylabel('y data and fit')
+    
     # plot corrected data
     pyplot.subplot(2,1,2)
     for j in range(len(yfit_arr)):
@@ -627,6 +631,8 @@ def _display_deadtime_fit(xfit,yfit_arr,ycorr_arr,tau,a,off):
             pyplot.plot(xfit,a[j]*xfit+off[j],'k--')
         else:
             pyplot.plot(xfit,a[j]*xfit,'k--')
+    pyplot.ylabel('y corrected ')
+    pyplot.xlabel('x')
     
 ########################################################################
 ########################################################################

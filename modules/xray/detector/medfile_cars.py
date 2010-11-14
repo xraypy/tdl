@@ -200,6 +200,7 @@ def read_ascii_file(file):
 
     while(1):
         line = fp.readline()
+        line = line.strip()
         if (line == ''): break
         pos = string.find(line, ' ')
         if (pos == -1): pos = len(line)
