@@ -15,17 +15,18 @@ Todo:
 ##########################################################################
 
 import numpy as num
-import xtal_calc
+#import xtal_calc
+from lattice import Lattice, LatticeTransform
 
 ##########################################################################
-def inplane_vectors(hkl, cell):
+def surface_vectors(hkl, lat):
     """
-    Calculate in-plane lattice vectors
+    Calculate in-plane lattice vectors, and repeat vectors
 
     Parameters:
     -----------
     * hkl defines the plane
-    * cell defines the lattice (a,b,c,alpha,beta,gamma)
+    * lat defines the lattice (is a Lattice instance)
 
     Output:
     -------
@@ -35,155 +36,54 @@ def inplane_vectors(hkl, cell):
     All the vectors are sorted according to their magnitudes given 
     in column 4 of the output. 
     """
+    # calculate vector d in bulk real space basis
+    d = lat.dvec(hkl)
+
     #calculate surface vectors for a given hkl plane through origin
-    V_tmp=[]
-    for n1 in range(-4,5):
-        for n2 in range(-4,5):
-            for n3 in range(-4,5):
+    Vs_tmp=[]
+    Vr_tmp=[]
+    vrange = range(-4,5)
+    for n1 in vrange:
+        for n2 in vrange:
+            for n3 in vrange:
                 temp = n1*hkl[0] + n2*hkl[1] + n3*hkl[2]
+                # from law of rational indicies, temp is zero 
+                # if the lattice vector is in the hkl plane
                 if temp == 0:
-                    n1n2n3 = [n1, n2, n3]
-                    v_mag = vector_mag(n1n2n3,cell)
-                    v = [n1, n2, n3, v_mag] 
-                    V_tmp.append(v)
-    V_tmp = num.array(V_tmp)
-    # V_tmp has all the surface vectors, now sort them according to magnitude
-    idx = num.argsort(V_tmp[:,3])
+                    v = [n1, n2, n3]
+                    v_mag = lat.mag(v,lat)
+                    Vs_tmp.append([n1, n2, n3, v_mag] )
+                # from law of rational indicies, temp < zero 
+                # if the lattice vector points below the hkl plane
+                # and temp is the number of planes below the surface
+                # where v terminates
+                elif temp < 0:
+                    v = [n1, n2, n3]
+                    v_mag = lat.mag(v,lat)
+                    v_ang = lat.angle(v,-1.*d,lat)
+                    Vr_tmp.append([n1, n2, n3, v_mag,temp,v_ang])
+
+    # Vs_tmp has all the surface vectors,
+    # now sort them according to magnitude
+    Vs_tmp = num.array(Vs_tmp)
+    idx = num.argsort(Vs_tmp[:,3])
     Vs = []
     for n in range(0,len(idx)):
-        x = V_tmp[idx[n],:]
+        x = Vs_tmp[idx[n],:]
         Vs.append(x)
     Vs = num.array(Vs)
-    return Vs
-     
-##########################################################################
-def slab_repeat_vectors(hkl,cell):
-    """
-    calculate a number of possible slab repeat vectors
 
-    Parameters:
-    -----------
-    * hkl defines the plane
-    * cell defines the lattice (a,b,c,alpha,beta,gamma)
-
-    Output:
-    -------
-    * list of vectors sorted by the angle they make with surface
-      normal that points into the bulk
-    """
-    # calculate number of possible slap repeat vectors
-    g = g_matx(cell)
-    g_inv = num.linalg.inverse(g)
-    hkl = num.transpose(hkl)
-    d_spc = d_spacing(hkl,cell)
-    d = num.array(num.matrixmultiply(g_inv,hkl))
-    d = d_spc*d_spc*d
-    V_tmp=[]
-    for n1 in range(-4,5):
-        for n2 in range(-4,5):
-            for n3 in range(-4,5):
-                temp = n1*hkl[0] + n2*hkl[1] + n3*hkl[2]
-                if temp < 0:
-                    n1n2n3 = [n1, n2, n3]
-                    v_mag = vector_mag(n1n2n3,cell)
-                    v_ang = vector_angle(n1n2n3, -d, cell)
-                    v = [n1, n2, n3, v_mag, temp, v_ang] 
-                    V_tmp.append(v)
-    V_tmp = num.array(V_tmp)
-   # V_tmp has lot of possible slab vectors, now sort them according to angle they make with -d
-    idx = num.argsort(V_tmp[:,5])
-    Vb = []
+    # Vr_tmp has lot of possible slab vectors,
+    # now sort them according to angle they make with -d
+    Vr_tmp = num.array(Vr_tmp)
+    idx = num.argsort(Vr_tmp[:,5])
+    Vr = []
     for n in range(0,len(idx)):
-        x = V_tmp[idx[n],:]
-        Vb.append(x)
-    Vb = num.array(Vb)
-    return Vb
+        x = Vr_tmp[idx[n],:]
+        Vr.append(x)
+    Vr = num.array(Vr)
 
-##########################################################################
-def basis_transformation_matrix(Va,Vb,Vc):
-    """
-    Compute the surface transformation
-    
-    Transform to a basis defined by Va, Vb, and Vc,
-
-    Note redo this to use lattice.LatticeTransform
-
-    returns matrix MGFN,
-    where MGFN[0] = M, M transforms the basis,
-    MGFN[1] = G, does reverse of M
-    MGFN[2] = F, transforms any vector in Va,Vb,Vc space
-    MGFN[3] = N, does reverse of F
-    the vectors Va,Vb,Vc are the real space vectors in the 
-    original basis system which describe the new basis
-    vectors for the primed system ie;
-    a" = Va(1) a + Va(2) b + Va(3) c
-    b" = Vb(1) a + Vb(2) b + Vb(3) c
-    c" = Vc(1) a + Vc(2) b + Vc(3) c
-    therefore M is the matrix describing the basis transform
-    this is the same matrix which transforms the recip space indicies from the 
-    original to the primed system ie 
-    |h"|      |h|
-    |k"| = M* |k|
-    |l"|      |l|
-
-    the inverse of M i.e. G gives the opposite relation
-
-    |h|      |h"|
-    |k| = G* |k"|
-    |l|      |l"|
-    and
-    a = G(1,1) a" + G(1,2) b" + G(1,3) c"
-    b = G(2,1) a" + G(2,2) b" + G(2,3) c"
-    c = G(3,1) a" + G(3,2) b" + G(3,3) c"
-
-    the matrix which transforms the recip space basis is
-    given by the inverse transpose of M i.e. F
-
-    % ie 
-    a*" = F(1,1) a* + F(1,2) b* + F(1,3) c*
-    b*" = F(2,1) a* + F(2,2) b* + F(2,3) c*
-    c*" = F(3,1) a* + F(3,2) b* + F(3,3) c*
-
-    this is the same matrix which transforms the real space
-    vector indicies from original to primed system
-
-    |x"|      |x|
-    |y"| = F* |y|
-    |z"|      |z|
-
-    the inverse of F gives the opposite relation
-    N = inv(F);
-
-    ie 
-    a* = N(1,1) a*" + N(1,2) b*" + N(1,3) c*"
-    b* = N(2,1) a*" + N(2,2) b*" + N(2,3) c*"
-    c* = N(3,1) a*" + N(3,2) b*" + N(3,3) c*"
-
-    this is the same matrix which transforms the real space
-    vector indicies from primed to original system
-    |x|      |x"|
-    |y| = N* |y"|
-    |z|      |z"|
-
-    """
-    """
-    # transform to basis defined by Va, Vb and Vc
-    # M transforms the basis to surface basis see Trainor et al. 2002
-    #        xas   yas  zas
-    # [M] =  xbs   ybs  zbs 
-    #        xcs   ycs  zcs
-    #
-    """
-    M = num.array([Va,Vb,Vc])
-    # G does the opposite of M
-    G = num.linalg.inv(M)
-    # F transforms any vector to surface (as,bs,cs) system
-    # for example V_rs = F*Vr, Vr in repeat vector in bulk system and Vr_s in surface system
-    F = num.linalg.inv(num.transpose(M))
-    # N does opposite of F
-    N = num.linalg.inv(F)
-    MGFN = num.array([M,G,F,N])
-    return MGFN
+    return Vs,Vr
 
 ##########################################################################
 def calc_surf_cell(F,bulk_name,cell):
@@ -257,46 +157,59 @@ def calc_surf_cell(F,bulk_name,cell):
 ##########################################################################
 if __name__ == "__main__":
     # define cell and hkl:
-    cell = [a,b,c,alpha,beta,gam]
-    hkl = [h,k,l]
+    #cell = [a,b,c,alpha,beta,gam]
+    #hkl = [h,k,l]
+    
+    cell = [10.223, 5.992, 4.761,90,90,90]
+    hkl = [1.,0.,1.]
+    lat = Lattice(*cell)
+    
     # calculate d spacing in Angstroms
-    d_space = xtal.d_spacing(hkl,cell)
+    d_space = lat.d(hkl)
 
     # calculate vector d in bulk real space basis
-    d = xtal.calc_d(hkl,cell)
+    d = lat.dvec(hkl)
 
     # calculate inplane vectors to choose Va and Vb
-    Vs = xtal.inplane_vectors(hkl,cell)
+    Vs,Vr = surface_vectors(hkl,lat)
 
-    # if indexing hematite check if Va and Vb can be further reduced by converting to rhomohedral from hexagonal
-    Va_rh = xtal.trans_hexa_to_rhombo(Va)
-    Vb_rh = xtal.trans_hexa_to_rhombo(Vb)
-
-    # calculate slab repeat vectors to choose Vr and the terminating layer (n)
-    Vb = xtal.slab_repeat_vectors(hkl,cell) # choose Vr and n from the list
-
-    Vc = n*d
-
-    # calculate all the basis transformation matrices
-    MGFN = xtal.basis_transformation_matrix(Va,Vb,Vc)
-    F = MGFN[2]
+    #################
+    # choose basis vectors for surface system
+    Va = [1.,0.,-1.]
+    Vb = [0.,1.,0.]
+    Vc = 5*d
+    Vrpt = [-1.,0.,-4.]
+    trans = LatticeTransform(lat,Va=Va,Vb=Vb,Vc=Vc)
+    slat = trans.plat()
+    
+    # surface cell params
+    # should be same as those in slat
+    """
+    mag_as = lat.mag(Va)
+    mag_bs = lat.mag(Vb)
+    mag_cs = lat.mag(Vc)
+    alp_s  = lat.angle(Vb,Vc)
+    bet_s  = lat.angle(Va,Vc)
+    gam_s  = lat.angle (Va,Vb)
+    scell = [ mag_as, mag_bs, mag_cs, alp_s, bet_s, gam_s]
+    """
+    
     # find repeat vector in surface basis
-    Vr_s = num.matrixmultiply(F,num.transpose(Vr))
-    del_1 = -1*Vr_s[0]
-    del_2 = -1*Vr_s[1]
-    mag_as = xtal.vector_mag(Va,cell)
-    mag_bs = xtal.vector_mag(Vb,cell)
-    mag_cs = xtal.vector_mag(Vc,cell)
-    alp_s = xtal.vector_angle(Vb,Vc,cell)
-    bet_s = xtal. vector_angle(Va,Vc,cell)
-    gam_s = xtal.vector_angle (Va,Vb,cell)
+    Vrpt_s = trans.xp(Vrpt)
+    del_1 = -1*Vrpt_s[0]
+    del_2 = -1*Vrpt_s[1]
 
-    scell = [ mag_as, mag_bs, mag_cs, alp_s, bet_S, gam_s]
-
-    # must notice repeat angle while choosing Vr but check again
-    repeat_angle = 180 - xtal.vector_angle(Vr_s, [0,0,1], cell)
+    # check repeat angle 
+    repeat_angle = slat.angle(Vrpt_s, [0.,0.,-1.])
 
     # calculate the surface cell using the bulk file bulk_name
     # ouput file will be bulk_name.surf
-    xtal.calc_surf_cell(F,bulk_name,cell)
+    #calc_surf_cell(bulk_name,lat,trans)
 
+    # to compute hkl_s from hkl
+    # use the following:
+    #hkl_s = trans.hp([h,k,l])
+    #
+    # visa versa given hkl_s compute
+    # hkl in the bulk basis from:
+    #hkl = trans.h([hs,ks,ls])
