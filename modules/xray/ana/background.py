@@ -119,6 +119,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
         r = width*sqrt(2*pow-1)
     If pow<=1/2 the we just use r = width
 
+    Note we should rename pow, since pow is a builtin...
     """
     # make sure pow is positive
     # and create some debug stuff
@@ -151,6 +152,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     bgr  = num.zeros(ndat)
     
     # calc polynomial
+    """
     npoly   = int(2*width) + 1
     pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
     if pow <= 0.5:
@@ -161,6 +163,24 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     # renorm poly
     pmax = num.max(num.fabs(poly))
     poly = ((width*pow)/pmax) * poly
+    """
+    ## edits
+    # make sure npoly is odd
+    #npoly = num.min(int(6*width)+1, 2*int(ndat/2.)+1)
+    #pdelx = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
+    npoly = num.min(int(3*width), int(ndat/2.))
+    pdelx = range(-npoly,-1)
+    pdelx.append(1)
+    pdelx.extend(range(2,npoly+1))
+    #print pdelx
+    pdelx = num.array(pdelx,dtype=float)
+    npoly = len(pdelx)
+    r = float(width)
+    poly = -1.*(pdelx/r)**(2.*pow)
+    # renorm poly 
+    pnorm = num.fabs(poly[int(npoly/2.) + int(width)])
+    poly  = poly/pnorm
+    ## end edits
     
     # loop through each point
     # NOTE this loop is the bottleneck
@@ -267,10 +287,10 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
 
     for j in range(len(p)):
         n = len(p[j])
-        if j < int(width):
+        if j < int(n/2):
             s = 0
         else:
-            s = j - int(width)
+            s = j - int(n/2)
         xx = range(s,s+n)
         pyplot.subplot(2,1,1)
         pyplot.plot(xx,p[j],'*-')
@@ -278,7 +298,16 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
         #pyplot.plot(xx,d[j],'*-')
         dd = num.min((0,num.min(d[j]))) 
         pyplot.plot(xx,p[j]+dd,'*-')
-
+    dma = num.max(data)
+    pyplot.subplot(2,1,1)
+    mi,ma = pyplot.ylim()
+    mi = num.max((mi,-dma))
+    pyplot.ylim(mi,1.1*dma)
+    pyplot.subplot(2,1,2)
+    mi,ma = pyplot.ylim()
+    mi = num.max((mi,-dma))
+    pyplot.ylim(mi,1.1*dma)
+    
 ############################################################
 def compress_array(array, compress):
     """
@@ -342,7 +371,7 @@ if __name__ == '__main__':
     from matplotlib import pyplot
     from mpcutils.mathutil import gauss
     # generate a curve
-    npts = 135
+    npts = 21
     x   = num.array(range(npts))
     g1  = gauss(x, npts/2., 5., 300)
     g2  = gauss(x, npts/2., 30., 100)
@@ -350,7 +379,7 @@ if __name__ == '__main__':
     r = 10.*r/num.max(r)
     y = (1.0*r+ 10.*x) + g1 + g2
     # plot bgr
-    width=5
-    plot_bgr(y,nbgr=3,width=width,pow=2.,tangent=False,
-             compress=2,debug=False)
+    width=1
+    plot_bgr(y,nbgr=3,width=width,pow=3.,tangent=False,
+             compress=1,debug=True)
     
