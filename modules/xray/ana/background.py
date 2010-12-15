@@ -168,18 +168,27 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     # make sure npoly is odd
     #npoly = num.min(int(6*width)+1, 2*int(ndat/2.)+1)
     #pdelx = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
-    npoly = num.min(int(3*width), int(ndat/2.))
+    if width <= 1:
+        npoly = num.min(11, 2*int(ndat/2)+1)
+    else:
+        npoly = num.min(10*int(width/2)+1, 2*int(ndat/2)+1)
+    #
+    pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
+    #
+    """
     pdelx = range(-npoly,-1)
     pdelx.append(1)
     pdelx.extend(range(2,npoly+1))
-    #print pdelx
     pdelx = num.array(pdelx,dtype=float)
+    """
+    #
+    print npoly,pdelx
     npoly = len(pdelx)
-    r = float(width)
-    poly = -1.*(pdelx/r)**(2.*pow)
+    r     = 2*float(width)
+    poly  = -1.*(pdelx/r)**(2.*pow)
     # renorm poly 
-    pnorm = num.fabs(poly[int(npoly/2.) + int(width)])
-    poly  = poly/pnorm
+    pnorm = (data[0:3].sum() + data[-3:].sum())/6.
+    poly  = poly*pnorm
     ## end edits
     
     # loop through each point
@@ -371,7 +380,7 @@ if __name__ == '__main__':
     from matplotlib import pyplot
     from mpcutils.mathutil import gauss
     # generate a curve
-    npts = 21
+    npts = 40
     x   = num.array(range(npts))
     g1  = gauss(x, npts/2., 5., 300)
     g2  = gauss(x, npts/2., 30., 100)
@@ -379,7 +388,7 @@ if __name__ == '__main__':
     r = 10.*r/num.max(r)
     y = (1.0*r+ 10.*x) + g1 + g2
     # plot bgr
-    width=1
-    plot_bgr(y,nbgr=3,width=width,pow=3.,tangent=False,
+    width=4
+    plot_bgr(y,nbgr=3,width=width,pow=1,tangent=False,
              compress=1,debug=True)
     
