@@ -28,6 +28,7 @@ The following shorthand/nomenclature is used in this module:
 * component = comp/X, conc = CX, moles = nX, mass = mX, mole frac = fX
 * species = spec/S/s, conc = CS, moles = nS, mass = mS, mole frac = fS
 * material = mat/M/m
+* stiochiometric coefficient = nu
 
 
 Examples:
@@ -131,6 +132,8 @@ class Component:
     ---------
     # create a component
     >>c = Component(formula={'H':2,'O':1})
+    or
+    >>c = Component(formula='H2 O')
     >>c['H'] = 10
     >>x = c['H']
     # we can also modify it by reference to element Z value
@@ -155,6 +158,8 @@ class Component:
         Parameters:
         -----------
         * formula is a dictionary of {'El',nu} or {Z,nu}
+          or a string that can be parsed by the parse_formula
+          function
         """
         self.name      = ''  # computed string name 
         self.formula   = {}  # dict of {'El':nu}
@@ -249,13 +254,18 @@ class Component:
           where 'El' is the atomic symbol or Z (integer)
           and nu is the stoichiometric coefficient
 
+          Or formula is a string: 'Si O2' (see parse_formula)
+
           Note nu = moles_of_El / mole_of_component
           therefore nu may be fractional and are converted to
           float even if passed as int
         
         """
+        #if type(formula) == types.StringType:
+        #    formula = {formula:1.}
         if type(formula) == types.StringType:
-            formula = {formula:1.}
+            formula = parse_formula(formula)
+            if formula == None: return
             
         for el,nu in formula.items():
             if type(el) != types.StringType:
@@ -319,9 +329,11 @@ class Species:
     # change the stiochiometry of the 2nd component
     >>s[1] = 8.2
 
-    # you can pass the formula directly.
+    # You can also pass the formula directly.
     # this just creates each element as a component.  
     >>s = Species(formula={'H':2,'O':1.})
+    or
+    >>s = Species(formula='{(1)[H2 O]}')
     """
     ####################################################################
     def __init__(self,**kw):
@@ -337,7 +349,9 @@ class Species:
         Parameters:
         -----------
         * comp is a list of components [(c,nu),(c,nu)]
-        * formula is a dictionary of {'Element':stiochiometry}
+        * formula is a dictionary of {'Element':nu} or
+          a string that can be parsed by the parse_fmt_formula
+          function
 
         Note use one or the other of the above methods to init
         in the case you use 'formula' then all elements are taken
@@ -349,10 +363,16 @@ class Species:
         if len(comp) > 0:
             self.set(comp)
         elif formula != None:
-            comp = []
-            for el in formula.keys():
-                c = Component(formula={el:1.})
-                comp.append((c,formula[el]))
+            if type(formula) == types.StringType:
+                comp = parse_fmt_formula(formula)
+                if comp == None:
+                    print "Error parsing formula string"
+                    return
+            elif type(formula) == types.DictType:
+                comp = []
+                for el in formula.keys():
+                    c = Component(formula={el:1.})
+                    comp.append((c,formula[el]))
             #print comp
             self.set(comp)
 
@@ -401,7 +421,7 @@ class Species:
         * comp - component class instance, or string or the component index
         """
         idx = -1
-        if hasaatr(comp,'name'):
+        if hasattr(comp,'name'):
             comp = comp.name
         if type(comp) != types.StringType:
             idx = int(comp)
@@ -461,7 +481,7 @@ class Species:
     ####################################################################
     def set(self,comp):
         """
-        This appends new comp units to existing
+        This appends new component units to existing species
 
         Parameters:
         -----------
@@ -523,6 +543,23 @@ class Species:
                 if el not in elem:
                     elem.append(el)
         return elem
+
+    ####################################################################
+    def net_formula(self):
+        """
+        Return the net elemental formula
+        """
+        elem = self.elements()
+        formula = {}
+        for c,nu in self.comp:
+            nu = float(nu)
+            f = c.formula
+            for el,enu in f.items():
+                if formula.has_key(el):
+                    formula[el] = formula[el] + float(enu)*nu
+                else:
+                    formula.update({el:float(enu)*nu})
+        return formula
     
     ####################################################################
     def components(self):
@@ -531,7 +568,7 @@ class Species:
         """
         names = []
         for (comp,nu) in self.comp:
-            name.append(comp.name)
+            names.append(comp.name)
         return names
 
 ########################################################################
@@ -649,7 +686,9 @@ def parse_fmt_formula(expr):
 
     Parameters:
     -----------
-    * expr is a string expression of the form: {(2)[A1_B2]}
+    * expr is a string expression of the form:
+         '{(2)[A1_B2]}{(1.1)[D_F0.1]}...'
+       where
        - {} deliniates components.
        - inside the curly brackets the (2) specifies the
          number of [A1_B2] (=component) formula units
@@ -697,43 +736,13 @@ def parse_comp(compstr):
       stoichiometry needs to be adjacent to the element (no space).  If there is
       no coefficient it is assumed to be 1.  
     """
-    if len(compstr) == 0: return None
-    compstr = compstr.strip()
-    compstr = compstr.replace(' ','_')
-    items = compstr.split("_")
+    formula = parse_formula(compstr)
 
-    formula = {}
-    for item in items:
-        if len(item) == 0:
-            pass
-        elif len(item) == 1:  
-            el = item[0].upper()
-            nu = 1.0
-        elif len(item) == 2:
-            el = item[0].upper()
-            if item[1].isalpha():
-                el = el + item[1].lower()
-                nu = 1.0
-            else:
-                nu = float(item[1])
-        else:
-            el = item[0].upper()
-            item = item[1:]
-            if item[0].isalpha():
-                el = el + item[0].lower()
-                item= item[1:]
-            nu = float(item[:])
-        #
-        formula.update({el:nu})
     return Component(formula=formula)
 
 def parse_formula(fstr):
     """
     Convert a string to a formula list 
-
-    Returns:
-    --------
-    * list:  [(element,nu),(element,nu)...]
 
     Parameters:
     ----------
@@ -742,12 +751,16 @@ def parse_formula(fstr):
       or underscore is needed to seperate elements in the formula.  The element
       stoichiometry needs to be adjacent to the element (no space).  If there is
       no coefficient it is assumed to be 1.
-      
+    
+    Output:
+    --------
+    * formula: a list of [(element,nu),(element,nu)...]
+    
     """
-    if len(formula) == 0: return None
-    str = str.strip()
-    compstr = compstr.replace(' ','_')
-    items = compstr.split("_")
+    if len(fstr) == 0: return None
+    fstr = fstr.strip()
+    fstr = fstr.replace(' ','_')
+    items = fstr.split("_")
 
     formula = {}
     for item in items:
@@ -772,7 +785,7 @@ def parse_formula(fstr):
             nu = float(item[:])
         #
         formula.update({el:nu})
-    return Component(formula=formula)
+    return formula
 
 ###################################################################
 def ideal_gas(p=1.,t=298.15,mw=0.0):
@@ -808,9 +821,9 @@ def mass_fraction(s,c):
     the stiochiometry of s.  
     """
     if type(s) == types.StringType:
-        s = compound.parse_fmt_formula(s)
+        s = Species(s)
     if type(c) == types.StringType:
-        c = compound.parse_comp(c)
+        c = parse_comp(c)
 
     return
 
@@ -860,8 +873,10 @@ def test_1():
 def test_2():
     """ test """
     expr = "{(1.0)[Si_O2]}{(1.232)[Fe2.3454_O11]}{(.12)[H_C.2_Al0.0001203]}"
-    spec = parse_fmt_formula(expr)
-    print spec
+    #spec = parse_fmt_formula(expr)
+    spec = Species(formula=expr)
+    print spec.net_formula()
+    return spec
 
 def test_3():
     """ test """
@@ -874,16 +889,14 @@ def test_3():
 
 def test_4():
     """test"""
-    #s = "Si3.9 Al.86 Li.08 Fe.1 Mg.14 O10 H"
-    s = "H2 O"
-    #x = parse_fmt_formula(s)
-    x = parse_comp(s)
-    x = Species(x)
-    print x
-    return x
+    fstr = "Si3.9 Al.86 Li.08 Fe.1 Mg.14 O10 H O2"
+    x = parse_formula(fstr)
+    sp = Species(formula=x) 
+    print x,sp
+    return x,sp
 
 #############################################################
 if __name__ == "__main__":
-    #test_1()
-    x = test_4()
+    spec=test_2()
+    #x,sp = test_4()
     
