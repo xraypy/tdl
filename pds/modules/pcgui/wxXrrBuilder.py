@@ -195,7 +195,7 @@ class wxXrrBuilder(model.Background, wxUtil):
         #
         mlayers = []
         for layer in layers:
-            comp = compound.parse_species_formula(str(layer[1]))
+            comp = compound.parse_fmt_formula(str(layer[1]))
             if comp == []:
                 print "Error parsing formula"
                 return

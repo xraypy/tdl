@@ -11,7 +11,17 @@ This module defines a set of routines for working with
 chemical compounds.  The following are defined:
 * element = a pure chemical element
 * component = a chemical entity described in terms of element stiochiometry
-* species = 
+* species = a chemical entity made up from one or more chemical components in
+            definite proportions.  Species has a well define composition
+            and structure
+            
+* gas
+* liquid
+* solution 
+* material = a (solid) species with a fixed density (we assume homogeneous) 
+   - amorphous
+   - xtaline
+* mixture
 
 The following shorthand/nomenclature is used in this module:
 * element = elem/El/Z/z, conc = CZ, moles = nZ, mass = mZ, mole frac = fZ
@@ -46,7 +56,8 @@ Examples:
 
 # this computes a species from an expression.  
 >>expr = "{(1.0)[Si_O2]}{(1.232)[Fe2.3454_O11]}{(.12)[H_C.2_Al0.0001203]}"
->>spec = parse_species_formula(expr)
+>>comps = parse_fmt_formula(expr)
+>>spec = Species(comp=comps)
 
 To Do
 ------
@@ -326,6 +337,11 @@ class Species:
         Parameters:
         -----------
         * comp is a list of components [(c,nu),(c,nu)]
+        * formula is a dictionary of {'Element':stiochiometry}
+
+        Note use one or the other of the above methods to init
+        in the case you use 'formula' then all elements are taken
+        as components.  
         """
         self.name   = ''   # computed name string
         self.comp   = []   # list of (comp,nu)
@@ -379,8 +395,14 @@ class Species:
     def __getitem__(self,comp):
         """
         return the stoich coeff of the component
+
+        Paramters:
+        ---------
+        * comp - component class instance, or string or the component index
         """
         idx = -1
+        if hasaatr(comp,'name'):
+            comp = comp.name
         if type(comp) != types.StringType:
             idx = int(comp)
             if comp < 0 or comp > len(self.comp):
@@ -619,13 +641,18 @@ class Material(Species):
         return moles*pc.N_A    
 
 ###################################################################
-def parse_species_formula(expr):
+def parse_fmt_formula(expr):
     """
-    convert string expr to a component or species object
+    Convert string expr to a list of component objects
+
+    The return value is of the form: [(comp,nu),(comp,nu)]
 
     Parameters:
     -----------
     * expr is a string expression of the form: {(2)[A1_B2]}
+       - {} deliniates components.
+       - inside the curly brackets the (2) specifies the
+         number of [A1_B2] (=component) formula units
 
     Todo:
     -----
@@ -660,14 +687,73 @@ def parse_species_formula(expr):
 
 def parse_comp(compstr):
     """
-    convert string (e.g. Si_O2) to a component object
+    Convert a string to a component object
+
+    Parameters:
+    ----------
+    * compstr is a string with a formula unit representing a chemical component
+      the string should be formatted as e.g. 'Si O2' or 'Si_O2'.  ie the space
+      or underscore is needed to seperate elements in the formula.  The element
+      stoichiometry needs to be adjacent to the element (no space).  If there is
+      no coefficient it is assumed to be 1.  
     """
     if len(compstr) == 0: return None
+    compstr = compstr.strip()
+    compstr = compstr.replace(' ','_')
     items = compstr.split("_")
 
     formula = {}
     for item in items:
-        if len(item) == 1:  
+        if len(item) == 0:
+            pass
+        elif len(item) == 1:  
+            el = item[0].upper()
+            nu = 1.0
+        elif len(item) == 2:
+            el = item[0].upper()
+            if item[1].isalpha():
+                el = el + item[1].lower()
+                nu = 1.0
+            else:
+                nu = float(item[1])
+        else:
+            el = item[0].upper()
+            item = item[1:]
+            if item[0].isalpha():
+                el = el + item[0].lower()
+                item= item[1:]
+            nu = float(item[:])
+        #
+        formula.update({el:nu})
+    return Component(formula=formula)
+
+def parse_formula(fstr):
+    """
+    Convert a string to a formula list 
+
+    Returns:
+    --------
+    * list:  [(element,nu),(element,nu)...]
+
+    Parameters:
+    ----------
+    * fstr is a chemical formula string 
+      The string should be formatted as e.g. 'Si O2' or 'Si_O2'.  ie the space
+      or underscore is needed to seperate elements in the formula.  The element
+      stoichiometry needs to be adjacent to the element (no space).  If there is
+      no coefficient it is assumed to be 1.
+      
+    """
+    if len(formula) == 0: return None
+    str = str.strip()
+    compstr = compstr.replace(' ','_')
+    items = compstr.split("_")
+
+    formula = {}
+    for item in items:
+        if len(item) == 0:
+            pass
+        elif len(item) == 1:  
             el = item[0].upper()
             nu = 1.0
         elif len(item) == 2:
@@ -708,11 +794,31 @@ def ideal_gas(p=1.,t=298.15,mw=0.0):
                           # x 1e3 = kg/m^3
     return (c,rho)
 
+###################################################################
+def mass_fraction(s,c):
+    """
+    Compute the mass fraction of a component or element in a species
+
+    Parameters
+    ----------
+    * s is a species instance (or string)
+    * c is a component instance (or string - which could be an element)
+
+    Note at this point the component c must have been used to define
+    the stiochiometry of s.  
+    """
+    if type(s) == types.StringType:
+        s = compound.parse_fmt_formula(s)
+    if type(c) == types.StringType:
+        c = compound.parse_comp(c)
+
+    return
+
 def ppm_to_molar(spec,ppm):
     """
     given a ppm concentration of a species
     compute the molar concentration (assuming aqueous
-    system and 1kg/L water density
+    system and 1kg/L water density)
     """
     ppm = float(ppm)
     C = ppm * (1.0e-3)
@@ -754,7 +860,7 @@ def test_1():
 def test_2():
     """ test """
     expr = "{(1.0)[Si_O2]}{(1.232)[Fe2.3454_O11]}{(.12)[H_C.2_Al0.0001203]}"
-    spec = parse_species_formula(expr)
+    spec = parse_fmt_formula(expr)
     print spec
 
 def test_3():
@@ -766,8 +872,18 @@ def test_3():
     ppm = molar_to_ppm(s,C)
     print ppm
 
+def test_4():
+    """test"""
+    #s = "Si3.9 Al.86 Li.08 Fe.1 Mg.14 O10 H"
+    s = "H2 O"
+    #x = parse_fmt_formula(s)
+    x = parse_comp(s)
+    x = Species(x)
+    print x
+    return x
+
 #############################################################
 if __name__ == "__main__":
     #test_1()
-    test_3()
+    x = test_4()
     

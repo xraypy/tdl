@@ -438,7 +438,27 @@ class Shell(_NumShell):
     def do_execfile(self,fname):
         """
         Execute a file of python code
+
+        Note that the file will be executed as if it was
+        imported into the '__main__' namespace
         """
+        if not os.path.exists(fname):
+            files = []
+            for p in sys.path:
+                f = os.path.join(p,fname)
+                if os.path.exists(f):
+                    files.append(f)
+            if len(files) == 0:
+                print "File '%s' not found" % fname
+                return 
+            elif len(files) == 1:
+                fname = files[0]
+            else:
+                print "Warning multiple files found on path"
+                print "Please specify the full path in fname or change the"
+                print "working directory to the directory with the correct file"
+                for f in files: print "    %s" % f
+                return
         return self.interp.execute_file(fname)
 
     #############################################################
