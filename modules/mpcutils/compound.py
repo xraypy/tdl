@@ -68,7 +68,11 @@ To Do
 * Note see the IUCR description of formulas in cif files....
   http://ww1.iucr.org/cif/cifdic_html/1/cif_core.dic/Cchemical_formula.html
 
-* Use element class in component
+* Use element class for elements...  and define a ChemicalFormula base class
+  that holds the basic info related to chemical formula's.  a Component
+  is therefor just a formula class, and a species is a collection
+  of formula classes.  Should be able to maka a simple formula instance using:
+  >>f = formula('Al2 O3')
 
 * Add charge stiochiometry
 
@@ -826,6 +830,23 @@ def element_mass_fraction(f,el):
     if nu == 0: return 0.
     aw = element_data.amu(el)
     frac = nu*aw/f.mw
+    return frac
+
+def mix_weight_percent(mixture,el):
+    """
+    Compute wt% of element in mixture
+
+    Parameters:
+    -----------
+    * mixture is a list of [(f,wt%),(f,wt%)..]
+      where f is a formula string (see parse_formula)
+      or a species or component instance
+    * el is an element string
+    """
+    frac = 0.
+    for f,wtp in mixture:
+        xx = wtp*element_mass_fraction(f,el)
+        frac = frac + xx
     return frac
 
 def ppm_to_molar(spec,ppm):
