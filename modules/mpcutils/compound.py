@@ -808,24 +808,25 @@ def ideal_gas(p=1.,t=298.15,mw=0.0):
     return (c,rho)
 
 ###################################################################
-def mass_fraction(s,c):
+def element_mass_fraction(f,el):
     """
-    Compute the mass fraction of a component or element in a species
+    Compute the mass fraction of an element in a species
+    (multiply by 100 for wt%, 1e6 for ppm and 1e9 for ppb)
 
     Parameters
     ----------
-    * s is a species instance (or string)
-    * c is a component instance (or string - which could be an element)
+    * f is a species or component instance (or string - see parse_formula)
+    * el is a a string, e.g. 'Al', 'As' etc..
 
-    Note at this point the component c must have been used to define
-    the stiochiometry of s.  
     """
-    if type(s) == types.StringType:
-        s = Species(s)
-    if type(c) == types.StringType:
-        c = parse_comp(c)
-
-    return
+    if type(f) == types.StringType:
+        f = parse_formula(f)
+        f = Species(formula=f)
+    nu = f.nuZ(el)
+    if nu == 0: return 0.
+    aw = element_data.amu(el)
+    frac = nu*aw/f.mw
+    return frac
 
 def ppm_to_molar(spec,ppm):
     """
