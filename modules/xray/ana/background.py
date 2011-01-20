@@ -182,7 +182,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     pdelx = num.array(pdelx,dtype=float)
     """
     #
-    print npoly,pdelx
+    #print npoly,pdelx
     npoly = len(pdelx)
     r     = 2*float(width)
     poly  = -1.*(pdelx/r)**(2.*pow)
