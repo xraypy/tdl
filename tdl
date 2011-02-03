@@ -1,6 +1,6 @@
 #!python
 """
-Startup tdl
+Startup pds
 """
 ##############################################################
 import sys
@@ -16,6 +16,4 @@ if pds:
     import pds
     pds.main(args)
 else:
-    #from larch.shell import shell
-    #shell(debug=True, scripts = args).cmdloop()
     pass

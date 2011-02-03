@@ -24,6 +24,7 @@ import os
 libspath = os.path.dirname(__file__)
 libspath = os.path.join(libspath,'libs')
 libspath = os.path.abspath(libspath)
+#print libspath
 
 # import the dll 
 _ref_dll = num.ctypeslib.load_library('_ref',libspath)
