@@ -14,12 +14,12 @@ anisotropic DW-Factors
 """
 #######################################################################
 import numpy as num
-from matplotlib import pyplot
+from   matplotlib import pyplot
 import os.path
-from   tdl.pds.lib.shellutil import Menu 
-from   tdl.pds.lib.shellutil import get_tf, get_yn, get_int, get_flt, get_str, get_flt_list
+from   shellutil import Menu 
+from   shellutil import get_tf, get_yn, get_int, get_flt, get_str, get_flt_list
 import rasd_ana
-from atomic import f0data as database
+from   atomic import f0data as database
 
 ########################################################################
 RASD_HEADER = """

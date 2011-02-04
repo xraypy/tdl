@@ -10,7 +10,7 @@ Authors/Modifications:
 
 import types
 import numpy as num
-from matplotlib import pyplot
+from   matplotlib import pyplot
 import med_data
 
 ########################################################################

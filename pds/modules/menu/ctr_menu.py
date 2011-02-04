@@ -14,9 +14,10 @@ import copy
 import numpy as num
 from   matplotlib import pyplot
 
-from   tdl.pds.lib.shellutil import Menu, show_more 
-from   tdl.pds.lib.shellutil import get_str, get_tf, get_yn 
-from   tdl.pds.lib.shellutil import get_int, get_flt, get_flt_list 
+#from   tdl.pds.lib.shellutil import Menu, show_more
+from   shellutil import Menu, show_more 
+from   shellutil import get_str, get_tf, get_yn 
+from   shellutil import get_int, get_flt, get_flt_list 
 import ctr_data
 import image_data
 import image_menu
