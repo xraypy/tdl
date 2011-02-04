@@ -74,5 +74,5 @@ setup(
     package_dir = package_dir,
     packages = packages,
     package_data = package_data,
-    data_files  = [('bin',['pds.sh'])]
+    data_files  = [('bin',['rpds'])]
 )
