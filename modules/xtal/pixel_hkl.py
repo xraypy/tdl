@@ -13,6 +13,7 @@ Notes:
 import numpy as num
 
 ###########################################################
+""""
 lam = 1.2;
 k = 2*pi/lam;
 
@@ -27,7 +28,7 @@ dx = 500;
 dz = 100;
 
 # vector pointing to pixel
-p = [dx*del_pixel; y; dz*del_pixel];
+p = [dx*del_pixel, y, dz*del_pixel];
 
 # normalized
 pn = p/sqrt((dx*del_pixel)^2 + y^2 + (dz*del_pixel)^2);
@@ -276,6 +277,6 @@ tth_p = v_angle(ki,kr_p, [1 1 1 90 90 90]);
 [U, UB] = calc_U(h_1, lam_1, angle_1, h_2, lam_2, angle_2, cell);
 h = (1/(2*pi))*inv(UB)*inv(Z)*Qm_p
 
-
+"""
 
 

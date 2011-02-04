@@ -6,7 +6,6 @@ Or to prevent copying to site-packages
   >>python setup.py build
 
 When installed the resulting package should look like:
-  site-packages/tdl/astlib
   site-packages/tdl/pds
   site-packages/tdl/modules
 
@@ -24,37 +23,43 @@ email   = "xxx"
 desc    = "tdl"
 
 #########################################################
-package_dir  = {'tdl.astlib':'astlib',
+package_dir  = {'tdl':'',
                 'tdl.pds':'pds',
-                'tdl.modules':'modules', }
-packages     = ['tdl.astlib','tdl.pds','tdl.modules']
+                'tdl.modules':'modules'}
+packages     = ['tdl','tdl.pds',
+                'tdl.pds.lib',
+                'tdl.modules']
 package_data = {'tdl.pds':['startup.pds']}
 
 ### Add-on modules
-#wrap and lib
+#wxgui
+packages.append('tdl.pds.modules.pcgui')
+#menu
+packages.append('tdl.pds.modules.menu')
+
+# wrap
 packages.append('tdl.modules.wrap')
 package_data.update({'tdl.modules.wrap':['libs/_ref.dll']})
 package_data['tdl.modules.wrap'].append('libs/core.lib')
 package_data['tdl.modules.wrap'].append('libs/gsl.dll')
 package_data['tdl.modules.wrap'].append('libs/gsl.lib')
 package_data['tdl.modules.wrap'].append('libs/gslcblas.dll')
-#mpcutils
+# mpcutils
 packages.append('tdl.modules.mpcutils')
 packages.append('tdl.modules.mpcutils.mpfit')
-#fmtfiles
+# fmt files
 packages.append('tdl.modules.fmtfiles')
-#wxgui
-packages.append('tdl.modules.wxgui')
-#xray
+# xray
 packages.append('tdl.modules.xray')
+packages.append('tdl.modules.xray.ana')
 packages.append('tdl.modules.xray.detector')
-packages.append('tdl.modules.xray.scandata')
 packages.append('tdl.modules.xray.xrd')
 packages.append('tdl.modules.xray.xrf')
 packages.append('tdl.modules.xray.xrr')
 packages.append('tdl.modules.xray.xtab')
-#xtal
+# xtal
 packages.append('tdl.modules.xtal')
+
 
 ### call the setup command
 setup(
@@ -67,5 +72,5 @@ setup(
     package_dir = package_dir,
     packages = packages,
     package_data = package_data,
-    data_files  = [('bin',['tdl'])]
+    data_files  = [('bin',['pds.sh'])]
 )
