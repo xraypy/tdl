@@ -16,8 +16,8 @@ anisotropic DW-Factors
 import numpy as num
 from matplotlib import pyplot
 import os.path
-from   pds.lib.shellutil import Menu 
-from   pds.lib.shellutil import get_tf, get_yn, get_int, get_flt, get_str, get_flt_list
+from   tdl.pds.lib.shellutil import Menu 
+from   tdl.pds.lib.shellutil import get_tf, get_yn, get_int, get_flt, get_str, get_flt_list
 import rasd_ana
 from atomic import f0data as database
 

@@ -12,8 +12,7 @@ if len(args) > 0:
         args.pop(0)
 
 if pds:
-    #from pds.lib.shell import main
-    import pds
+    from tdl import pds
     pds.main(args)
 else:
     pass

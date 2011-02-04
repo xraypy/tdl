@@ -26,8 +26,10 @@ desc    = "tdl"
 package_dir  = {'tdl':'',
                 'tdl.pds':'pds',
                 'tdl.modules':'modules'}
-packages     = ['tdl','tdl.pds',
+packages     = ['tdl',
+                'tdl.pds',
                 'tdl.pds.lib',
+                'tdl.pds.modules',
                 'tdl.modules']
 package_data = {'tdl.pds':['startup.pds']}
 
