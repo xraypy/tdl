@@ -15,6 +15,4 @@ try:
 except:
     import pds
     pds.main(args)
-else:
-    print "Error starting pds"
-    return
+    
