@@ -1,7 +1,0 @@
-include README.txt LICENSE.txt ChangeLog MANIFEST.in
-include *.py tdl.*
-recursive-include doc *.txt *.html *.tex
-recursive-include lib *.py
-recursive-include tests *.py *.txt
-recursive-exclude tests .svn/*
-recursive-exclude doc  .svn/*

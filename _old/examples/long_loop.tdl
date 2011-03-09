@@ -1,3 +1,0 @@
-for i in arange(10000):
-    x = sqrt(i*3.0)
-endfor

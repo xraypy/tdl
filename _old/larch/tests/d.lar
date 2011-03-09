@@ -1,5 +1,0 @@
-import numpy
-
-import core_eval
-x = core_eval.f1(3,2)
-print 'From D: ', x
