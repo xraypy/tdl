@@ -8,9 +8,9 @@ Authors/Modifications:
 
 Todo:
 -----
-* add escan files, ascii_scan files ....
+* add escan files(?), ascii_scan files ....
 * use the 'geo' parameter to allow spec
-  files from vairous beamlines / various
+  files from various beamlines / various
   gonio geometries to be used
 """
 #######################################################################
@@ -65,8 +65,8 @@ def spec_scan(spec,sc_num,geo='PSIC_APS_S13'):
     d = spec.scan_dict(sc_num)
 
     # parse positioner and scaler vals
-    # note if a positioner or scaler was list in the data
-    # array then we append the array to the positioners/scalers
+    # note if a positioner or scaler was listed in the data
+    # array then we append the array to the positioners/scalers.
     # otherwise the positioner value will be what was given
     # in d['P'] which should be a single value
     scalers = {}
@@ -346,6 +346,7 @@ def _read_image(fname,**kw):
     end   = kw.get('end',-1)
     nfmt  = kw.get('nfmt',3)
     fmt   = kw.get('fmt','tif')
+    pixel_map = kw.get('bad_pixel_map',None)
     #
     if start > -1:
         if end == -1:
@@ -355,7 +356,8 @@ def _read_image(fname,**kw):
             else:
                 print "No files found"
                 return None
-        image = image_data.read_files(fname,start=start,end=end,nfmt=nfmt)
+        image = image_data.read_files(fname,start=start,end=end,
+                                      nfmt=nfmt,pixel_map=pixel_map)
     else:
         image = image_data.read(fname)
     if image == None: return None
@@ -397,11 +399,10 @@ class Reader:
 
     This class knows about the following data/file types:
     * spec files
-    * escan (to be added)
     * med file (CARS and other fmts)
     * xrf data
     * images 
-    * other (ie ssrl files, old spec and super etc.. to be added)
+    * others could be added (e.g. escan)
 
     Attributes:
     -----------
@@ -425,7 +426,8 @@ class Reader:
     # image parameters
     * image_path path to locate image files
     * image_params is a dictionary:
-      {'rois':None,'fmt':'tif','nfmt':3,'archive':None}
+      {'rois':None,'fmt':'tif','nfmt':3,'archive':None,'bad_pixel_map':None}
+      -> archive is a dictionary with archive info (see image_data.ImageScan)
 
     Examples:
     ---------
@@ -463,7 +465,7 @@ class Reader:
         # image parameters
         self.image_path     = image_path
         self.image_params   = {'rois':None,'fmt':'tif','nfmt':3,
-                               'archive':None}
+                               'archive':None,'bad_pixel_map':None}
 
         # load spec file(s) if passed
         if spec: self.read_spec(spec)
@@ -583,7 +585,8 @@ class Reader:
                           nfmt=self.image_params['nfmt'],
                           fmt=self.image_params['fmt'],
                           rois=self.image_params['rois'],
-                          archive=self.image_params['archive'])
+                          archive=self.image_params['archive'],
+                          bad_pixel_map=self.image_params['bad_pixel_map'])
         return data
 
     ########################################################################
@@ -729,7 +732,8 @@ class Reader:
                                nfmt=self.image_params['nfmt'],
                                fmt=self.image_params['fmt'],
                                rois=self.image_params['rois'],
-                               archive=self.image_params['archive'])
+                               archive=self.image_params['archive'],
+                               bad_pixel_map=self.image_params['bad_pixel_map'])
             if image == None:
                 print "Warning, image files not read"
             else:

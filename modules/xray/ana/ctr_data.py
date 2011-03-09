@@ -23,13 +23,15 @@ Todo:
 * Integrations/Corrections for rocking scans
 * Add normalized F plots  - divide by |Fctr|
   (need to pass delta_H, delta_K for non-rational surfaces)
-
+* Lots of optimization to speed up...  
+  
 """
 ##############################################################################
 
 import types, copy
 import numpy as num
 from matplotlib import pyplot
+import time
 
 import plotter
 from   mathutil import cosd, sind, tand
@@ -38,6 +40,8 @@ from   mathutil import arccosd, arcsind, arctand
 import image_data
 from   xtal.active_area import active_area
 import gonio_psic 
+
+DEBUG = False
 
 ##############################################################################
 def ctr_data(scans,ctr=None,I=None,Inorm=None,Ierr=None,Ibgr=None,
@@ -142,6 +146,7 @@ class CtrData:
         """
         self.fig    = None
         self.cursor = None
+        self.hklist = None
         self.bad    = []
         self.scan   = []
         self.scan_index  = []
@@ -179,8 +184,11 @@ class CtrData:
         this is called by the pickler so we can delete stuff
         we dont want to pickle
         """
-        del self.cursor
-        self.cursor = None
+        try:
+            del self.cursor
+            self.cursor = None
+        except:
+            self.cursor = None
 
     ##########################################################################
     def append_scans(self,scans,I=None,Inorm=None,Ierr=None,Ibgr=None,
@@ -235,7 +243,9 @@ class CtrData:
             self.ctot  = num.append(self.ctot,data['ctot'])
             self.F     = num.append(self.F,data['F'])
             self.Ferr  = num.append(self.Ferr,data['Ferr'])
-
+        # make a list of stored hk's
+        self.hklist = find_HKs(self)
+        
     ##########################################################################
     def _scan_data(self,scan,I,Inorm,Ierr,Ibgr,corr_params,scan_type):
         """
@@ -286,7 +296,7 @@ class CtrData:
 
         Parameters:
         -----------
-        * idx is the index number of the point
+        * idx is the index number of the structure factor (data point)
 
         If scan type is image use the following kw arguments
         (if the argument is not passed the existing value is used,
@@ -305,6 +315,7 @@ class CtrData:
         * corr_params = CTR correction parameters
         
         """
+        if DEBUG: tm = time.time()
         if idx not in range(len(self.L)): return
 
         bad = kw.get('bad')
@@ -318,6 +329,7 @@ class CtrData:
             else:
                 print "Warning: bad should be True/False"
 
+        # Image Data
         if self.scan_type[idx]=="image":
             (scan_idx,point) = self.scan_index[idx]
             scan = self.scan[scan_idx]
@@ -366,7 +378,99 @@ class CtrData:
             self.ctot[idx]            = d['ctot']
             self.F[idx]               = d['F']
             self.Ferr[idx]            = d['Ferr']
+        # Rocking scan data
+        else:
+            # note if rocking scans are implemented
+            # make sure to compute corrections using the
+            # correct angles, e.g. the angles from the
+            # center of the scan (or at the start)
+            print "No other scan types implemented"
+        if DEBUG: print "Integration time(s)=",time.time()-tm
         return 
+
+    ##########################################################################
+    def hk_plot(self,H,K,fig=None,cursor=True,verbose=True,spnt=None):
+        """
+        Plot structure factors for select HK vs L (simple/fast plot)
+
+        Parameters:
+        -----------
+        * H and K are HK vals
+        * fig is the figure number to plot to
+        * cursor is a flag to indicate cursor updates
+        * verbose is a flag to indicate if cursor clicks
+          should also print info
+        * spnt is point index to plot in red
+        """
+        if DEBUG: tm1 = time.time()
+        pyplot.figure(fig)
+        pyplot.clf()
+        idx = HK_idx(self,H,K)
+        if len(idx[0])==0:
+            print "No matching values"
+            return
+        pyplot.plot(self.L[idx],self.F[idx],'bo')
+        if spnt != None:
+            if spnt in idx[0]:
+                sidx = num.where(idx[0]==spnt)
+                pyplot.plot(self.L[sidx],self.F[sidx],'ro')
+        pyplot.semilogy()
+        #
+        fig = pyplot.gcf()
+        self.fig = fig.number
+        if self.cursor != None:
+            self.cursor._disconnect()
+            del self.cursor
+            self.cursor = None
+        if cursor == True:
+            self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
+        if DEBUG: print "Rod Plot Time(s) =" , time.time()-tm1
+
+    ##########################################################################
+    def hk_plot_I(self,H,K,fig=None,cursor=True,verbose=True,spnt=None):
+        """
+        Plot intensities for select HK vs L (simple/fast plot)
+
+        Parameters:
+        -----------
+        * H and K are HK vals
+        * fig is the figure number to plot to
+        * cursor is a flag to indicate cursor updates
+        * verbose is a flag to indicate if cursor clicks
+          should also print info
+        * spnt is point index to plot in red
+        """
+        if DEBUG: tm1 = time.time()
+        pyplot.figure(fig)
+        pyplot.clf()
+        idx = HK_idx(self,H,K)
+        if len(idx[0])==0:
+            print "No matching values"
+            return
+        I  = self.I[idx]
+        In = self.Inorm[idx]
+        Ib = self.Ibgr[idx]
+        #Ie = self.Ierr[idx]
+        y  = I/In
+        yb = Ib/In
+        #ye = Ie/In
+        pyplot.plot(self.L[idx],y,'bo')
+        pyplot.plot(self.L[idx],yb,'m.')
+        if spnt != None:
+            if spnt in idx[0]:
+                sidx = num.where(idx[0]==spnt)
+                pyplot.plot(self.L[sidx],y[sidx],'ro')
+        pyplot.semilogy()
+        #
+        fig = pyplot.gcf()
+        self.fig = fig.number
+        if self.cursor != None:
+            self.cursor._disconnect()
+            del self.cursor
+            self.cursor = None
+        if cursor == True:
+            self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
+        if DEBUG: print "Rod Plot Time(s) =" , time.time()-tm1
 
     ##########################################################################
     def plot(self,fig=None,num_col=2,cursor=True,verbose=True,spnt=None):
@@ -382,6 +486,7 @@ class CtrData:
           should also print info
         * spnt is point index to plot in red
         """
+        if DEBUG: tm1 = time.time()
         hksets  = sort_data(self)
         nset    = len(hksets)
         num_col = float(num_col)
@@ -389,29 +494,32 @@ class CtrData:
         pyplot.figure(fig)
         pyplot.clf()
         for j in range(nset):
+            if DEBUG: tm2 = time.time()
             pyplot.subplot(num_row,num_col,j+1)
-            d = hksets[j]
-            title = 'H=%2.3f,K=%2.3f' % (d['H'][0],d['K'][0])
+            if DEBUG: tm3 = time.time()
+            title = 'H=%2.3f,K=%2.3f' % (hksets[j]['H'][0],hksets[j]['K'][0])
             pyplot.title(title, fontsize = 12)
-            pyplot.plot(d['L'],d['F'],'b.-')
-            pyplot.errorbar(d['L'],d['F'],d['Ferr'], fmt ='o')
+            pyplot.plot(hksets[j]['L'],hksets[j]['F'],'b.')
+            pyplot.errorbar(hksets[j]['L'],hksets[j]['F'],hksets[j]['Ferr'], fmt ='o')
             if spnt != None:
-                if spnt in d['point_idx']:
-                    idx = num.where(d['point_idx']==spnt)
-                    pyplot.plot(d['L'][idx],d['F'][idx],'ro')
+                if spnt in hksets[j]['point_idx']:
+                    idx = num.where(hksets[j]['point_idx']==spnt)
+                    pyplot.plot(hksets[j]['L'][idx],hksets[j]['F'][idx],'ro')
             pyplot.semilogy()
             #
-            min_L = num.floor(num.min(d['L']))
-            max_L = num.ceil(num.max(d['L']))
-            idx   = num.where(d['F'] > 0.)
-            min_F = num.min(d['F'][idx])
+            min_L = num.floor(num.min(hksets[j]['L']))
+            max_L = num.ceil(num.max(hksets[j]['L']))
+            idx   = num.where(hksets[j]['F'] > 0.)
+            min_F = num.min(hksets[j]['F'][idx])
             min_F = 10.**(num.round(num.log10(min_F)) - 1)
-            max_F = num.max(d['F'][idx])
+            max_F = num.max(hksets[j]['F'][idx])
             max_F = 10.**(num.round(num.log10(max_F)) + 1)
             pyplot.axis([min_L,max_L,min_F,max_F])
+            if DEBUG: print " -- Plot Time(s) =" , time.time()-tm2, time.time()-tm3
             #
-            pyplot.xlabel('L')
-            pyplot.ylabel('|F|')
+            #pyplot.xlabel('L')
+            #pyplot.ylabel('|F|')
+        #
         fig = pyplot.gcf()
         self.fig = fig.number
         if self.cursor != None:
@@ -420,6 +528,7 @@ class CtrData:
             self.cursor = None
         if cursor == True:
             self.cursor = plotter.cursor(fig=self.fig,verbose=verbose)
+        if DEBUG: print "Rod Plot Time(s) =" , time.time()-tm1
 
     ##########################################################################
     def plot_I(self,fig=None,num_col=2,cursor=True,verbose=True,spnt=None):
@@ -440,27 +549,27 @@ class CtrData:
         nset    = len(hksets)
         num_col = float(num_col)
         num_row = num.ceil(nset/num_col)
+
         pyplot.figure(fig)
         pyplot.clf()
         for j in range(nset):
             pyplot.subplot(num_row,num_col,j+1)
-            d = hksets[j]
-            title = 'H=%2.3f,K=%2.3f' % (d['H'][0],d['K'][0])
+            title = 'H=%2.3f,K=%2.3f' % (hksets[j]['H'][0],hksets[j]['K'][0])
             pyplot.title(title, fontsize = 12)
-            I  = d['I']
-            In = d['Inorm']
-            Ib = d['Ibgr']
-            Ie = d['Ierr']
+            I  = hksets[j]['I']
+            In = hksets[j]['Inorm']
+            Ib = hksets[j]['Ibgr']
+            Ie = hksets[j]['Ierr']
             y  = I/In
             yb = Ib/In
             ye = Ie/In
             #
-            pyplot.plot(d['L'],y,'b.-',label='I/Inorm')
-            pyplot.errorbar(d['L'],y,ye, fmt ='o')
-            pyplot.plot(d['L'],yb,'m.-',label='Ibgr/Inorm')
+            pyplot.plot(hksets[j]['L'],y,'b.',label='I/Inorm')
+            pyplot.errorbar(hksets[j]['L'],y,ye, fmt ='o')
+            pyplot.plot(hksets[j]['L'],yb,'m.',label='Ibgr/Inorm')
             #
-            min_L = num.floor(num.min(d['L']))
-            max_L = num.ceil(num.max(d['L']))
+            min_L = num.floor(num.min(hksets[j]['L']))
+            max_L = num.ceil(num.max(hksets[j]['L']))
             #
             idx   = num.where(y > 0.)
             min_I = num.min(y[idx])
@@ -487,18 +596,19 @@ class CtrData:
             pyplot.plot(d['L'][idx],tmp,'bo')
             #
             if spnt != None:
-                if spnt in d['point_idx']:
-                    idx = num.where(d['point_idx']==spnt)
+                if spnt in hksets[j]['point_idx']:
+                    idx = num.where(hksets[j]['point_idx']==spnt)
                     if I[idx] <= 0.:
-                        pyplot.plot(d['L'][idx],[1.1*min_I],'ro')
+                        pyplot.plot(hksets[j]['L'][idx],[1.1*min_I],'ro')
                     else:
-                        pyplot.plot(d['L'][idx],y[idx],'ro')
+                        pyplot.plot(hksets[j]['L'][idx],y[idx],'ro')
             #
             pyplot.semilogy()
             pyplot.axis([min_L,max_L,min_I,max_I])
-            pyplot.xlabel('L')
-            pyplot.ylabel('Intensity')
+            #pyplot.xlabel('L')
+            #pyplot.ylabel('Intensity')
             pyplot.legend()
+        #
         fig = pyplot.gcf()
         self.fig = fig.number
         if self.cursor != None:
@@ -515,7 +625,7 @@ class CtrData:
 
         Parameters:
         -----------
-        * idx = point index.
+        * idx is the index number of the structure factor (data point)
           if idx = None, then uses last cursor click
         * fig = fig number
         * show_int is a flag for showing integration plot for images
@@ -569,7 +679,10 @@ class CtrData:
         """
         Get scan from point index (idx)
 
-        If idx is None it uses the last plot selection        
+        Parameters
+        ----------
+        * idx is the index number of the structure factor (data point)
+          If idx is None it uses the last plot selection        
 
         Returns:
         --------
@@ -589,6 +702,58 @@ class CtrData:
             point = 0
         scan = self.scan[idx]
         return (scan,point)
+
+    ##########################################################################
+    def get_scan_name(self,idx=None):
+        """
+        Get the scan name from point index (idx)
+
+        Parameters
+        ----------
+        * idx is the index number of the structure factor (data point)
+          If idx is None it uses the last plot selection        
+
+        Returns:
+        --------
+        * string with scan information
+        """
+        if idx == None:
+            idx = self.get_idx()
+            if idx == None: return None
+        scan_idx = self.scan_index[idx]
+        if len(scan_idx) > 1:
+            point = scan_idx[1]
+            idx = scan_idx[0]
+        else:
+            idx = scan_idx
+            point = 0
+        name = self.scan[idx].name
+        return name
+        
+    ##########################################################################
+    def get_corr(self,idx=None):
+        """
+        Get scan the correction instance (which includes the
+        gonio instance) from point index (idx)
+
+        Parameters
+        ----------
+        * idx is the index number of the structure factor (data point)
+          If idx is None it uses the last plot selection        
+
+        Returns:
+        --------
+        * CtrCorrection instance
+        """
+        if self.scan_type[idx]=="image":
+            (scan,spnt) = self.get_scan(idx)
+            corr_params = self.corr_params[idx]
+            corr = _get_corr(scan,spnt,corr_params)
+        else:
+            # need the scan point within the rocking scan
+            # or the values at the start??
+            print "Not implemented for non image scans"
+        return corr
     
     ##########################################################################
     def get_points(self,fig=None):
@@ -626,7 +791,9 @@ class CtrData:
     ##########################################################################
     def write_HKL(self,fname = 'ctr.lst'):
         """
-        dump data file
+        Dump data file
+        
+        Note should use the sort fcn to write in order
         """
         f = open(fname, 'w')
         header = "#idx %5s %5s %5s %7s %7s\n" % ('H','K','L','F','Ferr')
@@ -639,6 +806,46 @@ class CtrData:
                                                                 self.Ferr[i])
                 f.write(line)
         f.close()
+
+##########################################################################
+def find_HKs(ctr,hkdecimal=3):
+    """
+    find all the unique HK pairs in the data set
+    """
+    hkvals = []
+    npts = len(ctr.L)
+    H = num.around(ctr.H,decimals=hkdecimal)
+    K = num.around(ctr.K,decimals=hkdecimal)
+    s = []
+    for j in range(npts):
+        s = (H[j],K[j]) 
+        if s not in hkvals:
+            hkvals.append(s)
+    # sort the hkvals
+    hkvals.sort()
+    return hkvals
+
+##########################################################################
+def HK_idx(ctr,H,K,hkdecimal=3):
+    """
+    Get the index numbers for all the data matching H,K
+
+    Example:
+    -------
+    idx = HK_idx(ctr,1,0)
+    Hset = ctr.H[idx]
+    Kset = ctr.K[idx]
+    Lset = ctr.K[idx]
+    Fset = ctr.F[idx]
+    """
+    Hrnd = num.around(ctr.H,decimals=hkdecimal)
+    Krnd = num.around(ctr.K,decimals=hkdecimal)
+    idx1 = num.where(Hrnd==H)
+    if len(idx1) == 0:
+        return idx1
+    idx2 = num.where(Krnd[idx1]==K)
+    idx = (idx1[0][idx2],)
+    return idx
 
 ##########################################################################
 def sort_data(ctr,hkdecimal=3):
@@ -655,68 +862,32 @@ def sort_data(ctr,hkdecimal=3):
       values to for sorting.  
 
     """
-    # round H and K to sepcified precision
-    H = num.around(ctr.H,decimals=hkdecimal)
-    K = num.around(ctr.K,decimals=hkdecimal)
-    L = ctr.L
-    F = ctr.F
-    Ferr = ctr.Ferr
-    #
-    I     = ctr.I
-    Inorm = ctr.Inorm
-    Ierr  = ctr.Ierr
-    Ibgr  = ctr.Ibgr
-    #
     scan_idx = ctr.scan_index
-    npts = len(F)
+    npts = len(ctr.F)
 
     #find all unique sets
-    hkvals = []
-    for j in range(npts):
-        s = (H[j],K[j]) 
-        if s not in hkvals:
-            hkvals.append(s)
+    hkvals = find_HKs(ctr,hkdecimal=hkdecimal)
 
-    # sort the hkvals
-    # and stick data in correct set
-    hkvals.sort()
+    # put data in correct set
     nsets = len(hkvals)
-    #d = {'H':[],'K':[],'L':[],'F':[],'Ferr':[],'idx':[]}
-    #hkset  = [copy.copy(d) for j in range(nsets)]
     hkset = []
     for j in range(nsets):
         hkset.append({'H':[],'K':[],'L':[],'F':[],'Ferr':[],
                       'I':[],'Inorm':[],'Ierr':[],'Ibgr':[],
-                      'point_idx':[],'scan_idx':[]})
-
-    for j in range(npts):
-        s      = (H[j],K[j])
-        setidx = hkvals.index(s)
-        hkset[setidx]['H'].append(H[j])
-        hkset[setidx]['K'].append(K[j])
-        hkset[setidx]['L'].append(L[j])
-        hkset[setidx]['F'].append(F[j])
-        hkset[setidx]['Ferr'].append(Ferr[j])
-        hkset[setidx]['I'].append(I[j])
-        hkset[setidx]['Inorm'].append(Inorm[j])
-        hkset[setidx]['Ierr'].append(Ierr[j])
-        hkset[setidx]['Ibgr'].append(Ibgr[j])
-        hkset[setidx]['point_idx'].append(j)
-        hkset[setidx]['scan_idx'].append(scan_idx[j])
-
-    # make arrays num arrays
+                      'point_idx':[]})
     for j in range(nsets):
-        hkset[j]['H'] = num.array(hkset[j]['H'])
-        hkset[j]['K'] = num.array(hkset[j]['K'])
-        hkset[j]['L'] = num.array(hkset[j]['L'])
-        hkset[j]['F'] = num.array(hkset[j]['F'])
-        hkset[j]['Ferr'] = num.array(hkset[j]['Ferr'])
-        hkset[j]['I']     = num.array(hkset[j]['I'])
-        hkset[j]['Inorm'] = num.array(hkset[j]['Inorm'])
-        hkset[j]['Ierr']  = num.array(hkset[j]['Ierr'])
-        hkset[j]['Ibgr']  = num.array(hkset[j]['Ibgr'])
-        hkset[j]['point_idx']  = num.array(hkset[j]['point_idx'])
-        hkset[j]['scan_idx']  = num.array(hkset[j]['scan_idx'])
+        s = hkvals[j]
+        idx = HK_idx(ctr,s[0],s[1],hkdecimal=hkdecimal)
+        hkset[j]['H']     = num.around(ctr.H[idx],decimals=hkdecimal)
+        hkset[j]['K']     = num.around(ctr.K[idx],decimals=hkdecimal)
+        hkset[j]['L']     = ctr.L[idx]
+        hkset[j]['F']     = ctr.F[idx]
+        hkset[j]['Ferr']  = ctr.Ferr[idx]
+        hkset[j]['I']     = ctr.I[idx]
+        hkset[j]['Inorm'] = ctr.Inorm[idx]
+        hkset[j]['Ierr']  = ctr.Ierr[idx]
+        hkset[j]['Ibgr']  = ctr.Ibgr[idx]
+        hkset[j]['point_idx'] = idx[0]
 
     # now sort each set by L
     for j in range(nsets):
@@ -731,7 +902,6 @@ def sort_data(ctr,hkdecimal=3):
         hkset[j]['Ierr'] = hkset[j]['Ierr'][lidx]
         hkset[j]['Ibgr'] = hkset[j]['Ibgr'][lidx]
         hkset[j]['point_idx'] = hkset[j]['point_idx'][lidx]
-        hkset[j]['scan_idx'] = hkset[j]['scan_idx'][lidx]
 
     return hkset
 
@@ -929,36 +1099,72 @@ def set_params(ctr,point,intpar={},corrpar={}):
             ctr.corr_params[point]['sample']['angles'] = _getpar(corrpar.get('sample angles'))
     
 ##############################################################################
-def _update_psic_angles(gonio,scan,point):
+def _update_psic_angles(gonio,scan,point,verbose=True):
     """
     given a psic gonio instance, a scandata object
     and a scan point, update the gonio angles...
     """
     npts = int(scan.dims[0])
-    if len(scan['phi']) == npts:
-        phi=scan['phi'][point]
-    else:
-        phi=scan['phi']
-    if len(scan['chi']) == npts:
-        chi=scan['chi'][point]
-    else:
-        chi=scan['chi']
-    if len(scan['eta']) == npts:
-        eta=scan['eta'][point]
-    else:
-        eta=scan['eta']
-    if len(scan['mu']) == npts:
-        mu=scan['mu'][point]
-    else:
-        mu=scan['mu']
-    if len(scan['nu']) == npts:
-        nu=scan['nu'][point]
-    else:
-        nu=scan['nu']
-    if len(scan['del']) == npts:
-        delta=scan['del'][point]
-    else:
-        delta=scan['del']
+    #
+    try:
+      if type(scan['phi']) == types.FloatType:
+          phi=scan['phi']
+      elif len(scan['phi']) == npts:
+          phi=scan['phi'][point]
+    except:
+        phi=None
+    if phi == None and verbose==True:
+        print "Warning no phi angle:", scan.name
+    #
+    try:
+        if type(scan['chi']) == types.FloatType:
+            chi=scan['chi']
+        elif len(scan['chi']) == npts:
+            chi=scan['chi'][point]
+    except:
+        chi = None
+    if chi == None and verbose==True:
+        print "Warning no chi angle", scan.name
+    #
+    try:
+        if type(scan['eta']) == types.FloatType:
+            eta=scan['eta']
+        elif len(scan['eta']) == npts:
+            eta=scan['eta'][point]
+    except:
+        eta = None
+    if eta == None and verbose==True:
+        print "Warning no eta angle", scan.name
+    #
+    try:
+        if type(scan['mu']) == types.FloatType:
+            mu=scan['mu']
+        elif len(scan['mu']) == npts:
+            mu=scan['mu'][point]
+    except:
+        mu = None
+    if mu == None and verbose==True:
+        print "Warning no mu angle", scan.name
+    #
+    try:
+        if type(scan['nu']) == types.FloatType:
+            nu=scan['nu']
+        elif len(scan['nu']) == npts:
+            nu=scan['nu'][point]
+    except:
+        nu = None
+    if nu == None and verbose==True:
+        print "Warning no nu angle", scan.name
+    #
+    try:
+        if type(scan['del']) == types.FloatType:
+            delta=scan['del']
+        elif len(scan['del']) == npts:
+            delta=scan['del'][point]
+    except:
+        delta = None
+    if delta == None and verbose==True:
+        print "Warning no del angle", scan.name
     #
     gonio.set_angles(phi=phi,chi=chi,eta=eta,
                      mu=mu,nu=nu,delta=delta)

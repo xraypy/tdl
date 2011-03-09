@@ -15,6 +15,8 @@ Simple integrations and plotting
 Todo:
 -----
 * Improve /speedup image background determination
+* Try other background options - spline/interpolate and variable size to compute stats
+* Also need arbitrary roi polygon...
 
 Notes:
 ------
@@ -52,7 +54,7 @@ IMG_BGR_PARAMS = {'bgrflag':1,
                   'nline':1,'filter':False,'compress':1}
 
 #######################################################################
-def read(file):
+def read(file,pixel_map=None):
     """
     read file or list of files
     """
@@ -62,31 +64,39 @@ def read(file):
     except:
         print "Error importing Image.open"
         return None
-    def rd(file):
+    # see if there is a pixel map
+    if pixel_map != None:
+        (bad_pixels,good_pixels) = read_pixel_map(pixel_map)
+    else:
+        bad_pixels = None
+        good_pixels = None
+    # read fcn
+    def rd(file,bad_pixels=None,good_pixels=None):
         try:
             im  = imopen(file)
             arr = num.fromstring(im.tostring(), dtype='int32')
             arr.shape = (im.size[1],im.size[0])
             #return arr.transpose()
+            if bad_pixels != None:
+                arr = pixel_mask(arr,bad_pixels,good_pixels)
             return arr
         except:
             print "Error reading file: %s" % file
-            #return num.array([[0]])
             return None
     if type(file) == types.StringType:
-        image = rd(file)
+        image = rd(file,bad_pixels=bad_pixels,good_pixels=good_pixels)
         return image
     elif type(file) == types.ListType:
         image = []
         for f in file:
-            tmp = rd(file)
+            tmp = rd(file,bad_pixels=bad_pixels,good_pixels=good_pixels)
             image.append(tmp)
     else:
         return None
     return image
 
 #######################################################################
-def read_files(file_prefix,start=0,end=100,nfmt=3):
+def read_files(file_prefix,start=0,end=100,nfmt=3,pixel_map=None):
     """
     read files that have a numerical suffix
     """
@@ -95,10 +105,98 @@ def read_files(file_prefix,start=0,end=100,nfmt=3):
     for j in range(start,end+1):
         ext  = format % j
         file = file_prefix + '_' + ext + '.tif'
-        arr  = read(file)
+        arr  = read(file,pixel_map=pixel_map)
         images.append(arr)
     return images
 
+############################################################################
+def pixel_mask(image,bad_pixels=[],good_pixels=[]):
+    """
+    Correct bad pixels in the image
+
+    Paramters:
+    ---------
+    * image is a image array
+    * bad_pixels is a list of [x,y] pairs corresponding
+      to bad pixel locations
+    * good_pixels is a list of [x,y] pairs corresponding
+      to good pixel locations (optional)
+
+    Returns:
+    -------
+    * The image with the bad_pixels set to either the average value of
+      the nieghbors or to the corresponding good pixel value
+
+    Notes:
+    ------
+    *  should we be concerned about types and rounding errors?
+    """
+    if bad_pixels == None: return
+    if good_pixels == None:
+        good_pixels = []
+    if len(good_pixels) == 0:
+        do_ave = True
+    else:
+        do_ave = False
+    ny = len(image)
+    nx = num.max(image[0])
+    for j in range(len(bad_pixels)):
+        x = bad_pixels[j][0]
+        y = bad_pixels[j][1]
+        if do_ave == True:
+            avg = 0.
+            na = 0.
+            if (x+1) < nx:
+                avg = avg + image[y][x+1]
+                na = na + 1.
+            if (x-1) >= 0:
+                avg = avg + image[y][x-1]
+                na = na + 1.
+            if (y+1) < ny:
+                avg = avg + image[y+1][x]
+                na = na + 1.
+            if (y-1) >= 0:
+                avg = avg + image[y-1][x]
+                na = na + 1.
+            if na > 0:
+                #print int(avg / na), image[y,x]
+                image[y,x] = int(avg / na)
+        else:
+            x2 = good_pixels[j][0]
+            y2 = good_pixels[j][1]
+            image[y,x] = image[y2,x2]
+    return image
+
+def read_pixel_map(fname):
+    """
+    read pixel map file
+
+    assume the file format is
+    (bad pixel)  (good pixel)
+    """
+    bad_pixels = []
+    good_pixels = []
+    try:
+        bad = []
+        good = []
+        f  = open(fname)
+        for line in f.readlines():
+            tmp = line.strip().split()
+            bad.append(tmp[0])
+            if len(tmp)>1:
+                good.append(tmp[1])
+        f.close()
+        for p in bad:
+            pp = p.split(',')
+            bad_pixels.append(map(int,pp))
+        for p in good:
+            pp = p.split(',')
+            good_pixels.append(map(int,pp))
+        return bad_pixels, good_pixels
+    except:
+        print "Error reading file: %s" % fname
+        return []
+    
 ############################################################################
 def clip_image(image,roi=[],rotangle=0.0,cp=False):
     """
@@ -111,8 +209,8 @@ def clip_image(image,roi=[],rotangle=0.0,cp=False):
       and y as vertical axis index (row index).
       Therefore, in image indexing:
          image[y1:y2,x1:x2] ==> rows y1 to y2 and cols x1 to x2
-    * rotangle
-    * cp
+    * rotangle is the angle to rotate the image by
+    * cp is flag to indicate if a new copy of the image is generated
     
     """
     if len(roi) != 4:
@@ -233,6 +331,8 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
         bild[r1:r2,c1-2:c1] = img.max()
         bild[r1:r2,c2:c2+2] = img.max()
         img = img+bild
+        if im_max == None:
+            im_max = num.max(img[r1:r2, c1:c2])
     #
     pyplot.imshow(img,cmap=cmap,vmax=im_max)
     pyplot.colorbar(orientation='horizontal')
@@ -419,6 +519,7 @@ def image_bgr(image,lineflag='c',nbgr=3,width=100,pow=2.,tangent=False,
                                           tangent=tangent,compress=compress)
     #show
     if plot:
+        
         pyplot.figure(3)
         pyplot.clf()
         pyplot.subplot(3,1,1)
@@ -660,6 +761,9 @@ class ImageAna:
             bild = ndimage.rotate(self.image,self.rotangle)
         else:
             bild = copy.copy(self.image)
+        # whats the max inside the roi
+        im_max = num.max(bild[r1:r2, c1:c2])
+        #
         bild[r1-1:r1,c1:c2] = bild.max()
         bild[r2:r2+1,c1:c2] = bild.max()
         bild[r1:r2,c1-1:c1] = bild.max()
@@ -696,7 +800,7 @@ class ImageAna:
         # plot full image with ROI
         pyplot.subplot(222)
         pyplot.title(self.title, fontsize = 12)
-        pyplot.imshow(bild,cmap=colormap)
+        pyplot.imshow(bild,cmap=colormap,vmax=im_max)
         pyplot.colorbar(orientation='horizontal')
 
         ####################################
@@ -1002,8 +1106,9 @@ class _ImageList:
             try:
                 self._write_image_tables(images,setname,descr)
             except:
-                print "Unable to write to image to hdf file"
                 self._cleanup()
+                print "Unable to write images:"
+                print "   Setname %s, hdf file %s" % (file,setname) 
     
     ################################################################
     def _cleanup(self):
@@ -1063,7 +1168,8 @@ class _ImageList:
         # find the highest one and
         # auto generate set name as next in the sequence 
         if hasattr(h.root.image_data,setname):
-            print "Image Archive File %s: Setname %s already exists" % (fname,setname)
+            print "Warning: Image Archive File '%s'" % fname
+            print "-->Setname '%s' already exists, data is not overwritten\n" % setname
         else:
             h.createGroup('/image_data',setname,"Image Data")
             grp = '/image_data/' + setname
@@ -1077,13 +1183,18 @@ class _ImageList:
         if not os.path.exists(fname):
             print "Archive file not found:", fname
             return None
-        h  = tables.openFile(fname,mode="r")
         grp = '/image_data/' + self.setname
-        #n  = h.getNode('/images',self.setname)
-        n  = h.getNode(grp,'images')
-        im = n.read()
-        h.close()
-        return im
+        try:
+            h  = tables.openFile(fname,mode="r")
+            #n  = h.getNode('/images',self.setname)
+            n  = h.getNode(grp,'images')
+            im = n.read()
+            h.close()
+            return im
+        except:
+            self._cleanup()
+            print "Error reading image tables: %s" % grp
+            return None
 
 ################################################################################
 ################################################################################

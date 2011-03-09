@@ -7,11 +7,12 @@ Authors/Modifications:
 
 Todo:
 -----
-* Include dictionary of space groups from the international tables
-* Handle 2D plane group operations (include dictionary of plane groups) 
+* UnitCell class
 * Reading cif files and others (maybe seperate module)
    - e.g. get xyz file from fit and par files
 * Structure analysis and bond valence calcs (seperate module...)
+* Include dictionary of space groups (a seperate module)
+* Handle 2D plane group operations (include dictionary of plane groups) 
  
 """
 ##########################################################################
@@ -20,6 +21,66 @@ import numpy as num
 import sys
 import types
 
+import lattice
+
+# try importing the aussie pycif module
+# if it wont load we should have our own simple backup
+# for reading/writing structures as cif files
+#try:
+#  import PyCif
+#except:
+#  pass
+
+
+##########################################################################
+class UnitCell:
+    """
+    Need to include assymetric unit and thermal factors
+    Also include slab repeat vector as an option (or maybe we
+    should make a new SurfaceCell class that subclasses this?)
+    """
+    def __init__(self):
+        # assymetric unit, debye wallers, lattice (Lattice instance)
+        # and sym_ops (PositionGenerator instance)
+        self.assym = []
+        self.dw = []
+        self.lat = None
+        pass
+    def read_cif(self):
+        pass
+    def write_cif(self):
+        pass
+    def generate_p1(self,na=1,nb=1,nc=1):
+        """
+        compute the p1 unit cell
+        the n's are range for expansion of the
+        unit cell 
+        """
+        pass
+    def transform(self):
+        """
+        this computes/returns a new UnitCell
+        given basis transform vectors.
+        Note this needs to generate a new Lattice,
+        new coordinates for assymetric unit,
+        correclty transform thermal tensor,
+        and transform the symmetry operators.
+        This will be a fun code to work on!!!
+        """
+        pass
+    def bond_valence(self):
+        """
+        compute bond valence sums (and coordination chem ie
+        coordation sphere, bond lenghts and angles)
+        """
+        pass
+    def visualize(self,na=1,nb=1,nc=1):
+        """
+        output a jmol script to view the structure
+        add more arguments for controlling jmol attributes 
+        """
+        pass
+    
 ##########################################################################
 class PositionGenerator:
     """

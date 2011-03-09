@@ -279,7 +279,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.wxShellHelp.visible = True
 
     def on_menuHelpDocumentation_select(self,event):
-        self.exec_line("web 'http://cars9.uchicago.edu/iffwiki/tdl'")
+        self.exec_line("web 'http://cars9.uchicago.edu/iffwiki/tdl/Pds'")
 
     ###########################################################
     #             EVENTS                                      #

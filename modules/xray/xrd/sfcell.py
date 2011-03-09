@@ -6,6 +6,10 @@ Authors/Modifications:
 ----------------------
 * Matt Newville (newville@cars.uchicago.edu)
 
+Todo
+----
+ * update to work as standalone....
+
 """
 ##########################################################################
 
@@ -16,10 +20,9 @@ import Ifeffit
 import atomic
 
 ##########################################################################
-class UnitCell:
+class P1Cell:
     """
-    Crystallographic unit cell, using modified Atoms p1.inp file
-    
+    Structure factor calcs for a P1 unit cell    
     """
     def __init__(self):
         """
@@ -43,100 +46,7 @@ class UnitCell:
         # print cmd
         self.iff.ifeffit(cmd)
 
-    def read_p1(self,file='p1.inp'):
-        """
-        read a p1.inp file, filling internal data.
-        returns 0 on success, 1 on failure.
-        """
-        self.filename = file
-        try:
-            f = open(self.filename,'r')
-            lines = f.readlines()
-            f.close()
-        except:
-            print "couldn't read input file %s" % self.filename
-            return 1
-        
-        atoms_mode = 0
-        for line in lines:
-            # remove end-of-line, any end-of-line comments,
-            # and strip whitespace
-            line = line[:-1]
-            line = line.split('!')[0].strip()
-            if (len(line)<1): continue
-
-            if (line[:5] == 'title'):  # title lines
-                t = line[5:]
-                words = t.split('=')
-                if (len(words)>1): t = words[1]
-                self.titles.append(t.strip())
-            elif (line[:5] == 'atoms'):
-                atoms_mode = 1 
-            elif (atoms_mode == 1):
-                # read atoms list line
-                dk_file = '';  bfac = 0.;   occ = 1.
-                words = line.split()
-
-                if (len(words) == 4): tag  = words[0]
-                if (len(words) > 4):  tag  = words[4]
-                if (len(words) > 5):  occ  = float(words[5])
-                if (len(words) > 6):  bfac = float(words[6])
-                if (len(words) > 7):  
-                    dk_file = words[7]
-                    print "diffkk file name = %s" %  dk_file
-                self.atoms.append({'atom':words[0], 'x':float(words[1]),
-                                   'y':float(words[2]), 'z':float(words[3]),
-                                   'tag':tag, 'occupancy':occ,
-                                   'dwf_b':bfac,'diffkk_file': dk_file })
-
-            elif (line[:5] == 'space'):
-                # space group doesn't quite fit with the rest of the
-                # parameters below (multi-word, on a line by itself)
-                self.p1_data['space'] = line[5:].strip()
-            elif (line[:6] == 'miller'):
-                # space group doesn't quite fit with the rest of the
-                # parameters below (multi-word, on a line by itself)
-                line = line.replace(',',' ')
-                words = line[6:].split()
-                if (len(words) < 3):
-                    print "Only %i miller indices given." % (len(words))
-                else:
-                    self.hkl = num.array(map(float,words[:3]))
-            else:
-                # read the free format keywords into self.p1_data
-                # replace '=' and ',' by ' '.
-                line = line.replace('=',' ')
-                line = line.replace(',',' ')
-                
-                # split into words, and reverse the list so that
-                # pop() can easily pull off the words
-                words = line.split()
-                words.reverse()
-
-                while (len(words)>1):
-                    # set data in self.p1_data dictionary
-                    att = words.pop().strip()
-                    if (att in self.p1_data.keys()):
-                        try:
-                            val = words.pop().strip()
-                        except:
-                            val = ''
-                        self.p1_data[att] = val.strip()
-        self.__file_read = 1
-
-        # clean up, making sure numbers are held as floats.
-        for p in ('a','b','c','emin','emax',
-                  'alpha','beta','gamma', 'rmax'):
-            self.p1_data[p] = float(self.p1_data[p])
-            
-        self.abc = num.array([self.p1_data['a'],
-                                  self.p1_data['b'],
-                                  self.p1_data['c']])
-
-        return 0
-
-
-    def get_structure_factor(self,use_diffkk=1):
+    def structure_factor(self,use_diffkk=1):
         """
         calculate structure factor
         """
@@ -256,6 +166,102 @@ class UnitCell:
         # lorentz correction
         dd = num.arcsin(atomic.hc / (2*dspace*energy[i_e0]))
         self.lorentz_normalization = ((atomic.hc / energy[i_e0])**3) / num.sin(2*dd)
+
+###############################################################################
+def read_p1(file='p1.inp'):
+    """
+    read a p1.inp file, filling internal data.
+    returns sf instance.
+
+    this needs to be modified!!
+    
+    """
+    self.filename = file
+    try:
+        f = open(self.filename,'r')
+        lines = f.readlines()
+        f.close()
+    except:
+        print "couldn't read input file %s" % self.filename
+        return 1
+    
+    atoms_mode = 0
+    for line in lines:
+        # remove end-of-line, any end-of-line comments,
+        # and strip whitespace
+        line = line[:-1]
+        line = line.split('!')[0].strip()
+        if (len(line)<1): continue
+
+        if (line[:5] == 'title'):  # title lines
+            t = line[5:]
+            words = t.split('=')
+            if (len(words)>1): t = words[1]
+            self.titles.append(t.strip())
+        elif (line[:5] == 'atoms'):
+            atoms_mode = 1 
+        elif (atoms_mode == 1):
+            # read atoms list line
+            dk_file = '';  bfac = 0.;   occ = 1.
+            words = line.split()
+
+            if (len(words) == 4): tag  = words[0]
+            if (len(words) > 4):  tag  = words[4]
+            if (len(words) > 5):  occ  = float(words[5])
+            if (len(words) > 6):  bfac = float(words[6])
+            if (len(words) > 7):  
+                dk_file = words[7]
+                print "diffkk file name = %s" %  dk_file
+            self.atoms.append({'atom':words[0], 'x':float(words[1]),
+                               'y':float(words[2]), 'z':float(words[3]),
+                               'tag':tag, 'occupancy':occ,
+                               'dwf_b':bfac,'diffkk_file': dk_file })
+
+        elif (line[:5] == 'space'):
+            # space group doesn't quite fit with the rest of the
+            # parameters below (multi-word, on a line by itself)
+            self.p1_data['space'] = line[5:].strip()
+        elif (line[:6] == 'miller'):
+            # space group doesn't quite fit with the rest of the
+            # parameters below (multi-word, on a line by itself)
+            line = line.replace(',',' ')
+            words = line[6:].split()
+            if (len(words) < 3):
+                print "Only %i miller indices given." % (len(words))
+            else:
+                self.hkl = num.array(map(float,words[:3]))
+        else:
+            # read the free format keywords into self.p1_data
+            # replace '=' and ',' by ' '.
+            line = line.replace('=',' ')
+            line = line.replace(',',' ')
+            
+            # split into words, and reverse the list so that
+            # pop() can easily pull off the words
+            words = line.split()
+            words.reverse()
+
+            while (len(words)>1):
+                # set data in self.p1_data dictionary
+                att = words.pop().strip()
+                if (att in self.p1_data.keys()):
+                    try:
+                        val = words.pop().strip()
+                    except:
+                        val = ''
+                    self.p1_data[att] = val.strip()
+    self.__file_read = 1
+
+    # clean up, making sure numbers are held as floats.
+    for p in ('a','b','c','emin','emax',
+              'alpha','beta','gamma', 'rmax'):
+        self.p1_data[p] = float(self.p1_data[p])
+        
+    self.abc = num.array([self.p1_data['a'],
+                              self.p1_data['b'],
+                              self.p1_data['c']])
+
+    return 0
 
 ##########################################################################
 ##########################################################################

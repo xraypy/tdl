@@ -18,13 +18,18 @@ import ana as scandata
 import ctr_data
 import image_data
 
-###############################################################################
+DEBUG = False
 
-CTR_HEADER = """Number of points          = %s
+###############################################################################
+#CTR_HEADER
+SET_HEADER = """Number of points   = %s
 New/selected points (set) = %s
-Current selected point    = %s
+"""
+
+POINT_HEADER = """Current selected point  = %s
 H=%3.2f, K=%3.2f, L=%6.5f
 Scan Type = '%s'
+Scan name = '%s'
 Labels: I='%s', Inorm='%s', Ierr='%s', Ibgr='%s'
 Geom='%s'
 Beam slits = %s
@@ -34,6 +39,7 @@ Scale   = %s
 Bad point flag = %s,
 I=%6.5g, Ierr=%6.5g, Ibgr=%6.5g, ctot=%6.5f
 F=%6.5g, Ferr=%6.5g
+Alpha=%s, Beta=%s
 """
 
 PARAM_DESCR = {
@@ -65,9 +71,9 @@ The background function should fit features that are in general broader
 than the width value. Estimate cwidth using the peak width in the
 column (y) direction. Note: width = 0 corresponds to no polynomial bgr""",
 
-'bgr col power':"""Power of polynomial used in column (y) direction bgr fit.
-Use pow < 0.5 for polynomials flatter than a circle (pow = 0 are linear)
-and pow  > 0.5 for steeper.""",
+'bgr col power':"""Power of polynomial used in row (x) direction bgr fit.
+pow = 0 results in linear background only (see nbgr).  Larger values of pow
+result in steeper polynomials.""",
 
 'bgr col tan':"""Flag for use of tangents in column (y) direction bgr determination.
 If 'True' then the local slope is removed when fitting a polynomial to a point.
@@ -82,8 +88,8 @@ than the width value. Estimate rwidth using the peak width in the
 row (x) direction. Note: width = 0 corresponds to no polynomial bgr""",
 
 'bgr row power':"""Power of polynomial used in row (x) direction bgr fit.
-Use pow < 0.5 for polynomials flatter than a circle (pow = 0 are linear)
-and pow  > 0.5 for steeper.""",
+pow = 0 results in linear background only (see nbgr).  Larger values of pow
+result in steeper polynomials.""",
 
 'bgr row tan':"""Flag for use of tangents in row direction (x) bgr determination.
 If 'True' then the local slope is removed when fitting a polynomial to a point.
@@ -107,7 +113,7 @@ If beam slits are 'None' or {} no area correction will be done""",
 'det_slits':"""Enter the detector slit settings: det_slits = {'horz':1.,'vert':1.}
 horz = det horz width in mm (total width in lab-z / horiz scattering plane)
 vert = det vert hieght in mm (total width in lab-x / vert scattering plane)
-If detector slits are 'None' or {} only a spil-off correction will be computed""",
+If detector slits are 'None' or {} only a spill-off correction will be computed""",
 
 'geom':"""Enter goniometer geometry.  Options: psic""",
 
@@ -251,7 +257,7 @@ class wxCtrData(model.Background, wxUtil):
             ctr.write_HKL(path)  
 
     def on_menuHelpDocumentation_select(self,event):
-        self.exec_line("web 'http://cars9.uchicago.edu/ifeffit/tdl/Docs/Pds/CtrGui'")
+        self.exec_line("web 'http://cars9.uchicago.edu/ifeffit/tdl/Pds/CtrGui'")
 
     ###########################################################
     #  Ctr Data
@@ -278,6 +284,8 @@ class wxCtrData(model.Background, wxUtil):
         self.init_gui()
         if self.components.AutoPlotCtr.checked==True:
             self._plot_ctr()
+        elif self.components.AutoPlotCtrHK.checked==True:
+            self._hk_plot_ctr()
         return
 
     def on_CtrDataVar_keyDown(self,event):
@@ -286,6 +294,8 @@ class wxCtrData(model.Background, wxUtil):
             self.init_gui()
             if self.components.AutoPlotCtr.checked==True:
                 self._plot_ctr()
+            elif self.components.AutoPlotCtrHK.checked==True:
+                self._hk_plot_ctr()
         else:
             event.skip()
         return
@@ -415,9 +425,15 @@ class wxCtrData(model.Background, wxUtil):
                 print "Enter valid point"
                 return
             if point not in pnts: point = 0
-            self.components.PointNum.items = map(str,pnts)
+            #
+            if DEBUG: tm1 = time.time()
+            # this is a serious time sink. therefore assume
+            # if the list are the same length we dont have to regen
+            if len(pnts) != len(self.components.PointNum.items):
+                self.components.PointNum.items = map(str,pnts)
             self.components.PointNum.stringSelection = str(point)
             self.components.PointNum.text = str(point)
+            if DEBUG: print "Update pnt nums time(s)", time.time()-tm1
     
     def init_AnchorPointNum(self,pnts=None):
         """
@@ -427,12 +443,18 @@ class wxCtrData(model.Background, wxUtil):
             self.components.AnchorPointNum.items = ['','0']
             self.components.AnchorPointNum.stringSelection = ''
         else:
+            #
+            if DEBUG: tm1 = time.time()
+            # this is a serious time sink. therefore assume
+            # if the list are the same length we dont have to regen
             point= self.components.AnchorPointNum.stringSelection
-            pnts = map(str,pnts)
-            pnts.insert(0,'')
-            if point not in pnts: point = ''
-            self.components.AnchorPointNum.items = pnts
+            if (len(pnts) + 1) != len(self.components.AnchorPointNum.items):
+                pnts = map(str,pnts)
+                pnts.insert(0,'')
+                self.components.AnchorPointNum.items = pnts
+            if point not in self.components.AnchorPointNum.items: point = ''
             self.components.AnchorPointNum.stringSelection = point
+            if DEBUG: print "Update anchor pnt nums time(s)", time.time()-tm1
 
     def on_PointNum_keyDown(self,event):
         keyCode = event.keyCode
@@ -722,7 +744,9 @@ class wxCtrData(model.Background, wxUtil):
             self.integrate_point(point=j,update_plots=False)
         if self.components.AutoPlotCtr.checked==True:
             self._plot_ctr()
-
+        elif self.components.AutoPlotCtrHK.checked==True:
+            self._hk_plot_ctr()
+    
     def on_CopyParamsToSet_mouseClick(self,event):
         ctr = self.get_ctr()
         if ctr == None: return
@@ -734,6 +758,8 @@ class wxCtrData(model.Background, wxUtil):
             self.integrate_point(point=j,update_plots=False)
         if self.components.AutoPlotCtr.checked==True:
             self._plot_ctr()
+        elif self.components.AutoPlotCtrHK.checked==True:
+            self._hk_plot_ctr()
 
     def on_CopySelParamToAll_mouseClick(self,event):
         ctr = self.get_ctr()
@@ -748,6 +774,9 @@ class wxCtrData(model.Background, wxUtil):
             self.integrate_point(point=j,update_plots=False)
         if self.components.AutoPlotCtr.checked==True:
             self._plot_ctr()
+        elif self.components.AutoPlotCtrHK.checked==True:
+            self._hk_plot_ctr()
+
     
     def on_CopySelParamToSet_mouseClick(self,event):
         ctr = self.get_ctr()
@@ -762,6 +791,9 @@ class wxCtrData(model.Background, wxUtil):
             self.integrate_point(point=j,update_plots=False)
         if self.components.AutoPlotCtr.checked==True:
             self._plot_ctr()
+        elif self.components.AutoPlotCtrHK.checked==True:
+            self._hk_plot_ctr()
+
 
     def _get_sel_par(self):
         intpar = {}
@@ -884,16 +916,28 @@ class wxCtrData(model.Background, wxUtil):
         if point == None:
             point = int(self.components.PointNum.text)
         if update_plots == True:
+            # turn off interactive to speed up
+            pyplot.ioff()
             if self.components.AutoPlotIntegration.checked == True:
                 plot = True
                 fig = 3
             else:
                 plot = False
                 fig = None
-            print "Integrate point:", point
+            t1 = time.time()
             ctr.integrate_point(point,plot=plot,fig=fig)
+            print "Integrate point: %i  (time(s) =%6.5f)" % (point,time.time()-t1)
+            
+            # force plot
+            pyplot.draw()
+            pyplot.show()
+            pyplot.ion()
+            
+            # now check other plots
             if self.components.AutoPlotCtr.checked==True:
                 self._plot_ctr()
+            elif self.components.AutoPlotCtrHK.checked==True:
+                self._hk_plot_ctr()
             if self.components.AutoPlotCorr.checked==True:
                 self._plot_corr()
         else:
@@ -925,6 +969,9 @@ class wxCtrData(model.Background, wxUtil):
         """
         update gui from a ctr data instance
         """
+        #
+        if DEBUG: tm1 = time.time()
+        #
         ctr = self.get_ctr()
         if ctr == None: return
         npts  = len(ctr.L)
@@ -938,22 +985,37 @@ class wxCtrData(model.Background, wxUtil):
             bad_flag = True
         else:
             bad_flag = False
-        header   = CTR_HEADER % (str(len(ctr.L)),str(set),str(point),
-                                 ctr.H[point],ctr.K[point],ctr.L[point],
-                                 str(ctr.scan_type[point]),
-                                 str(ctr.labels['I'][point]),
-                                 str(ctr.labels['Inorm'][point]),
-                                 str(ctr.labels['Ierr'][point]),
-                                 str(ctr.labels['Ibgr'][point]),
-                                 str(ctr.corr_params[point].get('geom')),
-                                 str(ctr.corr_params[point].get('beam_slits')),
-                                 str(ctr.corr_params[point].get('det_slits')),
-                                 str(ctr.corr_params[point].get('sample')),
-                                 str(ctr.corr_params[point].get('scale')),
-                                 str(bad_flag),
-                                 ctr.I[point],ctr.Ierr[point],ctr.Ibgr[point],
-                                 ctr.ctot[point],ctr.F[point],ctr.Ferr[point])
-        self.components.PointData.text = header
+        # try to get alpha and beta angles
+        try:
+            alp = "%6.3f" % ctr.get_corr(12).gonio.pangles['alpha']
+            bet = "%6.3f" % ctr.get_corr(12).gonio.pangles['beta']
+        except:
+            alp = ''
+            bet = ''
+        try:
+            sname = str(ctr.get_scan_name(point))
+        except:
+            sname = ''
+        header1   = SET_HEADER % (str(len(ctr.L)),str(set))
+        header2   = POINT_HEADER % (str(point),
+                                    ctr.H[point],ctr.K[point],ctr.L[point],
+                                    str(ctr.scan_type[point]),
+                                    sname,
+                                    str(ctr.labels['I'][point]),
+                                    str(ctr.labels['Inorm'][point]),
+                                    str(ctr.labels['Ierr'][point]),
+                                    str(ctr.labels['Ibgr'][point]),
+                                    str(ctr.corr_params[point].get('geom')),
+                                    str(ctr.corr_params[point].get('beam_slits')),
+                                    str(ctr.corr_params[point].get('det_slits')),
+                                    str(ctr.corr_params[point].get('sample')),
+                                    str(ctr.corr_params[point].get('scale')),
+                                    str(bad_flag),
+                                    ctr.I[point],ctr.Ierr[point],ctr.Ibgr[point],
+                                    ctr.ctot[point],ctr.F[point],ctr.Ferr[point],
+                                    alp, bet)
+        self.components.SetData.text = header1
+        self.components.PointData.text = header2
         #
         (intpar,corrpar) = ctr_data.get_params(ctr,point)
         self.init_IntParamList(params=intpar)
@@ -969,16 +1031,27 @@ class wxCtrData(model.Background, wxUtil):
             else:
                 self.components.Imax.text = str(im_max)
                 self.components.ImaxSlider.value = int(im_max)
+        if DEBUG: print "Update gui time(s)", time.time()-tm1
                 
     ###########################################################
     #   Plot
     ###########################################################
+    def on_AutoPlotCtr_mouseClick(self,event):
+        if self.components.AutoPlotCtr.checked == True:
+            self.components.AutoPlotCtrHK.checked = False
+
+    def on_AutoPlotCtrHK_mouseClick(self,event):
+        if self.components.AutoPlotCtrHK.checked == True:
+            self.components.AutoPlotCtr.checked = False
 
     ######################################################
     def on_PlotCtr_mouseClick(self,event):
         self._plot_ctr()
 
     def _plot_ctr(self):
+        # turn off interactive to speed up
+        pyplot.ioff()
+        
         ncol = self.components.PlotCol.text
         try:
             ncol = int(ncol)
@@ -991,12 +1064,43 @@ class wxCtrData(model.Background, wxUtil):
             ctr.plot_I(fig=0,num_col=ncol,spnt=point)
         else:
             ctr.plot(fig=0,num_col=ncol,spnt=point)
-    
+            
+        # show plot
+        pyplot.draw()
+        pyplot.show()
+        pyplot.ion()
+        
+    ######################################################
+    def on_hkPlot_mouseClick(self,event):
+        self._hk_plot_ctr()
+
+    def _hk_plot_ctr(self):
+        # make a plot with just current points HK vals
+        # turn off interactive to speed up
+        pyplot.ioff()
+
+        ctr = self.get_ctr()
+        if ctr == None: return
+        pnt = int(self.components.PointNum.stringSelection)
+        h = ctr.H[pnt]
+        k = ctr.K[pnt]
+        if self.components.HKCtrPlotInt.checked == True:
+            ctr.hk_plot_I(h,k,fig=0,spnt=pnt)
+        else:
+            ctr.hk_plot(h,k,fig=0,spnt=pnt)
+        # show plot
+        pyplot.draw()
+        pyplot.show()
+        pyplot.ion()
+
     ######################################################
     def on_PlotScanData_mouseClick(self,event):
         self._plot_scan()
         
     def _plot_scan(self):
+        # turn off interactive to speed up
+        pyplot.ioff()
+
         ctr = self.get_ctr()
         if ctr == None: return
         pnt = int(self.components.PointNum.stringSelection)
@@ -1010,11 +1114,19 @@ class wxCtrData(model.Background, wxUtil):
         else:
             ctr.plot_point(idx=pnt,fig=1)
 
+        # show plot
+        pyplot.draw()
+        pyplot.show()
+        pyplot.ion()
+
     ######################################################
     def on_CorrPlot_mouseClick(self,event):
         self._plot_corr()
         
-    def _plot_corr(self):        
+    def _plot_corr(self):
+        # turn off interactive to speed up
+        pyplot.ioff()
+
         ctr = self.get_ctr()
         if ctr == None: return
         point = int(self.components.PointNum.stringSelection)
@@ -1023,6 +1135,11 @@ class wxCtrData(model.Background, wxUtil):
         corr = ctr_data._get_corr(scan,spnt,corr_params)
         if ctr.scan_type[point] == 'image':
             corr.ctot_stationary(plot=True,fig=2)
+
+        # show plot
+        pyplot.draw()
+        pyplot.show()
+        pyplot.ion()
 
 ##################################################
 if __name__ == '__main__':

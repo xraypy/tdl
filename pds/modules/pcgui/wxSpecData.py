@@ -46,7 +46,7 @@ class wxSpecData(model.Background, wxUtil):
    ###########################################################
 
     def init_ShellItems(self,):
-        self.init_Grp()
+        #self.init_Grp()
         self.init_Reader()
         self.init_ScanVar()
         self.init_BadMcas()
@@ -63,7 +63,7 @@ class wxSpecData(model.Background, wxUtil):
 
     def on_menuFileExit_select(self,event): 
         self.close()
-
+    """
     def on_menuHelpParams_select(self,event): 
         import wxXrayDataHelp
         wxXrayDataHelp = mod_import(wxXrayDataHelp)
@@ -74,6 +74,9 @@ class wxSpecData(model.Background, wxUtil):
                                                 filename=filename)
         self.wxXrayDataHelp.position = (200, 5)
         self.wxXrayDataHelp.visible = True
+    """
+    def on_menuHelpDocumentation_select(self,event):
+        self.exec_line("web 'http://cars9.uchicago.edu/ifeffit/tdl/Pds/SpecGui'")
 
     ######################################################
 
@@ -83,39 +86,40 @@ class wxSpecData(model.Background, wxUtil):
 
     ######################################################
 
-    def init_Grp(self):
-        " Initialize the menu    "
-        grp = self.components.Grp.text
-        tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
-        self.components.Grp.items = tmp['ins']
-        self.components.Grp.text = grp
-        return
+    #def init_Grp(self):
+    #    " Initialize the menu    "
+    #    grp = self.components.Grp.text
+    #    tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
+    #    self.components.Grp.items = tmp['ins']
+    #    self.components.Grp.text = grp
+    #    return
 
-    def on_Grp_select(self, event):
-        "Re-init reader list given the new grp name"
-        grp = self.components.Grp.stringSelection
-        self.components.Grp.text = grp
-        self.init_Model()
-        return
+    #def on_Grp_select(self, event):
+    #    "Re-init reader list given the new grp name"
+    #    grp = self.components.Grp.stringSelection
+    #    self.components.Grp.text = grp
+    #    self.init_Model()
+    #    return
 
-    def on_Grp_keyDown(self,event):
-        "select a variable name and check it out"
-        keyCode = event.keyCode
-        if keyCode == wx.WXK_RETURN:
-            self.init_Model()
-        else:
-            event.skip()
-        return
+    #def on_Grp_keyDown(self,event):
+    #    "select a variable name and check it out"
+    #    keyCode = event.keyCode
+    #    if keyCode == wx.WXK_RETURN:
+    #        self.init_Model()
+    #    else:
+    #        event.skip()
+    #    return
 
     def init_Reader(self):
         """
         Initialize the menu. Use the group thats
         selected in the group menu
         """
-        grp = self.components.Grp.text  
-        if len(grp) == 0: grp = None
+        #grp = self.components.Grp.text  
+        #if len(grp) == 0: grp = None
         reader = self.components.Reader.stringSelection
-        tmp = self.shell.interp.symbol_table.list_symbols(symbol=grp,tunnel=False)
+        #tmp = self.shell.interp.symbol_table.list_symbols(symbol=grp,tunnel=False)
+        tmp = self.shell.interp.symbol_table.list_symbols(tunnel=False)
         tmp = tmp['var'] + tmp['ins']
         tmp.sort()
         self.components.Reader.items = tmp
@@ -306,6 +310,7 @@ class wxSpecData(model.Background, wxUtil):
         #
         for s in reader.spec_files:
             if s.fname == sfile:
+                s.read()
                 min = s.min_scan
                 max = s.max_scan
                 idx = num.arange(min,max+1,dtype=int)
@@ -404,6 +409,7 @@ class wxSpecData(model.Background, wxUtil):
         data = reader.spec_scan(scan_num,file=fname)
         self.set_data(var_name,data)
         ###
+        
         self.UpdateGuiParmsFromData(data)        
         ####
         if self.components.AutoUpdateCheck.checked==True:
@@ -506,6 +512,15 @@ class wxSpecData(model.Background, wxUtil):
     def init_ImagePath(self):
         self.components.ImagePath.text = ''
  
+    def init_ImageArchivePath(self):
+        self.components.ImageArchivePath.text = ''
+
+    def init_ImageROI(self):
+        self.components.ImageROI.text = ''
+
+    def init_BadPixelMap(self):
+        self.components.BadPixelMap.text = ''
+
     def on_MedPathSel_mouseClick(self,event):        
         cdir = self.eval_line("pwd()")
         result = dialog.directoryDialog(self, 'Open', cdir)
@@ -513,7 +528,7 @@ class wxSpecData(model.Background, wxUtil):
             dir = result.path
             dir = dir.replace("\\","\\\\")
             self.components.MedPath.text = dir
-       
+    
     def on_ImgPathSel_mouseClick(self,event):        
         cdir = self.eval_line("pwd()")
         result = dialog.directoryDialog(self, 'Open', cdir)
@@ -521,11 +536,31 @@ class wxSpecData(model.Background, wxUtil):
             dir = result.path
             dir = dir.replace("\\","\\\\")
             self.components.ImagePath.text = dir
-            
+    
+    def on_ImgArchivePathSel_mouseClick(self,event):        
+        cdir = self.eval_line("pwd()")
+        result = dialog.directoryDialog(self, 'Open', cdir)
+        if result.accepted:
+            dir = result.path
+            dir = dir.replace("\\","\\\\")
+            self.components.ImageArchivePath.text = dir
+
+    def on_BadPixelMapSel_mouseClick(self,event):        
+        cdir = self.eval_line("pwd()")
+        result = dialog.fileDialog(self, 'Open', cdir,'',"*")
+        if result.accepted:
+            file = result.paths[0]
+            if len(file) > 0:
+                file = file.replace("\\","\\\\")
+                self.components.BadPixelMap.text = file
+            else:
+                self.components.BadPixelMap.text = ''
+                
     def UpdateGuiMedImgPar(self,reader):
         """
         update the GUI from reader
         """
+        # spectra
         tmp = reader.spectra_path
         if tmp == None:
             self.components.MedPath.text = ''
@@ -542,13 +577,33 @@ class wxSpecData(model.Background, wxUtil):
         self.components.Align.checked = reader.spectra_params['align'] 
         self.components.CorrectData.checked = reader.spectra_params['correct']
         # missing fields for det_idx and nfmt       
+        
+        # Now for images
+        #reader.image_params = {'bad_pixel_map': None, 'rois': None,
+        # 'fmt': 'tif', 'nfmt': 3, 'archive': None}
+        self.components.ReadImg.checked = reader.spec_params['image']
         #
         tmp = reader.image_path
         if tmp == None:
             self.components.ImagePath.text = ''
         else:
             self.components.ImagePath.text = str(tmp)
-        self.components.ReadImg.checked = reader.spec_params['image']
+        #
+        tmp = reader.image_params.get('bad_pixel_map')
+        if tmp != None:
+            self.components.BadPixelMap.text = str(tmp)
+        else:
+            self.components.BadPixelMap.text = ''
+        #
+        self.components.ImageROI.text = repr(reader.image_params.get('rois'))
+        #
+        tmp = reader.image_params.get('archive')
+        if tmp != None:
+            arch_path = tmp.get('path')
+            if arch_path != None:
+                self.components.ImageArchivePath.text = str(arch_path)
+            else:
+                self.components.ImageArchivePath.text = ''
         
     def UpdateReaderMedImgPar(self):
         """
@@ -599,15 +654,38 @@ class wxSpecData(model.Background, wxUtil):
         reader.spectra_params['total'] = self.components.Total.checked
         reader.spectra_params['align'] = self.components.Align.checked
         reader.spectra_params['correct'] = self.components.CorrectData.checked
-        # missing fields for det_idx and nfmt       
+        # missing fields for det_idx and nfmt
+        
+        # image stuff
+        reader.spec_params['image'] = self.components.ReadImg.checked
         #
         image_path = str(self.components.ImagePath.text).strip()
         if len(image_path) > 0:
             reader.image_path=image_path
         else:
             reader.image_path=None
-        reader.spec_params['image'] = self.components.ReadImg.checked
-
+        #
+        pixel_map = str(self.components.BadPixelMap.text).strip()
+        if len(pixel_map) > 0:
+            reader.image_params['bad_pixel_map']=pixel_map
+        else:
+            reader.image_params['bad_pixel_map']=None
+        #
+        rois = str(self.components.ImageROI.text).strip()
+        if len(rois) > 0:
+            reader.image_params['rois']=self.eval_line(rois)
+        else:
+            reader.image_params['rois']=None
+        #
+        arch_path = str(self.components.ImageArchivePath.text).strip()
+        if len(arch_path) > 0:
+            if reader.image_params['archive'] == None:
+                reader.image_params['archive'] = {}
+            reader.image_params['archive']['path']=arch_path
+        else:
+            if type(reader.image_params['archive']) == types.DictType:
+                reader.image_params['archive']['path']=None
+            
     def on_FitDeadtime_mouseClick(self,event):
         #reader_name = self.get_ReaderName()
         tau_name = str(self.components.McaTaus.text).strip()
@@ -643,14 +721,36 @@ class wxSpecData(model.Background, wxUtil):
         var_name = self.components.ScanVar.text
         self._plot_img(var_name)
 
+    def on_ScanPntMore_mouseClick(self,event):
+        pts = self.components.ScanPnt.items
+        max = int(pts[-1])
+        curr = int(self.components.ScanPnt.stringSelection)
+        more = curr + 1
+        if more <= max:
+            self.components.ScanPnt.stringSelection = str(more)
+        self.ScanPnt_Click()
+
+    def on_ScanPntLess_mouseClick(self,event):
+        pts = self.components.ScanPnt.items
+        min = int(pts[0])
+        curr = int(self.components.ScanPnt.stringSelection)
+        less = curr - 1
+        if more >= mim:
+            self.components.ScanPnt.stringSelection = str(less)
+        self.ScanPnt_Click()
+
     def on_ScanPnt_keyDown(self,event):
         keyCode = event.keyCode
         if keyCode == wx.WXK_RETURN:
-            var_name = self.components.ScanVar.text
-            self._plot_img(var_name)
+            self.ScanPnt_Click()
         else:
             event.skip()
         return
+
+    def ScanPnt_Click(self):    
+        var_name = self.components.ScanVar.text
+        self._plot_med(var_name)
+        self._plot_img(var_name)
 
     ######################################################
     def AutoPlot(self,var_name=None):
@@ -669,50 +769,79 @@ class wxSpecData(model.Background, wxUtil):
     ######################################################
     def _plot_scaler(self,var_name):
         from matplotlib import pyplot
+        pyplot.ioff()
         pyplot.figure(1)
         hold = str(self.components.HoldCheck.checked)
         xlog = str(self.components.XlogCheck.checked)
         ylog = str(self.components.YlogCheck.checked)
+        #
+        deriv = self.components.ScalerDerivative.checked
+        grid  = self.components.ScalerGrid.checked
         #
         x = self.components.XPlot.stringSelection
         y = self.components.YPlot.stringSelection
         norm = self.components.NormPlot.stringSelection
         #
         if len(norm.strip()) > 0:
-            s = "plot(%s['%s'],%s['%s']/%s['%s']" % (var_name,x,
-                                                     var_name,y,
-                                                     var_name,norm)
+            if deriv:
+                s = "__dy__ = num.diff(%s['%s']/%s['%s'])" % (var_name,y,
+                                                              var_name,norm)
+                self.exec_line(s)
+                s = "plot(%s['%s'][1:],__dy__" % (var_name,x)
+            else:
+                s = "plot(%s['%s'],%s['%s']/%s['%s']" % (var_name,x,
+                                                         var_name,y,
+                                                         var_name,norm)
         else:
-            s = "plot(%s['%s'],%s['%s']" % (var_name,x,
-                                         var_name,y)
+            if deriv:
+                s = "__dy__ = num.diff(%s['%s'])" %  (var_name,y)
+                self.exec_line(s)
+                s = "plot(%s['%s'][1:],__dy__" % (var_name,x)
+            else:
+                s = "plot(%s['%s'],%s['%s']" % (var_name,x,
+                                                var_name,y)
         #
         s = s + ",xlog=%s,ylog=%s,hold=%s)" % (xlog,ylog,hold)
         #print s
         self.exec_line(s)
+        #
+        if grid:
+            s = "pyplot.grid(True)"
+            self.exec_line(s)
+        pyplot.draw()
+        pyplot.show()
+        pyplot.ion()
 
     ######################################################
     def _plot_med(self,var_name):
         data = self.get_data(var_name)
         if data == None: return
+        if hasattr(data,'med') == False: return
         if len(data.med.med) == 0: return
         from matplotlib import pyplot
+        pyplot.ioff()
         pyplot.figure(2)
         hold = str(self.components.MedHold.checked)
         ylog = str(self.components.MedYlog.checked)
         pnt = int(self.components.ScanPnt.stringSelection)
         s = "ana.med_data.med_plot(%s.med,scan_pnt=%s,hold=%s,ylog=%s)" % (var_name,
-                                                                                str(pnt),
-                                                                                hold,
-                                                                                ylog)
+                                                                           str(pnt),
+                                                                           hold,
+                                                                           ylog)
         #print s
         self.exec_line(s)
+        pyplot.draw()
+        pyplot.show()
+        pyplot.ion()
 
     ######################################################
     def _plot_img(self,var_name):
         data = self.get_data(var_name)
         if data == None: return
+        if hasattr(data,'image') == False: return
         if len(data.image.image) == 0: return
         from matplotlib import pyplot
+        pyplot.ioff()
         pyplot.figure(3)
         pyplot.clf()
         pnt = int(self.components.ScanPnt.stringSelection)
@@ -720,9 +849,18 @@ class wxSpecData(model.Background, wxUtil):
         if self.components.ColorMap.stringSelection.strip()!='':
             cmap = self.components.ColorMap.stringSelection.strip()
             s = "%s,cmap='%s'" % (s,cmap)
+        #
+        reader = self.get_Reader()
+        if reader.image_params.get('rois') != None:
+            roi = repr(reader.image_params.get('rois'))
+            s = "%s,roi=%s" % (s,roi)
+        #
         s = "%s)" % s
         #print s
         self.exec_line(s)
+        pyplot.draw()
+        pyplot.show()
+        pyplot.ion()
         
 ##################################################
 if __name__ == '__main__':

@@ -86,11 +86,18 @@ The metric tensor
 ------------------
 The metric tensor is defined in terms of the vector dot product
 for a general real space system
-  u*v = u*g*v
+  dot(u,v) = u*g*v
 where
        |a*a, a*b, a*c|
   g =  |b*a, b*b, b*c|
        |c*a, c*b, c*c|
+
+Therefore, (with a,b,c, correspoding to vectors magnitudes):
+
+g = [ [ a*a, a*b*cosd(gam), a*c*cosd(bet) ],
+      [ b*a*cosd(gam), b*b, b*c*cosd(alp) ],
+      [ c*a*cosd(bet), c*b*cosd(alp), c*c ] ]
+
 The metric tensor may also be defined in terms of a lattice transform
 ie the real space basis vectors can be expressed in terms of the
 recip space basis vectors via
@@ -135,9 +142,8 @@ Note that g and gr are always symmetric, therefore
 ##########################################################################
 
 import numpy as num
-
-from mathutil import cosd, sind, tand
-from mathutil import arccosd, arcsind, arctand
+from tdl.modules.mpcutils.mathutil import cosd, sind, tand
+from tdl.modules.mpcutils.mathutil import arccosd, arcsind, arctand
 
 ##########################################################################
 class Lattice:
@@ -260,7 +266,7 @@ class Lattice:
 
         The generalized dot product for real space vectors
         may be defined in terms of the metric tensor (g):
-           u*v = u*g*v
+           dot(u,v) = u*g*v
         If u and v are recip lattice vectors replace g with
         gr = inv(g)
         """
@@ -405,7 +411,8 @@ class LatticeTransform:
           lattice, ie this is the original unprimed lattice
         * Va, Vb, Vc are the lattice vectors that define the
           a',b',c' coordinate system (rotation and contraction)
-        * shift is the lattice shift vector 
+        * shift is the lattice shift vector
+        * (V's and shift are defined in the unprimed system)
         """
         self.lattice = lattice
         self.Va    = num.array([1.,0.,0.])
@@ -458,7 +465,7 @@ class LatticeTransform:
     def cartesian(self,shift=[0.,0.,0.]):
         """
         Calculates a cartesian basis using:
-          Va = a' is parrallel to a
+          Va = a' is parallel to a
           Vb = b' is perpendicular to a' and in the a/b plane
           Vc = c' is perpendicular to the a'/c' plane
         A shift vector may be specified to shift the origin
@@ -477,7 +484,7 @@ class LatticeTransform:
         """
         Given x = [x,y,z] in the original lattice
         compute the indicies of the vector in the new basis
-           xp = M*(x-shift)
+           xp = M*(x - shift)
         """
         x  = num.array(x,dtype=float)
         if self.shift.sum() != 0.:
@@ -489,7 +496,7 @@ class LatticeTransform:
         """
         Given xp = [x',y',z'] in the primed basis
         compute the indicies of the vector in the original basis
-            x = N*(xp+shiftp) = N*xp + shift
+            x = N*(xp + shiftp) = N*xp + shift
         """
         xp  = num.array(xp,dtype=float)
         x = num.dot(self.N,xp)
@@ -499,8 +506,9 @@ class LatticeTransform:
 
     def hp(self,h):
         """
-        Given h = [h,k,l] in the original (recip) lattice
-        compute the indicies of the vector in the new (recip) basis
+        Given h = [h,k,l] in the original (recip) basis
+        compute the indicies of the vector in the primed
+        (recip) basis
         """
         h  = num.array(h,dtype=float)
         return num.dot(self.F,h)
@@ -508,7 +516,8 @@ class LatticeTransform:
     def h(self,hp):
         """
         Given hp = [h',k',l'] in the primed (recip) basis
-        compute the indicies of the vector in the original (recip) basis
+        compute the indicies of the vector in the original
+        (recip) basis
         """
         hp  = num.array(hp,dtype=float)
         return num.dot(self.G,hp)

@@ -8,8 +8,25 @@ Authors/Modifications:
 Todo:
 -----
 * clean up and convert to class
-* use space group to generate from bulk
-  assymetric unit
+* use UnitCell to compute coordinates from bulk
+  assymetric unit and space group
+* one idea is to have an object that holds the bulk UnictCell
+  and pass in hkl for surface - use to define transform vectors
+  for defining surface cell (inlcude repeat).
+
+* should the object keep track of original symmetry/properties of
+  the bulk unit cell, or just transform and forget it?  I think we
+  shoul keep the original indexing (or at least create a copy of the
+  vectors that would allow us to transform back (ie be able to use
+  LatticeTranform to easily go back to bulk indexing)
+
+* also need an algo to find all unique surface terminations
+* find plane group of the surface
+* transform all the symmetry operations to new basis and modify for
+  surface cell (no 'z' contraints)
+
+* note it would be very cool to do this with just the assymetric unit
+  therefore refinements can use symmetry explicilty.
 """
 
 ##########################################################################
@@ -30,8 +47,13 @@ def surface_vectors(hkl, lat):
 
     Output:
     -------
-    The first three column's of the output give coefficients of the
-    in plane vectors.
+    Vr:  The first three column's of the output give coefficients of the
+    in plane vectors. The fourth is the vector length
+    
+    Vs: The first three column's of the output give coefficients of the
+    repeat vectors. The fourth is the magnitude, fifth is the plane
+    below the surface at which it terminates, and sixth is the
+    angle of the vector relative to the surface normal
     
     All the vectors are sorted according to their magnitudes given 
     in column 4 of the output. 
