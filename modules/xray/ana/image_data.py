@@ -416,12 +416,10 @@ def line_sum_integral(image,sumflag='c',nbgr=0,width=0,pow=2.,
     (data, data_idx, bgr) = line_sum(image,sumflag=sumflag,nbgr=nbgr,width=width,
                                      pow=pow,tangent=tangent,compress=compress)
     ### integrate
-    #Itot = data.sum()
-    #Ibgr = bgr.sum()
-    Itot = 0.0
-    Ibgr = 0.0
-    Itot = num.trapz(data)
-    Ibgr = num.trapz(bgr)
+    Itot = data.sum()
+    Ibgr = bgr.sum()
+    #Itot = num.trapz(data)
+    #Ibgr = num.trapz(bgr)
     I    = Itot - Ibgr
     
     ### compute errors
@@ -667,7 +665,8 @@ class ImageAna:
         self.clpimg = clip_image(self.image,self.roi,rotangle=self.rotangle)
 
         # integrate the roi
-        self.I = num.sum(num.trapz(self.clpimg))
+        #self.I = num.sum(num.trapz(self.clpimg))
+        self.I = num.sum(self.clpimg)
 
         # calculate and subtract image background
         self.bgrimg = None
@@ -698,7 +697,8 @@ class ImageAna:
                 self.bgrimg = (bgr_r + bgr_c)/2.
                     
             # correct for 2D bgr
-            self.Ibgr = num.sum(num.trapz(self.bgrimg))
+            #self.Ibgr = num.sum(num.trapz(self.bgrimg))
+            self.Ibgr = num.sum(self.bgrimg)
             self.I    = self.I - self.Ibgr
         
         # error
