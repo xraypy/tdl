@@ -593,7 +593,7 @@ class CtrData:
             #
             idx  = num.where(I <= 0.)
             tmp  = I[idx] * 0.0 + 1.1*min_I 
-            pyplot.plot(d['L'][idx],tmp,'bo')
+            pyplot.plot(hksets[j]['L'][idx],tmp,'bo')
             #
             if spnt != None:
                 if spnt in hksets[j]['point_idx']:

@@ -987,8 +987,8 @@ class wxCtrData(model.Background, wxUtil):
             bad_flag = False
         # try to get alpha and beta angles
         try:
-            alp = "%6.3f" % ctr.get_corr(12).gonio.pangles['alpha']
-            bet = "%6.3f" % ctr.get_corr(12).gonio.pangles['beta']
+            alp = "%6.3f" % ctr.get_corr(point).gonio.pangles['alpha']
+            bet = "%6.3f" % ctr.get_corr(point).gonio.pangles['beta']
         except:
             alp = ''
             bet = ''
