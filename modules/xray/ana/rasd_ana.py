@@ -113,12 +113,12 @@ class RasdAna:
         self.Ferr = num.array([], float) 
         self.f1 = num.array([], float) #f1 to be shifted by e0shift
         self.f2 = num.array([], float) #f2 to be shifted by e0shift
-        self.file = '' #*.rsdfile
+        self.file = '' #*.rsd file
 
         self.Q = num.ndarray((3), float) #q in fractional reziprocal coordinates
         self.mod_Q = float #norm Q in Ang**-1
         self.re_FNR = float #real part of non resonant Structure Factor
-        self.im_FNR = float #maginary part of non resonant Structure Factor
+        self.im_FNR = float #imaginary part of non resonant Structure Factor
 
         self.re_FR = num.array([], float) #real part of resonant Structure Factor
         self.im_FR = num.array([], float) #imaginary part of resonant Structure Factor
@@ -296,15 +296,31 @@ def Jacobi2(vec, Rasd):
 def Rasd_difference(allrasd, R, theta, DW):
     allrasd.RMS = 0
     allrasd.ndata = 0
+    U = num.zeros((3,3),float)
+    U[0][0] = DW[1]
+    U[1][1] = DW[2]
+    U[2][2] = DW[3]
+    U[0][1] = DW[4]
+    U[1][0] = DW[4]
+    U[0][2] = DW[5]
+    U[2][0] = DW[5]
+    U[1][2] = DW[6]
+    U[2][1] = DW[6]
+                  
     for Rasd in allrasd.reflist:
+        Q = num.zeros((3),float)
+        Q[0] = allrasd.g_inv[0][0]**0.5 * Rasd.Q[0]
+        Q[1] = allrasd.g_inv[1][1]**0.5 * Rasd.Q[1]
+        Q[2] = allrasd.g_inv[2][2]**0.5 * Rasd.Q[2]
+        
         j = 0
         re_Fq = 0
         im_Fq = 0
-        for j in range(len(DW)):
+        for j in range(len(theta)):
             re_Fq = re_Fq + (theta[j] * num.cos(2*num.pi*(Rasd.Q[0]*allrasd.g_inv[0][0]**0.5*R[j][0]+Rasd.Q[1]*allrasd.g_inv[1][1]**0.5*R[j][1]+\
-                                                          Rasd.Q[2]*allrasd.g_inv[2][2]**0.5*R[j][2]))* num.exp(-(Rasd.mod_Q /2)**2 *DW[j]))
+                                                          Rasd.Q[2]*allrasd.g_inv[2][2]**0.5*R[j][2]))* num.exp(-0.5 * num.dot(num.dot(Q,U),Q)))
             im_Fq = im_Fq + (theta[j] * num.sin(2*num.pi*(Rasd.Q[0]*allrasd.g_inv[0][0]**0.5*R[j][0]+Rasd.Q[1]*allrasd.g_inv[1][1]**0.5*R[j][1]+\
-                                                          Rasd.Q[2]*allrasd.g_inv[2][2]**0.5*R[j][2]))* num.exp(-(Rasd.mod_Q /2)**2 *DW[j]))
+                                                          Rasd.Q[2]*allrasd.g_inv[2][2]**0.5*R[j][2]))* num.exp(-0.5 * num.dot(num.dot(Q,U),Q)))
         Rasd.re_FR = Rasd.f1 * re_Fq - Rasd.f2 * im_Fq
         Rasd.im_FR = Rasd.f1 * im_Fq + Rasd.f2 * re_Fq
 
@@ -341,14 +357,15 @@ def simulated_annealing(allrasd):
     RMS_count_max = allrasd.RMS_count_max
     factor = allrasd.factor
     
-    RP = num.ndarray((len(DWmin),3),float)
-    thetaP = num.ndarray((len(DWmin)),float)
-    DWP = num.ndarray((len(DWmin)),float)
-    for i in range(len(DWmin)):
+    RP = num.ndarray((len(thetamin),3),float)
+    thetaP = num.ndarray((len(thetamin)),float)
+    DWP = num.ndarray((len(thetamin)),float)
+    for i in range(len(thetamin)):
         for j in range(3):
            RP[i][j] = random.uniform(Rmin[i][j],Rmax[i][j]) 
         thetaP[i] = random.uniform(thetamin[i], thetamax[i])
-        DWP[i] = random.uniform(DWmin[i], DWmax[i])
+        for j in range(6):
+            DWP[i][j] = random.uniform(DWmin[i][j], DWmax[i][j])
     
     RMS = Rasd_difference(allrasd, RP, thetaP, DWP).RMS
     RMS_test = RMS
@@ -376,9 +393,10 @@ def simulated_annealing(allrasd):
                 theta_tmp[i] = thetaP[i] * random.uniform( 1-(MC * Tstart), 1+(MC * Tstart))
                 if theta_tmp[i] < thetamin[i]: theta_tmp[i] = thetamin[i]
                 elif theta_tmp[i] > thetamax[i]: theta_tmp[i] = thetamax[i]
-                DW_tmp[i] = DWP[i] * random.uniform( 1-(MC * Tstart), 1+(MC * Tstart))
-                if DW_tmp[i] < DWmin[i]: DW_tmp[i] = DWmin[i]
-                elif DW_tmp[i] > DWmax[i]: DW_tmp[i] = DWmax[i]
+                for j in range(6):
+                    DW_tmp[i][j] = DWP[i][j] * random.uniform( 1-(MC * Tstart), 1+(MC * Tstart))
+                    if DW_tmp[i][j] < DWmin[i][j]: DW_tmp[i][j] = DWmin[i][j]
+                    elif DW_tmp[i][j] > DWmax[i][j]: DW_tmp[i][j] = DWmax[i][j]
 
             RMS_tmp = Rasd_difference(allrasd, R_tmp, theta_tmp, DW_tmp).RMS
 
