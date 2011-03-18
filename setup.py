@@ -59,6 +59,7 @@ packages.append('tdl.modules.xray.xrd')
 packages.append('tdl.modules.xray.xrf')
 packages.append('tdl.modules.xray.xrr')
 packages.append('tdl.modules.xray.xtab')
+packages.append('tdl.modules.xray.ctr')
 # xtal
 packages.append('tdl.modules.xtal')
 

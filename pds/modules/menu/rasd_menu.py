@@ -10,7 +10,6 @@ Create RasdList not from *.rsd files but directly from RasdData objects
 Functions to set Emin, Emax for individual scans and to remove bad datapoints
 Functions to append/remove scans to an existing RasdList object
 Least squares fitting of R, theta, and DW.
-anisotropic DW-Factors
 """
 #######################################################################
 import numpy as num
@@ -175,15 +174,19 @@ def rasd_menu(rasddata, cell = None, bulk_file = None, sur_file = None, f1f2_fil
                 print 'Scans used for Fourier synthesis: \n'+str(data) 
         elif ret == 'RefinementParams':
             allrasd.natoms = get_int(prompt = 'How many atoms in structure model?', default = allrasd.natoms)
-            if allrasd.Rmin == None or len(allrasd.DWmin) != allrasd.natoms:
+            if allrasd.Rmin == None or len(allrasd.thetamin) != allrasd.natoms:
                 allrasd.Rmin = num.zeros((allrasd.natoms,3),float)
                 allrasd.Rmax = num.ndarray((0,3),float)
                 for i in range(allrasd.natoms):
                     allrasd.Rmax = num.append(allrasd.Rmax, [[allrasd.cell[0],allrasd.cell[1],allrasd.cell[2]]],axis = 0)
                 allrasd.thetamin = num.ones((allrasd.natoms),float) *0.05
                 allrasd.thetamax = num.ones((allrasd.natoms),float) *0.999
-                allrasd.DWmin = num.ones((allrasd.natoms),float) * 12
-                allrasd.DWmax = num.ones((allrasd.natoms),float) * 90
+                allrasd.DWmin = num.zeros((allrasd.natoms,6),float)
+                for i in range(allrasd.natoms):
+                    allrasd.DWmin[i] = [0.001,0.001,0.001,0.,0.,0.]
+                allrasd.DWmax = num.zeros((allrasd.natoms,6),float)
+                for i in range(allrasd.natoms):
+                    allrasd.DWmax[i] = [1.,1.,1.,0.,0.,0.]
             for i in range(allrasd.natoms):
                 allrasd.Rmin[i] = get_flt_list(prompt = ('Rmin of atom '+str(i+1)+' [xmin,ymin,zmin] (Angstroem)'), default = allrasd.Rmin[i])
             for i in range(allrasd.natoms):
@@ -193,9 +196,9 @@ def rasd_menu(rasddata, cell = None, bulk_file = None, sur_file = None, f1f2_fil
             for i in range(allrasd.natoms):
                 allrasd.thetamax[i] = get_flt(prompt = ('max. occupancy of atom '+str(i+1)), default = allrasd.thetamax[i])
             for i in range(allrasd.natoms):
-                allrasd.DWmin[i] = get_flt(prompt = ('min. DW-factor for atom '+str(i+1)), default = allrasd.DWmin[i])
+                allrasd.DWmin[i] = get_flt_list(prompt = ('min. DW-factor for atom '+str(i+1)+' [b11,b22,b33,b12,b13,b23]'), default = allrasd.DWmin[i])
             for i in range(allrasd.natoms):
-                allrasd.DWmax[i] = get_flt(prompt = ('max. DW-factor for atom '+str(i+1)), default = allrasd.DWmax[i])
+                allrasd.DWmax[i] = get_flt_list(prompt = ('max. DW-factor for atom '+str(i+1)+' [b11,b22,b33,b12,b13,b23]'), default = allrasd.DWmax[i])
             allrasd.Tstart = get_flt(prompt = 'Startimg Temperature for simmulated annealing', default = allrasd.Tstart)
             allrasd.Tend = get_flt(prompt = 'End Temperature for simmulated annealing', default = allrasd.Tend)
             allrasd.cool = get_flt(prompt = 'cooling factor for simmulated annealing (usually 0.7 - 0.95)', default = allrasd.cool, min = 0.1, max = 0.99)
