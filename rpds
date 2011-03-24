@@ -9,10 +9,19 @@ if len(args) > 0:
     if args[0].lower() == 'pds':
         args.pop(0)
 
+# note for a normal site-packages install
+# the following should work fine (ie tdl
+# will be on the path).  For a non-standard
+# install we may need to add the parent dir
+# to the path so that 'import tdl' will work
 try:
     from tdl import pds
     pds.main(args)
 except:
-    import pds
+    import os, sys
+    p = os.path.dirname(__file__)
+    p = os.path.dirname(p)
+    sys.path.append(p)
+    from tdl import pds
     pds.main(args)
     

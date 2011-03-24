@@ -23,14 +23,17 @@ import types
 
 import lattice
 
-# try importing the aussie pycif module
+# try importing the aussie pycif module (CifFile).
 # if it wont load we should have our own simple backup
 # for reading/writing structures as cif files
-#try:
-#  import PyCif
-#except:
-#  pass
-
+try:
+    import CifFile
+    import StarFile
+    import yapps3_compiled_rt
+    import YappsStarParser_1_0
+    import YappsStarParser_1_1
+except:
+    pass
 
 ##########################################################################
 class UnitCell:
@@ -46,17 +49,58 @@ class UnitCell:
         self.dw = []
         self.lat = None
         pass
-    def read_cif(self):
-        pass
+    
+    def read_cif(name): #name is the filename.cif that will be read
+        self = CifFile.ReadCif(name) #change self to cif
+        self = self['global']
+        atm_pos = self.GetLoop("_atom_site_label")
+        num_cols = len (atm_pos)
+        test, num_atoms = 0, 0
+        while (test == 0): # This tells me the number of elements 
+            try:                # to which I will assign coordinates
+                holder = atm.pos[num_atoms]
+                num_atoms = num_atoms + 1 ### Edit this out and replace
+                                                                         ### with Toms code
+            except (RuntimeError, TypeError, NameError):
+                pass
+        atm_posd = dict(atm_pos) #This converts the CIF object into
+        counter = 0                             #a dictionary for ease 
+
+        #While loops generate the fractional position of the atoms below.
+        atm_names = [0]
+        while (counter < num_atoms): #We get a list of the atm names
+            atm_names[counter] = atm_posd['_atom_site_label'][counter]
+            counter = counter + 1
+        counter = 0
+        atm_xfrac = [0]
+        while (counter < num_atoms): #We get a list of atm x coords
+            atm_xfrac[counter] = atm_posd['_atom_site_fract_x'][counter]
+            counter = counter + 1
+        counter = 0
+        atm_yfrac = [0]
+        while (counter < num_atoms): #We get a list of atm y coords
+            atm_yfrac[counter] = atm_posd['_atom_site_frac_y'][counter]
+            counter = counter + 1
+        counter = 0
+        atm_zfrac = [0]
+        while (counter < num_atoms):
+            atm_zfrac[counter] = atm_posd['_atom_site_frac_z'][counter]
+            counter = counter + 1
+
+        angle_alpha = self['_cell_angle_alpha']
+        angle_beta = self['_cell_angle_beta']
+        angle_gamma = self['_cell_angle_gamma']
+
+        length_a = self['_cell_length_a']
+        length_b = self['_cell_length_b']
+        length_c = self['_cell_length_c']
+        
     def write_cif(self):
         pass
+
     def generate_p1(self,na=1,nb=1,nc=1):
-        """
-        compute the p1 unit cell
-        the n's are range for expansion of the
-        unit cell 
-        """
         pass
+
     def transform(self):
         """
         this computes/returns a new UnitCell
@@ -68,12 +112,14 @@ class UnitCell:
         This will be a fun code to work on!!!
         """
         pass
+
     def bond_valence(self):
         """
         compute bond valence sums (and coordination chem ie
         coordation sphere, bond lenghts and angles)
         """
         pass
+
     def visualize(self,na=1,nb=1,nc=1):
         """
         output a jmol script to view the structure

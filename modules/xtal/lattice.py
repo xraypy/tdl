@@ -142,6 +142,8 @@ Note that g and gr are always symmetric, therefore
 ##########################################################################
 
 import numpy as num
+#from tdl.modules.mpcutils.mathutil import cosd, sind, tand
+#from tdl.modules.mpcutils.mathutil import arccosd, arcsind, arctand
 from mpcutils.mathutil import cosd, sind, tand
 from mpcutils.mathutil import arccosd, arcsind, arctand
 
