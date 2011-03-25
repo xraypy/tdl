@@ -1,4 +1,5 @@
 from ctrFitcalcs import *
+from simplex import *
 import wx
 import os
 """
@@ -265,6 +266,7 @@ class MainControlPanel(wx.Panel):
         self.RMS = -1
         self.RMS_best = -1
         self.use_bulk_water = True
+        self.simplex_params = [0.5,0.5,0.5,1,0.00005,10000]
 
         self.nb = self.GetParent()
 
@@ -372,6 +374,42 @@ class MainControlPanel(wx.Panel):
 
         self.SimAn2button = wx.Button(self, label = 'Simulated Annealing 2', pos =(550,315), size=(210,40))
         self.Bind(wx.EVT_BUTTON, self.OnClickSimAn2, self.SimAn2button)
+
+        #### Downhill Simplex parameters and options #################################### 
+        wx.StaticText(self, label = 'Downhill Simplex:  ', pos=(590, 385), size=(140, 20))
+
+        wx.StaticText(self, label = 'alpha:    ', pos=(550, 417), size=(140, 20))
+        self.alpha = wx.TextCtrl(self, pos=(700,415), size=(60,20))
+        self.alpha.SetValue(str(self.simplex_params[0]))
+        self.Bind(wx.EVT_TEXT, self.setalpha, self.alpha)
+
+        wx.StaticText(self, label = 'beta:    ', pos=(550, 442), size=(140, 20))
+        self.beta = wx.TextCtrl(self, pos=(700,440), size=(60,20))
+        self.beta.SetValue(str(self.simplex_params[1]))
+        self.Bind(wx.EVT_TEXT, self.setbeta, self.beta)
+
+        wx.StaticText(self, label = 'gamma:    ', pos=(550, 467), size=(140, 20))
+        self.gamma = wx.TextCtrl(self, pos=(700,465), size=(60,20))
+        self.gamma.SetValue(str(self.simplex_params[2]))
+        self.Bind(wx.EVT_TEXT, self.setgamma, self.gamma)
+
+        wx.StaticText(self, label = 'delta:    ', pos=(550, 492), size=(140, 20))
+        self.delta = wx.TextCtrl(self, pos=(700,490), size=(60,20))
+        self.delta.SetValue(str(self.simplex_params[3]))
+        self.Bind(wx.EVT_TEXT, self.setdelta, self.delta)
+
+        wx.StaticText(self, label = 'Ftol:    ', pos=(550, 517), size=(140, 20))
+        self.ftol = wx.TextCtrl(self, pos=(700,515), size=(60,20))
+        self.ftol.SetValue(str(self.simplex_params[4]))
+        self.Bind(wx.EVT_TEXT, self.setftol, self.ftol)
+
+        wx.StaticText(self, label = 'maxiter:    ', pos=(550, 542), size=(140, 20))
+        self.maxiter = wx.TextCtrl(self, pos=(700,540), size=(60,20))
+        self.maxiter.SetValue(str(self.simplex_params[5]))
+        self.Bind(wx.EVT_TEXT, self.setmaxiter, self.maxiter)
+
+        self.Simplexbutton = wx.Button(self, label = 'Downhill Simplex', pos =(550,570), size=(210,40))
+        self.Bind(wx.EVT_BUTTON, self.OnClickSimplex, self.Simplexbutton)
 
     def setplotdims(self, event):
         if event.GetString() == '':
@@ -493,7 +531,82 @@ class MainControlPanel(wx.Panel):
                 for i in range(len(self.nb.param_labels)):
                     self.nb.parameter[self.nb.param_labels[i]][0] = self.nb.param_best[self.nb.param_labels[i]][0]
                     self.nb.ParameterPage.OnClick(True)
-            dlg.Destroy()    
+            dlg.Destroy()
+
+    def setalpha(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = float(event.GetString())
+            if a <= 0 or a >= 1:
+                print 'alpha must be > 0 and < 1'
+            else:
+                self.simplex_params[0] = a
+
+    def setbeta(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = float(event.GetString())
+            if a <= 0 or a >= 1:
+                print 'beta must be > 0 and < 1'
+            else:
+                self.simplex_params[1] = a
+
+    def setgamma(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = float(event.GetString())
+            if a <= 0 or a >= 1:
+                print 'gamma must be > 0 and < 1'
+            else:
+                self.simplex_params[2] = a
+
+    def setdelta(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = float(event.GetString())
+            if a <= 0 or a > 1:
+                print 'delta must be > 0 and <= 1'
+            else:
+                self.simplex_params[3] = a
+
+    def setftol(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = float(event.GetString())
+            if a <= 0:
+                print 'ftol must be > 0'
+            else:
+                self.simplex_params[4] = a
+
+    def setmaxiter(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = int(event.GetString())
+            if a <= 0:
+                print 'maxiter must be > 0'
+            else:
+                self.simplex_params[5] = a
+
+    def OnClickSimplex(self,e):
+        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.use_bulk_water)
+        if flag:
+            self.nb.param_best = {}
+            self.RMS_best = -1
+            self.nb.data, self.nb.param_best, self.RMS_best = simplex(self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, self.nb.surface, \
+                                        self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.simplex_params)
+            plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS_best)
+            dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
+            if dlg.ShowModal() == wx.ID_OK:
+                for i in range(len(self.nb.param_labels)):
+                    self.nb.parameter[self.nb.param_labels[i]][0] = self.nb.param_best[self.nb.param_labels[i]][0]
+                    self.nb.ParameterPage.OnClick(True)
+            dlg.Destroy()
 
 ##########################################################################################################################
 class ParameterPanel(wx.ScrolledWindow):
