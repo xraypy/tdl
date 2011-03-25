@@ -706,7 +706,7 @@ def plot_edensity(surface, param, param_use, cell, database, rigid_bodies, use_b
             edens[i] = edens[i] + (0.5 *(1+ erf((abscissa[i])/(2*sig)**0.5)))*0.33456
     for x in surface:
         f_par = database[x[0]]
-        f = f_par[0] + f_par[2] +f_par[4]+ f_par[6]+ f_par[8]
+        f = (f_par[0] + f_par[2] +f_par[4]+ f_par[6]+ f_par[8]) * x[10]
         for i in range(len(abscissa)):
             edens[i] = edens[i] + ((2*Num.pi*x[6])**(-1.5)* Num.exp(-0.5*(abscissa[i]-cell[2]*x[3])**2/x[6]))* f*2*Num.pi*x[6]/Auc
     

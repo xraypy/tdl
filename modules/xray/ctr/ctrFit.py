@@ -71,12 +71,14 @@ class wxCtrFitFrame(wx.Frame):
             dirname1 = dlg.GetDirectory()
             self.nb.data = read_data(dirname1+'/'+self.filename1)
             self.nb.MainControlPage.datafile.SetValue(self.filename1)
+            self.nb.MainControlPage.Rod_weight = []
+            self.nb.MainControlPage.rodweight = []
             for i in range(len(self.nb.data)):
                 wx.StaticText(self.nb.MainControlPage, label = (str(int(self.nb.data[i].H))+' '+str(int(self.nb.data[i].K))+' L'), pos=(350,25*i+67), size=(40,20))
                 self.nb.MainControlPage.rodweight.append(wx.TextCtrl(self.nb.MainControlPage,1000+i, pos=(400,25*i+65), size=(30,20)))
                 self.nb.MainControlPage.rodweight[i].SetValue('1')
-                self.Bind(wx.EVT_TEXT, self.nb.MainControlPage.setrodweight, self.nb.MainControlPage.rodweight[i])
                 self.nb.MainControlPage.Rod_weight.append(1)
+                self.Bind(wx.EVT_TEXT, self.nb.MainControlPage.setrodweight, self.nb.MainControlPage.rodweight[i])
         dlg.Destroy()
 
     def OnReadBulk(self,e):
@@ -120,9 +122,16 @@ class wxCtrFitFrame(wx.Frame):
             dirname4 = dlg.GetDirectory()
             self.nb.parameter, self.nb.param_labels = read_parameters(dirname4+'/'+self.filename4)
             self.nb.MainControlPage.parameterfile.SetValue(self.filename4)
-
+           
+            self.nb.DeletePage(1)
+            self.nb.ParameterPage = ParameterPanel(self.nb)
+            self.nb.AddPage(self.nb.ParameterPage, " Parameters ")
+            
+                        
             for i in range(len(self.nb.param_labels)):
-                wx.StaticText(self.nb.ParameterPage, label = self.nb.param_labels[i], pos=(20, 23*(i+1)+45), size=(120, 20))
+
+                control0_tmp = wx.StaticText(self.nb.ParameterPage, label = self.nb.param_labels[i], pos=(20, 23*(i+1)+45), size=(120, 20))
+                self.nb.ParameterPage.control0.append(control0_tmp)
                 
                 control1_tmp = wx.TextCtrl(self.nb.ParameterPage,2000+i, pos=(150, 23*(i+1)+40), size=(120,20))
                 self.nb.ParameterPage.control1.append(control1_tmp)
@@ -477,6 +486,7 @@ class ParameterPanel(wx.ScrolledWindow):
     def __init__(self,parent):
         wx.ScrolledWindow.__init__(self,parent)
 
+        self.control0 = []
         self.control1 = []
         self.control2 = []
         self.control3 = []
