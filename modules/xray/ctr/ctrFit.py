@@ -153,6 +153,20 @@ class wxCtrFitFrame(wx.Frame):
                 self.nb.ParameterPage.control4[i].SetValue(self.nb.parameter[self.nb.param_labels[i]][3])
                 wx.EVT_CHECKBOX(self.nb.ParameterPage, self.nb.ParameterPage.control4[i].GetId(), self.nb.ParameterPage.editparstate)
 
+                control5_tmp = wx.Button(self.nb.ParameterPage, 2000+i+4*len(self.nb.param_labels), label = '<', pos = (520, 23*(i+1)+40), size = (20,20))
+                self.nb.ParameterPage.control5.append(control5_tmp)
+                self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleminus , self.nb.ParameterPage.control5[i])
+
+                control6_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+5*len(self.nb.param_labels), pos=(550, 23*(i+1)+40), size=(50,20)))
+                self.nb.ParameterPage.control6.append(control6_tmp)
+                self.nb.ParameterPage.control6[i].SetValue('0')
+                self.nb.ParameterPage.togglesteps.append(0)
+                self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.togglestep, self.nb.ParameterPage.control6[i])
+
+                control7_tmp = wx.Button(self.nb.ParameterPage,2000+i+6*len(self.nb.param_labels), label = '>', pos = (610, 23*(i+1)+40), size = (20,20))
+                self.nb.ParameterPage.control7.append(control7_tmp)
+                self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleplus , self.nb.ParameterPage.control7[i])
+
             self.nb.ParameterPage.SetScrollbars(0, 10, 0, int((len(self.nb.param_labels)+4)*2.3)+1)
         dlg.Destroy()
 
@@ -491,11 +505,19 @@ class ParameterPanel(wx.ScrolledWindow):
         self.control2 = []
         self.control3 = []
         self.control4 = []
+        self.control5 = []
+        self.control6 = []
+        self.control7 = []
+        self.togglesteps = []
 
         wx.StaticText(self, label = 'value', pos=(170, 40), size=(100, 20))
         wx.StaticText(self, label = 'min', pos=(300, 40), size=(70, 20))
         wx.StaticText(self, label = 'max', pos=(390, 40), size=(70, 20))
         wx.StaticText(self, label = 'refine', pos=(455, 40), size=(60, 20))
+        wx.StaticText(self, label = ' - ', pos=(525, 40), size=(20, 20))
+        wx.StaticText(self, label = ' step ', pos=(560, 40), size=(40, 20))
+        wx.StaticText(self, label = ' + ', pos=(615, 40), size=(20, 20))
+        
 
         self.button = wx.Button(self, label = 'Update', pos =(20,20))
         self.Bind(wx.EVT_BUTTON, self.OnClick, self.button)
@@ -531,6 +553,38 @@ class ParameterPanel(wx.ScrolledWindow):
     def editparstate(self,event):
         item = event.GetId()- 3*len(self.nb.param_labels)-2000
         self.nb.parameter[self.nb.param_labels[item]][3] = self.control4[item].GetValue()
+
+    def toggleminus(self, event):
+        item = event.GetId()-4*len(self.nb.param_labels)-2000
+        step = self.togglesteps[item]
+        self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] - step
+        self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
+        self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
+                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
+                                                              self.nb.MainControlPage.use_bulk_water)
+        plot_rods(self.nb.data, self.nb.MainControlPage.plotdims, self.nb.MainControlPage.doplotbulk, self.nb.MainControlPage.doplotsurf, self.nb.MainControlPage.doplotrough,\
+                                                 self.nb.MainControlPage.doplotwater, self.nb.MainControlPage.RMS)
+        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water)
+
+
+    def togglestep(self,event):
+        item = event.GetId()-5*len(self.nb.param_labels)-2000
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            self.togglesteps[item] = float(event.GetString())
+
+    def toggleplus(self, event):
+        item = event.GetId()-6*len(self.nb.param_labels)-2000
+        step = self.togglesteps[item]
+        self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] + step
+        self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
+        self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
+                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
+                                                              self.nb.MainControlPage.use_bulk_water)
+        plot_rods(self.nb.data, self.nb.MainControlPage.plotdims, self.nb.MainControlPage.doplotbulk, self.nb.MainControlPage.doplotsurf, self.nb.MainControlPage.doplotrough,\
+                                                 self.nb.MainControlPage.doplotwater, self.nb.MainControlPage.RMS)
+        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water)
 
 ############################################################################################################
 ############################################################################################################
