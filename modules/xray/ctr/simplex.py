@@ -9,6 +9,16 @@ def insert(used_params, point, parameter):
         parameter[key][0] = point[i]
     return parameter
 
+def check_limits(used_params, point, parameter):
+    for i in range(len(used_params)):
+        key = used_params[i]
+        if point[i] < parameter[key][1]: 
+            point[i] = parameter[key][1]
+        elif point[i] > parameter[key][2]: 
+            point[i] = parameter[key][2]
+    return point
+    
+
 def calc_average(points):
     av_point = Num.zeros((len(points[0])),float)
     for i in points:
@@ -33,12 +43,14 @@ def contraction(Xmax, Xav, beta, used_params, parameter,param_usage, dat, cell, 
 def reflection(Xmax, Xav, alpha, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water):
     print 'reflection'
     Xref = (1+alpha)*Xav - alpha*Xmax
+    Xref = check_limits(used_params, Xref, parameter)
     parameter = insert(used_params, Xref, parameter)
     dat, Yref = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
     return Xref, Yref
 
 def expansion(Xref, Xav, gamma, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water):
     Xexp = (1+gamma)*Xref - gamma*Xav
+    Xexp = check_limits(used_params, Xexp, parameter)
     parameter = insert(used_params, Xexp, parameter)
     dat, Yexp = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
     return Xexp, Yexp
@@ -51,9 +63,18 @@ def compression(X, mini):
         Y = Num.append(Y,[x],axis = 0)
     return Y
 
+def calc_xdist(Xmin, Xmax):
+    xdist = 0
+    n = len(Xmin)
+    for i in range(n):
+        xdist =  xdist + (Xmax[i]-Xmin[i])**2
+    xdist = xdist**0.5
+    return xdist
+    
+
 #################################Simplex main routine###################################################################################################
 def simplex(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, simplex_params):
-    alpha, beta, gamma, delta, ftol, maxiter = simplex_params
+    alpha, beta, gamma, delta, ftol, xtol, maxiter = simplex_params
 
     used_params = []
     used_params_values = []
@@ -117,15 +138,19 @@ def simplex(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, da
                     for i in range(len(points)):
                         dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
         mini, maxi = min_max(function_values)
+        print 'iteration '+str(z)+', best RMS = '+str(round(function_values[mini],7))+', worst RMS = '+str(round(function_values[maxi],7))
         if function_values[mini] >= function_values[maxi]-ftol:
             not_converged = False
             print ' CONVERGENCE REACHED DUE TO FTOL \n\n'
+        if calc_xdist(points[mini], points[maxi]) <= xtol:
+            not_converged = False
+            print ' CONVERGENCE REACHED DUE TO XTOL \n\n'
         if z >= maxiter:
             not_converged = False
             print ' NO CONVERGENCE, STOP DUE TO MAXITER \n\n'
-        print 'iteration '+str(z)+', best RMS = '+str(round(function_values[mini],5))+', worst RMS = '+str(round(function_values[maxi],5))
         z = z+1
     param_best = points[mini]
+    parameter = insert(used_params, param_best, parameter)
     data_best, RMS_best = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
-    return data_best, param_best, RMS_best
+    return data_best, parameter, RMS_best
 ################################################################################################################################

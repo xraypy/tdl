@@ -8,7 +8,7 @@ by Frank Heberling (Frank.Heberling@kit.edu)
 """
 class wxCtrFitFrame(wx.Frame):
     def __init__(self, parent, title, size):
-        wx.Frame.__init__(self, parent, title= title, size=(800,800))
+        wx.Frame.__init__(self, parent, title= title, size=size)
 
         self.filename1 = ''
         self.filename2 = ''
@@ -243,7 +243,6 @@ class CtrNotebook(wx.Notebook):
         self.cell = []
         self.g_inv = []
 
-        self.param_best = {}
         self.parameter = {}
         self.param_labels = []
         
@@ -264,9 +263,9 @@ class MainControlPanel(wx.Panel):
         self.sim_an_params = [50, 20, 0.7, 10, 0.01, 500000, False]
         self.Rod_weight = [] #List of Rod weights
         self.RMS = -1
-        self.RMS_best = -1
+        self.param_best = {}
         self.use_bulk_water = True
-        self.simplex_params = [0.5,0.5,0.5,1,0.00005,10000]
+        self.simplex_params = [1.0,0.5,2.0,1.0,0.00005,0.001,10000]
 
         self.nb = self.GetParent()
 
@@ -403,12 +402,17 @@ class MainControlPanel(wx.Panel):
         self.ftol.SetValue(str(self.simplex_params[4]))
         self.Bind(wx.EVT_TEXT, self.setftol, self.ftol)
 
-        wx.StaticText(self, label = 'maxiter:    ', pos=(550, 542), size=(140, 20))
-        self.maxiter = wx.TextCtrl(self, pos=(700,540), size=(60,20))
-        self.maxiter.SetValue(str(self.simplex_params[5]))
+        wx.StaticText(self, label = 'Xtol:    ', pos=(550, 542), size=(140, 20))
+        self.xtol = wx.TextCtrl(self, pos=(700,540), size=(60,20))
+        self.xtol.SetValue(str(self.simplex_params[5]))
+        self.Bind(wx.EVT_TEXT, self.setxtol, self.xtol)
+
+        wx.StaticText(self, label = 'maxiter:    ', pos=(550, 567), size=(140, 20))
+        self.maxiter = wx.TextCtrl(self, pos=(700,565), size=(60,20))
+        self.maxiter.SetValue(str(self.simplex_params[6]))
         self.Bind(wx.EVT_TEXT, self.setmaxiter, self.maxiter)
 
-        self.Simplexbutton = wx.Button(self, label = 'Downhill Simplex', pos =(550,570), size=(210,40))
+        self.Simplexbutton = wx.Button(self, label = 'Downhill Simplex', pos =(550,595), size=(210,40))
         self.Bind(wx.EVT_BUTTON, self.OnClickSimplex, self.Simplexbutton)
 
     def setplotdims(self, event):
@@ -506,31 +510,31 @@ class MainControlPanel(wx.Panel):
     def OnClickSimAn1(self,e):
         flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.use_bulk_water)
         if flag:
-            self.nb.param_best = {}
-            self.RMS_best = -1
-            self.nb.data, self.nb.param_best, self.RMS_best = simulated_annealing01(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
+            self.param_best = {}
+            self.RMS = -1
+            self.nb.data, self.param_best, self.RMS = simulated_annealing01(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
                     database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies, self.use_bulk_water)
-            plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS_best)
+            plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.ShowModal() == wx.ID_YES:
                 for i in range(len(self.nb.param_labels)):
-                    self.nb.parameter[self.nb.param_labels[i]][0] = self.nb.param_best[self.nb.param_labels[i]][0]
-                    self.nb.ParameterPage.OnClick(True)
+                    self.nb.parameter[self.nb.param_labels[i]][0] = self.param_best[self.nb.param_labels[i]][0]
+                    self.nb.ParameterPage.control1[i].SetValue(str(round(self.param_best[self.nb.param_labels[i]][0], 12)))
             dlg.Destroy()
             
     def OnClickSimAn2(self,e):
         flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.use_bulk_water)
         if flag:
-            self.nb.param_best = {}
-            self.RMS_best = -1
-            self.nb.data, self.nb.param_best, self.RMS_best = simulated_annealing02(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
+            self.param_best = {}
+            self.RMS = -1
+            self.nb.data, self.param_best, self.RMS = simulated_annealing02(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
                     database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies, self.use_bulk_water)
-            plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS_best)
+            plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.ShowModal() == wx.ID_YES:
                 for i in range(len(self.nb.param_labels)):
-                    self.nb.parameter[self.nb.param_labels[i]][0] = self.nb.param_best[self.nb.param_labels[i]][0]
-                    self.nb.ParameterPage.OnClick(True)
+                    self.nb.parameter[self.nb.param_labels[i]][0] = self.param_best[self.nb.param_labels[i]][0]
+                    self.nb.ParameterPage.control1[i].SetValue(str(round(self.param_best[self.nb.param_labels[i]][0], 12)))
             dlg.Destroy()
 
     def setalpha(self,event):
@@ -538,8 +542,8 @@ class MainControlPanel(wx.Panel):
             None
         else:
             a = float(event.GetString())
-            if a <= 0 or a >= 1:
-                print 'alpha must be > 0 and < 1'
+            if a <= 0 or a > 1:
+                print 'alpha must be > 0 and <= 1'
             else:
                 self.simplex_params[0] = a
 
@@ -548,8 +552,8 @@ class MainControlPanel(wx.Panel):
             None
         else:
             a = float(event.GetString())
-            if a <= 0 or a >= 1:
-                print 'beta must be > 0 and < 1'
+            if a <= 0 or a > 1:
+                print 'beta must be > 0 and <= 1'
             else:
                 self.simplex_params[1] = a
 
@@ -558,8 +562,8 @@ class MainControlPanel(wx.Panel):
             None
         else:
             a = float(event.GetString())
-            if a <= 0 or a >= 1:
-                print 'gamma must be > 0 and < 1'
+            if a <= 0:
+                print 'gamma must be > 0'
             else:
                 self.simplex_params[2] = a
 
@@ -583,6 +587,16 @@ class MainControlPanel(wx.Panel):
             else:
                 self.simplex_params[4] = a
 
+    def setxtol(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = float(event.GetString())
+            if a <= 0:
+                print 'xtol must be > 0'
+            else:
+                self.simplex_params[5] = a
+
     def setmaxiter(self,event):
         if (event.GetString() == '') or (event.GetString() == '-'):
             None
@@ -591,21 +605,21 @@ class MainControlPanel(wx.Panel):
             if a <= 0:
                 print 'maxiter must be > 0'
             else:
-                self.simplex_params[5] = a
+                self.simplex_params[6] = a
 
     def OnClickSimplex(self,e):
         flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.use_bulk_water)
         if flag:
-            self.nb.param_best = {}
-            self.RMS_best = -1
-            self.nb.data, self.nb.param_best, self.RMS_best = simplex(self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, self.nb.surface, \
+            self.param_best = {}
+            self.RMS = -1
+            self.nb.data, self.param_best, self.RMS = simplex(self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, self.nb.surface, \
                                         self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.simplex_params)
-            plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS_best)
+            plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.ShowModal() == wx.ID_YES:
                 for i in range(len(self.nb.param_labels)):
-                    self.nb.parameter[self.nb.param_labels[i]][0] = self.nb.param_best[self.nb.param_labels[i]][0]
-                    self.nb.ParameterPage.OnClick(True)
+                    self.nb.parameter[self.nb.param_labels[i]][0] = self.param_best[self.nb.param_labels[i]][0]
+                    self.nb.ParameterPage.control1[i].SetValue(str(round(self.param_best[self.nb.param_labels[i]][0], 12)))
             dlg.Destroy()
 
 ##########################################################################################################################
@@ -701,7 +715,7 @@ class ParameterPanel(wx.ScrolledWindow):
 
 ############################################################################################################
 ############################################################################################################
-def start_ctr_fitting():
-    frame = wxCtrFitFrame(parent = None, title = " CtrFit", size = (800,800))
+def start():
+    frame = wxCtrFitFrame(parent = None, title = " Python Interface Structure Refinement", size = (800,750))
 
 
