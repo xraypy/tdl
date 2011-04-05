@@ -2,6 +2,7 @@ import numpy as Num
 from pylab import *
 import random
 from atomic import f0data as database
+from BV_params import bv_params
 
 ###################################### calculations ####################################################
 def calc_g_inv(cell):
@@ -18,6 +19,19 @@ def calc_g_inv(cell):
 
     g_inv = Num.linalg.inv(g)
     return g_inv
+
+def calc_g(cell):
+    g = Num.ndarray((3,3),float)
+    g[0][0] = cell[0]**2
+    g[0][1] = cell[0]*cell[1]*Num.cos(Num.radians(cell[5]))
+    g[0][2] = cell[0]*cell[2]*Num.cos(Num.radians(cell[4]))
+    g[1][0] = cell[1]*cell[0]*Num.cos(Num.radians(cell[5]))
+    g[1][1] = cell[1]**2
+    g[1][2] = cell[1]*cell[2]*Num.cos(Num.radians(cell[3]))
+    g[2][0] = cell[2]*cell[0]*Num.cos(Num.radians(cell[4]))
+    g[2][1] = cell[2]*cell[1]*Num.cos(Num.radians(cell[3]))
+    g[2][2] = cell[2]**2
+    return g
 
 #####################################################################################################
 class rigid_body:
@@ -59,6 +73,41 @@ def RB_update(rigid_bodies, surface, parameter, cell):
         for i in range(len(RB.atoms)):
             surface_new[RB.atoms[i]] = atoms[i]
     return surface_new
+##########################################################################################################################
+class BVcluster:
+    def __init__(self):
+        self.center = int
+        self.centerxoffset = int
+        self.centeryoffset = int
+        self.eqval = int
+        self.neighbors = []
+        self.neighborsxoffset = []
+        self.neighborsyoffset = []
+        self.ip = [0.,0.]
+        self.r0s = []
+        self.bs = []
+        self.g = Num.ndarray((3,3),float)
+    ######################################
+    def calc_BVS(self, surface):
+        center = Num.array([surface[self.center][1]+self.centerxoffset,surface[self.center][2]+self.centeryoffset,surface[self.center][3]],float)
+        BVS = 0
+        distances = []
+        for i in range(len(self.neighbors)):
+            neighbor = Num.array([surface[self.neighbors[i]][1]+self.neighborsxoffset[i],surface[self.neighbors[i]][2]+self.neighborsyoffset[i],surface[self.neighbors[i]][3]],float)
+            vector = neighbor - center
+            dist = (Num.dot(vector,Num.dot(self.g,vector)))**0.5
+            distances.append(dist)
+            BVS = BVS + Num.exp((self.r0s[i]-dist)/self.bs[i])
+        return BVS, distances
+#########################################################################################
+def BV_impact(BVclusters, surface):
+    impact = 0
+    for i in BVclusters:
+        BVS, dist = i.calc_BVS(surface)
+        eqval = (float(i.eqval) **2)**0.5
+        BV_offset = ((BVS - eqval)**2)**0.5 / eqval
+        impact = impact + (i.ip[0] * BV_offset)**i.ip[1]
+    return impact
 ##########################################################################################################################    
 def param_unfold(param, param_use, surface, use_bulk_water):
     if use_bulk_water:
@@ -195,7 +244,7 @@ class Fitting_Rod:
         a = 0
         b = 0
         for i in range(shape(bulk)[0]):
-            f_par = database[bulk[i][0]]
+            f_par = database[str.lower(bulk[i][0])]
             q = (Num.dot(Num.dot(hkl,g_inv),hkl))**0.5 
             f = (f_par[0]*Num.exp(-(q/4/Num.pi)**2*f_par[1]) + f_par[2]*Num.exp(-(q/4/Num.pi)**2*f_par[3]) +\
                 f_par[4]*Num.exp(-(q/4/Num.pi)**2*f_par[5]) + f_par[6]*Num.exp(-(q/4/Num.pi)**2*f_par[7]) + f_par[8])*\
@@ -208,7 +257,7 @@ class Fitting_Rod:
         a = 0
         b = 0
         for i in range(shape(surface)[0]):
-            f_par = database[surface[i][0]]
+            f_par = database[str.lower(surface[i][0])]
             #umean = (surface[i][4]+surface[i][5]+surface[i][6])/3 #use these two lines for mean-
             #U = Num.array([[umean,0,0],[0,umean,0],[0,0,umean]])  #isotropic DW-Factors
             U = Num.array([[surface[i][4],surface[i][7],surface[i][8]],[surface[i][7],surface[i][5],surface[i][9]],[surface[i][8],surface[i][9],surface[i][6]]])
@@ -295,7 +344,7 @@ def read_bulk(bulkfile):
                 cell.append(float(tmp[j+1]))
             Nlayers = int(tmp[9])
         else:
-            tmp2 = [str.lower(tmp[0]), float(tmp[1]),float(tmp[2]),float(tmp[3]),float(tmp[4])]
+            tmp2 = [tmp[0], float(tmp[1]),float(tmp[2]),float(tmp[3]),float(tmp[4])]
             bulk.append(tmp2)
     return bulk, cell, Nlayers
 
@@ -306,7 +355,7 @@ def read_surface(surfacefile):
     f.close()
     for i in data:
         tmp = str.rsplit(i)
-        tmp2 = [str.lower(tmp[0]), float(tmp[1]),float(tmp[2]),float(tmp[3]),float(tmp[4]),float(tmp[5]),float(tmp[6]),float(tmp[7]),float(tmp[8]),float(tmp[9]),float(tmp[10])]
+        tmp2 = [tmp[0], float(tmp[1]),float(tmp[2]),float(tmp[3]),float(tmp[4]),float(tmp[5]),float(tmp[6]),float(tmp[7]),float(tmp[8]),float(tmp[9]),float(tmp[10])]
         surface.append(tmp2)
         
     parameter_usage=[]
@@ -410,6 +459,43 @@ def read_rigid_bodies(rigidbodyfile):
             del(tmp2)
         
     return rigid_bodies
+
+def read_BV(BVfile, cell):
+    BVclusters = []
+    f = open(BVfile,'r')
+    data = f.readlines()
+    f.close()
+    for i in data:
+        BVC = BVcluster()
+        tmp = str.rsplit(i)
+        n = int(tmp[0])
+        center_label = tmp[1]
+        BVC.eqval = int(tmp[2])
+        BVC.center = int(tmp[3])
+        BVC.centerxoffset = int(tmp[4])
+        BVC.centeryoffset = int(tmp[5])
+        for j in range(n-1):
+            neighbor_label = tmp[6+j*5]
+            neighbor_valence = int(tmp[7+j*5])
+            key = center_label + str(BVC.eqval) + neighbor_label + str(neighbor_valence)
+            if key in bv_params.keys():
+                BVC.r0s.append(bv_params[key][0])
+                BVC.bs.append(bv_params[key][1])
+            else:
+                key = neighbor_label + str(neighbor_valence) + center_label + str(BVC.eqval)
+                if key in bv_params.keys():
+                    BVC.r0s.append(bv_params[key][0])
+                    BVC.bs.append(bv_params[key][1])
+                else: print ' No bond valence parameters found for: '+center_label+' '+str(BVC.eqval)+' and '+neighbor_label+' '+str(neighbor_valence)
+            BVC.neighbors.append(int(tmp[8+j*5]))
+            BVC.neighborsxoffset.append(int(tmp[9+j*5]))
+            BVC.neighborsyoffset.append(int(tmp[10+j*5]))
+        BVC.ip[0] = float(tmp[11+(n-2)*5])
+        BVC.ip[1] = float(tmp[12+(n-2)*5])
+        BVC.g = calc_g(cell)
+        BVclusters.append(BVC)
+    return BVclusters
+                
 #########################################################################################
 def shift_bulk(zwater, bulk):
     bulk_new =[]
@@ -419,7 +505,8 @@ def shift_bulk(zwater, bulk):
     return bulk_new
     
 #########################################calculate rods##################################
-def calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water):
+def calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water,\
+              use_BVC, BVclusters):
 
     zwater, sig_water, Scale,specScale, beta, surface_new = param_unfold(parameter,param_usage, surface_tmp, use_bulk_water)
     bulk_new = shift_bulk(zwater, bulk_tmp)
@@ -434,10 +521,14 @@ def calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, 
         RMS = RMS + Num.sum(dat[i].difference)*Rod_weight[i]
         n = n + len(dat[i].L)*Rod_weight[i]      
     RMS = (RMS / n)**0.5
+    if use_BVC:
+        impact = BV_impact(BVclusters, surface_new)
+        RMS = RMS+ impact
 
     return dat, RMS
 ############################### Simulated Annealing #################################################################
-def simulated_annealing01(dat, cell, NLayers, bulk, surface, database, Rod_weight, sim_an_params, parameter, param_usage, plot_RMS_track, rigid_bodies, use_bulk_water):
+def simulated_annealing01(dat, cell, NLayers, bulk, surface, database, Rod_weight, sim_an_params, parameter, param_usage, plot_RMS_track,\
+                          rigid_bodies, use_bulk_water, use_BVC, BVclusters):
 
     Tstart,Tend,cool,maxrun,MC,factor,random_parameters = sim_an_params
     g_inv = calc_g_inv(cell)
@@ -447,7 +538,7 @@ def simulated_annealing01(dat, cell, NLayers, bulk, surface, database, Rod_weigh
             if parameter[i][3]:
                 parameter[i][0] = random.uniform(parameter[i][1], parameter[i][2])
       
-    dat, RMS = calc_CTRs(parameter, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
+    dat, RMS = calc_CTRs(parameter, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
 
     guess = (int(Num.log(float(Tend)/float(Tstart))/Num.log(cool))+1)*maxrun
     print 'approximated number of iterations: '+str( int(guess) )
@@ -476,7 +567,7 @@ def simulated_annealing01(dat, cell, NLayers, bulk, surface, database, Rod_weigh
                     param_tmp[i] =  [parameter[i][0]]
 
                 
-            dat, RMS_tmp = calc_CTRs(param_tmp,param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
+            dat, RMS_tmp = calc_CTRs(param_tmp,param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
 
             dR = (RMS - RMS_tmp) * factor
 
@@ -521,7 +612,7 @@ def simulated_annealing01(dat, cell, NLayers, bulk, surface, database, Rod_weigh
     mini = Num.where(R_track == R_track.min())
     param_best = param_track[int(mini[0][0])]
 
-    data_best, RMS_best = calc_CTRs(param_best,param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
+    data_best, RMS_best = calc_CTRs(param_best,param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
     R_track = Num.append(R_track, RMS_best)
 
     print '\n####################################################\n'
@@ -536,7 +627,8 @@ def simulated_annealing01(dat, cell, NLayers, bulk, surface, database, Rod_weigh
 
     return data_best, param_best, RMS_best
 ############################### Simulated Annealing #################################################################
-def simulated_annealing02(dat, cell, NLayers, bulk, surface, database, Rod_weight, sim_an_params, parameter, param_usage, plot_RMS_track, rigid_bodies, use_bulk_water):
+def simulated_annealing02(dat, cell, NLayers, bulk, surface, database, Rod_weight, sim_an_params, parameter, param_usage, plot_RMS_track,\
+                          rigid_bodies, use_bulk_water, use_BVC, BVclusters):
 
     Tstart,Tend,cool,maxrun,MC,factor,random_parameters = sim_an_params
     g_inv = calc_g_inv(cell)
@@ -546,7 +638,7 @@ def simulated_annealing02(dat, cell, NLayers, bulk, surface, database, Rod_weigh
             if parameter[i][3]:
                 parameter[i][0] = random.uniform(parameter[i][1], parameter[i][2])
       
-    dat, RMS = calc_CTRs(parameter, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
+    dat, RMS = calc_CTRs(parameter, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
 
     R_track =Num.array([RMS],float)
     param_track = [parameter]
@@ -586,7 +678,7 @@ def simulated_annealing02(dat, cell, NLayers, bulk, surface, database, Rod_weigh
                     else:
                         param_tmp[i] = [parameter[i][0]+addvector]
 
-                dat, RMS_tmp = calc_CTRs(param_tmp, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
+                dat, RMS_tmp = calc_CTRs(param_tmp, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
 
                 dR = (RMS - RMS_tmp) * factor
 
@@ -634,7 +726,7 @@ def simulated_annealing02(dat, cell, NLayers, bulk, surface, database, Rod_weigh
     mini = Num.where(R_track == R_track.min())
     param_best = param_track[int(mini[0][0])]
 
-    data_best, RMS_best = calc_CTRs(param_best, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water)
+    data_best, RMS_best = calc_CTRs(param_best, param_usage, dat, cell, bulk, surface, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
     R_track = Num.append(R_track, RMS_best)
 
     print '\n####################################################\n'
@@ -705,7 +797,7 @@ def plot_edensity(surface, param, param_use, cell, database, rigid_bodies, use_b
         for i in range(len(abscissa)):
             edens[i] = edens[i] + (0.5 *(1+ erf((abscissa[i])/(2*sig)**0.5)))*0.33456
     for x in surface:
-        f_par = database[x[0]]
+        f_par = database[str.lower(x[0])]
         f = (f_par[0] + f_par[2] +f_par[4]+ f_par[6]+ f_par[8]) * x[10]
         for i in range(len(abscissa)):
             edens[i] = edens[i] + ((2*Num.pi*x[6])**(-1.5)* Num.exp(-0.5*(abscissa[i]-cell[2]*x[3])**2/x[6]))* f*2*Num.pi*x[6]/Auc

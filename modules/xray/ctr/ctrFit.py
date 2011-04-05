@@ -2,6 +2,7 @@ from ctrFitcalcs import *
 from simplex import *
 import wx
 import os
+
 """
 Functions and classes used to build the CtrFit GUI
 by Frank Heberling (Frank.Heberling@kit.edu)
@@ -15,6 +16,7 @@ class wxCtrFitFrame(wx.Frame):
         self.filename3 = ''
         self.filename4 = ''
         self.filename5 = ''
+        self.filename6 = ''
         
         # A status bar
         self.CreateStatusBar()
@@ -26,6 +28,7 @@ class wxCtrFitFrame(wx.Frame):
         menuReadSurface = filemenu.Append(wx.ID_ANY,"&Read Surfacefile"," Read in a Surface file")
         menuReadParameter = filemenu.Append(wx.ID_ANY,"&Read Parameterfile"," Read in a Parameter file")
         menuReadRigidbody = filemenu.Append(wx.ID_ANY,"&Read Rigidbodyfile"," Read in a Rigid Body file")
+        menuReadBV = filemenu.Append(wx.ID_ANY,"&Read Bondvalencefile"," Read in a Bond Valence file")
         filemenu.AppendSeparator()
         menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
 
@@ -48,6 +51,7 @@ class wxCtrFitFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnReadSurface, menuReadSurface)
         self.Bind(wx.EVT_MENU, self.OnReadParameter, menuReadParameter)
         self.Bind(wx.EVT_MENU, self.OnReadRigidbody, menuReadRigidbody)
+        self.Bind(wx.EVT_MENU, self.OnReadBV, menuReadBV)
         self.Bind(wx.EVT_MENU, self.OnExit, menuExit)
 
         self.Bind(wx.EVT_MENU, self.OnWriteCif, menuWriteCif)
@@ -182,6 +186,19 @@ class wxCtrFitFrame(wx.Frame):
             self.nb.MainControlPage.rigidbodyfile.SetValue(self.filename5)
         dlg.Destroy()
 
+    def OnReadBV(self, e):
+        """ Read in a Bond Valence File """
+        dirname6 = ''
+        dlg = wx.FileDialog(self, "Choose a bond valence file", dirname6, "", "*.*", wx.OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.filename6 = dlg.GetFilename()
+            dirname6 = dlg.GetDirectory()
+            self.nb.MainControlPage.BVclusters = []
+            self.nb.MainControlPage.BVclusters = read_BV((dirname6+'/'+self.filename6), self.nb.cell)
+            self.nb.MainControlPage.bondvalencefile.SetValue(self.filename6)
+        dlg.Destroy()
+        
+
     def OnExit(self,e):
         self.Close(True)  # Close the frame.
 
@@ -259,12 +276,15 @@ class MainControlPanel(wx.Panel):
         self.doplotRMStrack = False
         self.plotdims = [2,3]
 
+        self.BVclusters = []
+        self.use_BVC = False
+
         self.rodweight = []# List of TextControls to read rod weights
         self.sim_an_params = [50, 20, 0.7, 10, 0.01, 500000, False]
         self.Rod_weight = [] #List of Rod weights
         self.RMS = -1
         self.param_best = {}
-        self.use_bulk_water = True
+        self.use_bulk_water = False
         self.simplex_params = [1.0,0.5,2.0,1.0,0.00005,0.001,10000]
 
         self.nb = self.GetParent()
@@ -273,6 +293,10 @@ class MainControlPanel(wx.Panel):
         wx.StaticText(self, label = 'File Information: ', pos=(80, 12), size=(100, 20))
         wx.StaticText(self, label = 'Data Information: ', pos=(350, 12), size=(100, 20))
         wx.StaticText(self, label = 'Fit options: ', pos=(610, 12), size=(100, 20))
+        wx.StaticLine(self, pos = (300,0), size = (5,650), style = wx.LI_VERTICAL)
+        wx.StaticLine(self, pos = (500,0), size = (5,650), style = wx.LI_VERTICAL)
+        wx.StaticLine(self, pos = (0,265), size = (300,5), style = wx.LI_HORIZONTAL)
+        wx.StaticLine(self, pos = (0,515), size = (300,5), style = wx.LI_HORIZONTAL)
 
         wx.StaticText(self, label = 'Rods:', pos=(350,42), size=(40,20))
         wx.StaticText(self, label = 'weight', pos=(400,42), size=(30,20))
@@ -293,43 +317,55 @@ class MainControlPanel(wx.Panel):
         wx.StaticText(self, label = 'rigid body file = ', pos=(20, 212), size=(100, 20))
         self.rigidbodyfile = wx.TextCtrl(self, pos=(130,210), size=(120,20), style= wx.TE_READONLY)
 
-        #CTR plotting
-        wx.StaticText(self, label = 'Plotting Options: ', pos=(80, 272), size=(100, 20))
-        wx.StaticText(self, label = 'CTR plot options (Fig. 1): ', pos=(20, 297), size=(200, 20))
+        wx.StaticText(self, label = 'bond valence file = ', pos=(20, 237), size=(100, 20))
+        self.bondvalencefile = wx.TextCtrl(self, pos=(130,235), size=(120,20), style= wx.TE_READONLY)
 
-        wx.StaticText(self, label = 'CTR plot dimensions', pos=(40, 322), size=(110, 20))
-        self.getplotdims = wx.TextCtrl(self, pos=(160, 320), size=(40,-1))
+        #CTR plotting
+        wx.StaticText(self, label = 'Plotting Options: ', pos=(80, 282), size=(100, 20))
+        wx.StaticText(self, label = 'CTR plot options (Fig. 1): ', pos=(20, 307), size=(200, 20))
+
+        wx.StaticText(self, label = 'CTR plot dimensions', pos=(40, 332), size=(110, 20))
+        self.getplotdims = wx.TextCtrl(self, pos=(160, 330), size=(40,-1))
         self.getplotdims.SetValue(str(self.plotdims[0])+' '+str(self.plotdims[1]))
         self.Bind(wx.EVT_TEXT, self.setplotdims, self.getplotdims)
 
-        self.plot_bulk = wx.CheckBox(self, label =  '  plot bulk (green)', pos = (40, 347))
+        self.plot_bulk = wx.CheckBox(self, label =  '  plot bulk (green)', pos = (40, 357))
         self.plot_bulk.SetValue(False)
         wx.EVT_CHECKBOX(self, self.plot_bulk.GetId(), self.setplotbulk)
         
-        self.plot_surf = wx.CheckBox(self, label =  '  plot surface (red)', pos = (40, 372))
+        self.plot_surf = wx.CheckBox(self, label =  '  plot surface (red)', pos = (40, 382))
         self.plot_surf.SetValue(False)
         wx.EVT_CHECKBOX(self, self.plot_surf.GetId(), self.setplotsurf)
         
-        self.plot_rough = wx.CheckBox(self, label = '  plot roughness (cyan)', pos = (40, 397))
+        self.plot_rough = wx.CheckBox(self, label = '  plot roughness (cyan)', pos = (40, 407))
         self.plot_rough.SetValue(False)
         wx.EVT_CHECKBOX(self, self.plot_rough.GetId(), self.setplotrough)
         
-        self.plot_water = wx.CheckBox(self, label = '  plot water (magenta)', pos = (40, 422))
+        self.plot_water = wx.CheckBox(self, label = '  plot water (magenta)', pos = (40, 432))
         self.plot_water.SetValue(False)
         wx.EVT_CHECKBOX(self, self.plot_water.GetId(), self.setplotwater)
 
-        self.button = wx.Button(self, label = 'Plot CTRs', pos =(170,415))
+        self.button = wx.Button(self, label = 'Plot CTRs', pos =(170,425))
         self.Bind(wx.EVT_BUTTON, self.OnClick, self.button)
 
         #edensity plotting
-        wx.StaticText(self, label = 'plot e-density', pos=(20, 460), size=(140, 20))
-        wx.StaticText(self, label = '(Fig. 2, current surface)', pos=(20, 480), size=(140, 20))
-        self.plotedens = wx.Button(self, label = 'Plot edens', pos =(170,470))
+        wx.StaticText(self, label = 'plot e-density', pos=(20, 455), size=(140, 20))
+        wx.StaticText(self, label = '(Fig. 2, current surface)', pos=(20, 474), size=(140, 20))
+        self.plotedens = wx.Button(self, label = 'Plot edens', pos =(170,465))
         self.Bind(wx.EVT_BUTTON, self.OnPlotedens, self.plotedens)
 
-        #Fitting optio use bulk water
+        #Bond Valence constraints
+        wx.StaticText(self, label = 'Bond Valence: ', pos=(80, 542), size=(120, 20))
+        self.set_use_BVC = wx.CheckBox(self, label = ' use Bond Valence Constraints in Fit', pos = (25, 567))
+        self.set_use_BVC.SetValue(False)
+        wx.EVT_CHECKBOX(self, self.set_use_BVC.GetId(), self.setusebvc)
+        self.calc_BVS = wx.Button(self, label = 'calculate Bond Valence Sums', pos =(20,592), size =(230, 20))
+        self.Bind(wx.EVT_BUTTON, self.on_calc_BVS, self.calc_BVS)
+
+                                            
+        #Fitting option use bulk water
         self.douse_bulk_water = wx.CheckBox(self, label = '  use bulk water', pos = (550, 37))
-        self.douse_bulk_water.SetValue(True)
+        self.douse_bulk_water.SetValue(False)
         wx.EVT_CHECKBOX(self, self.douse_bulk_water.GetId(), self.set_bulk_water)
 
         #Simulated annealing parameters and options
@@ -415,6 +451,8 @@ class MainControlPanel(wx.Panel):
         self.Simplexbutton = wx.Button(self, label = 'Downhill Simplex', pos =(550,595), size=(210,40))
         self.Bind(wx.EVT_BUTTON, self.OnClickSimplex, self.Simplexbutton)
 
+                                          
+   ################################# Plotting options event functions #########################################
     def setplotdims(self, event):
         if event.GetString() == '':
             None
@@ -445,15 +483,28 @@ class MainControlPanel(wx.Panel):
 
     def OnClick(self,e):
         self.nb.data, self.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
-                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water)
+                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.use_BVC, self.BVclusters)
         plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough,\
                                                  self.doplotwater, self.RMS)
 
     def OnPlotedens(self, e):
         plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.use_bulk_water)
 
+    ################################# Bond Valence constraints event functions #########################################
+    def setusebvc(self,e): self.use_BVC = self.set_use_BVC.GetValue()
+    def on_calc_BVS(self, e):
+        for i in range(len(self.BVclusters)):
+            zwater, sig_water, Scale,specScale, beta, surface = param_unfold(self.nb.parameter,self.nb.parameter_usage, self.nb.surface, self.use_bulk_water)
+            surface = RB_update(self.nb.rigid_bodies, surface, self.nb.parameter, self.nb.cell)
+            BVS, dist = self.BVclusters[i].calc_BVS(surface)
+            print 'Bond Valence sum in BV-cluster '+str(i+1)+' = '+str(round(BVS, 4))+'; distances are: \n'
+            for j in range(len(dist)):
+                print str(round(dist[j],5))
+            print '\n'
+    ################################# Fitting options event functions #########################################
     def set_bulk_water(self,e): self.use_bulk_water = self.douse_bulk_water.GetValue()
-
+                                          
+    ################################# Simulated Annealing options event functions #########################################
     def setTstart(self,event):
         if (event.GetString() == '') or (event.GetString() == '-'):
             None
@@ -513,7 +564,8 @@ class MainControlPanel(wx.Panel):
             self.param_best = {}
             self.RMS = -1
             self.nb.data, self.param_best, self.RMS = simulated_annealing01(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
-                    database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies, self.use_bulk_water)
+                    database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies,\
+                    self.use_bulk_water, self.use_BVC, self.BVclusters)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
@@ -528,7 +580,8 @@ class MainControlPanel(wx.Panel):
             self.param_best = {}
             self.RMS = -1
             self.nb.data, self.param_best, self.RMS = simulated_annealing02(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
-                    database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies, self.use_bulk_water)
+                    database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies,\
+                    self.use_bulk_water, self.use_BVC, self.BVclusters)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
@@ -536,7 +589,7 @@ class MainControlPanel(wx.Panel):
                     self.nb.parameter[self.nb.param_labels[i]][0] = self.param_best[self.nb.param_labels[i]][0]
                     self.nb.ParameterPage.control1[i].SetValue(str(round(self.param_best[self.nb.param_labels[i]][0], 12)))
             dlg.Destroy()
-
+    ################################# Simplex options event functions #########################################
     def setalpha(self,event):
         if (event.GetString() == '') or (event.GetString() == '-'):
             None
@@ -613,7 +666,8 @@ class MainControlPanel(wx.Panel):
             self.param_best = {}
             self.RMS = -1
             self.nb.data, self.param_best, self.RMS = simplex(self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, self.nb.surface, \
-                                        self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.simplex_params)
+                                        self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.simplex_params, \
+                                        self.use_BVC, self.BVclusters)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
@@ -716,6 +770,6 @@ class ParameterPanel(wx.ScrolledWindow):
 ############################################################################################################
 ############################################################################################################
 def start():
-    frame = wxCtrFitFrame(parent = None, title = " Python Interface Structure Refinement", size = (800,750))
+    frame = wxCtrFitFrame(parent = None, title = u"\u03c0-surf,  Python Interface StrUcture ReFinement", size = (800,750))
 
 
