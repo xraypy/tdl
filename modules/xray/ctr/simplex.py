@@ -1,5 +1,5 @@
 import numpy as Num
-from ctrFitcalcs import *
+from ctrfitcalcs import *
 import random
 
 ############################### methods used by simplex ############################################################################################
@@ -33,26 +33,26 @@ def min_max(function_values):
     maxi = int(Num.where(function_values == Ymax)[0][0])
     return mini, maxi
 
-def contraction(Xmax, Xav, beta, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters):
+def contraction(Xmax, Xav, beta, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag):
     print 'contraction'
     Xcon = beta*Xmax+(1-beta)*Xav
     parameter = insert(used_params, Xcon, parameter)
-    dat, Ycon = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+    dat, Ycon = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
     return Xcon,Ycon
 
-def reflection(Xmax, Xav, alpha, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters):
+def reflection(Xmax, Xav, alpha, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag):
     print 'reflection'
     Xref = (1+alpha)*Xav - alpha*Xmax
     Xref = check_limits(used_params, Xref, parameter)
     parameter = insert(used_params, Xref, parameter)
-    dat, Yref = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+    dat, Yref = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
     return Xref, Yref
 
-def expansion(Xref, Xav, gamma, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters):
+def expansion(Xref, Xav, gamma, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag):
     Xexp = (1+gamma)*Xref - gamma*Xav
     Xexp = check_limits(used_params, Xexp, parameter)
     parameter = insert(used_params, Xexp, parameter)
-    dat, Yexp = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+    dat, Yexp = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
     return Xexp, Yexp
 
 def compression(X, mini):
@@ -74,7 +74,7 @@ def calc_xdist(Xmin, Xmax):
 
 #################################Simplex main routine###################################################################################################
 def simplex(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water,\
-            simplex_params, use_BVC, BVclusters):
+            simplex_params, use_BVC, BVclusters, RMS_flag):
     alpha, beta, gamma, delta, ftol, xtol, maxiter = simplex_params
 
     used_params = []
@@ -91,22 +91,22 @@ def simplex(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, da
         if i == 0:
             points[i] = used_params_values
             parameter = insert(used_params, points[i], parameter)
-            dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+            dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
         else:
             for j in range(len(points[i])):
                 key = used_params[j]
                 points[i][j] = used_params_values[j] + random.uniform(((parameter[key][1]-used_params_values[j])*delta), ((parameter[key][2]-used_params_values[j])*delta))
             parameter = insert(used_params, points[i], parameter)    
-            dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+            dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
             
     not_converged = True
     z = 0
     mini, maxi = min_max(function_values)
     while not_converged:     
         Xav = calc_average(points)
-        Xref, Yref = reflection(points[maxi], Xav, alpha, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+        Xref, Yref = reflection(points[maxi], Xav, alpha, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
         if Yref < function_values[mini]:
-            Xexp, Yexp = expansion(Xref, Xav, gamma, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+            Xexp, Yexp = expansion(Xref, Xav, gamma, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
             if Yexp < function_values[mini]:
                 print 'expansion'
                 points[maxi] = Xexp
@@ -127,9 +127,9 @@ def simplex(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, da
                 function_values[maxi] = Yref
             else:
                 if Yref < function_values[maxi]:
-                    Xcon,Ycon = contraction(Xref, Xav, beta, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+                    Xcon,Ycon = contraction(Xref, Xav, beta, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
                 else:
-                    Xcon,Ycon = contraction(points[maxi], Xav, beta, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+                    Xcon,Ycon = contraction(points[maxi], Xav, beta, used_params, parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
 
                 if Ycon < function_values[maxi]:
                     points[maxi] = Xcon
@@ -137,9 +137,9 @@ def simplex(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, da
                 else:
                     points = compression(points, mini)
                     for i in range(len(points)):
-                        dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+                        dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
         mini, maxi = min_max(function_values)
-        print 'iteration '+str(z)+', best RMS = '+str(round(function_values[mini],7))+', worst RMS = '+str(round(function_values[maxi],7))
+        print 'iteration '+str(z)+', best R = '+str(round(function_values[mini],7))+', worst R = '+str(round(function_values[maxi],7))
         if function_values[mini] >= function_values[maxi]-ftol:
             not_converged = False
             print ' CONVERGENCE REACHED DUE TO FTOL \n\n'
@@ -152,6 +152,6 @@ def simplex(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, da
         z = z+1
     param_best = points[mini]
     parameter = insert(used_params, param_best, parameter)
-    data_best, RMS_best = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters)
+    data_best, RMS_best = calc_CTRs(parameter,param_usage, dat, cell, bulk_tmp, surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag)
     return data_best, parameter, RMS_best
 ################################################################################################################################

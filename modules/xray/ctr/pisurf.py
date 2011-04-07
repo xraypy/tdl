@@ -1,10 +1,10 @@
-from ctrFitcalcs import *
+from ctrfitcalcs import *
 from simplex import *
 import wx
 import os
 
 """
-Functions and classes used to build the CtrFit GUI
+Functions and classes used to build the pi-surf GUI
 by Frank Heberling (Frank.Heberling@kit.edu)
 """
 class wxCtrFitFrame(wx.Frame):
@@ -36,6 +36,7 @@ class wxCtrFitFrame(wx.Frame):
         writemenu = wx.Menu()
         menuWriteCif = writemenu.Append(wx.ID_ANY, "&Write .cif file", " Write surface structure to a .cif file")
         menuWritePar = writemenu.Append(wx.ID_ANY, "&Write Parameter file", " Write parameters to a .par file")
+        menuWriteData = writemenu.Append(wx.ID_ANY, "&Write Data file", " Write data and fit results to a .dat file")
         menuWriteSurf = writemenu.Append(wx.ID_ANY, "&Write Surface file", " Write surface in fractional coordinates to a .sur file")
         menuWriteBulk = writemenu.Append(wx.ID_ANY, "&Write Bulk file", " Write bulk structure to a .bul file")
       
@@ -56,6 +57,7 @@ class wxCtrFitFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.OnWriteCif, menuWriteCif)
         self.Bind(wx.EVT_MENU, self.OnWritePar, menuWritePar)
+        self.Bind(wx.EVT_MENU, self.OnWriteData, menuWriteData)
         self.Bind(wx.EVT_MENU, self.OnWriteSurf, menuWriteSurf)
         self.Bind(wx.EVT_MENU, self.OnWriteBulk, menuWriteBulk)
 
@@ -221,6 +223,16 @@ class wxCtrFitFrame(wx.Frame):
             os.chdir(dirname)
             write_par(self.nb.parameter, self.nb.param_labels, filename)
         dlg.Destroy()
+
+    def OnWriteData(self,e):
+        dirname = ''
+        dlg = wx.FileDialog(self, "Write Data and Fit Results to .dat file", dirname, ".dat", "*.dat", wx.SAVE)
+        if dlg.ShowModal() == wx.ID_OK:
+            filename = dlg.GetFilename()
+            dirname = dlg.GetDirectory()
+            os.chdir(dirname)
+            write_data(self.nb.data, filename)
+        dlg.Destroy()
         
     def OnWriteSurf(self,e):
         dirname = ''
@@ -283,6 +295,9 @@ class MainControlPanel(wx.Panel):
         self.sim_an_params = [50, 20, 0.7, 10, 0.01, 500000, False]
         self.Rod_weight = [] #List of Rod weights
         self.RMS = -1
+        self.RMS_flag = 1
+        self.RMS_flag_log = [' invalid R flag ',' R = norm. average of |log(F) - log(Fcalc)| ',' R = norm. average |F - Fcalc| ',' R = norm. Ferr weighted average of |F - Fcalc| ']
+        
         self.param_best = {}
         self.use_bulk_water = False
         self.simplex_params = [1.0,0.5,2.0,1.0,0.00005,0.001,10000]
@@ -368,87 +383,94 @@ class MainControlPanel(wx.Panel):
         self.douse_bulk_water.SetValue(False)
         wx.EVT_CHECKBOX(self, self.douse_bulk_water.GetId(), self.set_bulk_water)
 
-        #Simulated annealing parameters and options
-        wx.StaticText(self, label = 'Simulated Annealing:  ', pos=(590, 67), size=(140, 20))
+        wx.StaticText(self, label = 'R flag', pos=(550, 62), size=(140, 20))
+        self.getrmsflag = wx.TextCtrl(self, pos=(700, 60), size=(60,20))
+        self.getrmsflag.SetValue(str(self.RMS_flag))
+        self.Bind(wx.EVT_TEXT, self.setrmsflag, self.getrmsflag)
+        self.rmsflaglog = wx.TextCtrl(self, pos=(550, 85), size=(210,20), style = wx.TE_READONLY)
+        self.rmsflaglog.SetValue(self.RMS_flag_log[self.RMS_flag])
 
-        wx.StaticText(self, label = 'start Temperature:    ', pos=(550, 92), size=(140, 20))
-        self.Tstart = wx.TextCtrl(self, pos=(700,90), size=(60,20))
+        #Simulated annealing parameters and options
+        wx.StaticText(self, label = 'Simulated Annealing:  ', pos=(590, 112), size=(140, 20))
+
+        wx.StaticText(self, label = 'start Temperature:    ', pos=(550, 137), size=(140, 20))
+        self.Tstart = wx.TextCtrl(self, pos=(700,135), size=(60,20))
         self.Tstart.SetValue(str(self.sim_an_params[0]))
         self.Bind(wx.EVT_TEXT, self.setTstart, self.Tstart)
 
-        wx.StaticText(self, label = 'end Temperature:      ', pos=(550, 117), size=(140, 20))
-        self.Tend = wx.TextCtrl(self, pos=(700,115), size=(60,20))
+        wx.StaticText(self, label = 'end Temperature:      ', pos=(550, 162), size=(140, 20))
+        self.Tend = wx.TextCtrl(self, pos=(700,160), size=(60,20))
         self.Tend.SetValue(str(self.sim_an_params[1]))
         self.Bind(wx.EVT_TEXT, self.setTend, self.Tend)
 
-        wx.StaticText(self, label = 'cooling factor:       ', pos=(550, 142), size=(140, 20))
-        self.cool = wx.TextCtrl(self, pos=(700,140), size=(60,20))
+        wx.StaticText(self, label = 'cooling factor:       ', pos=(550, 187), size=(140, 20))
+        self.cool = wx.TextCtrl(self, pos=(700,185), size=(60,20))
         self.cool.SetValue(str(self.sim_an_params[2]))
         self.Bind(wx.EVT_TEXT, self.setcool, self.cool)
 
-        wx.StaticText(self, label = 'iterations per cycle: ', pos=(550, 167), size=(140, 20))
-        self.iter = wx.TextCtrl(self, pos=(700,165), size=(60,20))
+        wx.StaticText(self, label = 'iterations per cycle: ', pos=(550, 212), size=(140, 20))
+        self.iter = wx.TextCtrl(self, pos=(700,210), size=(60,20))
         self.iter.SetValue(str(self.sim_an_params[3]))
         self.Bind(wx.EVT_TEXT, self.setiter, self.iter)
 
-        wx.StaticText(self, label = 'Boltzmann weight:     ', pos=(550, 192), size=(140, 20))
-        self.Boltz = wx.TextCtrl(self, pos=(700,190), size=(60,20))
+        wx.StaticText(self, label = 'Boltzmann weight:     ', pos=(550, 237), size=(140, 20))
+        self.Boltz = wx.TextCtrl(self, pos=(700,235), size=(60,20))
         self.Boltz.SetValue(str(self.sim_an_params[5]))
         self.Bind(wx.EVT_TEXT, self.setBoltz, self.Boltz)
         
-        self.random_pars = wx.CheckBox(self, label = '  start Fit with random parameters', pos = (550, 217))
+        self.random_pars = wx.CheckBox(self, label = '  start Fit with random parameters', pos = (550, 262))
         self.random_pars.SetValue(False)
         wx.EVT_CHECKBOX(self, self.random_pars.GetId(), self.setrandom_pars)
         
-        self.plot_RMS_track = wx.CheckBox(self, label = '  plot RMS track (Fig. 3, after Fit)', pos = (550, 242))
+        self.plot_RMS_track = wx.CheckBox(self, label = '  plot R track (Fig. 3, after Fit)', pos = (550, 287))
         self.plot_RMS_track.SetValue(False)
         wx.EVT_CHECKBOX(self, self.plot_RMS_track.GetId(), self.setplotRMStrack)
 
-        self.SimAn1button = wx.Button(self, label = 'Simulated Annealing 1', pos =(550,270), size=(210,40))
+        self.SimAn1button = wx.Button(self, label = 'Simulated Annealing 1', pos =(550,310), size=(210,35))
         self.Bind(wx.EVT_BUTTON, self.OnClickSimAn1, self.SimAn1button)
 
-        self.SimAn2button = wx.Button(self, label = 'Simulated Annealing 2', pos =(550,315), size=(210,40))
+        self.SimAn2button = wx.Button(self, label = 'Simulated Annealing 2', pos =(550,350), size=(210,35))
         self.Bind(wx.EVT_BUTTON, self.OnClickSimAn2, self.SimAn2button)
 
         #### Downhill Simplex parameters and options #################################### 
-        wx.StaticText(self, label = 'Downhill Simplex:  ', pos=(590, 385), size=(140, 20))
+        wx.StaticText(self, label = 'Downhill Simplex:  ', pos=(590, 395), size=(140, 20))
 
-        wx.StaticText(self, label = 'alpha:    ', pos=(550, 417), size=(140, 20))
-        self.alpha = wx.TextCtrl(self, pos=(700,415), size=(60,20))
+        wx.StaticText(self, label = 'alpha:    ', pos=(550, 422), size=(140, 20))
+        self.alpha = wx.TextCtrl(self, pos=(700,420), size=(60,20))
         self.alpha.SetValue(str(self.simplex_params[0]))
         self.Bind(wx.EVT_TEXT, self.setalpha, self.alpha)
 
-        wx.StaticText(self, label = 'beta:    ', pos=(550, 442), size=(140, 20))
-        self.beta = wx.TextCtrl(self, pos=(700,440), size=(60,20))
+        wx.StaticText(self, label = 'beta:    ', pos=(550, 447), size=(140, 20))
+        self.beta = wx.TextCtrl(self, pos=(700,445), size=(60,20))
         self.beta.SetValue(str(self.simplex_params[1]))
         self.Bind(wx.EVT_TEXT, self.setbeta, self.beta)
 
-        wx.StaticText(self, label = 'gamma:    ', pos=(550, 467), size=(140, 20))
-        self.gamma = wx.TextCtrl(self, pos=(700,465), size=(60,20))
+        wx.StaticText(self, label = 'gamma:    ', pos=(550, 472), size=(140, 20))
+        self.gamma = wx.TextCtrl(self, pos=(700,470), size=(60,20))
         self.gamma.SetValue(str(self.simplex_params[2]))
         self.Bind(wx.EVT_TEXT, self.setgamma, self.gamma)
 
-        wx.StaticText(self, label = 'delta:    ', pos=(550, 492), size=(140, 20))
-        self.delta = wx.TextCtrl(self, pos=(700,490), size=(60,20))
+        wx.StaticText(self, label = 'delta:    ', pos=(550, 497), size=(140, 20))
+        self.delta = wx.TextCtrl(self, pos=(700,495), size=(60,20))
         self.delta.SetValue(str(self.simplex_params[3]))
         self.Bind(wx.EVT_TEXT, self.setdelta, self.delta)
 
-        wx.StaticText(self, label = 'Ftol:    ', pos=(550, 517), size=(140, 20))
-        self.ftol = wx.TextCtrl(self, pos=(700,515), size=(60,20))
+        wx.StaticText(self, label = 'Ftol:    ', pos=(550, 522), size=(140, 20))
+        self.ftol = wx.TextCtrl(self, pos=(700,520), size=(60,20))
         self.ftol.SetValue(str(self.simplex_params[4]))
         self.Bind(wx.EVT_TEXT, self.setftol, self.ftol)
 
-        wx.StaticText(self, label = 'Xtol:    ', pos=(550, 542), size=(140, 20))
-        self.xtol = wx.TextCtrl(self, pos=(700,540), size=(60,20))
+        wx.StaticText(self, label = 'Xtol:    ', pos=(550, 547), size=(140, 20))
+        self.xtol = wx.TextCtrl(self, pos=(700,545), size=(60,20))
         self.xtol.SetValue(str(self.simplex_params[5]))
         self.Bind(wx.EVT_TEXT, self.setxtol, self.xtol)
 
-        wx.StaticText(self, label = 'maxiter:    ', pos=(550, 567), size=(140, 20))
-        self.maxiter = wx.TextCtrl(self, pos=(700,565), size=(60,20))
+        wx.StaticText(self, label = 'maxiter:    ', pos=(550, 572), size=(140, 20))
+        self.maxiter = wx.TextCtrl(self, pos=(700,570), size=(60,20))
         self.maxiter.SetValue(str(self.simplex_params[6]))
         self.Bind(wx.EVT_TEXT, self.setmaxiter, self.maxiter)
 
-        self.Simplexbutton = wx.Button(self, label = 'Downhill Simplex', pos =(550,595), size=(210,40))
+        self.Simplexbutton = wx.Button(self, label = 'Downhill Simplex', pos =(550,600), size=(210,35))
         self.Bind(wx.EVT_BUTTON, self.OnClickSimplex, self.Simplexbutton)
 
                                           
@@ -483,7 +505,8 @@ class MainControlPanel(wx.Panel):
 
     def OnClick(self,e):
         self.nb.data, self.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
-                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.use_BVC, self.BVclusters)
+                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.use_BVC,\
+                               self.BVclusters, self.RMS_flag)
         plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough,\
                                                  self.doplotwater, self.RMS)
 
@@ -503,6 +526,19 @@ class MainControlPanel(wx.Panel):
             print '\n'
     ################################# Fitting options event functions #########################################
     def set_bulk_water(self,e): self.use_bulk_water = self.douse_bulk_water.GetValue()
+
+    def setrmsflag(self,event):
+        if (event.GetString() == '') or (event.GetString() == '-'):
+            None
+        else:
+            a = int(event.GetString())
+            if a >0 and a < 4:
+                self.RMS_flag = a
+                self.rmsflaglog.SetValue(self.RMS_flag_log[a])
+            else:
+                print 'R flag must be 1, 2, or 3!'
+                self.rmsflaglog.SetValue(self.RMS_flag_log[0])
+            
                                           
     ################################# Simulated Annealing options event functions #########################################
     def setTstart(self,event):
@@ -565,7 +601,7 @@ class MainControlPanel(wx.Panel):
             self.RMS = -1
             self.nb.data, self.param_best, self.RMS = simulated_annealing01(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
                     database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies,\
-                    self.use_bulk_water, self.use_BVC, self.BVclusters)
+                    self.use_bulk_water, self.use_BVC, self.BVclusters, self.RMS_flag)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
@@ -581,7 +617,7 @@ class MainControlPanel(wx.Panel):
             self.RMS = -1
             self.nb.data, self.param_best, self.RMS = simulated_annealing02(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
                     database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies,\
-                    self.use_bulk_water, self.use_BVC, self.BVclusters)
+                    self.use_bulk_water, self.use_BVC, self.BVclusters, self.RMS_flag)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
@@ -667,7 +703,7 @@ class MainControlPanel(wx.Panel):
             self.RMS = -1
             self.nb.data, self.param_best, self.RMS = simplex(self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, self.nb.surface, \
                                         self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.simplex_params, \
-                                        self.use_BVC, self.BVclusters)
+                                        self.use_BVC, self.BVclusters, self.RMS_flag)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
@@ -742,7 +778,8 @@ class ParameterPanel(wx.ScrolledWindow):
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
         self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
                                self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
-                                                              self.nb.MainControlPage.use_bulk_water)
+                                                              self.nb.MainControlPage.use_bulk_water, self.nb.MainControlPage.use_BVC, self.nb.MainControlPage.BVclusters,\
+                                                              self.nb.MainControlPage.RMS_flag)
         plot_rods(self.nb.data, self.nb.MainControlPage.plotdims, self.nb.MainControlPage.doplotbulk, self.nb.MainControlPage.doplotsurf, self.nb.MainControlPage.doplotrough,\
                                                  self.nb.MainControlPage.doplotwater, self.nb.MainControlPage.RMS)
         plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water)
@@ -762,7 +799,8 @@ class ParameterPanel(wx.ScrolledWindow):
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
         self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
                                self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
-                                                              self.nb.MainControlPage.use_bulk_water)
+                                                              self.nb.MainControlPage.use_bulk_water, self.nb.MainControlPage.use_BVC, self.nb.MainControlPage.BVclusters,\
+                                                              self.nb.MainControlPage.RMS_flag)
         plot_rods(self.nb.data, self.nb.MainControlPage.plotdims, self.nb.MainControlPage.doplotbulk, self.nb.MainControlPage.doplotsurf, self.nb.MainControlPage.doplotrough,\
                                                  self.nb.MainControlPage.doplotwater, self.nb.MainControlPage.RMS)
         plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water)
