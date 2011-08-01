@@ -15,8 +15,8 @@ import copy
 import numpy as num
 from matplotlib import pyplot
 
-from  mpcutils.mathutil import LinReg
-
+from scipy.stats import linregress
+import time
 #######################################################################
 def linear_background(data,nbgr=0):
     """
@@ -45,9 +45,8 @@ def linear_background(data,nbgr=0):
     xlin = num.append(xlin,num.arange(ndat-nbgr,ndat,1))
     ylin = num.array(data[0:nbgr],dtype=float)
     ylin = num.append(ylin,data[ndat-nbgr:])
-    lr   = LinReg(xlin,ylin,plot=False)
-    linbgr = lr.calc_y(num.arange(ndat))
-    return linbgr
+    m, b, rval, pval, stderr = linregress(xlin, ylin)
+    return m * num.arange(ndat) + b
 
 #######################################################################
 def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
@@ -170,11 +169,11 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     #npoly = num.min(int(6*width)+1, 2*int(ndat/2.)+1)
     #pdelx = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
     if width <= 1:
-        npoly = num.min(11, 2*int(ndat/2)+1)
+        npoly = min(11, 2*int(ndat/2)+1)
     else:
-        npoly = num.min(10*int(width/2)+1, 2*int(ndat/2)+1)
+        npoly = min(10*int(width/2)+1, 2*int(ndat/2)+1)
     #
-    pdelx   = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
+    pdelx   = num.array(range(npoly),dtype=float) - (npoly-1.)/2.
     """
     pdelx = range(-npoly,-1)
     pdelx.append(1)
@@ -198,10 +197,11 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     n = (npoly-1)/2
     for j in range(ndat):
         # data and polynomial indicies
-        dlidx = num.max((0,j-n))
-        dridx = num.min((ndat,j+n+1))
-        plidx = num.max((0,n-j))
-        pridx = num.min((npoly,ndat-j+n))
+        dlidx = max((0,j-n))
+        dridx = min((ndat,j+n+1))
+        plidx = max((0,n-j))
+        pridx = min((npoly,ndat-j+n))
+        delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx])
         if tangent:
             # calc avg val to l and r of center
             # and use to calc avg slope
@@ -220,12 +220,9 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
                 ryave = num.sum(y[j+1:dridx])/nr
                 rxave = num.sum(num.arange(j+1,dridx))
             slope = (ryave - lyave)/ num.abs(rxave - lxave)
-            line = slope*num.arange(-1*nl,nr+1) 
-            #print line
-        else:
-            line = num.zeros(len(y[dlidx:dridx]))
-        delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx]+line) 
-        bgr[j] = y[j] + num.min((0,num.min(delta)))
+            delta = delta - slope*num.arange(-1*nl,nr+1)
+
+        bgr[j] = min(0, delta.min())
         # debug arrays
         if debug:
             p.append((y[j] + poly[plidx:pridx] + line))
@@ -236,8 +233,8 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     # come up from the bottom, they will always tend to
     # underfit.  So having an additional linear part
     # helps to limit the residual. 
-    linbgr2 = linear_background(y-bgr,nbgr=nbgr)
-    bgr = bgr + linbgr2
+    linbgr2 = linear_background(-bgr,nbgr=nbgr)
+    bgr = bgr + y +  linbgr2
 
     # Compression
     if compress > 1:
@@ -253,6 +250,23 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
         return (bgr,p,d,linbgr)
     else:
         return bgr
+
+
+############################################################################
+def show_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1):
+    """
+    make a non-fancy background plot
+    """
+    #
+    t0 = time.time()
+    bgr = background(data,nbgr=nbgr,width=width,pow=pow,
+                     tangent=tangent,compress=compress,debug=False)
+    print 'time to calc background = %.5f sec' % (time.time() - t0)
+    pyplot.plot(data)
+    pyplot.plot(data-bgr, 'r')
+    pyplot.plot(bgr, 'k-')
+    pyplot.show()
+        
 
 ############################################################################
 def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
@@ -316,6 +330,7 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
     mi,ma = pyplot.ylim()
     mi = num.max((mi,-dma))
     pyplot.ylim(mi,1.1*dma)
+    pyplot.show()
     
 ############################################################
 def compress_array(array, compress):
@@ -376,19 +391,20 @@ def expand_array(array, expand, sample=0, rem=0):
     
 ################################################################################
 ################################################################################
+
+def gauss(x, cen, sigma):
+    "simple gaussian:   gauss = exp( (x-cen)**2 / (2 * sig**2) ) "
+    return  num.exp(-(x-cen)**2 /(2*sigma**2))
+
 if __name__ == '__main__':
     from matplotlib import pyplot
-    from mpcutils.mathutil import gauss
     # generate a curve
-    npts = 20
-    x   = num.array(range(npts))
-    g1  = gauss(x, npts/2., 5., 300)
-    g2  = gauss(x, npts/2., 30., 100)
-    r = num.random.normal(size=npts)
-    r = 10.*r/num.max(r)
-    y = (1.0*r+ 10.*x) + g1 + g2
-    # plot bgr
-    width=10
-    plot_bgr(y,nbgr=3,width=width,pow=1,tangent=False,
-             compress=1,debug=True)
+    npts = 2000
+    x  = 1.0 * num.arange(npts)
+    g1 = 40 * gauss(x, 0.6*npts, 8.)
+    g2 = 20 * gauss(x, 0.5*npts,  270)
+    r  = 2 * num.random.normal(size=npts)
+    y  = r + x/25 + g1 + g2
+
+    show_bgr(y, nbgr=3, width=100, pow=1, tangent=False, compress=1)
     
