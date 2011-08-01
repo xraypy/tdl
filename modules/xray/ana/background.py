@@ -197,10 +197,10 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     n = (npoly-1)/2
     for j in range(ndat):
         # data and polynomial indicies
-        dlidx = max((0,j-n))
-        dridx = min((ndat,j+n+1))
-        plidx = max((0,n-j))
-        pridx = min((npoly,ndat-j+n))
+        dlidx = max(0,j-n)
+        dridx = min(ndat,j+n+1)
+        plidx = max(0,n-j)
+        pridx = min(npoly,ndat-j+n)
         delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx])
         if tangent:
             # calc avg val to l and r of center
