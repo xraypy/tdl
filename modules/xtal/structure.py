@@ -19,21 +19,20 @@ Todo:
 
 import numpy as num
 import sys
+import sets
 import types
-
+import string
 import lattice
 
-# try importing the aussie pycif module (CifFile).
+# try importing the aussie pycif module
 # if it wont load we should have our own simple backup
 # for reading/writing structures as cif files
 try:
+    
     import CifFile
     import StarFile
-    import yapps3_compiled_rt
-    import YappsStarParser_1_0
-    import YappsStarParser_1_1
 except:
-    pass
+    print "No Pycif module available"
 
 ##########################################################################
 class UnitCell:
@@ -48,59 +47,99 @@ class UnitCell:
         self.assym = []
         self.dw = []
         self.lat = None
+        self.PositionGenerator = []
         pass
     
-    def read_cif(name): #name is the filename.cif that will be read
-        self = CifFile.ReadCif(name) #change self to cif
-        self = self['global']
-        atm_pos = self.GetLoop("_atom_site_label")
-        num_cols = len (atm_pos)
-        test, num_atoms = 0, 0
-        while (test == 0): # This tells me the number of elements 
-            try:                # to which I will assign coordinates
-                holder = atm.pos[num_atoms]
-                num_atoms = num_atoms + 1 ### Edit this out and replace
-                                                                         ### with Toms code
-            except (RuntimeError, TypeError, NameError):
-                pass
-        atm_posd = dict(atm_pos) #This converts the CIF object into
-        counter = 0                             #a dictionary for ease 
-
-        #While loops generate the fractional position of the atoms below.
-        atm_names = [0]
-        while (counter < num_atoms): #We get a list of the atm names
-            atm_names[counter] = atm_posd['_atom_site_label'][counter]
-            counter = counter + 1
+    def read_cif(self,fname):
+        cf = CifFile.ReadCif(fname)
+        #Converts CifFile to CifBlock which is readable
+        cb = cf['global']
+        positions = cb.GetLoop('_atom_site_label')
+        positions = positions.values()
+        atoms = positions[0]
+        num_atoms = len(atoms)
+        x = positions[1]
+        y = positions[2]
+        z = positions[3]
         counter = 0
-        atm_xfrac = [0]
-        while (counter < num_atoms): #We get a list of atm x coords
-            atm_xfrac[counter] = atm_posd['_atom_site_fract_x'][counter]
+        n = 0
+        assym_unit = []
+        elem_positions = {}
+        
+        while (counter < num_atoms): 
+            elem_positions = {'name':atoms[n], 'x':x[n], 'y':y[n], 'z':z[n]}
+            assym_unit.append(elem_positions)
             counter = counter + 1
-        counter = 0
-        atm_yfrac = [0]
-        while (counter < num_atoms): #We get a list of atm y coords
-            atm_yfrac[counter] = atm_posd['_atom_site_frac_y'][counter]
-            counter = counter + 1
-        counter = 0
-        atm_zfrac = [0]
-        while (counter < num_atoms):
-            atm_zfrac[counter] = atm_posd['_atom_site_frac_z'][counter]
-            counter = counter + 1
+            n = n + 1
 
-        angle_alpha = self['_cell_angle_alpha']
-        angle_beta = self['_cell_angle_beta']
-        angle_gamma = self['_cell_angle_gamma']
+        self.assym_unit = assym_unit
 
-        length_a = self['_cell_length_a']
-        length_b = self['_cell_length_b']
-        length_c = self['_cell_length_c']
+        a = cb['_cell_length_a']
+        self.a = a
+        b = cb['_cell_length_b']
+        self.b = b
+        c = cb['_cell_length_c']
+        self.c = c
+
+        alpha = cb['_cell_angle_alpha']
+        self.alpha = alpha
+        beta = cb['_cell_angle_beta']
+        self.beta = beta
+        gamma = cb['_cell_angle_gamma']
+        self.gamma = gamma
+
+         # store values
+        self.lat = lattice.Lattice(a,b,c,alpha,beta,gamma)
+        print ""
+        print ""
+        print "Lattice Information is as follows:"
+        print self.lat
+        
+        sym_operations = cb.GetLoop('_space_group_symop_operation_xyz')
+        sym_values = sym_operations.values()
+        # This converts all the operations into a list of strings
+        sym_values = sym_values[0] 
+
+        num_opers = len(sym_values)
+        p = PositionGenerator()
+
+        dict_length = len(assym_unit)
+        counter = 0
+        position = 0
+        atom_name = 1
+        
+        while (counter < dict_length):
+            print "Fractional coordinates for ", atom_name
+            while (position < num_opers):
+                split = sym_values[position]
+                xyz = string.split(split, ',')
+                x=xyz[0]
+                y=xyz[1]
+                z=xyz[2]
+                matrix = p._make_seitz_matrix(x,y,z)
+                p.ops.append(matrix)
+                position = position + 1
+            vecs = p.copy(0.11,0.5,0.5,reduce=True,rem_dups=True)
+            for v in vecs: print v   
+            counter = counter + 1
+            position = 0
+            atom_name = atom_name + 1
+
+       #Store positions
+        self.symm = PositionGenerator()
+        # loop through and add sym ops to self.symm
         
     def write_cif(self):
         pass
-
+   
     def generate_p1(self,na=1,nb=1,nc=1):
-        pass
+        cell = self.lattice(a,b,c,alpha,beta,gamma) 
+        # cell is a new lattice instance
 
+        # Now generate positions
+
+        
+            
     def transform(self):
         """
         this computes/returns a new UnitCell
@@ -112,14 +151,12 @@ class UnitCell:
         This will be a fun code to work on!!!
         """
         pass
-
     def bond_valence(self):
         """
         compute bond valence sums (and coordination chem ie
         coordation sphere, bond lenghts and angles)
         """
         pass
-
     def visualize(self,na=1,nb=1,nc=1):
         """
         output a jmol script to view the structure
@@ -311,6 +348,12 @@ def _test1():
     p.add_op(sym=sym3,shift=shift1)
     p.add_op(sym=sym4,shift=shift1)
     return p
+
+def test2():
+    uc = UnictCell()
+    uc.read_cif('pyrite.cif')
+    p1_coords = uc.generate_p1()
+    print p1_coords
 
 ##########################################################################
 ##########################################################################
