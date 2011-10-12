@@ -2,6 +2,8 @@ from ctrfitcalcs import *
 from simplex import *
 import wx
 import os
+from pisurf_resonant import ResonantDataPanel
+from pisurf_resonant import read_RSD, read_f1f2, RASD_Fourier
 
 """
 Functions and classes used to build the pi-surf GUI
@@ -17,6 +19,7 @@ class wxCtrFitFrame(wx.Frame):
         self.filename4 = ''
         self.filename5 = ''
         self.filename6 = ''
+        self.filename7 = ''
         
         # A status bar
         self.CreateStatusBar()
@@ -38,12 +41,18 @@ class wxCtrFitFrame(wx.Frame):
         menuWritePar = writemenu.Append(wx.ID_ANY, "&Write Parameter file", " Write parameters to a .par file")
         menuWriteData = writemenu.Append(wx.ID_ANY, "&Write Data file", " Write data and fit results to a .dat file")
         menuWriteSurf = writemenu.Append(wx.ID_ANY, "&Write Surface file", " Write surface in fractional coordinates to a .sur file")
-        menuWriteBulk = writemenu.Append(wx.ID_ANY, "&Write Bulk file", " Write bulk structure to a .bul file")
-      
+        #menuWriteBulk = writemenu.Append(wx.ID_ANY, "&Write Bulk file", " Write bulk structure to a .bul file")
+
+        #Setting up the resonant files menu
+        ridsmenu = wx.Menu()
+        menuReadf1f2 = ridsmenu.Append(wx.ID_ANY, "Read .f1f2 file", " Read in f1f2 Data ")
+        menuReadridsdata = ridsmenu.Append(wx.ID_ANY, "Read resonant data files", " Specify the file containing the names of all the .rsd files to be read ")
+              
         # Creating the menubar.
         menuBar = wx.MenuBar()
         menuBar.Append(filemenu,"&Read Files") # Adding the "filemenu" to the MenuBar
         menuBar.Append(writemenu,"&Write Files")
+        menuBar.Append(ridsmenu,"&RIDS Files")
         self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
         
         # define events
@@ -59,7 +68,10 @@ class wxCtrFitFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnWritePar, menuWritePar)
         self.Bind(wx.EVT_MENU, self.OnWriteData, menuWriteData)
         self.Bind(wx.EVT_MENU, self.OnWriteSurf, menuWriteSurf)
-        self.Bind(wx.EVT_MENU, self.OnWriteBulk, menuWriteBulk)
+        #self.Bind(wx.EVT_MENU, self.OnWriteBulk, menuWriteBulk)
+
+        self.Bind(wx.EVT_MENU, self.OnReadf1f2, menuReadf1f2)
+        self.Bind(wx.EVT_MENU, self.OnReadRids, menuReadridsdata)
 
         self.nb = CtrNotebook(self)
 
@@ -72,26 +84,33 @@ class wxCtrFitFrame(wx.Frame):
     def OnReadData(self,e):
         """ Read in data"""
         dirname1 = ''
-        dlg = wx.FileDialog(self, "Choose a data file", dirname1, "", "*.*", wx.OPEN)
+        dlg = wx.FileDialog(self, "Choose a data file", dirname1, ".dat", "*.dat", wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             self.filename1 = dlg.GetFilename()
             dirname1 = dlg.GetDirectory()
             self.nb.data = read_data(dirname1+'/'+self.filename1)
+            self.nb.MainControlPage.Rdata = calc_Rdata(self.nb.data)
             self.nb.MainControlPage.datafile.SetValue(self.filename1)
             self.nb.MainControlPage.Rod_weight = []
             self.nb.MainControlPage.rodweight = []
+            self.nb.MainControlPage.rmsflaglog.SetValue(self.nb.MainControlPage.RMS_flag_log[self.nb.MainControlPage.RMS_flag]+self.nb.MainControlPage.Rdata[self.nb.MainControlPage.RMS_flag])
+            if self.nb.bulk != []:
+                for x in self.nb.data:
+                    x.calcFbulk(self.nb.cell, self.nb.bulk, self.nb.g_inv, database)
+   
             for i in range(len(self.nb.data)):
                 wx.StaticText(self.nb.MainControlPage, label = (str(int(self.nb.data[i].H))+' '+str(int(self.nb.data[i].K))+' L'), pos=(350,25*i+67), size=(40,20))
                 self.nb.MainControlPage.rodweight.append(wx.TextCtrl(self.nb.MainControlPage,1000+i, pos=(400,25*i+65), size=(30,20)))
                 self.nb.MainControlPage.rodweight[i].SetValue('1')
                 self.nb.MainControlPage.Rod_weight.append(1)
                 self.Bind(wx.EVT_TEXT, self.nb.MainControlPage.setrodweight, self.nb.MainControlPage.rodweight[i])
+            self.nb.SetSelection(0)
         dlg.Destroy()
 
     def OnReadBulk(self,e):
         """ Read in bulk file"""
         dirname2 = ''
-        dlg = wx.FileDialog(self, "Choose a bulk file", dirname2, "", "*.*", wx.OPEN)
+        dlg = wx.FileDialog(self, "Choose a bulk file", dirname2, ".bul", "*.bul", wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             self.filename2 = dlg.GetFilename()
             dirname2 = dlg.GetDirectory()
@@ -107,75 +126,84 @@ class wxCtrFitFrame(wx.Frame):
             self.nb.MainControlPage.bulkfile.AppendText('\ndelta2 = '+str(round(self.nb.cell[7],5)))
             self.nb.MainControlPage.bulkfile.AppendText('\nNLayers = '+str(self.nb.NLayers))
             self.nb.g_inv = calc_g_inv(self.nb.cell)
+            self.nb.ResonantDataPage.allrasd.cell = self.nb.cell
+            self.nb.ResonantDataPage.allrasd.g_inv = self.nb.g_inv
+            if self.nb.data != []:
+                for x in self.nb.data:
+                    x.calcFbulk(self.nb.cell, self.nb.bulk, self.nb.g_inv, database)                
+            self.nb.SetSelection(0)
         dlg.Destroy()
 
     def OnReadSurface(self,e):
         """ Read in surface file"""
         dirname3 = ''
-        dlg = wx.FileDialog(self, "Choose a surface file", dirname3, "", "*.*", wx.OPEN)
+        dlg = wx.FileDialog(self, "Choose a surface file", dirname3, ".sur", "*.sur", wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             self.filename3 = dlg.GetFilename()
             dirname3 = dlg.GetDirectory()
             self.nb.surface, self.nb.parameter_usage = read_surface(dirname3+'/'+self.filename3)
             self.nb.MainControlPage.surfacefile.SetValue(self.filename3)
+            self.nb.SetSelection(0)
         dlg.Destroy()
 
     def OnReadParameter(self,e):
         """ Read in parameter file"""
         dirname4 = ''
-        dlg = wx.FileDialog(self, "Choose a parameter file", dirname4, "", "*.*", wx.OPEN)
+        dlg = wx.FileDialog(self, "Choose a parameter file", dirname4, ".par", "*.par", wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             self.filename4 = dlg.GetFilename()
             dirname4 = dlg.GetDirectory()
             self.nb.parameter, self.nb.param_labels = read_parameters(dirname4+'/'+self.filename4)
             self.nb.MainControlPage.parameterfile.SetValue(self.filename4)
            
-            self.nb.DeletePage(1)
+            self.nb.DeletePage(2)
             self.nb.ParameterPage = ParameterPanel(self.nb)
             self.nb.AddPage(self.nb.ParameterPage, " Parameters ")
             
                         
             for i in range(len(self.nb.param_labels)):
 
-                control0_tmp = wx.StaticText(self.nb.ParameterPage, label = self.nb.param_labels[i], pos=(20, 23*(i+1)+45), size=(120, 20))
+                control0_tmp = wx.StaticText(self.nb.ParameterPage, label = self.nb.param_labels[i], pos=(20, 23*(i+1)+25), size=(120, 20))
                 self.nb.ParameterPage.control0.append(control0_tmp)
                 
-                control1_tmp = wx.TextCtrl(self.nb.ParameterPage,2000+i, pos=(150, 23*(i+1)+40), size=(120,20))
+                control1_tmp = wx.TextCtrl(self.nb.ParameterPage,2000+i, pos=(150, 23*(i+1)+20), size=(120,20))
                 self.nb.ParameterPage.control1.append(control1_tmp)
                 self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparvalue, self.nb.ParameterPage.control1[i])
                 
-                control2_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+len(self.nb.param_labels), pos=(280, 23*(i+1)+40), size=(80,20)))
+                control2_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+len(self.nb.param_labels), pos=(280, 23*(i+1)+20), size=(80,20)))
                 self.nb.ParameterPage.control2.append(control2_tmp)
                 self.nb.ParameterPage.control2[i].SetValue(str(self.nb.parameter[self.nb.param_labels[i]][1]))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparmin, self.nb.ParameterPage.control2[i])
                 
-                control3_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+2*len(self.nb.param_labels), pos=(370, 23*(i+1)+40), size=(80,20)))
+                control3_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+2*len(self.nb.param_labels), pos=(370, 23*(i+1)+20), size=(80,20)))
                 self.nb.ParameterPage.control3.append(control3_tmp)
                 self.nb.ParameterPage.control3[i].SetValue(str(self.nb.parameter[self.nb.param_labels[i]][2]))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparmax, self.nb.ParameterPage.control3[i])
                                 
-                control4_tmp = (wx.CheckBox(self.nb.ParameterPage,2000+i+3*len(self.nb.param_labels), label = '', pos = (460, 23*(i+1)+45)))
+                control4_tmp = (wx.CheckBox(self.nb.ParameterPage,2000+i+3*len(self.nb.param_labels), label = '', pos = (460, 23*(i+1)+25)))
                 self.nb.ParameterPage.control4.append(control4_tmp)
                 self.nb.ParameterPage.control4[i].SetValue(self.nb.parameter[self.nb.param_labels[i]][3])
                 wx.EVT_CHECKBOX(self.nb.ParameterPage, self.nb.ParameterPage.control4[i].GetId(), self.nb.ParameterPage.editparstate)
 
-                control5_tmp = wx.Button(self.nb.ParameterPage, 2000+i+4*len(self.nb.param_labels), label = '<', pos = (520, 23*(i+1)+40), size = (20,20))
+                control5_tmp = wx.Button(self.nb.ParameterPage, 2000+i+4*len(self.nb.param_labels), label = '<', pos = (520, 23*(i+1)+20), size = (20,20))
                 self.nb.ParameterPage.control5.append(control5_tmp)
                 self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleminus , self.nb.ParameterPage.control5[i])
 
-                control6_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+5*len(self.nb.param_labels), pos=(550, 23*(i+1)+40), size=(50,20)))
+                control6_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+5*len(self.nb.param_labels), pos=(550, 23*(i+1)+20), size=(50,20)))
                 self.nb.ParameterPage.control6.append(control6_tmp)
                 self.nb.ParameterPage.control6[i].SetValue('0')
                 self.nb.ParameterPage.togglesteps.append(0)
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.togglestep, self.nb.ParameterPage.control6[i])
 
-                control7_tmp = wx.Button(self.nb.ParameterPage,2000+i+6*len(self.nb.param_labels), label = '>', pos = (610, 23*(i+1)+40), size = (20,20))
+                control7_tmp = wx.Button(self.nb.ParameterPage,2000+i+6*len(self.nb.param_labels), label = '>', pos = (610, 23*(i+1)+20), size = (20,20))
                 self.nb.ParameterPage.control7.append(control7_tmp)
                 self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleplus , self.nb.ParameterPage.control7[i])
 
             self.nb.ParameterPage.SetScrollbars(0, 10, 0, int((len(self.nb.param_labels)+4)*2.3)+1)
+            self.nb.SetSelection(2)
         dlg.Destroy()
+        
 
     def OnReadRigidbody(self,e):
         """ Read in rigid body file"""
@@ -211,7 +239,7 @@ class wxCtrFitFrame(wx.Frame):
             filename = dlg.GetFilename()
             dirname = dlg.GetDirectory()
             os.chdir(dirname)
-            write_cif(self.nb.cell, self.nb.surface, self.nb.parameter,self.nb.parameter_usage, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water, filename)
+            write_cif(self.nb.cell, self.nb.surface, self.nb.parameter,self.nb.parameter_usage, self.nb.rigid_bodies, self.nb.MainControlPage.UBW_flag, filename)
         dlg.Destroy()
 
     def OnWritePar(self,e):
@@ -241,27 +269,93 @@ class wxCtrFitFrame(wx.Frame):
             filename = dlg.GetFilename()
             dirname = dlg.GetDirectory()
             os.chdir(dirname)
-            write_surface(self.nb.cell, self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water, filename)
+            write_surface(self.nb.cell, self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.nb.MainControlPage.UBW_flag, filename)
+        dlg.Destroy()
+
+    def OnReadf1f2(self,e):
+        dirname = ''
+        dlg = wx.FileDialog(self, "Read f1f2 data from .f1f2 file", dirname, ".f1f2", "*.f1f2", wx.OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.filename7 = dlg.GetFilename()
+            dirname = dlg.GetDirectory()
+            self.nb.ResonantDataPage.allrasd = read_f1f2(self.nb.ResonantDataPage.allrasd,dirname+'/'+self.filename7)
+            self.nb.ResonantDataPage.f1f2file.SetValue(self.filename7)
+            self.nb.SetSelection(1)
         dlg.Destroy()
         
-    def OnWriteBulk(self,e):
+    def OnReadRids(self,e):
         dirname = ''
-        dlg = wx.FileDialog(self, "Write bulk structure to .bul file", dirname, ".bul", "*.bul", wx.SAVE)
+        dlg = wx.FileDialog(self, "Specify the file with a list of *.rsd filenames", dirname, "","*.*", wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetFilename()
             dirname = dlg.GetDirectory()
-            os.chdir(dirname)
-            write_bulk(self.nb.bulk, self.nb.parameter,self.nb.MainControlPage.use_bulk_water, filename)
+            f = file(dirname+'/'+filename,'r')
+            rasddata = f.readlines()
+            f.close()
+            self.nb.ResonantDataPage.allrasd = read_RSD(self.nb.ResonantDataPage.allrasd, self.nb.bulk, self.nb.surface, self.nb.parameter,\
+                                                        self.nb.parameter_usage, self.nb.rigid_bodies, database, rasddata,\
+                                                        self.nb.MainControlPage.UBW_flag, dirname, self)
+            n = len(self.nb.ResonantDataPage.allrasd.list)
+            for i in range(n):
+                self.nb.ResonantDataPage.allrasd.list[i] = RASD_Fourier(self.nb.ResonantDataPage.allrasd, i)
+
+                AR = self.nb.ResonantDataPage.allrasd.list[i].AR
+                PR = self.nb.ResonantDataPage.allrasd.list[i].PR
+
+                if AR < 0 and PR < 0 and PR > -0.5:
+                    PR = PR + 0.5
+                    AR = -AR
+                elif AR > 0 and PR < 0:
+                    PR = PR + 1
+                elif AR < 0 and PR > 0.5:
+                    AR = -AR
+                    PR = PR -0.5
+                elif AR < 0 and PR < 0.5 and PR > 0:
+                    AR = -AR
+                    PR = PR +0.5
+                if PR > 1: PR = PR -1
+                self.nb.ResonantDataPage.allrasd.list[i].AR = AR
+                self.nb.ResonantDataPage.allrasd.list[i].PR = PR
+                    
+                
+                control0_tmp = wx.Button(self.nb.ResonantDataPage, 3000+i, label = self.nb.ResonantDataPage.allrasd.list[i].file, pos = (290, 23*(i+1)+20), size = (120,20))
+                self.nb.ResonantDataPage.datacontrol0.append(control0_tmp)
+                self.Bind(wx.EVT_BUTTON, self.nb.ResonantDataPage.ClickDataButton , self.nb.ResonantDataPage.datacontrol0[i])
+
+                control1_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+n, pos=(420, 23*(i+1)+20), size=(60,20), style = wx.TE_READONLY)
+                self.nb.ResonantDataPage.datacontrol1.append(control1_tmp)
+                self.nb.ResonantDataPage.datacontrol1[i].SetValue(str(round(AR, 3)))
+
+                control2_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+2*n, pos=(490, 23*(i+1)+20), size=(60,20))
+                self.nb.ResonantDataPage.datacontrol2.append(control2_tmp)
+                self.nb.ResonantDataPage.datacontrol2[i].SetValue(str(round(PR, 3)))
+                self.Bind(wx.EVT_TEXT, self.nb.ResonantDataPage.editPR, self.nb.ResonantDataPage.datacontrol2[i])
+
+                control4_tmp = wx.CheckBox(self.nb.ResonantDataPage,3000+i+4*n, label = '', pos = (560, 23*(i+1)+25))
+                self.nb.ResonantDataPage.datacontrol4.append(control4_tmp)
+                self.nb.ResonantDataPage.datacontrol4[i].SetValue(False)
+                wx.EVT_CHECKBOX(self.nb.ResonantDataPage, self.nb.ResonantDataPage.datacontrol4[i].GetId(), self.nb.ResonantDataPage.editUIF)
+
+                control5_tmp = wx.CheckBox(self.nb.ResonantDataPage,3000+i+5*n, label = '', pos = (590, 23*(i+1)+25))
+                self.nb.ResonantDataPage.datacontrol5.append(control5_tmp)
+                self.nb.ResonantDataPage.datacontrol5[i].SetValue(False)
+                wx.EVT_CHECKBOX(self.nb.ResonantDataPage, self.nb.ResonantDataPage.datacontrol5[i].GetId(), self.nb.ResonantDataPage.editUIR)
+
+                control6_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+6*n, pos=(620, 23*(i+1)+20), size=(60,20), style = wx.TE_READONLY)
+                self.nb.ResonantDataPage.datacontrol6.append(control6_tmp)
+                self.nb.ResonantDataPage.datacontrol6[i].SetValue('')
+
+                control7_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+7*n, pos=(690, 23*(i+1)+20), size=(60,20), style = wx.TE_READONLY)
+                self.nb.ResonantDataPage.datacontrol7.append(control7_tmp)
+                self.nb.ResonantDataPage.datacontrol7[i].SetValue('')
+
+            self.nb.ResonantDataPage.SetScrollbars(0, 10, 0, int((n+4)*2.3)+1)
+            self.nb.SetSelection(1)
         dlg.Destroy()
 ############################################################################################################
 class CtrNotebook(wx.Notebook):
     def __init__(self, parent):
         wx.Notebook.__init__(self,parent)
-        self.MainControlPage = MainControlPanel(self)
-        self.ParameterPage = ParameterPanel(self)
-
-        self.AddPage(self.MainControlPage, " Main Controls " )
-        self.AddPage(self.ParameterPage, " Parameters ")
 
         self.parameter_usage = []
         self.surface = []
@@ -274,6 +368,14 @@ class CtrNotebook(wx.Notebook):
 
         self.parameter = {}
         self.param_labels = []
+
+        self.MainControlPage = MainControlPanel(self)
+        self.ParameterPage = ParameterPanel(self)
+        self.ResonantDataPage = ResonantDataPanel(self)
+
+        self.AddPage(self.MainControlPage, " Main Controls " )
+        self.AddPage(self.ResonantDataPage, "Resonant Data ")
+        self.AddPage(self.ParameterPage, " Parameters ")
         
 
         
@@ -295,11 +397,13 @@ class MainControlPanel(wx.Panel):
         self.sim_an_params = [50, 20, 0.7, 10, 0.01, 500000, False]
         self.Rod_weight = [] #List of Rod weights
         self.RMS = -1
+        self.Rdata = ['','','','','']
         self.RMS_flag = 1
-        self.RMS_flag_log = [' invalid R flag ',' R = norm. average of |log(F) - log(Fcalc)| ',' R = norm. average |F - Fcalc| ',' R = norm. Ferr weighted average of |F - Fcalc| ']
+        self.RMS_flag_log = [' invalid R flag ',' R = norm. average of |log(F) - log(Fcalc)|, Rdata = ',' R = norm. average |F - Fcalc|, Rdata = ',' R = norm. Ferr weighted average of |F - Fcalc|, Rdata = ', ' R = norm. chi**2, Rdata = ']
+
+        self.UBW_flag = False
         
         self.param_best = {}
-        self.use_bulk_water = False
         self.simplex_params = [1.0,0.5,2.0,1.0,0.00005,0.001,10000]
 
         self.nb = self.GetParent()
@@ -388,7 +492,7 @@ class MainControlPanel(wx.Panel):
         self.getrmsflag.SetValue(str(self.RMS_flag))
         self.Bind(wx.EVT_TEXT, self.setrmsflag, self.getrmsflag)
         self.rmsflaglog = wx.TextCtrl(self, pos=(550, 85), size=(210,20), style = wx.TE_READONLY)
-        self.rmsflaglog.SetValue(self.RMS_flag_log[self.RMS_flag])
+        self.rmsflaglog.SetValue(self.RMS_flag_log[self.RMS_flag]+self.Rdata[self.RMS_flag])
 
         #Simulated annealing parameters and options
         wx.StaticText(self, label = 'Simulated Annealing:  ', pos=(590, 112), size=(140, 20))
@@ -504,20 +608,20 @@ class MainControlPanel(wx.Panel):
                 self.Rod_weight[rod] = a
 
     def OnClick(self,e):
-        self.nb.data, self.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
-                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.use_BVC,\
+        self.nb.data, self.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell,\
+                               self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.UBW_flag, self.use_BVC,\
                                self.BVclusters, self.RMS_flag)
         plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough,\
                                                  self.doplotwater, self.RMS)
 
     def OnPlotedens(self, e):
-        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.use_bulk_water)
+        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.UBW_flag, self.nb.ResonantDataPage.resel)
 
     ################################# Bond Valence constraints event functions #########################################
     def setusebvc(self,e): self.use_BVC = self.set_use_BVC.GetValue()
     def on_calc_BVS(self, e):
         for i in range(len(self.BVclusters)):
-            zwater, sig_water, Scale,specScale, beta, surface = param_unfold(self.nb.parameter,self.nb.parameter_usage, self.nb.surface, self.use_bulk_water)
+            zwater, sig_water, sig_water_bar, d_water, Scale,specScale, beta, surface = param_unfold(self.nb.parameter,self.nb.parameter_usage, self.nb.surface, self.UBW_flag)
             surface = RB_update(self.nb.rigid_bodies, surface, self.nb.parameter, self.nb.cell)
             BVS, dist = self.BVclusters[i].calc_BVS(surface)
             print 'Bond Valence sum in BV-cluster '+str(i+1)+' = '+str(round(BVS, 4))+'; distances are: \n'
@@ -525,21 +629,20 @@ class MainControlPanel(wx.Panel):
                 print str(round(dist[j],5))
             print '\n'
     ################################# Fitting options event functions #########################################
-    def set_bulk_water(self,e): self.use_bulk_water = self.douse_bulk_water.GetValue()
+    def set_bulk_water(self,event):
+        self.UBW_flag = self.douse_bulk_water.GetValue()
 
     def setrmsflag(self,event):
         if (event.GetString() == '') or (event.GetString() == '-'):
             None
         else:
             a = int(event.GetString())
-            if a >0 and a < 4:
+            if a >0 and a <= 4:
                 self.RMS_flag = a
-                self.rmsflaglog.SetValue(self.RMS_flag_log[a])
+                self.rmsflaglog.SetValue(self.RMS_flag_log[a]+self.Rdata[a])
             else:
-                print 'R flag must be 1, 2, or 3!'
-                self.rmsflaglog.SetValue(self.RMS_flag_log[0])
-            
-                                          
+                print 'R flag must be 1, 2, 3, or 4!'
+                self.rmsflaglog.SetValue(self.RMS_flag_log[0]+self.Rdata[0])                                          
     ################################# Simulated Annealing options event functions #########################################
     def setTstart(self,event):
         if (event.GetString() == '') or (event.GetString() == '-'):
@@ -595,14 +698,15 @@ class MainControlPanel(wx.Panel):
     def setplotRMStrack(self,e): self.doplotRMStrack = self.plot_RMS_track.GetValue()
 
     def OnClickSimAn1(self,e):
-        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.use_bulk_water)
+        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.UBW_flag)
         if flag:
             self.param_best = {}
             self.RMS = -1
-            self.nb.data, self.param_best, self.RMS = simulated_annealing01(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
+            self.nb.data, self.param_best, self.RMS = simulated_annealing01(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.surface,\
                     database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies,\
-                    self.use_bulk_water, self.use_BVC, self.BVclusters, self.RMS_flag)
+                    self.UBW_flag, self.use_BVC, self.BVclusters, self.RMS_flag)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
+            self.nb.SetSelection(2)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
                 for i in range(len(self.nb.param_labels)):
@@ -611,14 +715,15 @@ class MainControlPanel(wx.Panel):
             dlg.Destroy()
             
     def OnClickSimAn2(self,e):
-        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.use_bulk_water)
+        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.UBW_flag)
         if flag:
             self.param_best = {}
             self.RMS = -1
-            self.nb.data, self.param_best, self.RMS = simulated_annealing02(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.bulk, self.nb.surface,\
+            self.nb.data, self.param_best, self.RMS = simulated_annealing02(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.surface,\
                     database, self.Rod_weight, self.sim_an_params, self.nb.parameter, self.nb.parameter_usage, self.doplotRMStrack, self.nb.rigid_bodies,\
-                    self.use_bulk_water, self.use_BVC, self.BVclusters, self.RMS_flag)
+                    self.UBW_flag, self.use_BVC, self.BVclusters, self.RMS_flag)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
+            self.nb.SetSelection(2)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
                 for i in range(len(self.nb.param_labels)):
@@ -697,14 +802,15 @@ class MainControlPanel(wx.Panel):
                 self.simplex_params[6] = a
 
     def OnClickSimplex(self,e):
-        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.use_bulk_water)
+        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.UBW_flag)
         if flag:
             self.param_best = {}
             self.RMS = -1
-            self.nb.data, self.param_best, self.RMS = simplex(self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, self.nb.surface, \
-                                        self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.use_bulk_water, self.simplex_params, \
+            self.nb.data, self.param_best, self.RMS = simplex(self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.surface, \
+                                        self.nb.NLayers, database, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies, self.UBW_flag, self.simplex_params, \
                                         self.use_BVC, self.BVclusters, self.RMS_flag)
             plot_rods(self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
+            self.nb.SetSelection(2)
             dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
             if dlg.ShowModal() == wx.ID_YES:
                 for i in range(len(self.nb.param_labels)):
@@ -727,24 +833,15 @@ class ParameterPanel(wx.ScrolledWindow):
         self.control7 = []
         self.togglesteps = []
 
-        wx.StaticText(self, label = 'value', pos=(170, 40), size=(100, 20))
-        wx.StaticText(self, label = 'min', pos=(300, 40), size=(70, 20))
-        wx.StaticText(self, label = 'max', pos=(390, 40), size=(70, 20))
-        wx.StaticText(self, label = 'refine', pos=(455, 40), size=(60, 20))
-        wx.StaticText(self, label = ' - ', pos=(525, 40), size=(20, 20))
-        wx.StaticText(self, label = ' step ', pos=(560, 40), size=(40, 20))
-        wx.StaticText(self, label = ' + ', pos=(615, 40), size=(20, 20))
+        wx.StaticText(self, label = 'value', pos=(170, 20), size=(100, 20))
+        wx.StaticText(self, label = 'min', pos=(300, 20), size=(70, 20))
+        wx.StaticText(self, label = 'max', pos=(390, 20), size=(70, 20))
+        wx.StaticText(self, label = 'refine', pos=(455, 20), size=(60, 20))
+        wx.StaticText(self, label = ' - ', pos=(525, 20), size=(20, 20))
+        wx.StaticText(self, label = ' step ', pos=(560, 20), size=(40, 20))
+        wx.StaticText(self, label = ' + ', pos=(615, 20), size=(20, 20))
         
-
-        self.button = wx.Button(self, label = 'Update', pos =(20,20))
-        self.Bind(wx.EVT_BUTTON, self.OnClick, self.button)
-
-        self.nb = self.GetParent()
-        
-    def OnClick(self,e):
-        for i in range(len(self.nb.param_labels)):
-            self.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
-        
+        self.nb = self.GetParent()     
 
     def editparvalue(self,event):
         item = event.GetId()-2000
@@ -776,13 +873,13 @@ class ParameterPanel(wx.ScrolledWindow):
         step = self.togglesteps[item]
         self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] - step
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
-        self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
+        self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell,\
                                self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
-                                                              self.nb.MainControlPage.use_bulk_water, self.nb.MainControlPage.use_BVC, self.nb.MainControlPage.BVclusters,\
+                                                              self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_BVC, self.nb.MainControlPage.BVclusters,\
                                                               self.nb.MainControlPage.RMS_flag)
         plot_rods(self.nb.data, self.nb.MainControlPage.plotdims, self.nb.MainControlPage.doplotbulk, self.nb.MainControlPage.doplotsurf, self.nb.MainControlPage.doplotrough,\
                                                  self.nb.MainControlPage.doplotwater, self.nb.MainControlPage.RMS)
-        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water)
+        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.UBW_flag, self.nb.ResonantDataPage.resel)
 
 
     def togglestep(self,event):
@@ -797,13 +894,13 @@ class ParameterPanel(wx.ScrolledWindow):
         step = self.togglesteps[item]
         self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] + step
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
-        self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.bulk, \
+        self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell,\
                                self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
-                                                              self.nb.MainControlPage.use_bulk_water, self.nb.MainControlPage.use_BVC, self.nb.MainControlPage.BVclusters,\
+                                                              self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_BVC, self.nb.MainControlPage.BVclusters,\
                                                               self.nb.MainControlPage.RMS_flag)
         plot_rods(self.nb.data, self.nb.MainControlPage.plotdims, self.nb.MainControlPage.doplotbulk, self.nb.MainControlPage.doplotsurf, self.nb.MainControlPage.doplotrough,\
                                                  self.nb.MainControlPage.doplotwater, self.nb.MainControlPage.RMS)
-        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.use_bulk_water)
+        plot_edensity(self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.UBW_flag,self.nb.ResonantDataPage.resel)
 
 ############################################################################################################
 ############################################################################################################
