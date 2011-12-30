@@ -1,0 +1,105 @@
+###############################################################################
+# Note: see make_msvs.bat for definition of the env variables.
+# Note: XLIBS should be OK with just a list of the lib names
+#       but could be my MSVS is meesed up, so I need full paths.. 
+###############################################################################
+LINK       = $(TOOLS)\\bin\\link.exe 
+LIBEXE     = $(TOOLS)\\bin\\lib.exe
+LOPT       = /nologo /incremental:no /machine:I386
+DLLOPT     = /dll $(LOPT)
+XLIBS      = ..\\gsl.lib  \
+             $(LIB2)\\kernel32.lib \
+             $(LIB2)\\user32.lib \
+             $(LIB2)\\gdi32.lib \
+             $(LIB2)\\winspool.lib \
+             $(LIB2)\\comdlg32.lib \
+             $(LIB2)\\advapi32.lib \
+             $(LIB2)\\shell32.lib \
+             $(LIB2)\\ole32.lib \
+             $(LIB2)\\oleaut32.lib \
+             $(LIB2)\\uuid.lib \
+             $(LIB2)\\odbc32.lib \
+             $(LIB2)\\odbccp32.lib \
+             $(LIB1)\\libc.lib  \
+             $(LIB1)\\oldnames.lib
+
+TDLLIBDIR  = $(TDLDIR)\\lib
+TDLSRCDIR  = $(TDLLIBDIR)\\src
+LIBOBJ     = utils.obj numfcns.obj lmdif.obj fit.obj peak.obj xrr.obj
+WRAPOBJ    = wrap_xrr.obj wrap_hello.obj
+OBJ        = $(LIBOBJ) $(WRAPOBJ)
+LIBTDL     = libtdlw32.lib
+###############################################################################
+
+# default built all dll's
+build: _xrr.dll _hello.dll
+
+# clean then build
+rebuild: clean build
+
+# generate _xrr.dll
+_xrr.dll: $(LIBTDL)
+    $(LINK) /implib:$*.lib /out:$*.dll $(DLLOPT) wrap$*.obj $(XLIBS) $(LIBTDL) 
+    copy /Y  $@  $(TDLLIBDIR)\\.
+
+# generate _hello.dll
+_hello.dll: $(LIBTDL)
+    $(LINK) /implib:$*.lib /out:$*.dll $(DLLOPT) wrap$*.obj $(XLIBS) $(LIBTDL) 
+    copy /Y  $@  $(TDLLIBDIR)\\.
+
+# generate LIBTDL from LIBOBJ
+$(LIBTDL): $(LIBOBJ)
+	$(LIBEXE) /OUT:$(LIBTDL) $(LIBOBJ)
+
+# Run the make file in each of the lib directories
+$(OBJ):
+	cd $(TDLSRCDIR)\\fit
+	$(MAKE) /F makefile.msvs 
+	cd $(MAKEDIR)
+
+	cd $(TDLSRCDIR)\\peak
+	$(MAKE) /F makefile.msvs 
+	cd $(MAKEDIR)
+
+	cd $(TDLSRCDIR)\\utils
+	$(MAKE) /F makefile.msvs 
+	cd $(MAKEDIR)
+
+	cd $(TDLSRCDIR)\\wrap
+	$(MAKE) /F makefile.msvs 
+	cd $(MAKEDIR)
+
+	cd $(TDLSRCDIR)\\xrr
+	$(MAKE) /F makefile.msvs 
+	cd $(MAKEDIR)
+
+# clean up
+clean:
+	cd $(TDLSRCDIR)\\fit
+	$(MAKE) /F makefile.msvs clean 
+	cd $(MAKEDIR)
+	
+	cd $(TDLSRCDIR)\\peak
+	$(MAKE) /F makefile.msvs  clean 
+	cd $(MAKEDIR)
+	
+	cd $(TDLSRCDIR)\\utils
+	$(MAKE) /F makefile.msvs  clean
+	cd $(MAKEDIR)
+	
+	cd $(TDLSRCDIR)\\wrap
+	$(MAKE) /F makefile.msvs  clean
+	cd $(MAKEDIR)
+
+	cd $(TDLSRCDIR)\\xrr
+	$(MAKE) /F makefile.msvs  clean
+	cd $(MAKEDIR)
+	
+	del *.obj
+	del *.o
+	del *.lib
+	del *.a
+	del *.dll
+	del *.so
+	del *.exp
+	del *.o

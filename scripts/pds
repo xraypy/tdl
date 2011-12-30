@@ -1,0 +1,2 @@
+#!/bin/sh
+python ../pds/runpds.py $*
