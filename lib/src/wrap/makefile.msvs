@@ -1,0 +1,26 @@
+##############################################################
+# NOTE the following environment variable must be set:
+#   - COMPILER: Path to compiler executable
+#   - COMPFLAGS: Compiler flags
+#   - INCLUDE: Include statement for compiler
+#
+# Execute this file as:
+# >>nmake /F makefile.msvs build    # to build the obj code
+# >>nmake /F makefile.msvs rebuild  # to rebuild the obj code
+# >>nmake /F makefile.msvs clean    # to delete obj code
+##############################################################
+CC       = $(COMPILER)
+CFLAGS   = $(COMPFLAGS)
+INCLUDE  = $(TDLINCLUDE)
+
+SRCFILES   = wrap_xrr.c wrap_hello.c
+##############################################################
+
+build: $(SRCFILES)
+	$(CC) $(CFLAGS) $(INCLUDE) $(SRCFILES)
+	copy /Y *.obj ..\..\build\.
+
+clean:
+	del *.obj
+
+rebuild: clean build

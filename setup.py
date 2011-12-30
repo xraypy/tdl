@@ -6,8 +6,11 @@ Or to prevent copying to site-packages
   >>python setup.py build
 
 When installed the resulting package should look like:
-  site-packages/tdl/pds
-  site-packages/tdl/modules
+    site-packages/tdl/doc
+    site-packages/tdl/lib
+    site-packages/tdl/modules
+    site-packages/tdl/pds
+    site-packages/tdl/scripts
 
 """
 #########################################################
@@ -16,53 +19,60 @@ import distutils
 from distutils.core import setup, Extension
 
 #from  lib.version import name,version,author,email,desc
-version = '0.9'
+version = '0.91'
 name    = 'tdl'
-author  = "Newville and Trainor"
+author  = "pyxrd"
 email   = "xxx"
 desc    = "tdl"
 
 #########################################################
 package_dir  = {'tdl':'',
+                'tdl.doc':'doc',
+                'tdl.lib':'lib',
+                'tdl.modules':'modules',
                 'tdl.pds':'pds',
-                'tdl.modules':'modules'}
+                'tdl.scripts':'scripts'}
 packages     = ['tdl',
+                'tdl.doc',
+                'tdl.lib',
+                'tdl.modules',
                 'tdl.pds',
-                'tdl.pds.lib',
-                'tdl.pds.modules',
-                'tdl.modules']
-package_data = {'tdl.pds':['startup.pds']}
+                'tdl.scripts']
 
-### Add-on modules
-#wxgui
-packages.append('tdl.pds.modules.pcgui')
-#menu
-packages.append('tdl.pds.modules.menu')
+# misc package data
+package_data = {}
+package_data.update({'tdl.doc':['LICENSE.txt']})
+package_data.update({'tdl.scripts':['pds']})
+package_data['tdl.scripts'].append('pds.bat')
+package_data['tdl.scripts'].append('spectohdf.py')
+                
+#pds
+packages.append('tdl.pds.pcgui')
+packages.append('tdl.pds.menu')
+package_data.update({'tdl.pds':['startup.pds']})
 
-# wrap
-packages.append('tdl.modules.wrap')
-package_data.update({'tdl.modules.wrap':['libs/_ref.dll']})
-package_data['tdl.modules.wrap'].append('libs/core.lib')
-package_data['tdl.modules.wrap'].append('libs/gsl.dll')
-package_data['tdl.modules.wrap'].append('libs/gsl.lib')
-package_data['tdl.modules.wrap'].append('libs/gslcblas.dll')
-# mpcutils
-packages.append('tdl.modules.mpcutils')
-packages.append('tdl.modules.mpcutils.mpfit')
-# fmt files
-packages.append('tdl.modules.fmtfiles')
-# xray
-packages.append('tdl.modules.xray')
-packages.append('tdl.modules.xray.ana')
-packages.append('tdl.modules.xray.detector')
-packages.append('tdl.modules.xray.xrd')
-packages.append('tdl.modules.xray.xrf')
-packages.append('tdl.modules.xray.xrr')
-packages.append('tdl.modules.xray.xtab')
-packages.append('tdl.modules.xray.ctr')
-# xtal
+# tdl.lib
+package_data.update({'tdl.lib':['_xrr.dll']})
+package_data['tdl.lib'].append('_hello.lib')
+package_data['tdl.lib'].append('gsl.dll')
+package_data['tdl.lib'].append('gsl.lib')
+package_data['tdl.lib'].append('gslcblas.dll')
+
+# modules
+packages.append('tdl.modules.ana')
+packages.append('tdl.modules.geom')
+packages.append('tdl.modules.peak')
+packages.append('tdl.modules.specfile')
+packages.append('tdl.modules.spectra')
+packages.append('tdl.modules.sxrd')
+packages.append('tdl.modules.utils')
+packages.append('tdl.modules.utils.mpfit')
+packages.append('tdl.modules.utils.files')
+packages.append('tdl.modules.xrd')
+packages.append('tdl.modules.xrf')
+packages.append('tdl.modules.xrr')
+packages.append('tdl.modules.xtab')
 packages.append('tdl.modules.xtal')
-
 
 ### call the setup command
 setup(
@@ -75,5 +85,5 @@ setup(
     package_dir = package_dir,
     packages = packages,
     package_data = package_data,
-    data_files  = [('bin',['rpds'])]
+    data_files  = []
 )

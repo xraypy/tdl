@@ -1,0 +1,33 @@
+= Installation Notes =
+
+If you are working on a development version of tdl and/or running tdl from a local python installation you need the following:
+
+* The following are some of the core (ie essential) things you need:
+   * Python (2.5 or higher) the Python Interpreter
+   * Numpy (1.0 or higher) numerical modules
+   * Scipy (0.5 or higher) scientific computing
+   * Matplotlib (0.87 or higher) plotting 
+   * PyTables for working with hdf files
+     * note pytables uses numexpr so you need that too
+     * note that h5py is a similiar hdf file interface
+   * Python Imaging Library (PIL) for working with image files
+
+* The following are good addons
+   * wxPython for building graphical user interfaces 
+      * get the unicode version. 
+   * Pythoncard interface to wxPython for gui programming
+   * pyreadline
+
+* For windows
+   * Py2exe for generating standalone executables 
+   * pywin32 windows (only) extensions and editor 
+
+To install tdl into python/.../site-packages just exectute:
+>>python setup.py install
+
+To run tdl from a non-standard location (e.g. your devel directory) just make sure that the 
+root directory is on the PYTHONPATH.  E.g. if you copy this package to:
+c:\user\bob\devel\tdl
+Add c:\user\bob\devel to PYTHONPATH.
+
+In either case for installation you may want to add tdl/scripts to your system path to access the command line utilities.
