@@ -953,8 +953,11 @@ def _get_corr(scan,point,corr_params):
     # get gonio instance for corrections
     if geom == 'psic':
         gonio = gonio_psic.psic_from_spec(scan['G'])
-        npts = scan.get('numPoints')
-        _update_psic_angles(gonio,scan,point,npts=npts)
+        try:
+            npts = scan.get('numPoints', None)
+            _update_psic_angles(gonio,scan,point,npts=npts)
+        except:
+            _update_psic_angles(gonio,scan,point)
         corr  = CtrCorrectionPsic(gonio=gonio,beam_slits=beam,
                                   det_slits=det,sample=sample)
     else:
