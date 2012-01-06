@@ -9,7 +9,6 @@ import os
 import math
 #import sys
 import time
-#import numpy
 import copy
 import linecache
 import threading
@@ -25,10 +24,10 @@ from wx.lib.splitter import MultiSplitterWindow
 from wx.tools.Editra.src.eclib import pstatbar
 import xml.etree.cElementTree as xmlTree
 
-from pds.lib.shellutil import mod_import
-import image_data
-import gonio_psic
-import ctr_data
+from pds.shellutil import mod_import
+from tdl.modules.ana import image_data
+from tdl.modules.geom import gonio_psic
+from tdl.modules.ana import ctr_data
 
 import wx.lib.inspection
 

@@ -6,7 +6,6 @@ Last modified: 11.28.2011
 
 import wx
 import copy
-
 import matplotlib
 from matplotlib import pyplot
 from matplotlib.figure import Figure
