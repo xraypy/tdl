@@ -181,6 +181,8 @@ class SpecFile:
                     buffOld = buffNew = allLines.next()
                     if buffNew[0:3] != '\n' and buffNew[0:3] != '#C ':
                         lStart = buffOld.split()[2]
+                    else:
+                        lStart = lStop = cmnd.split()[3]
                     while (buffNew[0:3] != '\n' and buffNew[0:3] != '#C '):
                         buffOld = buffNew
                         lineno = lineno + 1
