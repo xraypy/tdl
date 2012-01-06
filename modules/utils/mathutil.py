@@ -103,7 +103,9 @@ def cartesian_angle(u,v):
     uv = num.dot(u,v)
     um = cartesian_mag(u)
     vm = cartesian_mag(v)
-    arg = uv/(um*vm)
+    denom = (um*vm)
+    if denom == 0: return 0.
+    arg = uv/denom
     if num.fabs(arg) > 1.0:
         arg = arg / num.fabs(arg)
     alpha = arccosd(arg)

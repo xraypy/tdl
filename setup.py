@@ -18,8 +18,8 @@ When installed the resulting package should look like:
 import distutils
 from distutils.core import setup, Extension
 
-#from  lib.version import name,version,author,email,desc
-version = '0.91'
+#from version import name,version,author,email,desc
+version = '0.4'
 name    = 'tdl'
 author  = "pyxrd"
 email   = "xxx"
