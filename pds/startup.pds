@@ -67,24 +67,32 @@ except:
 ## PDS menus
 from pds import menu
 
-## TDL mods
+## files
 from tdl.modules.utils.files.read_fmt import read_column as readcol
-# ana
+
+## ana
 from tdl.modules import ana
-# peak
-from tdl.modules import peak
-# specfile
+
+## peak
+#from tdl.modules import peak
+
+## specfile
 from tdl.modules import specfile
-# spectra
-from tdl.modules import spectra
-# sxrd
+
+## spectra
+#from tdl.modules import spectra
+
+## sxrd
 from tdl.modules import sxrd
-# xrf
-from tdl.modules import xrf
-# xrr
-from tdl.modules import xrr
-# xtal
-from tdl.modules import xtal
+
+## xrf
+#from tdl.modules import xrf
+
+## xrr
+#from tdl.modules import xrr
+
+## xtal
+#from tdl.modules import xtal
 
 ##################################################
 ## Make sure help is defined

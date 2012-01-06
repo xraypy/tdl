@@ -634,18 +634,20 @@ class Psic:
 
         Notes:
         ------
-        Note this must be calc after tth,tau, and alpha!
+        Note this must be calc after tth, tau, and alpha!
         """
         tau   = self.pangles['tau']
-        alpha = self.pangles['alpha']
         tth   = self.pangles['tth']
-        xx    = (cosd(tau)*sind(tth/2.) - sind(alpha))
-        xx    = xx /(sind(tau)*cosd(tth/2.))
-        psi = arccosd( xx )
+        alpha = self.pangles['alpha']
         #beta = self.calc_beta()
         #xx = (-cosd(tau)*sind(tth/2.) + sind(beta))
-        # xx = xx /(sind(tau)*cosd(tth/2.))
-        #psi = arccosd( xx )
+        xx    = (cosd(tau)*sind(tth/2.) - sind(alpha))
+        denom = (sind(tau)*cosd(tth/2.))
+        if denom == 0: 
+            self.pangles['psi'] = 0.
+            return
+        xx    = xx /denom
+        psi = arccosd( xx )
         self.pangles['psi'] = psi
 
     def _calc_qaz(self):

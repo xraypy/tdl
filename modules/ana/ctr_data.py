@@ -1377,12 +1377,13 @@ class CtrCorrectionPsic:
     ##########################################################################
     def active_area(self,plot=False,fig=None):
         """
-        Compute active area correction (c_a = A_beam/A_int)
+        Compute active area correction (c_a = A_beam/(A_int)**2)
         
         Use to correct scattering data for area effects,
-        including spilloff, i.e.
+        including spilloff, A_int/A_beam and normailization 
+        to unit surface area (1/A_beam), i.e.
            Ic = Im * ca = Im/A_ratio 
-           A_ratio = A_int/A_beam 
+           A_ratio = A_int/(A_beam**2) 
         where
            A_int = intersection area (area of beam on sample
                    viewed by detector)
@@ -1440,7 +1441,7 @@ class CtrCorrectionPsic:
         if A_int == 0.:
             ca = 0.
         else:
-            ca = A_beam/A_int
+            ca = A_beam/(A_int**2)
 
         return ca
 

@@ -178,12 +178,13 @@ def line_intercept(p1,p2,p3,p4):
         flag = 0
     #check if the intersection point corresponds to an end point
     intercept = num.array([x,y])
-    def _same(p1,p2,prec=0.001):
+    def _same(p1,p2,prec=0.00001):
         """ are two points the same """
         #return num.all(num.equal(p1,p2))
         t1 = num.fabs(p1[0]-p2[0]) < prec
         t2 = num.fabs(p1[1]-p2[1]) < prec
         if  t1 and t2:
+            #print "same", p1,p2
             return True
     if flag == 1:
         if _same(intercept,p1):
