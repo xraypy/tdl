@@ -547,7 +547,11 @@ class ImageAna:
                  cnbgr=5,cwidth=0,cpow=2.,ctan=False,
                  rnbgr=5,rwidth=0,rpow=2.,rtan=False,
                  nline=1,filter=False,compress=1,
-                 plot=True,fig=None,figtitle=''):
+                 plot=True,fig=None,figtitle='',
+                 clpimg=None,bgrimg=None,integrated=False,
+                 I=0.0,Ibgr=0.0,Ierr=0.0,I_c=0.0,I_r=0.0,
+                 Ibgr_c=0.0,Ibgr_r=0.0,Ierr_c=0.0,Ierr_r=0.0,
+                 im_max=-1):
         """
         Initialize
 
@@ -616,22 +620,22 @@ class ImageAna:
         self.roi    = (int(c1),int(r1),int(c2),int(r2))
         self.rotangle   = rotangle
         self.image      = image
-        self.clpimg     = None
-        self.bgrimg     = None
-        self.integrated = False
+        self.clpimg     = clpimg
+        self.bgrimg     = bgrimg
+        self.integrated = integrated
         #
         self.title  = figtitle
         #
-        self.I      = 0.0
-        self.Ibgr   = 0.0
-        self.Ierr   = 0.0
+        self.I      = I
+        self.Ibgr   = Ibgr
+        self.Ierr   = Ierr
         #
-        self.I_c    = 0.0
-        self.I_r    = 0.0
-        self.Ibgr_c = 0.0
-        self.Ibgr_r = 0.0
-        self.Ierr_c = 0.0
-        self.Ierr_r = 0.0
+        self.I_c    = I_c
+        self.I_r    = I_r
+        self.Ibgr_c = Ibgr_c
+        self.Ibgr_r = Ibgr_r
+        self.Ierr_c = Ierr_c
+        self.Ierr_r = Ierr_r
         #
         self.bgrflag = bgrflag
         self.cbgr = {'nbgr':cnbgr,'width':cwidth,'pow':cpow,'tan':ctan}
@@ -640,12 +644,31 @@ class ImageAna:
         self.filter = filter
         self.compress = compress
         self.plotflag = plot
+        self.im_max = im_max
         
-        self.integrate()
+        if not self.integrated:
+            self.integrate()
 
         # plot
-        if self.plotflag == True: self.plot(fig=fig)
+        if self.plotflag: self.plot(fig=fig)
             
+    ############################################################################
+    def getVars(self):
+        toReturn = (self.clpimg, 
+                    self.bgrimg, 
+                    self.integrated, 
+                    self.I, 
+                    self.Ibgr,
+                    self.Ierr,
+                    self.I_c,
+                    self.I_r,
+                    self.Ibgr_c,
+                    self.Ibgr_r,
+                    self.Ierr_c,
+                    self.Ierr_r
+                    )
+        return toReturn
+    
     ############################################################################
     def integrate(self):
         """
@@ -839,6 +862,131 @@ class ImageAna:
         pyplot.axis([0,rawmax*1.25, data_idx.max(), 0])
         pyplot.xticks(rotation=-45)
         pyplot.legend(loc=0)
+        
+        
+    ############################################################################
+    def embedPlot(self,fig):
+        """
+        make fancy 4-panel plot to embed in wxPython.
+        fig is the Figure in which to embed the plots
+        """
+        if self.integrated == False:
+            self.integrate()
+        
+        fig.clear()
+        colormap = None
+        #if fig != None:
+        #    pyplot.figure(fig)
+        #    pyplot.clf()
+        #    pyplot.figure(fig,figsize=[12,8])
+        #else:
+        #    pyplot.figure(fig,figsize=[12,8])
+        title_c = 'Col sum\nI_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
+        title_r = 'Row sum\nI_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
+        title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
+        if self.bgrimg != None:
+            title_roi = title_roi + '\n(background subtracted)'
+
+        # calc full image with an roi box
+        (c1,r1,c2,r2) = self.roi
+        if self.rotangle != 0.0:
+            bild = ndimage.rotate(self.image,self.rotangle)
+        else:
+            bild = copy.copy(self.image)
+        # whats the max inside the roi
+        if self.im_max == -1:
+            im_max = num.max(bild[r1:r2, c1:c2])
+        else:
+            im_max = self.im_max
+        #
+        bildMax = bild.max()
+        bild[r1-2:r1,c1:c2] = bildMax
+        bild[r2:r2+2,c1:c2] = bildMax
+        bild[r1:r2,c1-2:c1] = bildMax
+        bild[r1:r2,c2:c2+2] = bildMax
+
+        ###################################
+        #### plot column sum
+        self.subplot1 = fig.add_subplot(221)
+        self.subplot1.set_title(title_c, fontsize = 12)
+        # plot raw sum
+        (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='c',nbgr=0)
+        rawmax = data.max()
+        (sp1Data1, sp1Data_Idx1, sp1Bgr1) = (data, data_idx, bgr)
+        sp1Rawmax = rawmax
+        self.subplot1.plot(data_idx, data, 'k',label='raw sum')
+        # get bgr and data-bgr
+        if self.bgrimg != None:
+            # here data is automatically bgr subracted
+            (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='c',nbgr=0)
+            bgr = self.bgrimg.sum(axis=0)
+        else:
+            # here data is data and bgr is correct, therefore data = data-bgr
+            (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='c',
+                                             nbgr=self.rbgr['nbgr'],
+                                             width=self.rbgr['width'],
+                                             pow=self.rbgr['pow'],
+                                             tangent=self.rbgr['tan'])
+            data = data-bgr
+        (sp1Data2, sp1Data_Idx2, sp1Bgr2) = (data, data_idx, bgr)
+        # plot bgr and bgr subtracted data
+        self.subplot1.plot(data_idx, bgr, 'r',label='bgr')
+        self.subplot1.plot(data_idx, data, 'b',label='data-bgr')
+        self.subplot1.axis([0, data_idx.max(), 0, rawmax*1.25])
+        self.subplot1.legend(loc=0)
+
+        ####################################
+        # plot full image with ROI
+        self.subplot2 = fig.add_subplot(222, title = self.title)
+        self.subplot2.set_title(self.title, fontsize = 12)
+        forColorbar = self.subplot2.imshow(bild,cmap=colormap,vmax=im_max)
+        fig.colorbar(forColorbar, ax=self.subplot2, orientation='horizontal')
+
+        ####################################
+        # plot zoom on image 
+        self.subplot3 = fig.add_subplot(223, title = title_roi)
+        self.subplot3.set_title(title_roi,fontsize = 12)
+        if self.bgrimg != None:
+            self.subplot3.imshow(self.clpimg-self.bgrimg, cmap=colormap, aspect='auto')
+        else:
+            self.subplot3.imshow(self.clpimg, cmap=colormap, aspect='auto')
+            
+        ####################################
+        # plot row sum
+        self.subplot4 = fig.add_subplot(224, title = title_r)
+        self.subplot4.set_title(title_r, fontsize = 12)
+        # plot raw sum
+        (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='r',nbgr=0)
+        rawmax = data.max()
+        (sp4Data1, sp4Data_Idx1, sp4Bgr1) = (data, data_idx, bgr)
+        sp4Rawmax = rawmax
+        self.subplot4.plot(data, data_idx, 'k',label='raw sum')
+        # get bgr and data-bgr
+        if self.bgrimg != None:
+            # here data is automatically bgr subracted
+            (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='r',nbgr=0)
+            bgr = self.bgrimg.sum(axis=1)
+        else:
+            # here data is data and bgr is correct, therefore data = data-bgr
+            (data, data_idx, bgr) = line_sum(self.clpimg,sumflag='r',
+                                             nbgr=self.cbgr['nbgr'],
+                                             width=self.cbgr['width'],
+                                             pow=self.cbgr['pow'],
+                                             tangent=self.cbgr['tan'])
+            data = data-bgr
+        (sp4Data2, sp4Data_Idx2, sp4Bgr2) = (data, data_idx, bgr)
+        # plot bgr and bgr subtracted data
+        self.subplot4.plot(bgr, data_idx, 'r',label='bgr')
+        self.subplot4.plot(data, data_idx, 'b',label='data-bgr')
+        self.subplot4.axis([0,rawmax*1.25, data_idx.max(), 0])
+        #self.subplot4.xticks(rotation=-45)
+        self.subplot4.legend(loc=0)
+        
+        im_max = num.max(bild[r1:r2, c1:c2])
+        
+        return (im_max,
+                colormap,
+                self.subplot2)
 
 ##############################################################################
 class ImageScan:

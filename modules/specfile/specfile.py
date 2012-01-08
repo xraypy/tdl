@@ -137,9 +137,11 @@ class SpecFile:
         summarize
         """
         lineno = 0
-        (mnames,cmnd,date,xtime,Gvals,q,Pvals,atten,energy,lab) = (None,None,None,None,None,None,None,None,None,None)
-        (index, ncols, n_sline) = (0,0,0)
-        for i in self._lines:
+        (mnames,cmnd,date,xtime,Gvals,q,Pvals,atten,energy,lab,lStart,lStop,aborted) = (None,None,None,None,None,None,None,None,None,None,None,None,False)
+        (index, ncols, n_sline, dataStart, dataStop) = (0,0,0,0,0)
+        self._lines.append('\n')
+        allLines = iter(self._lines)
+        for i in allLines:
             lineno = lineno + 1
             i  = i[:-1]
             # get motor names: they should be at the top of the file
@@ -173,6 +175,42 @@ class SpecFile:
                 energy = i[8:]
             elif (i[0:3] == '#L '):
                 lab = i[3:]
+                dataStart = lineno + 1
+                if cmnd.split()[0] == 'rodscan':
+                    lineno = lineno + 1
+                    buffOld = buffNew = allLines.next()
+                    if buffNew[0:3] != '\n' and buffNew[0:3] != '#C ':
+                        lStart = buffOld.split()[2]
+                    else:
+                        lStart = lStop = cmnd.split()[3]
+                    while (buffNew[0:3] != '\n' and buffNew[0:3] != '#C '):
+                        buffOld = buffNew
+                        lineno = lineno + 1
+                        buffNew = allLines.next()
+                        """
+                        try:
+                            buffNew = allLines.next()
+                        except:
+                            print '\n\n'
+                            print 'excepting on line', lineno
+                            buffNew = '\n'
+                        """
+                    if buffOld[0:3] != '\n' and buffOld[0:3] != '#C ':
+                        lStop = buffOld.split()[2]
+                    dataStop = lineno
+                    if buffNew[0:3] == '#C ':
+                        if buffNew.split()[7] == 'aborted':
+                            aborted = True
+                else:
+                    lineno = lineno + 1
+                    buff = allLines.next()
+                    while buff[0:3] != '\n' and buff[0:3] != '#C ':
+                        lineno = lineno + 1
+                        buff = allLines.next()
+                    dataStop = lineno
+                    if buff[0:3] == '#C ':
+                        if buff.split()[7] == 'aborted':
+                            aborted = True
                 self._summary.append({'index':index,
                                      'nl_start':n_sline,
                                      'cmd':cmnd,
@@ -186,9 +224,14 @@ class SpecFile:
                                      'labels':lab,
                                      'atten':atten,
                                      'energy':energy,
-                                     'lineno':lineno})
-                (cmnd,date,xtime,Gvals,q,Pvals,atten,energy,lab) = (None,None,None,None,None,None,None,None,None)
-                (index, ncols, n_sline) = (0,0,0)
+                                     'lineno':lineno,
+                                     'lStart':lStart,
+                                     'lStop':lStop,
+                                     'aborted':aborted,
+                                     'dataStart':dataStart,
+                                     'dataStop':dataStop})
+                (cmnd,date,xtime,Gvals,q,Pvals,atten,energy,lab,lStart,lStop,aborted) = (None,None,None,None,None,None,None,None,None,None,None,False)
+                (index, ncols, n_sline, dataStart, dataStop) = (0,0,0,0,0)
 
         self.min_scan = self._summary[0]['index']
         self.max_scan = self._summary[0]['index']

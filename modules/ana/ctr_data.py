@@ -928,7 +928,7 @@ def image_point_F(scan,point,I='I',Inorm='io',Ierr='Ierr',Ibgr='Ibgr',
         if corr == None:
             d['ctot'] = 1.0
         else:
-            d['ctot'] = corr.ctot_stationary()
+            (d['ctot'], d['alpha'], d['beta']) = corr.ctot_stationary(returnAll=True)
     # compute F
     if d['I'] <= 0.0 or d['Inorm'] <= 0.:
         d['F']    = 0.0
@@ -953,7 +953,11 @@ def _get_corr(scan,point,corr_params):
     # get gonio instance for corrections
     if geom == 'psic':
         gonio = gonio_psic.psic_from_spec(scan['G'])
-        _update_psic_angles(gonio,scan,point)
+        try:
+            npts = scan.get('numPoints', None)
+            _update_psic_angles(gonio,scan,point,npts=npts)
+        except:
+            _update_psic_angles(gonio,scan,point)
         corr  = CtrCorrectionPsic(gonio=gonio,beam_slits=beam,
                                   det_slits=det,sample=sample)
     else:
@@ -1099,12 +1103,15 @@ def set_params(ctr,point,intpar={},corrpar={}):
             ctr.corr_params[point]['sample']['angles'] = _getpar(corrpar.get('sample angles'))
     
 ##############################################################################
-def _update_psic_angles(gonio,scan,point,verbose=True):
+def _update_psic_angles(gonio,scan,point,verbose=True,npts=None):
     """
     given a psic gonio instance, a scandata object
     and a scan point, update the gonio angles...
     """
-    npts = int(scan.dims[0])
+    if npts==None:
+        npts = int(scan.dims[0])
+    try: scanName = scan.name
+    except: scanName = 'Current selection'
     #
     try:
       if type(scan['phi']) == types.FloatType:
@@ -1114,7 +1121,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         phi=None
     if phi == None and verbose==True:
-        print "Warning no phi angle:", scan.name
+        print "Warning no phi angle:", scanName
     #
     try:
         if type(scan['chi']) == types.FloatType:
@@ -1124,7 +1131,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         chi = None
     if chi == None and verbose==True:
-        print "Warning no chi angle", scan.name
+        print "Warning no chi angle", scanName
     #
     try:
         if type(scan['eta']) == types.FloatType:
@@ -1134,7 +1141,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         eta = None
     if eta == None and verbose==True:
-        print "Warning no eta angle", scan.name
+        print "Warning no eta angle", scanName
     #
     try:
         if type(scan['mu']) == types.FloatType:
@@ -1144,7 +1151,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         mu = None
     if mu == None and verbose==True:
-        print "Warning no mu angle", scan.name
+        print "Warning no mu angle", scanName
     #
     try:
         if type(scan['nu']) == types.FloatType:
@@ -1154,7 +1161,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         nu = None
     if nu == None and verbose==True:
-        print "Warning no nu angle", scan.name
+        print "Warning no nu angle", scanName
     #
     try:
         if type(scan['del']) == types.FloatType:
@@ -1164,7 +1171,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         delta = None
     if delta == None and verbose==True:
-        print "Warning no del angle", scan.name
+        print "Warning no del angle", scanName
     #
     gonio.set_angles(phi=phi,chi=chi,eta=eta,
                      mu=mu,nu=nu,delta=delta)
@@ -1277,13 +1284,13 @@ class CtrCorrectionPsic:
         self.fh         = 1.0
 
     ##########################################################################
-    def ctot_stationary(self,plot=False,fig=None):
+    def ctot_stationary(self,plot=False,fig=None, returnAll=False):
         """
         correction factors for stationary measurements (e.g. images)
         """
         cp = self.polarization()
         cl = self.lorentz_stationary()
-        ca = self.active_area(plot=plot,fig=fig)
+        (ca, alpha, beta) = self.active_area(plot=plot,fig=fig, returnAll=True)
         ct = (cp)*(cl)*(ca)
         if plot == True:
             print "Correction factors (mult by I)" 
@@ -1291,7 +1298,10 @@ class CtrCorrectionPsic:
             print "   Lorentz=%f" % cl
             print "   Area=%f" % ca
             print "   Total=%f" % ct
-        return ct
+        if not returnAll:
+            return ct
+        else:
+            return (ct, alpha, beta)
 
     ##########################################################################
     def lorentz_stationary(self):
@@ -1375,15 +1385,14 @@ class CtrCorrectionPsic:
         return cp
 
     ##########################################################################
-    def active_area(self,plot=False,fig=None):
+    def active_area(self,plot=False,fig=None, returnAll=False):
         """
-        Compute active area correction (c_a = A_beam/(A_int)**2)
+        Compute active area correction (c_a = A_beam/A_int)
         
         Use to correct scattering data for area effects,
-        including spilloff, A_int/A_beam and normailization 
-        to unit surface area (1/A_beam), i.e.
+        including spilloff, i.e.
            Ic = Im * ca = Im/A_ratio 
-           A_ratio = A_int/(A_beam**2) 
+           A_ratio = A_int/A_beam 
         where
            A_int = intersection area (area of beam on sample
                    viewed by detector)
@@ -1391,17 +1400,26 @@ class CtrCorrectionPsic:
         """
         if self.beam_slits == {} or self.beam_slits == None:
             print "Warning beam slits not specified"
-            return 1.0
+            if not returnAll:
+                return 1.0
+            else:
+                return (1.0, 0.0, 0.0)
         alpha = self.gonio.pangles['alpha']
         beta  = self.gonio.pangles['beta']
         if plot == True:
             print 'Alpha = ', alpha, ', Beta = ', beta
         if alpha < 0.0:
             print 'alpha is less than 0.0'
-            return 0.0
+            if not returnAll:
+                return 0.0
+            else:
+                return (0.0, alpha, beta)
         elif beta < 0.0:
             print 'beta is less than 0.0'
-            return 0.0
+            if not returnAll:
+                return 0.0
+            else:
+                return(0.0, alpha, beta)
 
         # get beam vectors
         bh = self.beam_slits['horz']
@@ -1441,9 +1459,12 @@ class CtrCorrectionPsic:
         if A_int == 0.:
             ca = 0.
         else:
-            ca = A_beam/(A_int**2)
+            ca = A_beam/A_int
 
-        return ca
+        if not returnAll:
+            return ca
+        else:
+            return (ca, alpha, beta)
 
 ##############################################################################
 ##############################################################################

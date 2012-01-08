@@ -72,3 +72,23 @@ class menuApps:
                                            filename=filename)
         self.wxCtrData.position = (200, 5)
         self.wxCtrData.visible = True
+
+    def on_menuAppsCtrData_select(self, event):
+        from pds.pcgui import wxCtrData
+        wxCtrData = mod_import(wxCtrData)
+        wxCtrData = wxCtrData.wxCtrData
+        filename = os.path.join(self.rsrc_path,'wxCtrData.rsrc.py')
+        self.wxCtrData = model.childWindow(self, wxCtrData,
+                                           filename=filename)
+        self.wxCtrData.position = (200, 5)
+        self.wxCtrData.visible = True
+    
+    def on_menuAppsScanSelect_select(self, event):
+        import wxScanSelect
+        wxScanSelect = mod_import(wxScanSelect)
+        wxScanSelect = wxScanSelect.wxScanSelect
+        filename = os.path.join(self.rsrc_path,'wxScanSelect.rsrc.py')
+        self.wxScanSelect = model.childWindow(self, wxScanSelect,
+                                            filename=filename)
+        self.wxScanSelect.position = (200, 5)
+        self.wxScanSelect.visible = True
