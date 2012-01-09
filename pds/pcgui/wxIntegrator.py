@@ -1425,11 +1425,12 @@ class Integrator(wx.Frame, wx.Notebook):
                                         'polygon':scanData[parentNumber][myNumber]['samplePolygon']}}
             if corr_params['det_slits'] == {}:
                 corr_params['det_slits'] = None
+            # TPT changed 'numPoints' to 'dims'
             fDict = ctr_data.image_point_F(scan={'I':[scanData[parentNumber][myNumber]['I']],
                                                 'io':[scanData[parentNumber][myNumber]['io']],
                                                 'Ierr':[scanData[parentNumber][myNumber]['Ierr']],
                                                 'Ibgr':[scanData[parentNumber][myNumber]['Ibgr']],
-                                                'numPoints':1,
+                                                'dims':(1,0),
                                                 'phi':scanData[parentNumber][myNumber].get('phi'),
                                                 'chi':scanData[parentNumber][myNumber].get('chi'),
                                                 'eta':scanData[parentNumber][myNumber].get('eta'),
@@ -1477,6 +1478,7 @@ class Integrator(wx.Frame, wx.Notebook):
                             scanData[parentNumber][myNumber]['plot'],
                             scanData[parentNumber][myNumber]['fig'],
                             scanData[parentNumber][myNumber]['figtitle'])
+            # TPT changed getVars to get_vars
             (scanData[parentNumber][myNumber]['clpimg'],
                 scanData[parentNumber][myNumber]['bgrimg'],
                 scanData[parentNumber][myNumber]['integrated'],
@@ -1488,7 +1490,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 scanData[parentNumber][myNumber]['Ibgr_c'],
                 scanData[parentNumber][myNumber]['Ibgr_r'],
                 scanData[parentNumber][myNumber]['Ierr_c'],
-                scanData[parentNumber][myNumber]['Ierr_r']) = imageAna.getVars()
+                scanData[parentNumber][myNumber]['Ierr_r']) = imageAna.get_vars()
             self.updateF(parentNumber, myNumber)
         
         #How to update the L vs I/F plot
@@ -1619,6 +1621,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                 scanData[parentNumber][myNumber]['fig'],
                                 scanData[parentNumber][myNumber]['figtitle'],
                                 im_max=scanData[parentNumber][myNumber]['imageMax'])
+                # TPT changed getVars to get_vars
                 (scanData[parentNumber][myNumber]['clpimg'],
                     scanData[parentNumber][myNumber]['bgrimg'],
                     scanData[parentNumber][myNumber]['integrated'],
@@ -1630,10 +1633,11 @@ class Integrator(wx.Frame, wx.Notebook):
                     scanData[parentNumber][myNumber]['Ibgr_c'],
                     scanData[parentNumber][myNumber]['Ibgr_r'],
                     scanData[parentNumber][myNumber]['Ierr_c'],
-                    scanData[parentNumber][myNumber]['Ierr_r']) = imageAna.getVars()
+                    scanData[parentNumber][myNumber]['Ierr_r']) = imageAna.get_vars()
+            # TPT rename embedPlot to embed_plot
             (scanData[parentNumber][myNumber]['realImageMax'],
                 scanData[parentNumber][myNumber]['colormap'],
-                scanData[parentNumber][myNumber]['subplot2']) = imageAna.embedPlot(self.fig4)
+                scanData[parentNumber][myNumber]['subplot2']) = imageAna.embed_plot(self.fig4)
             if scanData[parentNumber][myNumber]['fChanged']:
                 self.updateF(parentNumber, myNumber)
             toggle_selector.RS = RectangleSelector(scanData[parentNumber][myNumber]['subplot2'],
@@ -2423,7 +2427,7 @@ Old code
                     
            ##         scanData[parentNumber][myNumber]['imageAna'] = \
            ##             image_data.ImageAna(scanData[parentNumber][myNumber]['imageData'], plot=False)
-           ##         scanData[parentNumber][myNumber]['imageAna'].embedPlot(self.fig4)
+           ##         scanData[parentNumber][myNumber]['imageAna'].embed_plot(self.fig4)
            
                 #self.scanInfo.SetLabel(''.join(str(scanData[self.scanTree.GetItemText(ofMe).split()[1][:-1]])))
                 #self.psic = gonio_psic.psic_from_spec(map(float,scanData[self.scanTree.GetItemText(ofMe).split()[1][:-1]]['1']['G'].split()),angles={})

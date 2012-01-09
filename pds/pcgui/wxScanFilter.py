@@ -90,7 +90,7 @@ class wxScanFilter(model.Background, wxUtil):
         # Information returned per scan:
         #   cmnd: Actual command issued
         #   index: Scan index number
-        #   nl_start: Line number for the start of the scan
+        #   nl_start: Line number for the start of the scan --> TPT this is the line number of the #S line
         #   date: The date and time of the scan
         #   time: How long the scan took
         #   G: All the G values
@@ -101,7 +101,7 @@ class wxScanFilter(model.Background, wxUtil):
         #   labels: The column headers for the scan data
         #   atten: The states of the attenuators
         #   energy: The energy used for the scan
-        #   lineno: Line number for the end of the scan
+        #   lineno: Line number for the end of the scan  --> TPT this is the line number of the #L line !!
         #   lStart: The actual starting L value
         #   lStop: The actual stopping L value
         #   aborted: Whether or not the scan was aborted
@@ -138,8 +138,16 @@ class wxScanFilter(model.Background, wxUtil):
                 #hVal and kVal are the points in reciprocal space
                 hVal = fullLine[1]
                 kVal = fullLine[2]
-                Li = i['lStart']
-                Lf = i['lStop']
+                
+                ## TPT removed these fields from specfile summary
+                ## so just grab them from the rodscan cmd.  If you really need
+                ## the actual values then Id suggest grabbing them from the 
+                ## data returned by specFile.scan_data(scanIndex)
+                #Li = i['lStart']
+                #Lf = i['lStop']
+                Li = fullLine[3]
+                Lf = fullLine[4]
+
                 #To get the distance to the point, we have to multiply the
                 # reciprocal point by the distances of H and K
                 # For example: if [H, K] is [2, -1] but H is 1.8 and K is 2,
@@ -172,7 +180,23 @@ class wxScanFilter(model.Background, wxUtil):
             else:
                 aborted = ''
             scanDate = i['date']
-            scanData = (i['cmd'], i['time'], i['atten'], i['energy'], i['nl_start'], i['lineno'], i['dataStart'], i['dataStop'], i['mot_names'])
+            
+            ## TPT, Removed dataStart and dataStop from the summary. added nl_dat.
+            #scanData = (i['cmd'], i['time'], i['atten'], i['energy'], i['nl_start'], 
+            #            i['lineno'], i['dataStart'], i['dataStop'], i['mot_names'])
+            # Not sure how/why you need the line numbers (can just use the specfile.scan_data or
+            # specfile.scan_dict methods to get the column data when needed), 
+            # but you should be able to get them from the following.
+            # Note dataStart and dataStop might need the +1's depending on how you use them???
+            dataStart = i['lineno'] + 1
+            dataStop = i['lineno'] + i['nl_dat'] + 1
+            
+            # Also note the i['nl_start'] is the #S line, and i['lineno'] is the #L line
+            # However, I think you were using i['lineno'] as the end of the scan
+            # scan data ?? so I also changed the 5th field to dataStop
+            scanData = (i['cmd'], i['time'], i['atten'], i['energy'], i['nl_start'], 
+                        dataStop, dataStart, dataStop, i['mot_names'])
+                        
             #Each loop, check that the fromL and toL
             # are still the min and max, respectively
             fromL = min(fromL, toL, Li, Lf)
@@ -310,12 +334,15 @@ class wxScanFilter(model.Background, wxUtil):
         scanNum = int(self.components.unfilteredList.getStringSelection()[0][0])
         fullScanData = allScans[scanNum - 1][9]
         #This is what's shown; more can be easily added
+        # TPT added sata and end data to make a check
         toShow = 'Command: ' + fullScanData[0].strip() + '\n\n' + \
                     'Time: ' + fullScanData[1].strip() + '\n\n' + \
                     'Attenuators: ' + fullScanData[2].strip() + '\n\n' + \
                     'Energy: ' + fullScanData[3].strip() + '\n\n' + \
                     'Start line: ' + str(fullScanData[4]) + '\n\n' + \
                     'End line: ' + str(fullScanData[5]) + '\n\n' + \
+                    'Start data line: ' + str(fullScanData[6]) + '\n\n' + \
+                    'End data line: ' + str(fullScanData[7]) + '\n\n' + \
                     'Data points: ' + str(int(fullScanData[7]) - int(fullScanData[6])) + '\n\n' + \
                     'HK Distance(s): ' + str(allScans[scanNum - 1][10]) + '\n\n'
         
