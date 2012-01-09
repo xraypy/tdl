@@ -653,21 +653,14 @@ class ImageAna:
         if self.plotflag: self.plot(fig=fig)
             
     ############################################################################
-    def getVars(self):
-        toReturn = (self.clpimg, 
-                    self.bgrimg, 
-                    self.integrated, 
-                    self.I, 
-                    self.Ibgr,
-                    self.Ierr,
-                    self.I_c,
-                    self.I_r,
-                    self.Ibgr_c,
-                    self.Ibgr_r,
-                    self.Ierr_c,
-                    self.Ierr_r
-                    )
-        return toReturn
+    def get_vars(self):
+        ret = (self.clpimg, self.bgrimg, 
+               self.integrated, self.I, 
+               self.Ibgr, self.Ierr,
+               self.I_c, self.I_r,
+               self.Ibgr_c, self.Ibgr_r,
+               self.Ierr_c, self.Ierr_r )
+        return ret
     
     ############################################################################
     def integrate(self):
@@ -865,10 +858,15 @@ class ImageAna:
         
         
     ############################################################################
-    def embedPlot(self,fig):
+    def embed_plot(self,fig):
         """
         make fancy 4-panel plot to embed in wxPython.
         fig is the Figure in which to embed the plots
+        
+        Notes:
+        -----
+        Is this method redundant?  We should combine this and plot so 
+        we only have one display method
         """
         if self.integrated == False:
             self.integrate()
