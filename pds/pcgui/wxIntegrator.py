@@ -2070,7 +2070,7 @@ class ReaderThread(threading.Thread):
                                                         'K': scan[2],
                                                         'G': map(float,scan[11].split()),
                                                         'labels': scan[12].split(),
-														'type': type,
+                                                        'type': type,
                                                         'roi':[], 
                                                         'rotangle': 0, 
                                                         'bgrflag': 1, 
