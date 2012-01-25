@@ -1,7 +1,7 @@
 '''
-Spec to HDF5 converter
+Spec to HDF5 converter / parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-1/19/2011
+1/25/2011
 '''
 
 import array
@@ -54,35 +54,49 @@ def summarize(lines):
             i = i[:-1]
             # get motor names: they should be at the top of the file
             # but they can be reset anywhere in the file
-            if (i[0:2] == '#O'):
+            if (i.startswith('#O')):
                 if i[2] == '0': mnames = ''
                 mnames = mnames + i[3:]
             # get scan number
-            elif (i[0:3] == '#S '):
+            elif (i.startswith('#S ')):
                 v = i[3:].split()
                 index = int(v[0])
                 cmnd = i[4 + len(v[0]):]
                 n_sline = lineno
             # Get the date
-            elif (i[0:3] == '#D '):
+            elif (i.startswith('#D ')):
                 date = i[3:]
-            elif (i[0:3] == '#T '):
+            # Get some value in seconds (unclear what it is)
+            elif (i.startswith('#T ')):
                 xtime = i[3:]
-            elif (i[0:2] == '#G'):
+            # Get the G values
+            elif (i.startswith('#G')):
                 if i[2] == '0': g_vals = ''
                 g_vals = g_vals + i[3:]
-            elif (i[0:3] == '#Q '):
+            # Get Q
+            elif (i.startswith('#Q ')):
                 q = i[3:]
-            elif (i[0:2] == '#P'):
+            # Get the motor values
+            elif (i.startswith('#P')):
                 if i[2] == '0': p_vals = ''
                 p_vals = p_vals + i[3:]
-            elif (i[0:3] == '#N '):
+            # Get the number of data columns
+            elif (i.startswith('#N ')):
                 ncols = int(i[3:])
-            elif (i[0:3] == '#AT'):
+            # Get the attenuator positions
+            # NOTE: This will also match #ATTEN_FACTORS
+            # If that starts getting used again, we can either change
+            # this to i.startswith('#ATTEN ') or put it after an 
+            # i.startswith('#ATTEN_F') check.
+            elif (i.startswith('#AT')):
                 atten = i[6:]
-            elif (i[0:3] == '#EN'):
+            # Get the beam energy
+            elif (i.startswith('#EN')):
                 energy = i[8:]
-            elif (i[0:3] == '#L '):
+            # Get the column header info, as well as the following data
+            # Also check for comments following the data containing
+            # the word 'aborted'
+            elif (i.startswith('#L ')):
                 lab = i[3:].split()
                 ## count how many lines of 'data' we have
                 ## and see if the scan was aborted
@@ -90,9 +104,9 @@ def summarize(lines):
                 nl_dat = 0
                 aborted = False
                 for ii in xx:
-                    if (ii[0:3] == '#S '):
+                    if (ii.startswith('#S ')):
                         break
-                    elif (ii[0:1] ==  '#'):
+                    elif (ii.startswith('#')):
                         if ii.find('aborted') > -1:
                             aborted = True
                     elif (len(ii) > 3):
@@ -136,8 +150,9 @@ def summarize(lines):
 def read_image(file):
     try:
         im = Image.open(file)
-        # While numpy free, this seems to only be able to handle 1D arrays
+        # While numpy free, this seems to only be able to handle 1D arrays:
         #arr = array.array('L', im.tostring())
+        # So we'll still have to use numpy for this
         arr = num.fromstring(im.tostring(), dtype='int32')
         arr.shape = (im.size[1], im.size[0])
         return arr
@@ -147,6 +162,8 @@ def read_image(file):
 
 # Main conversion function, takes user input and converts
 # specified .spc file to .h5
+# Only works if a file doesn't exist: appending and overwriting
+# have not been implemented yet
 def spec_to_hdf(args):
     if len(args) == 0:
         print 'Current directory: ', os.getcwd()
@@ -159,7 +176,7 @@ def spec_to_hdf(args):
         output = raw_input('> ')
         if output == '':
             output = 'default.h5'
-        if output[-3:] != '.h5':
+        if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
             choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
@@ -175,7 +192,7 @@ def spec_to_hdf(args):
         output = raw_input('> ')
         if output == '':
             output = 'default.h5'
-        if output[-3:] != '.h5':
+        if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
             choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
@@ -193,7 +210,7 @@ def spec_to_hdf(args):
         output = args[1]
         if output == '':
             output = 'default.h5'
-        if output[-3:] != '.h5':
+        if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
             choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
@@ -211,7 +228,7 @@ def spec_to_hdf(args):
         output = args[1]
         if output == '':
             output = 'default.h5'
-        if output[-3:] != '.h5':
+        if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
             choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
@@ -233,16 +250,9 @@ def spec_to_hdf(args):
     this_file.close()
     summary = summarize(lines)
 
-    #print summary[1].keys()
-    
-    #print summary[1]['labels']
     master_file = h5py.File(output)
     master_group = master_file.create_group('MasterCopy')
     spec_group = master_group.create_group(spec_name)
-    #for key in summary[1].keys():
-    #    if key not in ['labels', 'point_data', 'g_labs', 'mnames', 'G', 'P']:
-    #        print key
-    #        print type(summary[1][key])
     
     for scan in summary:
         scan_group = spec_group.create_group(str(scan['index']))
@@ -251,7 +261,108 @@ def spec_to_hdf(args):
         scan_group.create_dataset('param_labs',
                                  data=scan['g_labs'] + scan['mnames'])
         scan_group.create_dataset('param_data', data=scan['G'] + scan['P'])
-        if scan.get('cmd', '').split()[0] == 'rodscan':
+        # Scan types: ['a2scan', 'a4scan', 'ascan', 'Escan', 'hkcircle',
+        #              'hklmesh', 'hklrock', 'hklscan', 'loopscan', 'mesh',
+        #              'powder_scan', 'rodscan', 'rodscan_interp',
+        #              'timescan', 'xascan']
+        # Currently included: a2scan, a4scan, ascan, Escan, hklscan, rodscan,
+        #                     timescan
+        # Parses according to the command given
+        if scan.get('cmd', '').split()[0] == 'a2scan':
+            for key in scan.keys():
+                if key == 'cmd':
+                    split_cmd = scan[key].split()
+                    scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['motor1'] = split_cmd[1]
+                    scan_group.attrs['m1_start'] = float(split_cmd[2])
+                    scan_group.attrs['m1_stop'] = float(split_cmd[3])
+                    scan_group.attrs['motor2'] = split_cmd[4]
+                    scan_group.attrs['m2_start'] = float(split_cmd[5])
+                    scan_group.attrs['m2_stop'] = float(split_cmd[6])
+                    scan_group.attrs['num_points'] = float(split_cmd[7])
+                    scan_group.attrs['count_time'] = float(split_cmd[8])
+                elif key not in ['labels', 'point_data',
+                               'g_labs', 'mnames', 'G', 'P']:
+                    scan_key = scan[key]
+                    if scan_key is None:
+                        scan_key = 'None'
+                    scan_group.attrs[key] = scan_key
+        elif scan.get('cmd', '').split()[0] == 'a4scan':
+            for key in scan.keys():
+                if key == 'cmd':
+                    split_cmd = scan[key].split()
+                    scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['motor1'] = split_cmd[1]
+                    scan_group.attrs['m1_start'] = float(split_cmd[2])
+                    scan_group.attrs['m1_stop'] = float(split_cmd[3])
+                    scan_group.attrs['motor2'] = split_cmd[4]
+                    scan_group.attrs['m2_start'] = float(split_cmd[5])
+                    scan_group.attrs['m2_stop'] = float(split_cmd[6])
+                    scan_group.attrs['motor3'] = split_cmd[7]
+                    scan_group.attrs['m3_start'] = float(split_cmd[8])
+                    scan_group.attrs['m3_stop'] = float(split_cmd[9])
+                    scan_group.attrs['motor4'] = split_cmd[10]
+                    scan_group.attrs['m4_start'] = float(split_cmd[11])
+                    scan_group.attrs['m4_stop'] = float(split_cmd[12])
+                    scan_group.attrs['num_points'] = float(split_cmd[13])
+                    scan_group.attrs['count_time'] = float(split_cmd[14])
+                elif key not in ['labels', 'point_data',
+                               'g_labs', 'mnames', 'G', 'P']:
+                    scan_key = scan[key]
+                    if scan_key is None:
+                        scan_key = 'None'
+                    scan_group.attrs[key] = scan_key
+        elif scan.get('cmd', '').split()[0] == 'ascan':
+            for key in scan.keys():
+                if key == 'cmd':
+                    split_cmd = scan[key].split()
+                    scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['motor1'] = split_cmd[1]
+                    scan_group.attrs['m1_start'] = float(split_cmd[2])
+                    scan_group.attrs['m1_stop'] = float(split_cmd[3])
+                    scan_group.attrs['num_points'] = float(split_cmd[4])
+                    scan_group.attrs['count_time'] = float(split_cmd[5])
+                elif key not in ['labels', 'point_data',
+                               'g_labs', 'mnames', 'G', 'P']:
+                    scan_key = scan[key]
+                    if scan_key is None:
+                        scan_key = 'None'
+                    scan_group.attrs[key] = scan_key
+        elif scan.get('cmd', '').split()[0] == 'Escan':
+            for key in scan.keys():
+                if key == 'cmd':
+                    split_cmd = scan[key].split()
+                    scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['energy_start'] = float(split_cmd[1])
+                    scan_group.attrs['energy_stop'] = float(split_cmd[2])
+                    scan_group.attrs['num_points'] = float(split_cmd[3])
+                    scan_group.attrs['count_time'] = float(split_cmd[4])
+                elif key not in ['labels', 'point_data',
+                               'g_labs', 'mnames', 'G', 'P']:
+                    scan_key = scan[key]
+                    if scan_key is None:
+                        scan_key = 'None'
+                    scan_group.attrs[key] = scan_key
+        elif scan.get('cmd', '').split()[0] == 'hklscan':
+            for key in scan.keys():
+                if key == 'cmd':
+                    split_cmd = scan[key].split()
+                    scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['h_start'] = float(split_cmd[1])
+                    scan_group.attrs['h_stop'] = float(split_cmd[2])
+                    scan_group.attrs['k_start'] = float(split_cmd[3])
+                    scan_group.attrs['k_stop'] = float(split_cmd[4])
+                    scan_group.attrs['L_start'] = float(split_cmd[5])
+                    scan_group.attrs['L_stop'] = float(split_cmd[6])
+                    scan_group.attrs['num_points'] = float(split_cmd[7])
+                    scan_group.attrs['count_time'] = float(split_cmd[8])
+                elif key not in ['labels', 'point_data',
+                               'g_labs', 'mnames', 'G', 'P']:
+                    scan_key = scan[key]
+                    if scan_key is None:
+                        scan_key = 'None'
+                    scan_group.attrs[key] = scan_key
+        elif scan.get('cmd', '').split()[0] == 'rodscan':
             for key in scan.keys():
                 if key == 'cmd':
                     split_cmd = scan[key].split()
@@ -270,6 +381,19 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+        elif scan.get('cmd', '').split()[0] == 'timescan':
+            for key in scan.keys():
+                if key == 'cmd':
+                    split_cmd = scan[key].split()
+                    scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['count_time'] = float(split_cmd[1])
+                    scan_group.attrs['time_space'] = float(split_cmd[2])
+                elif key not in ['labels', 'point_data',
+                               'g_labs', 'mnames', 'G', 'P']:
+                    scan_key = scan[key]
+                    if scan_key is None:
+                        scan_key = 'None'
+                    scan_group.attrs[key] = scan_key
         else:
             for key in scan.keys():
                 if key not in ['labels', 'point_data',
@@ -278,7 +402,9 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+        # Set the image directory for the scan
         this_dir = image_dir + 'S%03d\\' % scan['index']
+        # Print the directory (to give users a sense of progress made)
         print this_dir
         if os.path.isdir(this_dir):
             image_data = []
@@ -286,7 +412,7 @@ def spec_to_hdf(args):
                 try:
                     image_value = None
                     image_path = os.path.join(this_dir, image_file)
-                    if image_path[-4:] == '.tif':
+                    if image_path.endswith('.tif'):
                         image_value = read_image(image_path)
                     if image_value != None:
                         image_data.append(image_value)
