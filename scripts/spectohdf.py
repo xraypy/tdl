@@ -1,7 +1,7 @@
 '''
 Spec to HDF5 converter / parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-1/25/2011
+2/1/2012
 '''
 
 import array
@@ -43,18 +43,21 @@ def summarize(lines):
 
         summary = []
         lineno = 0
-        (mnames, cmnd, date, xtime, g_vals, q, p_vals, atten, energy, lab,
-        aborted) = \
-            (None, None, None, None, None, None, None, None, None, None,
-            False)
+        (spec_name, mnames, cmnd, date, xtime, g_vals, q, p_vals, atten,
+        energy, lab, aborted) = \
+            (None, None, None, None, None, None, None, None, None,
+            None, None, False)
         point_data = []
         (index, ncols, n_sline) = (0, 0, 0)
         for i in lines:
             lineno = lineno + 1
             i = i[:-1]
+            # get the name of the specfile, should only appear once
+            if (i.startswith('#F')):
+                spec_name = i[3:]
             # get motor names: they should be at the top of the file
             # but they can be reset anywhere in the file
-            if (i.startswith('#O')):
+            elif (i.startswith('#O')):
                 if i[2] == '0': mnames = ''
                 mnames = mnames + i[3:]
             # get scan number
@@ -74,6 +77,8 @@ def summarize(lines):
                 if i[2] == '0': g_vals = ''
                 g_vals = g_vals + i[3:]
             # Get Q
+            # NOTE: This value is useless: it shows what Q was at the end
+            # of the previous scan, not what it is going to be.
             elif (i.startswith('#Q ')):
                 q = i[3:]
             # Get the motor values
@@ -114,6 +119,7 @@ def summarize(lines):
                         point_data.append(map(float, ii.split()))
                 ## append all the info...
                 current_dict = {'index':index,
+                                     'spec_name':spec_name,
                                      'nl_start':n_sline,
                                      'cmd':cmnd,
                                      'date':date,
@@ -125,8 +131,8 @@ def summarize(lines):
                                      'Q':q,
                                      'ncols':ncols,
                                      'labels':lab,
-                                     'atten':atten,
-                                     'energy':energy,
+                                     'atten':atten.strip(),
+                                     'energy':float(energy),
                                      'lineno':lineno,
                                      'aborted':aborted,
                                      'point_data':point_data}
@@ -251,8 +257,7 @@ def spec_to_hdf(args):
     summary = summarize(lines)
 
     master_file = h5py.File(output)
-    master_group = master_file.create_group('MasterCopy')
-    spec_group = master_group.create_group(spec_name)
+    spec_group = master_file.create_group(spec_name)
     
     for scan in summary:
         scan_group = spec_group.create_group(str(scan['index']))
