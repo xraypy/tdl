@@ -18,7 +18,7 @@ class wxUtil:
         # get the shell reference from the parent window
         # otherwise create a new one (ie for standalones)
         try:
-            self.shell = self.getParent().get_shell()
+            self.shell = self.GetParent().get_shell()
         except:
             from pds import shell
             self.shell = shell.Shell(stdin=self,stdout=self,GUI='WXAgg')

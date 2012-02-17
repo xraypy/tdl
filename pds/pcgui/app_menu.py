@@ -74,7 +74,7 @@ class menuApps:
         self.wxCtrData.visible = True
     
     def on_menuAppsScanSelect_select(self, event):
-        import wxScanSelect
+        from pds.pcgui import wxScanSelect
         wxScanSelect = mod_import(wxScanSelect)
         wxScanSelect = wxScanSelect.wxScanSelect
         filename = os.path.join(self.rsrc_path,'wxScanSelect.rsrc.py')
@@ -82,3 +82,9 @@ class menuApps:
                                             filename=filename)
         self.wxScanSelect.position = (200, 5)
         self.wxScanSelect.visible = True
+        
+    def on_menuAppsFilter_select(self, event):
+        from pds.pcgui import wxFilter
+        wxFilter = mod_import(wxFilter)
+        self.wxFilter = wxFilter.filterGUI(self)
+        self.wxFilter.CenterOnScreen()

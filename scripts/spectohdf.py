@@ -118,6 +118,16 @@ def summarize(lines):
                         nl_dat = nl_dat + 1
                         point_data.append(map(float, ii.split()))
                 ## append all the info...
+                L_pos = -1
+                L_start = '--'
+                L_stop = '--'
+                try:
+                    L_pos = lab.index('L')
+                except ValueError:
+                    pass
+                if L_pos > -1 and len(point_data) > 0:
+                    L_start = point_data[0][L_pos]
+                    L_stop = point_data[-1][L_pos]
                 current_dict = {'index':index,
                                      'spec_name':spec_name,
                                      'nl_start':n_sline,
@@ -135,7 +145,10 @@ def summarize(lines):
                                      'energy':float(energy),
                                      'lineno':lineno,
                                      'aborted':aborted,
-                                     'point_data':point_data}
+                                     'point_data':point_data,
+                                     'real_L_start':L_start,
+                                     'real_L_stop':L_stop,
+                                     'nl_dat':nl_dat}
                 summary.append(current_dict)
                 (cmnd, date, xtime, g_vals, q, p_vals, atten, energy, lab,
                 aborted) = \
@@ -171,6 +184,7 @@ def read_image(file):
 # Only works if a file doesn't exist: appending and overwriting
 # have not been implemented yet
 def spec_to_hdf(args):
+    choice = 'a'
     if len(args) == 0:
         print 'Current directory: ', os.getcwd()
         print 'Please enter the path to the specfile:'
@@ -185,12 +199,9 @@ def spec_to_hdf(args):
         if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
-                                or (C)ancel (A/O/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
+                                or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
-                return
-            elif choice == 'a':
-                print 'Sorry, not implemented yet.'
                 return
     elif len(args) == 1:
         input = args[0]
@@ -201,12 +212,9 @@ def spec_to_hdf(args):
         if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
-                                or (C)ancel (A/O/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
+                                or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
-                return
-            elif choice == 'a':
-                print 'Sorry, not implemented yet.'
                 return
     elif len(args) == 2:
         input = args[0]
@@ -219,14 +227,17 @@ def spec_to_hdf(args):
         if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
-                                or (C)ancel (A/O/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
+                                or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
-            elif choice == 'a':
-                print 'Sorry, not implemented yet.'
-                return
     else:
+        options = args[2:]
+        choice = None
+        if '-a' in options:
+            choice = 'a'
+        elif '-w' in options:
+            choice = 'w'
         input = args[0]
         if not os.path.isfile(input):
             print 'Error: file not found'
@@ -237,14 +248,8 @@ def spec_to_hdf(args):
         if not output.endswith('.h5'):
             output = output + '.h5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, (O)verwrite, \
-                                or (C)ancel (A/O/C)? ').lower()
             if choice == 'c':
                 return
-            elif choice == 'a':
-                print 'Sorry, not implemented yet.'
-                return
-        options = args[2:]
     
     time1 = time.time()
     
@@ -256,15 +261,31 @@ def spec_to_hdf(args):
     this_file.close()
     summary = summarize(lines)
 
-    master_file = h5py.File(output)
-    spec_group = master_file.create_group(spec_name)
+    master_file = h5py.File(output, choice)
+    spec_group = master_file.require_group(spec_name)
     
     for scan in summary:
-        scan_group = spec_group.create_group(str(scan['index']))
+        scan_group = spec_group.require_group(str(scan['index']))
+        try:
+            del scan_group['point_labs']
+        except KeyError:
+            pass
         scan_group.create_dataset('point_labs', data=scan['labels'])
+        try:
+            del scan_group['point_data']
+        except KeyError:
+            pass
         scan_group.create_dataset('point_data', data=scan['point_data'])
+        try:
+            del scan_group['param_labs']
+        except KeyError:
+            pass
         scan_group.create_dataset('param_labs',
                                  data=scan['g_labs'] + scan['mnames'])
+        try:
+            del scan_group['param_data']
+        except KeyError:
+            pass
         scan_group.create_dataset('param_data', data=scan['G'] + scan['P'])
         # Scan types: ['a2scan', 'a4scan', 'ascan', 'Escan', 'hkcircle',
         #              'hklmesh', 'hklrock', 'hklscan', 'loopscan', 'mesh',
@@ -276,6 +297,7 @@ def spec_to_hdf(args):
         if scan.get('cmd', '').split()[0] == 'a2scan':
             for key in scan.keys():
                 if key == 'cmd':
+                    scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
                     scan_group.attrs['motor1'] = split_cmd[1]
@@ -295,6 +317,7 @@ def spec_to_hdf(args):
         elif scan.get('cmd', '').split()[0] == 'a4scan':
             for key in scan.keys():
                 if key == 'cmd':
+                    scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
                     scan_group.attrs['motor1'] = split_cmd[1]
@@ -320,6 +343,7 @@ def spec_to_hdf(args):
         elif scan.get('cmd', '').split()[0] == 'ascan':
             for key in scan.keys():
                 if key == 'cmd':
+                    scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
                     scan_group.attrs['motor1'] = split_cmd[1]
@@ -336,6 +360,7 @@ def spec_to_hdf(args):
         elif scan.get('cmd', '').split()[0] == 'Escan':
             for key in scan.keys():
                 if key == 'cmd':
+                    scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
                     scan_group.attrs['energy_start'] = float(split_cmd[1])
@@ -351,6 +376,7 @@ def spec_to_hdf(args):
         elif scan.get('cmd', '').split()[0] == 'hklscan':
             for key in scan.keys():
                 if key == 'cmd':
+                    scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
                     scan_group.attrs['h_start'] = float(split_cmd[1])
@@ -370,6 +396,7 @@ def spec_to_hdf(args):
         elif scan.get('cmd', '').split()[0] == 'rodscan':
             for key in scan.keys():
                 if key == 'cmd':
+                    scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
                     scan_group.attrs['h_val'] = float(split_cmd[1])
@@ -389,6 +416,7 @@ def spec_to_hdf(args):
         elif scan.get('cmd', '').split()[0] == 'timescan':
             for key in scan.keys():
                 if key == 'cmd':
+                    scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
                     scan_group.attrs['count_time'] = float(split_cmd[1])
@@ -419,11 +447,19 @@ def spec_to_hdf(args):
                     image_path = os.path.join(this_dir, image_file)
                     if image_path.endswith('.tif'):
                         image_value = read_image(image_path)
-                    if image_value != None:
-                        image_data.append(image_value)
+                        if image_value != None:
+                            image_data.append(image_value)
+                        else:
+                            holding = image_data[-1].copy()
+                            holding.fill(-1)
+                            image_data.append(holding)
                 except:
                     print 'Error reading image ' + image_path
             if image_data != []:
+                try:
+                    del scan_group['image_data']
+                except KeyError:
+                    pass
                 scan_group.create_dataset('image_data', data=image_data,
                                          compression='szip')
     
