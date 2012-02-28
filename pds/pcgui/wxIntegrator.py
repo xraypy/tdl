@@ -41,7 +41,7 @@ class Integrator(wx.Frame, wx.Notebook):
             mod_import(image_data)
             global scanData
             
-            getNames=self.nameProjects()
+            '''getNames=self.nameProjects()
             nameResult=getNames.ShowModal()
             if nameResult == wx.ID_CANCEL:
                 getNames.Destroy()
@@ -50,6 +50,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.projectName = getNames.nameField.GetValue()
                 self.subprojectName = getNames.subNameField.GetValue()
                 getNames.Destroy()
+            '''
             
             
             #Parse the input
@@ -1492,6 +1493,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 scanData[parentNumber][myNumber]['Ierr_c'],
                 scanData[parentNumber][myNumber]['Ierr_r']) = imageAna.get_vars()
             self.updateF(parentNumber, myNumber)
+            scanData[parentNumber][myNumber]['imageData'] = imageFile
         
         #How to update the L vs I/F plot
         #This update usually occurs last, and so does not call other updates
@@ -1564,6 +1566,13 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.updateRodPlot(myParent, parentNumber, myNumber)
                 self.updateLabels(parentNumber, myNumber)
                 self.scanTree.SetFocus()
+            imageFile = scanData[parentNumber][myNumber]['imageFile']
+            if isinstance(scanData[parentNumber][myNumber]['imageData'], basestring) or scanData[parentNumber][myNumber]['pixelMapChanged']:
+                try:
+                    scanData[parentNumber][myNumber]['imageData'] = image_data.read(imageFile, ''.join(['int_ctr\\', scanData[parentNumber][myNumber]['badPixelMap']]))
+                except:
+                    scanData[parentNumber][myNumber]['imageData'] = image_data.read(imageFile, None)
+                scanData[parentNumber][myNumber]['pixelMapChanged'] = False
             self.fig4.clear()
             if scanData[parentNumber][myNumber]['imageChanged'] == False:
                 imageAna = image_data.ImageAna(
@@ -1702,9 +1711,13 @@ class Integrator(wx.Frame, wx.Notebook):
         
         #What to do when a new selection is made
         def newSelected(self, event):
+            try:
+                scanData[self.parentNumber][self.myNumber]['imageData'] = scanData[self.parentNumber][self.myNumber]['imageFile']
+            except:
+                pass
             ofMe = event.GetItem()
             myParent = self.scanTree.GetItemParent(ofMe)
-            print self.scanTree.GetItemPyData(ofMe)
+            #print self.scanTree.GetItemPyData(ofMe)
             if ofMe == self.scanRoot:
                 self.fig4.clear()
                 self.canvas4.draw()
@@ -1722,19 +1735,19 @@ class Integrator(wx.Frame, wx.Notebook):
             else:
                 myText = self.scanTree.GetItemText(ofMe)
                 parentText = self.scanTree.GetItemText(myParent)
-                myNumber = myText.split()[1]
-                parentNumber = parentText.split()[1][:-1]
-                imageFile = scanData[parentNumber][myNumber]['imageFile']
-                if isinstance(scanData[parentNumber][myNumber]['imageData'], basestring) or scanData[parentNumber][myNumber]['pixelMapChanged']:
+                self.myNumber = myText.split()[1]
+                self.parentNumber = parentText.split()[1][:-1]
+                imageFile = scanData[self.parentNumber][self.myNumber]['imageFile']
+                if isinstance(scanData[self.parentNumber][self.myNumber]['imageData'], basestring) or scanData[self.parentNumber][self.myNumber]['pixelMapChanged']:
                     try:
                         print 'trying...'
-                        scanData[parentNumber][myNumber]['imageData'] = image_data.read(imageFile, ''.join(['int_ctr\\', scanData[parentNumber][myNumber]['badPixelMap']]))
+                        scanData[self.parentNumber][self.myNumber]['imageData'] = image_data.read(imageFile, ''.join(['int_ctr\\', scanData[self.parentNumber][self.myNumber]['badPixelMap']]))
                     except:
                         print 'failing...'
-                        scanData[parentNumber][myNumber]['imageData'] = image_data.read(imageFile, None)
-                    scanData[parentNumber][myNumber]['pixelMapChanged'] = False
+                        scanData[self.parentNumber][self.myNumber]['imageData'] = image_data.read(imageFile, None)
+                    scanData[self.parentNumber][self.myNumber]['pixelMapChanged'] = False
                 if self.keepMaxToggle.GetValue():
-                    scanData[parentNumber][myNumber]['imageMax'] = int(self.imageMaxField.GetValue())
+                    scanData[self.parentNumber][self.myNumber]['imageMax'] = int(self.imageMaxField.GetValue())
                 possibilities = {self.colNbgrFreeze: (self.colNbgrField, 'cnbgr', int),
                                     self.colPowerFreeze: (self.colPowerField, 'cpow', float),
                                     self.colWidthFreeze: (self.colWidthField, 'cwidth', int),
@@ -1747,17 +1760,19 @@ class Integrator(wx.Frame, wx.Notebook):
                 for key in possibilities:
                     if key.GetValue():
                         whatField, updateThis, ofType = possibilities[key]
-                        if scanData[parentNumber][myNumber][updateThis] == ofType(eval(whatField.GetValue())):
+                        if scanData[self.parentNumber][self.myNumber][updateThis] == ofType(eval(whatField.GetValue())):
                             pass
                         else:
-                            scanData[parentNumber][myNumber][updateThis] = ofType(eval(whatField.GetValue()))
-                            whatField.SetValue(str(scanData[parentNumber][myNumber][updateThis]))
-                            scanData[parentNumber][myNumber]['imageChanged'] = True
-                            scanData[parentNumber][myNumber]['fChanged'] = True
-                self.updateFourPlot(myParent, parentNumber, myNumber)
-                self.updateRodPlot(myParent, parentNumber, myNumber)
-                self.updateFields(parentNumber, myNumber)
-                self.statusBar.SetStatusText('Scan ' + parentNumber + ', Point ' + myNumber)
+                            scanData[self.parentNumber][self.myNumber][updateThis] = ofType(eval(whatField.GetValue()))
+                            whatField.SetValue(str(scanData[self.parentNumber][self.myNumber][updateThis]))
+                            scanData[self.parentNumber][self.myNumber]['imageChanged'] = True
+                            scanData[self.parentNumber][self.myNumber]['fChanged'] = True
+                self.updateFourPlot(myParent, self.parentNumber, self.myNumber)
+                self.updateRodPlot(myParent, self.parentNumber, self.myNumber)
+                self.updateFields(self.parentNumber, self.myNumber)
+                self.statusBar.SetStatusText('Scan ' + self.parentNumber + ', Point ' + self.myNumber)
+                #for key in scanData[parentNumber][myNumber].keys():
+                #    print key
 
                 
         #Write a file to the current directory containing the index, H, K,
