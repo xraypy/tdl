@@ -1,10 +1,11 @@
 '''
 Spec to HDF5 converter / parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-2/1/2012
+3/8/2012
 '''
 
 import array
+import math
 import os
 import sys
 import time
@@ -314,6 +315,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
         elif scan.get('cmd', '').split()[0] == 'a4scan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -340,6 +347,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
         elif scan.get('cmd', '').split()[0] == 'ascan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -357,6 +370,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
         elif scan.get('cmd', '').split()[0] == 'Escan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -373,6 +392,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
         elif scan.get('cmd', '').split()[0] == 'hklscan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -393,6 +418,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
         elif scan.get('cmd', '').split()[0] == 'rodscan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -413,6 +444,27 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
+            # Calculate the HK distance
+            h_val = scan_group.attrs['h_val']
+            k_val = scan_group.attrs['k_val']
+            h_val_d = list(scan_group['param_labs']).index('g_aa_s')
+            k_val_d = list(scan_group['param_labs']).index('g_bb_s')
+            t_val_d = list(scan_group['param_labs']).index('g_ga_s')
+            h_val_d = float(list(scan_group['param_data'])[h_val_d])
+            k_val_d = float(list(scan_group['param_data'])[k_val_d])
+            t_val_d = float(list(scan_group['param_data'])[t_val_d])
+            t_val_d = math.radians(180 - t_val_d)
+            hk_dist = round(((h_val * h_val_d)**2 + \
+                             (k_val * k_val_d)**2 - \
+                              2 * h_val * h_val_d * k_val * k_val_d * \
+                              math.cos(t_val_d))**0.5, 8)
+            scan_group.attrs['hk_dist'] = hk_dist
         elif scan.get('cmd', '').split()[0] == 'timescan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -427,6 +479,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
         else:
             for key in scan.keys():
                 if key not in ['labels', 'point_data',
@@ -435,6 +493,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
+                    if key.startswith('date'):
+                        try:
+                            scan_group.attrs['epoch'] = \
+                                        time.mktime(time.strptime(scan_key))
+                        except:
+                            pass
         # Set the image directory for the scan
         this_dir = image_dir + 'S%03d\\' % scan['index']
         # Print the directory (to give users a sense of progress made)

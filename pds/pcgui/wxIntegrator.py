@@ -1,10 +1,9 @@
 '''
 Specfile Integrator
 Author: Craig Biwer (cbiwer@uchicago.edu)
-Last modified: 12.16.2011
+Last modified: 2.29.2012
 '''
 
-import wx
 import os
 import math
 #import sys
@@ -13,7 +12,8 @@ import copy
 import linecache
 import threading
 import Queue
-#import h5py
+
+import wx
 import matplotlib
 from matplotlib import pyplot
 from matplotlib.figure import Figure
@@ -29,8 +29,6 @@ from tdl.modules.ana import image_data
 from tdl.modules.geom import gonio_psic
 from tdl.modules.ana import ctr_data
 
-import wx.lib.inspection
-
 queueLock = threading.RLock()
 scanData = None
 
@@ -40,18 +38,6 @@ class Integrator(wx.Frame, wx.Notebook):
         def __init__(self, *args, **kwargs):
             mod_import(image_data)
             global scanData
-            
-            '''getNames=self.nameProjects()
-            nameResult=getNames.ShowModal()
-            if nameResult == wx.ID_CANCEL:
-                getNames.Destroy()
-                return
-            else:
-                self.projectName = getNames.nameField.GetValue()
-                self.subprojectName = getNames.subNameField.GetValue()
-                getNames.Destroy()
-            '''
-            
             
             #Parse the input
             self.fullFilename = copy.copy(args[1])
@@ -2002,44 +1988,6 @@ class Integrator(wx.Frame, wx.Notebook):
             self.Destroy()
             del self
             del scanData
-            
-        #This class is for the dialog box that asks for the project / subproject name
-        class nameProjects(wx.Dialog):
-            def __init__(self):
-                wx.Dialog.__init__(self, parent=None, title="New Integrator", size=(220, 136))
-
-                wholeBox = wx.BoxSizer(wx.VERTICAL)
-                requestBox = wx.BoxSizer(wx.HORIZONTAL)
-                textBox = wx.BoxSizer(wx.VERTICAL)
-                fieldBox = wx.BoxSizer(wx.VERTICAL)
-                namesBox = wx.BoxSizer(wx.HORIZONTAL)
-                buttonBox = wx.BoxSizer(wx.HORIZONTAL)
-                
-                requestText = wx.StaticText(self, label='Please enter project and subproject names:')
-                nameText = wx.StaticText(self, label='Project name:')
-                self.nameField = wx.TextCtrl(self)
-                self.nameField.SetValue('Untitled Project')
-                subNameText = wx.StaticText(self, label='Subproject name:')
-                self.subNameField = wx.TextCtrl(self)
-                self.subNameField.SetValue('Untitled Subproject')
-                okButton = wx.Button(self, label='OK', id=wx.ID_OK)
-                cancelButton = wx.Button(self, label='Cancel', id=wx.ID_CANCEL)
-                
-                requestBox.Add(requestText, flag=wx.ALIGN_CENTER)
-                textBox.Add(nameText, proportion=1, flag=wx.ALIGN_RIGHT | wx.BOTTOM, border=5)
-                textBox.Add(subNameText, proportion=1, flag=wx.ALIGN_RIGHT | wx.TOP, border=3)
-                fieldBox.Add(self.nameField, proportion=1)
-                fieldBox.Add(self.subNameField, proportion=1)
-                namesBox.Add(textBox, proportion=1, flag=wx.ALIGN_CENTER)
-                namesBox.Add(fieldBox, proportion=1, flag=wx.ALIGN_CENTER)
-                buttonBox.Add(okButton, proportion=1, flag=wx.ALIGN_CENTER)
-                buttonBox.Add(cancelButton, proportion=1, flag=wx.ALIGN_CENTER)
-                
-                wholeBox.Add(requestBox, proportion=1, flag=wx.ALIGN_CENTER)
-                wholeBox.Add(namesBox, proportion=1)
-                wholeBox.Add(buttonBox, proportion=1, flag=wx.ALIGN_CENTER)
-                
-                self.SetSizer(wholeBox)
             
          
 #Thread class for reading scans from the queue and parsing them
