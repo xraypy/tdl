@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-3/8/2012
+3/14/2012
 '''
 
 import h5py
@@ -15,6 +15,12 @@ import wx.lib.agw.ultimatelistctrl as ULC
 
 import tdl.modules.specfile.filtertools as ft
 from pds.pcgui.wxUtil import wxUtil
+
+POSSIBLE_ATTRIBUTES = ['bad_pixel_map', 'beam_slits', 'bgrflag',
+                              'cnbgr', 'colormap', 'cpow', 'ctan', 'cwidth',
+                              'det_slits', 'rnbgr', 'roi', 'rotangle', 'rpow',
+                              'rtan', 'rwidth', 'sample_angle',
+                              'sample_diameter', 'sample_polygon', 'scale']
 
 class filterGUI(wx.Frame, wxUtil):
     '''The GUI window for filtering.'''
@@ -32,6 +38,9 @@ class filterGUI(wx.Frame, wxUtil):
         
         # All the scans parsed from the file
         self.scanItems = []
+        
+        # The attribute dictionary
+        self.attrDict = {}
         
         # The possible specfiles
         self.allSpecs = {}
@@ -64,6 +73,9 @@ class filterGUI(wx.Frame, wxUtil):
         self.dateResult = None
         self.dateCases = None
         
+        # The project to be built
+        self.projectTree = {}
+        
         # Make the window
         self.fullWindow = wx.Panel(self)
         
@@ -72,7 +84,7 @@ class filterGUI(wx.Frame, wxUtil):
         # fullSizer holds three vertical sizers:
         #   leftSizer holds the table and associated buttons on the left 
         #   middleSizer holds info in the middle
-        #   rightSizer (will) holds the project layout
+        #   rightSizer holds the project layout
         ###############################################################
         
         self.fullSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -169,7 +181,7 @@ class filterGUI(wx.Frame, wxUtil):
                                  flag=wx.EXPAND | wx.BOTTOM, border=2)
         # Add a border line
         self.managementSizer.Add(wx.StaticLine(self.leftPanel, size=(2, 24)),
-                                 flag= wx.LEFT, border=16)
+                                 flag=wx.LEFT, border=16)
         
         # Arrange the left panel
         self.leftSizer.Add(self.filterButtonSizer, proportion=0, flag=wx.EXPAND)
@@ -185,7 +197,7 @@ class filterGUI(wx.Frame, wxUtil):
         ###############################################################
         # In the middle:
         # fileSizer holds the filename text
-        # nextStepSizer holds the buttons for moving to the integrator
+        # newAttributeSizer holds attribute adder and list
         # Everything else is placed directly into middleSizer
         ###############################################################
         
@@ -221,6 +233,7 @@ class filterGUI(wx.Frame, wxUtil):
         
         # The drop down list
         self.attrSelect = wx.Choice(self.middlePanel, size=(110, -1))
+        self.attrSelect.SetItems(POSSIBLE_ATTRIBUTES)
         
         # The text box
         self.attrSpecify = wx.TextCtrl(self.middlePanel)
@@ -246,38 +259,7 @@ class filterGUI(wx.Frame, wxUtil):
         self.attrList.InsertColumn(2, '', width=36)
         self.attrList.SetColumnWidth(1, ULC.ULC_AUTOSIZE_FILL)
         
-        #self.attrList.SetScrollbar(0, -1, -1, -1)
-        
-        def deleteMe(event):
-            print 'ouch'
-            deleteThis = event.GetEventObject().GetName()
-            deleteThis = self.attrList.FindItemData(-1, deleteThis)
-            self.attrList.DeleteItem(deleteThis)
-        
-        for i in range(30):
-            self.attrList.Append(['sample_diameter', 'b', ''])
-            self.attrList.SetItemData(i, 'test'+str(i))
-            thisButton = wx.Button(self.attrList, label='X', size=(32, 15), name='test'+str(i))
-            thisButton.Bind(wx.EVT_BUTTON, deleteMe)
-            self.attrList.SetItemWindow(i, col=2, wnd=thisButton)
-        
-        '''# The integrator buttons
-        self.nextStepSizer = wx.BoxSizer(wx.HORIZONTAL)
-        
-        # Create a new integrator window
-        self.newIntegrator = wx.Button(self.middlePanel, label='New Integrator')
-        
-        # Append scans to an existing integrator window
-        self.appendIntegrator = wx.Button(self.middlePanel,
-                                          label='Append Scans To...')
-        
-        # Populate the sizer
-        self.nextStepSizer.Add(self.newIntegrator, proportion=1,
-                               flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=16)
-        self.nextStepSizer.Add(self.appendIntegrator, proportion=1,
-                               flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=16)'''
-        
-        # Arrange the right panel
+        # Arrange the middle panel
         self.middleSizer.Add(self.fileSizer, proportion=0,
                             flag=wx.EXPAND | wx.TOP | wx.LEFT, border=20)
         # Add a border line
@@ -304,12 +286,6 @@ class filterGUI(wx.Frame, wxUtil):
                              flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
                              border=24)
         self.middleSizer.AddSpacer(10)
-        '''# Add another border line
-        self.middleSizer.Add(wx.StaticLine(self.middlePanel, size=(332, 2)),
-                            flag=wx.LEFT | wx.TOP | wx.RIGHT | 
-                            wx.EXPAND, border=16)
-        self.middleSizer.Add(self.nextStepSizer, proportion=0,
-                            flag=wx.EXPAND | wx.ALL, border=8)'''
 
         self.middlePanel.SetSizerAndFit(self.middleSizer)
         
@@ -317,10 +293,71 @@ class filterGUI(wx.Frame, wxUtil):
         # End of the middle layout
         ###############################################################
         
+        ###############################################################
+        # On the right:
+        # projectNameSizer holds the project name label and box
+        # nextStepSizer holds the buttons for moving to the integrator
+        # Everything else is placed directly into rightSizer
+        ###############################################################
+        
+        # The project name label and box
+        self.projectNameSizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        # The static label
+        self.projectNameText = wx.StaticText(self.rightPanel,
+                                             label='Project Name: ')
+        
+        # The text box
+        self.projectNameBox = wx.TextCtrl(self.rightPanel)
+        
+        # Populate the sizer
+        self.projectNameSizer.Add(self.projectNameText,
+                                  flag=wx.CENTER | wx.LEFT, border=8)
+        self.projectNameSizer.Add(self.projectNameBox, proportion=1,
+                                  flag=wx.EXPAND | wx.RIGHT, border=8)
+        
+        # The new project tree box
+        self.newProjectTree = wx.TreeCtrl(self.rightPanel)
+        
+        # The integrator buttons
+        self.nextStepSizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        # Create a new integrator window
+        self.newIntegrator = wx.Button(self.rightPanel, label='New Integrator')
+        
+        # Append scans to an existing integrator window
+        self.appendIntegrator = wx.Button(self.rightPanel,
+                                          label='Append Scans To...')
+        
+        # Populate the sizer
+        self.nextStepSizer.Add(wx.StaticLine(self.rightPanel, size=(2, 24)),
+                               flag=wx.LEFT | wx.RIGHT, border=1)
+        self.nextStepSizer.Add(self.newIntegrator, proportion=1,
+                               flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=16)
+        self.nextStepSizer.Add(self.appendIntegrator, proportion=1,
+                               flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=16)
+        
+        # Arrange the right panel
+        self.rightSizer.Add(self.projectNameSizer, proportion=0,
+                            flag=wx.EXPAND | wx.TOP, border=20)
+        self.rightSizer.Add(self.newProjectTree, proportion=1,
+                             flag=wx.EXPAND | wx.TOP | wx.BOTTOM,
+                             border=4)
+        self.rightSizer.Add(self.nextStepSizer, proportion=0,
+                            flag=wx.EXPAND | wx.TOP | wx.BOTTOM,
+                            border=4)
+                            
+        self.rightPanel.SetSizerAndFit(self.rightSizer)
+        
+        ###############################################################
+        # End of the right layout
+        ###############################################################
+        
         self.fullSizer.Add(self.leftPanel, proportion=6,
                            flag=wx.EXPAND | wx.LEFT, border=8)
         self.fullSizer.Add(self.middlePanel, proportion=3, flag=wx.EXPAND)
-        self.fullSizer.Add(self.rightPanel, proportion=3, flag=wx.EXPAND)
+        self.fullSizer.Add(self.rightPanel, proportion=3,
+                           flag=wx.EXPAND | wx.RIGHT, border=8)
         
         self.fullWindow.SetSizer(self.fullSizer)
         
@@ -360,9 +397,19 @@ class filterGUI(wx.Frame, wxUtil):
         # The date button
         self.dateButton.Bind(wx.EVT_BUTTON, self.filterDate)
         # The keep button
-        
+        self.keepButton.Bind(wx.EVT_BUTTON, self.keepSelected)
         # The reset button
+        self.resetButton.Bind(wx.EVT_BUTTON, self.readFile)
+        # The single right button
         
+        # The single left button
+        
+        # The all right button
+        
+        # The all left button
+        
+        # The new attribute button
+        self.attrAdd.Bind(wx.EVT_BUTTON, self.addAttribute)
         # The new button
         
         # The append button
@@ -383,6 +430,7 @@ class filterGUI(wx.Frame, wxUtil):
         self.moreLabel.SetFocus()
         self.Show()
         
+    # Choose and load an HDF file so it can be filtered
     def loadHDF(self, event):
         '''Open an HDF file and parse its contents into the filter.'''
         
@@ -406,13 +454,16 @@ class filterGUI(wx.Frame, wxUtil):
                 print 'Error reading file'
                 loadDialog.Destroy()
                 raise
-            self.readFile()
+            
+            self.readFile(None)
             self.fileName.SetLabel(os.path.split(loadDialog.GetPath())[-1])
-            self.updateTable()
         loadDialog.Destroy()
+        if self.projectNameBox.GetValue() == '':
+            self.projectNameBox.SetValue('Project1.h5')
         self.dataTable.SetFocus()
     
-    def readFile(self):
+    # Reset all filters and read in an HDF file
+    def readFile(self, event):
         '''Read the HDF file self.filterFile, building the 
         scan list self.scanItems to place into the filter list.
         
@@ -421,9 +472,27 @@ class filterGUI(wx.Frame, wxUtil):
         if self.filterFile is None:
             print 'Error: no file selected'
             return
-        # Reset the scan items and other collected data
+            
+        # Reset all the hdf-related variables
         self.scanItems = []
+        self.allSpecs = {}
+        self.allHK = {}
+        self.LMin, self.LMax = (float('inf'), float('-inf'))
+        self.allTypes = {}
         self.possibleYears = []
+        self.dateMin, self.dateMax = (float('inf'), float('-inf'))
+        self.activeFilters = []
+        self.specResult = None
+        self.specCases = None
+        self.hkResult = None
+        self.hkCases = None
+        self.LResult = None
+        self.LCases = None
+        self.typeResult = None
+        self.typeCases = None
+        self.dateResult = None
+        self.dateCases = None
+        
         filterItems = self.filterFile.items()
         filterItems.sort()
         for spec, group in filterItems:
@@ -526,6 +595,8 @@ class filterGUI(wx.Frame, wxUtil):
         # Then sort the scans by specfile name, resulting in 
         # scans ordered by specfile first, then scan number
         self.scanItems.sort(key=lambda scan : scan[0])
+        # Update the data table with the new scan information
+        self.updateTable()
     
     # Delete everything in the table, then add the appropriate scans
     def updateTable(self):
@@ -574,28 +645,86 @@ class filterGUI(wx.Frame, wxUtil):
                   'Data points: ' + str(selectionAttrs.get('nl_dat', 'N/A'))
         self.moreBox.SetValue(toShow)
     
+    # Add an attribute both to the attribute dictionary and the on-screen list
+    def addAttribute(self, event):
+        '''When the '+' button is clicked, add the corresponding
+        attribute and value to the list (if the attribute isn't
+        already present).
+        
+        '''
+        
+        attrText = self.attrSelect.GetStringSelection()
+        if attrText == '' or attrText in self.attrDict:
+            return
+        attrValue = self.attrSpecify.GetValue()
+        if attrValue == '':
+            return
+        self.attrDict[attrText] = attrValue
+        self.attrList.Append([attrText, attrValue, ''])
+        self.attrList.SetItemData(self.attrList.GetItemCount()-1, attrText)
+        thisButton = wx.Button(self.attrList, label='X', size=(32, 15), name=attrText)
+        thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
+        self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2, wnd=thisButton)
+    
+    # Delete an attribute both from the dictionary and the on-screen list
+    def deleteMe(self, event):
+            deleteThis = event.GetEventObject().GetName()
+            del self.attrDict[deleteThis]
+            deleteThis = self.attrList.FindItemData(-1, deleteThis)
+            self.attrList.DeleteItem(deleteThis)
+    
+    # Move the selected scans to the project tree
+    def moveOneRight(self, event):
+        pass
+    
+    # Keep only the selected scans by faking a filtered result
+    def keepSelected(self, event):
+        item = self.dataTable.GetFirstSelected()
+        if item == -1:
+            return
+        self.specResult = {}
+        self.specCases = []
+        while item != -1:
+            specName = self.dataTable.GetItem(item, 0).Text
+            scanNumber = self.dataTable.GetItem(item, 1).Text
+            if specName in self.specResult:
+                self.specResult[specName].append(int(scanNumber))
+            else:
+                self.specResult[specName] = [int(scanNumber)]
+            self.specCases.append('/'+specName+'/'+scanNumber)
+            item = self.dataTable.GetNextSelected(item)
+        for key in self.allSpecs:
+            if key not in self.specResult:
+                self.specResult[key] = []
+        self.updateTable()
+    
+    # Filter by specfile and scan number
     def filterSpec(self, event):
         filterWindow = SpecWindow(self,
                                   self.allSpecs,
                                   self.specResult).ShowModal()
         return
     
+    # Filter by HK pair
     def filterHK(self, event):
         filterWindow = HKWindow(self, self.allHK, self.hkResult).ShowModal()
         return
     
+    # Filter by L range
     def filterL(self, event):
         filterWindow = LWindow(self,
                                (self.LMin, self.LMax),
                                self.LResult).ShowModal()
         return
         
+    # Filter by scan type
     def filterType(self, event):
         filterWindow = TypeWindow(self,
                                   self.allTypes,
                                   self.typeResult).ShowModal()
         return
     
+    # Filter by date range
     def filterDate(self, event):
         filterWindow = DateWindow(self,
                                   self.possibleYears,
@@ -603,6 +732,7 @@ class filterGUI(wx.Frame, wxUtil):
                                   self.dateResult).ShowModal()
         return
         
+    # Close the window
     def onClose(self, event):
         try:
             self.filterFile.close()
@@ -627,11 +757,6 @@ class SpecWindow(wx.Dialog):
                                                   treemix.TR_EXTENDED | 
                                                   treemix.TR_AUTO_CHECK_CHILD |
                                                   treemix.TR_AUTO_CHECK_PARENT)# |
-                                                       #treemix.TR_AUTO_TOGGLE_CHILD)
-        #self.list = NumberListCtrl(self, style=wx.LC_REPORT |
-        #                                       wx.LC_NO_HEADER)
-        #self.list.InsertColumn(0, "", width=20)
-        #self.list.InsertColumn(1, "Specfile")
         
         # Populate the list
         self.allSpec = allSpec
@@ -640,7 +765,6 @@ class SpecWindow(wx.Dialog):
         else:
             self.currentSpec = allSpec
         self.allRoot = self.list.AddRoot(self.GetParent().fileName.GetLabel(), ct_type=1)
-        #allRoot.Set3State(True)
         specKeys = self.allSpec.keys()
         specKeys.sort()
         for spec in specKeys:
@@ -651,44 +775,20 @@ class SpecWindow(wx.Dialog):
                 scanRoot = self.list.AppendItem(specRoot, str(scan), ct_type=1)
                 if scan in self.currentSpec[spec]:
                     self.list.CheckItem(scanRoot)
-            #self.list.Append(['',spec])
-            #if spec in self.currentSpec:
-            #    self.list.CheckItem(specRoot)
-                #self.list.CheckItem(self.allSpec.index(spec), True)
         self.list.Expand(self.allRoot)
         
-        # Create the 'check all' check box (selector), the apply and
-        # cancel buttons, and the input field for scan ranges
-        #self.selector = wx.CheckBox(self, style=wx.CHK_3STATE)
+        # Create the apply and cancel buttons
         self.apply = wx.Button(self, label="Apply")
         self.cancel = wx.Button(self, label="Cancel")
-        
-        # Set the 'check all' check box to the
-        # appropriate state (all, some, or none)
-        #self.setCheck(None)
         
         # Bindings
         self.apply.Bind(wx.EVT_BUTTON, self.onApply)
         self.cancel.Bind(wx.EVT_BUTTON, self.onCancel)
-        #self.selector.Bind(wx.EVT_CHECKBOX, self.onCheckAll)
-        
-        # If checking an item takes too long, try commenting this out
-        #self.Bind(wx.EVT_CHECKBOX, self.setCheck)
         
         # General layout
         self.windowSizer = wx.BoxSizer(wx.VERTICAL)
-        # The column headers
-        self.columnSizer = wx.BoxSizer(wx.HORIZONTAL)
         # The apply and cancel buttons
         self.buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
-        
-        # Column headers
-        #self.columnSizer.Add(self.selector,
-        #                     flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
-        #self.columnSizer.Add(wx.StaticText(self, label="Specfile"),
-        #                     flag=wx.EXPAND | wx.LEFT, border=4)
-        #self.windowSizer.Add(self.columnSizer,
-        #                     flag=wx.EXPAND | wx.ALL, border=4)
         
         # The list
         self.windowSizer.Add(self.list, proportion=1,
@@ -706,42 +806,11 @@ class SpecWindow(wx.Dialog):
         self.SetSizer(self.windowSizer)
         self.CenterOnScreen()
         self.Bind(wx.EVT_CLOSE, self.onCancel)
-        
-    # Examine the state of all the check boxes until enough
-    # is known to set the state of the 'check all' box.
-    #def setCheck(self, event):
-    #    num = self.list.GetItemCount()
-    #    if num == 0: return
-    #    thirdState = self.list.IsChecked(0)
-    #    for i in range(1, num):
-    #        if self.list.IsChecked(i) != thirdState:
-    #            self.selector.Set3StateValue(wx.CHK_UNDETERMINED)
-    #            return
-    #    self.selector.SetValue(thirdState)
-    
-    # Select all or deselect all; if the 'check all' check box
-    # is in the mixed state, deselects all
-    #def onCheckAll(self, event):
-    #    if self.selector.Get3StateValue():
-    #        self.onSelectAll(None)
-    #    else:
-    #        self.onDeselectAll(None)
-    
-    # Check all check boxes
-    #def onSelectAll(self, event):
-    #    num = self.list.GetItemCount()
-    #    for i in range(num):
-    #        self.list.CheckItem(i)
-
-    # Uncheck all check boxes
-    #def onDeselectAll(self, event):
-    #    num = self.list.GetItemCount()
-    #    for i in range(num):
-    #        self.list.CheckItem(i, False)
     
     # First, release the focus so if something breaks you're not stuck.
-    # Then, get the indexes of the checked boxes and return them so
-    # the main window knows which to keep and which to hide.
+    # Then, iterate through the specfiles, filling out the selectedSpec
+    # dictionary with selected scan numbers. With this done, filter the
+    # hdf file for the matching scans and update the table in the main window.
     def onApply(self, event):
         wx.Window.MakeModal(self, False)
         selectedSpec = {}
@@ -795,16 +864,6 @@ class HKWindow(wx.Dialog):
                                                   treemix.TR_EXTENDED |
                                                   treemix.TR_AUTO_CHECK_CHILD |
                                                   treemix.TR_AUTO_CHECK_PARENT)
-                                                    
-        #self.list = NumberListCtrl(self, style=wx.LC_REPORT |
-        #                                       wx.LC_NO_HEADER |
-        #                                       wx.LC_HRULES |
-        #                                       wx.LC_VRULES)
-        #self.list.InsertColumn(0, "", width=24)
-        #self.list.InsertColumn(1, "HK Pair", width=64)
-        #self.list.InsertColumn(2, "Num. Scans", width = 64)
-        #self.list.InsertColumn(3, "HK Distance(s)")
-        #self.list.Arrange()
         
         # Populate the list
         self.allHK = allHK
@@ -814,14 +873,11 @@ class HKWindow(wx.Dialog):
             self.currentHK = allHK
         self.allRoot = self.list.AddRoot('HK Pairs', ct_type=1)
         self.allHKKeys = self.allHK.keys()
-        #try:
-        #    self.allHKKeys.remove(('--', '--'))
-        #except:
-        #    pass
         self.allHKKeys = sorted(self.allHKKeys, key=lambda key: eval(key[1]))
         self.allHKKeys = sorted(self.allHKKeys, key=lambda key: eval(key[0]))
         for hk in self.allHKKeys:
-            hkRoot = self.list.AppendItem(self.allRoot, str(hk), ct_type=1)
+            hkRoot = self.list.AppendItem(self.allRoot,
+                                          str(tuple(map(float, hk))), ct_type=1)
             allSpecs = self.allHK[hk].keys()
             allSpecs.sort()
             for spec in allSpecs:
@@ -834,58 +890,20 @@ class HKWindow(wx.Dialog):
                 if spec in self.currentHK[hk]:
                     self.list.CheckItem(specRoot)
         self.list.Expand(self.allRoot)
-        '''
-        self.counter = 0
-        self.keyToIndex = {}
-        #Sort the HK pairs first by H and K, then by distance,
-        # resulting in distances grouped together and sorted
-        # internally by H and K
-        allHKKeys = allHKPairs.keys()
-        allHKKeys = sorted(allHKKeys, key = lambda key: eval(key))
-        allHKKeys = sorted(allHKKeys, key = lambda key: allHKPairs[key][2])
-        for key in allHKKeys:
-            self.list.Append(["", key, len(allHKPairs[key][1]), allHKPairs[key][2]])
-            self.keyToIndex[key] = self.counter
-            self.list.CheckItem(self.keyToIndex[key], allHKPairs[key][0])
-            self.counter += 1
-        '''
         
-        # Creates the 'check all' check box ('Selector'),
-        # as well as the apply and cancel buttons
-        #self.selector = wx.CheckBox(self, style=wx.CHK_3STATE)
+        # Create the apply and cancel buttons
         self.apply = wx.Button(self, label="Apply")
         self.cancel = wx.Button(self, label="Cancel")
-        
-        # Set the appropriate state for the 'check all' box
-        #self.setCheck(None)
         
         # Bindings
         self.apply.Bind(wx.EVT_BUTTON, self.onApply)
         self.cancel.Bind(wx.EVT_BUTTON, self.onCancel)
-        #self.selector.Bind(wx.EVT_CHECKBOX, self.onCheckAll)
-        
-        # If checking an item takes too long, try commenting this out
-        #self.Bind(wx.EVT_CHECKBOX, self.setCheck)
     
         # General layout
         self.windowSizer = wx.BoxSizer(wx.VERTICAL)
-        # The column headings
-        #self.columnSizer = wx.BoxSizer(wx.HORIZONTAL)
         # The apply and cancel buttons
         self.buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
-        
-        # The column headings (including the 'check all' box)
-        '''self.columnSizer.Add(self.selector,
-                             flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
-        self.columnSizer.Add(wx.StaticText(self, label="HK Pair"),
-                             flag=wx.EXPAND | wx.LEFT, border=12)
-        self.columnSizer.Add(wx.StaticText(self, label="Num. Scans"),
-                             flag=wx.EXPAND | wx.LEFT, border=24)
-        self.columnSizer.Add(wx.StaticText(self, label="HK Distance(s)"),
-                             flag=wx.EXPAND | wx.LEFT, border=16)
-        self.windowSizer.Add(self.columnSizer,
-                             flag=wx.EXPAND | wx.ALL, border=4)
-        '''
+
         # The list
         self.windowSizer.Add(self.list, proportion=1,
                              flag=wx.EXPAND | wx.ALL, border=4)
@@ -902,42 +920,11 @@ class HKWindow(wx.Dialog):
         self.SetSizer(self.windowSizer)
         self.CenterOnScreen()
         self.Bind(wx.EVT_CLOSE, self.onCancel)
-    
-    '''# Examine the state of all the check boxes until enough
-    # is known to set the state of the 'check all' box
-    def setCheck(self, event):
-        num = self.list.GetItemCount()
-        if num == 0: return
-        thirdState = self.list.IsChecked(0)
-        for i in range(1, num):
-            if self.list.IsChecked(i) != thirdState:
-                self.selector.Set3StateValue(wx.CHK_UNDETERMINED)
-                return
-        self.selector.SetValue(thirdState)
-    
-    # Select all or deselect all; if the 'check all' check box
-    # is in the mixed state, deselects all
-    def onCheckAll(self, event):
-        if self.selector.Get3StateValue():
-            self.onSelectAll(None)
-        else:
-            self.onDeselectAll(None)
-        
-    # Check all check boxes
-    def onSelectAll(self, event):
-        num = self.list.GetItemCount()
-        for i in range(num):
-            self.list.CheckItem(i)
-    
-    # Uncheck all check boxes
-    def onDeselectAll(self, event):
-        num = self.list.GetItemCount()
-        for i in range(num):
-            self.list.CheckItem(i, False)'''
 
     # First, release the focus so if something breaks you're not stuck.
-    # Then, get the indexes of the checked boxes and return them so
-    # the main window knows which to keep and which to hide.
+    # Then, fill out selectedHK to match the format of allHKs from the 
+    # parent class. Once this is done, filter the hdf file to return the
+    # desired scans and update the table in the main window.
     def onApply(self, event):
         wx.Window.MakeModal(self, False)
         selectedHK = {}
@@ -1046,8 +1033,9 @@ class LWindow(wx.Dialog):
         self.Bind(wx.EVT_CLOSE, self.onCancel)
 
     # First, release the focus so if something breaks you're not stuck.
-    # Then capture the 'from' and 'to' values,
-    # cast them as strings, and return them.
+    # Then, capture the 'from' and 'to' values and filter the hdf file
+    # to pick out scans within the specified range. Also, filter out 
+    # anything that's not a rodscan to reduce clutter.
     def onApply(self, event):
         wx.Window.MakeModal(self, False)
         try:
@@ -1115,13 +1103,6 @@ class TypeWindow(wx.Dialog):
             newType = self.list.Append(["", key, self.allTypes[key]])
             if key in self.currentTypes:
                 self.list.CheckItem(newType)
-        '''self.counter = 0
-        self.typeToIndex = {}
-        for type in allTypes:
-            self.list.Append(["", type, len(allTypes[type][1])])
-            self.typeToIndex[type] = self.counter
-            self.list.CheckItem(self.typeToIndex[type], allTypes[type][0])
-            self.counter += 1'''
         
         # Create the 'check all' check box (selector), the apply and
         # cancel buttons, and the input field for scan ranges
@@ -1208,8 +1189,8 @@ class TypeWindow(wx.Dialog):
             self.list.CheckItem(i, False)
 
     # First, release the focus so if something breaks you're not stuck.
-    # Then, get the scan types with checked boxes and return them so
-    # the main window knows which to keep and which to hide.
+    # Then, filter the hdf file to select the checked scans and update
+    # the table in the main window.
     def onApply(self, event):
         wx.Window.MakeModal(self, False)
         selectedTypes = []
@@ -1243,9 +1224,6 @@ class DateWindow(wx.Dialog):
                                     allDates=(float('-inf'), float('inf')),
                                     currentDates=None):
         
-        # Takes two arguments: the parent (e.g. self) and
-        # the possible years, sorted from early to late.
-        
         # Make the window
         wx.Dialog.__init__(self, parent, -1,
                            title="Date Range", size=(288, 117))
@@ -1257,9 +1235,9 @@ class DateWindow(wx.Dialog):
             self.currentDateMin, self.currentDateMax = allDates
         # Set the default choices for year, month, day, hour, and minute.
         # The year choices are passed as an argument, sorted early to late.
-        # Note the user would be allowed to select Febuary 31 since the
-        # choices are static, but it won't break the program
-        # i.e. February 31 comes after February 30 but before March 1
+        # If the user selects February 31, it automaticalls sets it to 
+        # February 28/29 at 23:59:59 to prevent an error when converting
+        # to epoch.
         self.yearChoices = possibleYears
         if self.yearChoices == []:
             self.yearChoices = ['N/A']
@@ -1385,7 +1363,8 @@ class DateWindow(wx.Dialog):
         self.Bind(wx.EVT_CLOSE, self.onCancel)
 
     # First, release the focus so if something breaks you're not stuck.
-    # Then, capture and return the selected 'from' and 'to' dates
+    # Then, capture the selected 'from' and 'to' dates and filter the 
+    # hdf file to select the scans that were initiated in the given range.
     def onApply(self, event):
         wx.Window.MakeModal(self, False)
         # Check the 'From' date to make sure it exists
