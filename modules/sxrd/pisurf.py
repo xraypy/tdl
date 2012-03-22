@@ -16,7 +16,8 @@ from tdl.modules.sxrd.ctrfitcalcs import *
 from tdl.modules.sxrd.simplex import simplex
 from tdl.modules.sxrd.genetic_algorithm import genetic
 from tdl.modules.sxrd.pisurf_resonant import ResonantDataPanel
-from tdl.modules.sxrd.pisurf_resonant import read_RSD, read_f1f2, RASD_Fourier
+from tdl.modules.sxrd.pisurf_resonant import read_RSD, read_f1f2 
+from tdl.modules.sxrd.pisurf_resonant import RASD_Fourier, write_rids
 from tdl.modules.sxrd.fourierframe import createfourierframe
 
 from tdl.modules.xtab.atomic import f0data as database

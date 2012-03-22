@@ -347,6 +347,9 @@ class ResonantDataPanel(wx.ScrolledWindow):
                         AR = Rasd.re_Fq /Num.cos(2*Num.pi*PR)
                     self.datacontrol6[j].SetValue(str(round(AR,3)))
                     self.datacontrol7[j].SetValue(str(round(PR,3)))
+                    
+                    Rasd.AR_refine = AR
+                    Rasd.PR_refine = PR
                 
                     rasdplot.errorbar(Rasd.E,(Rasd.F/Rasd.norm)+i*0.5, (Rasd.Ferr/Rasd.norm),fmt = 'bo')
                     rasdplot.plot(Rasd.E, (Rasd.F_calc/Rasd.norm)+i*0.5, 'g-' )
@@ -679,12 +682,12 @@ def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodie
 def write_rids(allrasd, filename):
     f = file(filename, 'w')
     for Rasd in allrasd.list:
-        if rasd.use_in_refine:
-            f.write('#\n RIDS scan at: '+str(round(Rasd.Q[0],1))+' '+str(round(Rasd.Q[1],1))+' '+str(round(Rasd.Q[2],3))+'\n')
-            f.write('AR = '+str(round(Rasd.AR,3))+' PR = '+str(round(Rasd.PR,3))+'\n')
-            f.write('AR_model = '+str(round(Rasd.AR_refine,3))+' PR_model = '+str(round(Rasd.PR_refine,3))+'\n')
-            f.write('chi**2 = '+str(round(Rasd.RMS,5))+'\n\n')
-            f.write('# E    F**2           F_err**2        F_model**2 \n')
+        if Rasd.use_in_Refine:
+            f.write('#\n#RIDS scan at: '+str(round(Rasd.Q[0],1))+' '+str(round(Rasd.Q[1],1))+' '+str(round(Rasd.Q[2],3))+'\n')
+            f.write('#AR = '+str(round(Rasd.AR,3))+' PR = '+str(round(Rasd.PR,3))+'\n')
+            f.write('#AR_model = '+str(round(Rasd.AR_refine,3))+' PR_model = '+str(round(Rasd.PR_refine,3))+'\n')
+            f.write('#chi**2 = '+str(round(Rasd.RMS,5))+'\n#\n')
+            f.write('#E               F**2            F_err**2        F_model**2 \n')
             for i in range(len(Rasd.E)):
                 line = "%7.2f %15.5f %15.5f %15.5f\n" % (Rasd.E[i], Rasd.F[i]/Rasd.norm[i], Rasd.Ferr[i]/Rasd.norm[i], Rasd.F_calc[i]/Rasd.norm[i])
                 f.write(line)
