@@ -1,5 +1,5 @@
 """
-Functions and classes used to build the pi-surf GUI
+Functions used in pi-surf for resonant surface diffraction data refinement
 
 Authors/modifications:
 ----------------------
@@ -44,26 +44,26 @@ def min_max(function_values):
     maxi = int(Num.where(function_values == Ymax)[0][0])
     return mini, maxi
 
-def contraction(Xmax, Xav, beta, used_params, allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data):
+def contraction(Xmax, Xav, beta, used_params, allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data, use_lay_el):
     Xcon = beta*Xmax+(1-beta)*Xav
     parameter = insert(used_params, Xcon, parameter)
-    allrasd = Rasd_difference(allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data)
+    allrasd = Rasd_difference(allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data, use_lay_el)
     Ycon = allrasd.RMS
     return Xcon,Ycon
 
-def reflection(Xmax, Xav, alpha, used_params, allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data):
+def reflection(Xmax, Xav, alpha, used_params, allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data, use_lay_el):
     Xref = (1+alpha)*Xav - alpha*Xmax
     Xref = check_limits(used_params, Xref, parameter)
     parameter = insert(used_params, Xref, parameter)
-    allrasd = Rasd_difference(allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data)
+    allrasd = Rasd_difference(allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data, use_lay_el)
     Yref = allrasd.RMS
     return Xref, Yref
 
-def expansion(Xref, Xav, gamma, used_params, allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data):
+def expansion(Xref, Xav, gamma, used_params, allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data, use_lay_el):
     Xexp = (1+gamma)*Xref - gamma*Xav
     Xexp = check_limits(used_params, Xexp, parameter)
     parameter = insert(used_params, Xexp, parameter)
-    allrasd = Rasd_difference(allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data)
+    allrasd = Rasd_difference(allrasd, surface, parameter, parameter_usage, use_bulk_water, Refine_Data, use_lay_el)
     Yexp = allrasd.RMS
     return Xexp, Yexp
 
@@ -84,7 +84,7 @@ def calc_xdist(Xmin, Xmax):
     
 
 #################################Simplex main routine###################################################################################################
-def res_simplex(parameter,param_usage, allrasd, surface, simplex_params, use_bulk_water, Refine_Data):
+def res_simplex(parameter,param_usage, allrasd, surface, simplex_params, use_bulk_water, Refine_Data, use_lay_el):
 
     alpha, beta, gamma, delta, ftol, xtol, maxiter = simplex_params
 
@@ -102,24 +102,27 @@ def res_simplex(parameter,param_usage, allrasd, surface, simplex_params, use_bul
         if i == 0:
             points[i] = used_params_values
             parameter = insert(used_params, points[i], parameter)
-            allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+            allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
             function_values[i] = allrasd.RMS
         else:
             for j in range(len(points[i])):
                 key = used_params[j]
                 points[i][j] = used_params_values[j] + random.uniform(((parameter[key][1]-used_params_values[j])*delta), ((parameter[key][2]-used_params_values[j])*delta))
             parameter = insert(used_params, points[i], parameter)    
-            allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+            allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
             function_values[i] = allrasd.RMS
     not_converged = True
     z = 0
     mini, maxi = min_max(function_values)
     while not_converged:
+        while wx.GetApp().Pending():
+            wx.GetApp().Dispatch()
+            wx.GetApp().Yield(True)
         old_minimum = function_values[mini]
         Xav = calc_average(points)
-        Xref, Yref = reflection(points[maxi], Xav, alpha, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+        Xref, Yref = reflection(points[maxi], Xav, alpha, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
         if Yref < function_values[mini]:
-            Xexp, Yexp = expansion(Xref, Xav, gamma, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+            Xexp, Yexp = expansion(Xref, Xav, gamma, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
             if Yexp < function_values[mini]:
                 points[maxi] = Xexp
                 function_values[maxi] = Yexp
@@ -139,9 +142,9 @@ def res_simplex(parameter,param_usage, allrasd, surface, simplex_params, use_bul
                 function_values[maxi] = Yref
             else:
                 if Yref < function_values[maxi]:
-                    Xcon,Ycon = contraction(Xref, Xav, beta, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+                    Xcon,Ycon = contraction(Xref, Xav, beta, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
                 else:
-                    Xcon,Ycon =contraction(points[maxi], Xav, beta, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+                    Xcon,Ycon =contraction(points[maxi], Xav, beta, used_params, allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
 
                 if Ycon < function_values[maxi]:
                     points[maxi] = Xcon
@@ -150,7 +153,7 @@ def res_simplex(parameter,param_usage, allrasd, surface, simplex_params, use_bul
                     points = compression(points, mini)
                     for i in range(len(points)):
                         parameter = insert(used_params, points[i], parameter)
-                        allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+                        allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
                         function_values[i] = allrasd.RMS
         mini, maxi = min_max(function_values)
         if function_values[mini]<old_minimum:
@@ -167,7 +170,7 @@ def res_simplex(parameter,param_usage, allrasd, surface, simplex_params, use_bul
         z = z+1
     param_best = points[mini]
     parameter = insert(used_params, param_best, parameter)
-    allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data)
+    allrasd = Rasd_difference(allrasd, surface, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el)
     return allrasd, parameter
 ################################################################################################################################
 ##################  Refinement of Atom coordinates, occupancies and DW- Factors  ###################################################################
@@ -184,13 +187,14 @@ def Jacobi2(vec, Rasd):
     return J
 
 ### main function that calculates the difference between measured and calculated F**2s for a set of resonant atoms ###
-def Rasd_difference(allrasd, surface_tmp, parameter, param_usage, use_bulk_water, Refine_Data):
+def Rasd_difference(allrasd, surface_tmp, parameter, param_usage, use_bulk_water, Refine_Data, use_lay_el):
     allrasd.RMS = 0
     allrasd.ndata = 0
     
-    zwater, sig_water,sig_water_bar, d_water, Scale,specScale, beta, surface = param_unfold(parameter,param_usage, surface_tmp, use_bulk_water)
+    global_parms, surface = param_unfold(parameter,param_usage, surface_tmp, use_bulk_water, use_lay_el)
     natoms = len(surface)
-                 
+    occ_el, K,sig_el,sig_el_bar,d_el,d0_el,sig_water, sig_water_bar, d_water, zwater, Scale, specScale, beta= global_parms
+    
     for Rasd in allrasd.list:
         if Rasd.use_in_Refine:
             Q = Num.zeros((3),float)
@@ -203,11 +207,25 @@ def Rasd_difference(allrasd, surface_tmp, parameter, param_usage, use_bulk_water
             im_Fq = 0
             for n in range(natoms):
                 R = Num.array([surface[n][1],surface[n][2],surface[n][3]],float)
-                U = Num.array([[surface[n][4],surface[n][7],surface[n][8]],[surface[n][7],surface[n][5],surface[n][9]],[surface[n][8],surface[n][9],surface[n][6]]],float)
+
+                U = Num.ndarray((3,3),float)
+                U[0][0] = surface[n][4]
+                U[0][1] = surface[n][7]*(surface[n][4])**0.5*(surface[n][5])**0.5
+                U[0][2] = surface[n][8]*(surface[n][4])**0.5*(surface[n][6])**0.5
+                U[1][0] = U[0][1]
+                U[1][1] = surface[n][5]
+                U[1][2] = surface[n][9]*(surface[n][5])**0.5*(surface[n][6])**0.5
+                U[2][0] = U[0][2]
+                U[2][1] = U[1][2]
+                U[2][2] = surface[n][6]
+                
                 theta = surface[n][10]
                 re_Fq = re_Fq + (theta * Num.cos(2*Num.pi*(Rasd.Q[0]*R[0]+Rasd.Q[1]*R[1]+Rasd.Q[2]*R[2])) * Num.exp(-2* Num.pi**2 * Num.dot(Num.dot(Q,U),Q)))
                 im_Fq = im_Fq + (theta * Num.sin(2*Num.pi*(Rasd.Q[0]*R[0]+Rasd.Q[1]*R[1]+Rasd.Q[2]*R[2])) * Num.exp(-2* Num.pi**2 * Num.dot(Num.dot(Q,U),Q)))
-                                                
+            if use_lay_el and Q[0] == 0 and Q[1] == 0:
+                re_lay, im_lay = calc_F_lay_el(Rasd.Q, occ_el, K, sig_el, sig_el_bar, d_el, d0_el, allrasd.g_inv)
+                re_Fq = re_Fq + re_lay
+                im_Fq = im_Fq + im_lay                                    
             Rasd.re_FR = Rasd.f1 * re_Fq - Rasd.f2 * im_Fq
             Rasd.im_FR = Rasd.f1 * im_Fq + Rasd.f2 * re_Fq
 
@@ -252,3 +270,24 @@ def Rasd_difference(allrasd, surface_tmp, parameter, param_usage, use_bulk_water
     allrasd.RMS = allrasd.RMS/allrasd.ndata
 
     return allrasd
+
+def calc_F_lay_el(hkl, occ, K, sig, sig_bar, d, d0, g_inv):
+    zinv = g_inv[2][2]**0.5
+    q = hkl[2]* zinv
+    qd4pi = q/4/Num.pi
+    f = Num.exp(-2 * Num.pi**2 * q**2 * sig)*occ
+    x = Num.pi * q * d
+    al = 2 * Num.pi**2 * q**2 * sig_bar + K * d
+    a = Num.exp(al)*Num.cos(2*x)-1
+    b = Num.exp(al)*Num.sin(-2*x)
+    c = 4 * Num.cos(x)**2 * Num.sinh(al/2)**2 - 4 * Num.sin(x)**2 * Num.cosh(al/2)**2
+    d = -2 * Num.sin(2*x) * Num.sinh(al)
+    wert = 2*Num.pi*hkl[2]*d0
+    rez = Num.cos(wert)
+    imz = Num.sin(wert)
+    wert = c**2 + d**2
+    relayer = (a*c + b*d)/(wert)
+    imlayer = (b*c - a*d)/(wert)
+    re = f* (relayer * rez - imlayer * imz)
+    im = f* (relayer * imz + imlayer * rez)
+    return re, im
