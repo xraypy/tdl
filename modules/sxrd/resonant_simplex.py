@@ -10,6 +10,8 @@ Frank Heberling (Frank.Heberling@kit.edu)
 
 import numpy as Num
 import random
+import wx
+
 from scipy.optimize import leastsq
 from tdl.modules.sxrd.ctrfitcalcs import param_unfold
 
