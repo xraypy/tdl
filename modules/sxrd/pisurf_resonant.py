@@ -1,5 +1,6 @@
 """
-Functions and classes used to build the pi-surf GUI
+Functions and classes used to build the resonant data handling part of the
+pi-surf GUI
 
 Authors/modifications:
 ----------------------
@@ -15,8 +16,9 @@ import os
 
 from tdl.modules.sxrd.ctrfitcalcs import param_unfold,RB_update, calc_g_inv
 from tdl.modules.sxrd.resonant_simplex import res_simplex
-from tdl.modules.xtab.atomic import f0data as database
+from tdl.modules.sxrd.fourierframe import createfourierframe
 
+from tdl.modules.xtab.atomic import f0data as database
 #################################################################################
 class ResonantDataPanel(wx.ScrolledWindow):
     def __init__(self,parent):
@@ -29,6 +31,9 @@ class ResonantDataPanel(wx.ScrolledWindow):
         self.allrasd = RasdList()
         self.allrasd.g_inv = self.nb.g_inv
         self.allrasd.cell = self.nb.cell
+
+        self.fframe = None
+        self.fig7 = None
 
         self.simplex_params = [1.0,0.5,2.0,1.0,1e-4,1e-6,10000]
 
@@ -109,6 +114,11 @@ class ResonantDataPanel(wx.ScrolledWindow):
         self.getzf.SetValue(str(self.allrasd.zf))
         self.Bind(wx.EVT_TEXT, self.setzf, self.getzf)
 
+        wx.StaticText(self, label = '       zmin ', pos=(20, 367), size=(60, 20))
+        self.getzmin = wx.TextCtrl(self, pos=(90,365), size=(40,20))
+        self.getzmin.SetValue(str(self.allrasd.zmin))
+        self.Bind(wx.EVT_TEXT, self.setzmin, self.getzmin)
+
         wx.StaticText(self, label = 'pixels in x ', pos=(140, 292), size=(60, 20))
         self.getan = wx.TextCtrl(self, pos=(210,290), size=(40,20))
         self.getan.SetValue(str(self.allrasd.an))
@@ -124,29 +134,32 @@ class ResonantDataPanel(wx.ScrolledWindow):
         self.getcn.SetValue(str(self.allrasd.cn))
         self.Bind(wx.EVT_TEXT, self.setcn, self.getcn)
 
-        self.FourierSynthButton = wx.Button(self, label = 'Calculate Fourier Synthesis', pos =(20,365), size=(230,25))
+        self.FourierSynthButton = wx.Button(self, label = 'Calculate Fourier Synthesis', pos =(20,390), size=(230,25))
         self.Bind(wx.EVT_BUTTON, self.OnClickFSB, self.FourierSynthButton)
         
-        wx.StaticLine(self, pos = (0,395), size = (270,5), style = wx.LI_HORIZONTAL)
+        wx.StaticLine(self, pos = (0,420), size = (270,5), style = wx.LI_HORIZONTAL)
 
-        self.getRD = wx.CheckBox(self, label = ' check to refine data, uncheck for AR and PR', pos = (20, 410))
+        self.getRD = wx.CheckBox(self, label = ' check to refine data, uncheck for AR and PR', pos = (20, 435))
         self.getRD.SetValue(self.allrasd.Refine_Data)
         wx.EVT_CHECKBOX(self, self.getRD.GetId(), self.setRD)
-        self.RefineButton = wx.Button(self, label = 'Run Refinement', pos =(20,460), size=(230,160))
+        self.ulem = wx.CheckBox(self, label = ' check to use layered resonant element model', pos = (20, 460))
+        self.ulem.SetValue(self.nb.MainControlPage.use_lay_el)
+        wx.EVT_CHECKBOX(self, self.ulem.GetId(), self.setulem)
+        self.RefineButton = wx.Button(self, label = 'Run Refinement', pos =(20,485), size=(230,135))
         self.Bind(wx.EVT_BUTTON, self.OnClickRefine, self.RefineButton)
         
         wx.StaticLine(self, pos = (0,645), size = (270,5), style = wx.LI_HORIZONTAL)
         
     def setE0(self,event):
-        if event.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.E0 = float(event.GetString())
+        except ValueError:
+            pass
 
     def setresel(self,event):
         if event.GetString() == '':
-            None
-        else:
+            pass
+        try:
             self.resel = str(event.GetString())
             if str.lower(self.resel) not in database.keys():
                 print 'unknown element: '+self.resel
@@ -155,17 +168,23 @@ class ResonantDataPanel(wx.ScrolledWindow):
                 f = (f_par[0] + f_par[2] + f_par[4] + f_par[6] + f_par[8])
                 self.showZ.SetValue(str(round(f,0)))
                 self.allrasd.ZR = round(f,0)
+                self.nb.MainControlPage.el = str.lower(self.resel)
+                if str.lower(self.resel) not in self.nb.runningDB.keys():
+                    self.nb.runningDB[str.lower(self.resel)] = database[str.lower(self.resel)]
+        except ValueError:
+            pass
 
     def setplotnorm(self,e): self.plot_norm = self.getplotnorm.GetValue()
 
     def OnClickUpdate(self,e):
-        zwater, sig_water,sig_water_bar, d_water, Scale,specScale, beta, surface_new = param_unfold(self.nb.parameter,self.nb.parameter_usage,\
-                                                                                                    self.nb.surface, self.nb.MainControlPage.UBW_flag)
-        bulk = self.nb.bulk #shift_bulk(zwater, self.nb.bulk)
+        global_parms, surface_new = param_unfold(self.nb.parameter,self.nb.parameter_usage,self.nb.surface,\
+                                                 self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_lay_el)
+        bulk = self.nb.bulk 
         surface = RB_update(self.nb.rigid_bodies, surface_new, self.nb.parameter, self.allrasd.cell)
         for Rasd in self.allrasd.list:
-            Rasd.re_FNR ,Rasd.im_FNR = calcFNR(Rasd.Q,sig_water,sig_water_bar,d_water,zwater, self.allrasd.cell, bulk, surface, database,\
-                                               self.allrasd.g_inv, self.nb.MainControlPage.UBW_flag)
+            Rasd.re_FNR ,Rasd.im_FNR = calcFNR(Rasd.Q,global_parms, self.allrasd.cell, bulk, surface, database,\
+                                               self.allrasd.g_inv, self.nb.MainControlPage.UBW_flag,\
+                                               self.nb.MainControlPage.use_lay_el, str.lower(self.resel))
 
         for item in range(len(self.allrasd.list)):
             self.allrasd.list[item] = RASD_Fourier(self.allrasd, item)
@@ -182,10 +201,10 @@ class ResonantDataPanel(wx.ScrolledWindow):
 
     def editPR(self,e):
         item = e.GetId()-3000-2*len(self.allrasd.list)
-        if e.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.list[item].PR = float(e.GetString())
+        except ValueError:
+            pass
 
     def editUIF(self,e):
         item = e.GetId()-3000-4*len(self.allrasd.list)
@@ -198,60 +217,64 @@ class ResonantDataPanel(wx.ScrolledWindow):
     def setdoabscorr(self,e): self.allrasd.do_abs_corr = self.getdoabscorr.GetValue()
 
     def setdwater(self,e):
-        if e.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.d_water = float(e.GetString())
+        except ValueError:
+            pass
 
     def setconc(self,e):
-        if e.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.conc = float(e.GetString())
+        except ValueError:
+            pass
 
     def setdkapton(self,e):
-        if e.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.d_kapton = float(e.GetString())
+        except ValueError:
+            pass
 
     def OnClickabscorr(self,e):
         abs_correct(self.allrasd)
         for item in range(len(self.allrasd.list)):
             self.datacontrol1[item].SetValue(str(round(self.allrasd.list[item].AR,3)))
             self.datacontrol2[item].SetValue(str(round(self.allrasd.list[item].PR,3)))
-            
 
     def setxf(self,e):
-        if e.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.xf = float(e.GetString())
+        except ValueError:
+            pass
     def setyf(self,e):
-        if e.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.yf = float(e.GetString())
+        except ValueError:
+            pass
     def setzf(self,e):
-        if e.GetString() == '':
-            None
-        else:
+        try:
             self.allrasd.zf = float(e.GetString())
+        except ValueError:
+            pass
+    def setzmin(self,e):
+        try:
+            self.allrasd.zmin = float(e.GetString())
+        except ValueError:
+            pass
     def setan(self,e):
-        if e.GetString() == '':
-            None
-        else:
-            self.allrasd.an = float(e.GetString())
+        try:
+            self.allrasd.an = int(e.GetString())
+        except ValueError:
+            pass
     def setbn(self,e):
-        if e.GetString() == '':
-            None
-        else:
-            self.allrasd.bn = float(e.GetString())
+        try:
+            self.allrasd.bn = int(e.GetString())
+        except ValueError:
+            pass
     def setcn(self,e):
-        if e.GetString() == '':
-            None
-        else:
-            self.allrasd.cn = float(e.GetString())
+        try:
+            self.allrasd.cn = int(e.GetString())
+        except ValueError:
+            pass
 
     def OnClickFSB(self,e):
         Fourier = Num.ndarray((0,5),float)
@@ -264,10 +287,16 @@ class ResonantDataPanel(wx.ScrolledWindow):
             if dlg.ShowModal() == wx.OK:
                 dlg.Destroy()        
         else:
-            Fourier_synthesis(Fourier, self.allrasd.cell, self.allrasd.ZR, self.allrasd.xf, self.allrasd.yf, self.allrasd.zf,\
-                          self.allrasd.an, self.allrasd.bn, self.allrasd.cn)
+            if self.fframe != None:
+                self.fframe.Close()
+                self.fframe = None
+            rho, Fcell = Fourier_synthesis(Fourier, self.allrasd.cell, self.allrasd.ZR, self.allrasd.xf, self.allrasd.yf, self.allrasd.zf,\
+                          self.allrasd.an, self.allrasd.bn, self.allrasd.cn, self.allrasd.zmin)
+            self.fframe = createfourierframe(self, rho, Fcell, self.allrasd.zmin*self.allrasd.cell[2])
+            self.fframe.Show(True)
         
     def setRD(self,e): self.allrasd.Refine_Data = self.getRD.GetValue()
+    def setulem(self, e): self.nb.MainControlPage.use_lay_el = self.ulem.GetValue()
     def OnClickRefine(self,e):
         res_param_usage = []
         res_surface = []
@@ -278,7 +307,7 @@ class ResonantDataPanel(wx.ScrolledWindow):
 
         res_params = {}
 
-        global_params = ['zwater','sig_water','sig_water_bar','d_water','beta','Scale','specScale']
+        global_params = ['z_el','d_el','sig_el','sig_el_bar','K','occ_el_0','zwater','sig_water','sig_water_bar','d_water','beta','Scale','specScale']
         for i in range(len(res_param_usage)):
             for j in range(1,20,2):
                 if res_param_usage[i][j] not in res_params and res_param_usage[i][j] != 'None':
@@ -286,12 +315,19 @@ class ResonantDataPanel(wx.ScrolledWindow):
         for key in global_params:
             res_params[key] = self.nb.parameter[key]
    
-        self.allrasd, res_params = res_simplex(res_params,res_param_usage, self.allrasd, res_surface, self.simplex_params, self.nb.MainControlPage.UBW_flag, self.allrasd.Refine_Data)
+        self.allrasd, res_params = res_simplex(res_params,res_param_usage, self.allrasd, res_surface, self.simplex_params,\
+                                               self.nb.MainControlPage.UBW_flag, self.allrasd.Refine_Data, self.nb.MainControlPage.use_lay_el)
 
         if self.allrasd.Refine_Data:
-            figure(7)
-            clf()
-            title('Overall chi**2: '+str(self.allrasd.RMS))
+            if self.fig7 == None:
+                self.fig7 = figure(7)
+            else:
+                self.fig7.clf()
+            self.fig7.suptitle('Overall chi**2: '+str(self.allrasd.RMS), fontsize = 20)
+            rasdplot = self.fig7.add_subplot(111)
+            rasdplot.set_xlabel('energy')
+            rasdplot.set_ylabel('|F|**2')
+            
             i = 0
             j = 0
             for Rasd in self.allrasd.list:
@@ -311,12 +347,16 @@ class ResonantDataPanel(wx.ScrolledWindow):
                         AR = Rasd.re_Fq /Num.cos(2*Num.pi*PR)
                     self.datacontrol6[j].SetValue(str(round(AR,3)))
                     self.datacontrol7[j].SetValue(str(round(PR,3)))
+                    
+                    Rasd.AR_refine = AR
+                    Rasd.PR_refine = PR
                 
-                    errorbar(Rasd.E,(Rasd.F/Rasd.norm)+i*0.5, (Rasd.Ferr/Rasd.norm),fmt = 'bo')
-                    plot(Rasd.E, (Rasd.F_calc/Rasd.norm)+i*0.5, 'g-' )
-                    text(Rasd.E0,i*0.5+1,(Rasd.file +', chi**2 = ' +str(round(Rasd.RMS,4))))
+                    rasdplot.errorbar(Rasd.E,(Rasd.F/Rasd.norm)+i*0.5, (Rasd.Ferr/Rasd.norm),fmt = 'bo')
+                    rasdplot.plot(Rasd.E, (Rasd.F_calc/Rasd.norm)+i*0.5, 'g-' )
+                    rasdplot.text(Rasd.E0,i*0.5+1,(Rasd.file +', chi**2 = ' +str(round(Rasd.RMS,4))))
                     i = i+1
                 j = j+1
+            self.fig7.canvas.draw()
         else:
             j = 0
             for Rasd in self.allrasd.list:
@@ -333,10 +373,7 @@ class ResonantDataPanel(wx.ScrolledWindow):
             for i in range(len(self.nb.param_labels)):
                 self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
         dlg.Destroy()
-
-
-        
-        
+########################################################################################################
 ###################################### calculations ####################################################
 def calc_FucNR(hkl,bulk,g_inv,database):
     a = 0
@@ -358,24 +395,24 @@ def calc_FsurfNR(hkl,surface,g_inv,database):
     q_Ang = [hkl[0]*g_inv[0][0]**0.5, hkl[1]*g_inv[1][1]**0.5, hkl[2]*g_inv[2][2]**0.5]
     for i in range(shape(surface)[0]):
         f_par = database[str.lower(surface[i][0])]
-        U = Num.array([[surface[i][4],surface[i][7],surface[i][8]],[surface[i][7],surface[i][5],surface[i][9]],[surface[i][8],surface[i][9],surface[i][6]]])
+
+        U = Num.ndarray((3,3),float)
+        U[0][0] = surface[i][4]
+        U[0][1] = surface[i][7]*(surface[i][4])**0.5*(surface[i][5])**0.5
+        U[0][2] = surface[i][8]*(surface[i][4])**0.5*(surface[i][6])**0.5
+        U[1][0] = U[0][1]
+        U[1][1] = surface[i][5]
+        U[1][2] = surface[i][9]*(surface[i][5])**0.5*(surface[i][6])**0.5
+        U[2][0] = U[0][2]
+        U[2][1] = U[1][2]
+        U[2][2] = surface[i][6]
+        
         f = (f_par[0]*Num.exp(-(q/4/Num.pi)**2*f_par[1]) + f_par[2]*Num.exp(-(q/4/Num.pi)**2*f_par[3]) +\
             f_par[4]*Num.exp(-(q/4/Num.pi)**2*f_par[5]) + f_par[6]*Num.exp(-(q/4/Num.pi)**2*f_par[7]) + f_par[8])*\
             Num.exp(-2* Num.pi**2*(Num.dot(q_Ang,Num.dot(U,q_Ang)))) * surface[i][10]
         a = a + (f * Num.cos(2*Num.pi*(hkl[0]*surface[i][1] + hkl[1]*surface[i][2] + hkl[2]*surface[i][3])))
         b = b + (f * Num.sin(2*Num.pi*(hkl[0]*surface[i][1] + hkl[1]*surface[i][2] + hkl[2]*surface[i][3])))
     return a, b
-
-
-#def calc_Fwater_erfNR(hkl, sig, g_inv, database, cell):
-#    f_par = database['o2-.']
-#    q = hkl[2]* g_inv[2][2]**0.5
-#    Auc = cell[0]* Num.sin(Num.radians(cell[5]))* cell[1]
-#    f = (f_par[0]*Num.exp(-(q/4/Num.pi)**2*f_par[1]) + f_par[2]*Num.exp(-(q/4/Num.pi)**2*f_par[3]) +\
-#            f_par[4]*Num.exp(-(q/4/Num.pi)**2*f_par[5]) + f_par[6]*Num.exp(-(q/4/Num.pi)**2*f_par[7]) + f_par[8])*\
-#            Num.exp(-2 * Num.pi**2 * q**2 * sig)
-#    b = f * 0.033456 * Auc / (q*2*Num.pi)
-#    return b
 
 def calc_Fwater_layeredNR(hkl, sig, sig_bar, d,zwater, g_inv, database, cell):
     f_par = database['o2-.']
@@ -398,8 +435,33 @@ def calc_Fwater_layeredNR(hkl, sig, sig_bar, d,zwater, g_inv, database, cell):
     im = f* (relayer * imz + imlayer * rez)
     return re, im
         
+def calc_F_layered_el_NR(hkl, occ, K, sig, sig_bar, d, d0, g_inv, database, el):
+    f_par = database[el]
+    zinv = g_inv[2][2]**0.5
+    q = hkl[2]* zinv
+    qd4pi = q/4/Num.pi
+    f = (f_par[0]*Num.exp(-(qd4pi)**2*f_par[1]) + f_par[2]*Num.exp(-(qd4pi)**2*f_par[3]) +\
+            f_par[4]*Num.exp(-(qd4pi)**2*f_par[5]) + f_par[6]*Num.exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
+            Num.exp(-2 * Num.pi**2 * q**2 * sig)*occ
+    x = Num.pi * q * d
+    al = 2 * Num.pi**2 * q**2 * sig_bar + K * d
+    a = Num.exp(al)*Num.cos(2*x)-1
+    b = Num.exp(al)*Num.sin(-2*x)
+    c = 4 * Num.cos(x)**2 * Num.sinh(al/2)**2 - 4 * Num.sin(x)**2 * Num.cosh(al/2)**2
+    d = -2 * Num.sin(2*x) * Num.sinh(al)
+    wert = 2*Num.pi*hkl[2]*d0
+    rez = Num.cos(wert)
+    imz = Num.sin(wert)
+    wert = c**2 + d**2
+    relayer = (a*c + b*d)/(wert)
+    imlayer = (b*c - a*d)/(wert)
+    re = f* (relayer * rez - imlayer * imz)
+    im = f* (relayer * imz + imlayer * rez)
+    return re, im
 
-def calcFNR(hkl,sig_water,sig_water_bar,d_water,zwater, cell, bulk, surface, database, g_inv, use_bulk_water):
+def calcFNR(hkl, global_parms, cell, bulk, surface, database, g_inv, use_bulk_water, use_lay_el, el):
+    
+    occ_el, K,sig_el,sig_el_bar,d_el,d0_el,sig_water, sig_water_bar, d_water, zwater, Scale, specScale, beta= global_parms
 
     zeta = hkl[2]+ hkl[0]*cell[6]+ hkl[1]*cell[7]
 
@@ -411,17 +473,21 @@ def calcFNR(hkl,sig_water,sig_water_bar,d_water,zwater, cell, bulk, surface, dat
             
     re_bc = re_ctr*re_bulk - im_ctr*im_bulk
     im_bc = re_bulk*im_ctr + re_ctr*im_bulk
-
-           
+    
     if hkl[0] == 0.0 and hkl[1] == 0.0:
         if not use_bulk_water:
             re_water = 0
             im_water = 0
         else:
             re_water, im_water = calc_Fwater_layeredNR(hkl, sig_water, sig_water_bar, d_water,zwater, g_inv, database, cell)
+        if not use_lay_el:
+            re_el = 0
+            im_el = 0
+        else:
+            re_el, im_el = calc_F_layered_el_NR(hkl, occ_el, K, sig_el, sig_el_bar, d_el, d0_el, g_inv, database, el)
                     
-        re_FNR = (re_bc + re_surf + re_water)
-        im_FNR = (im_bc + im_surf + im_water)
+        re_FNR = (re_bc + re_surf + re_water + re_el)
+        im_FNR = (im_bc + im_surf + im_water + im_el)
     else:
         re_FNR = (re_bc + re_surf)
         im_FNR = (im_bc + im_surf)
@@ -455,6 +521,7 @@ class RasdList:
         self.xf = 1
         self.yf = 1
         self.zf = 1
+        self.zmin = 0
         self.an = 11
         self.bn = 11
         self.cn = 61
@@ -541,7 +608,7 @@ def read_f1f2(allrasd, f1f2_file):
     allrasd.f2 = f1f2[2]
     return allrasd
 #############################################################################################################################
-def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodies, database, rasddata, use_bulk_water, dirname, parent):
+def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodies, database, rasddata, use_bulk_water, use_lay_el, el, dirname, parent):
     """    
     read in data in RasdList of RasdAna objects for fitting
    """
@@ -556,13 +623,14 @@ def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodie
             dlg.Destroy()
         return allrasd
     else:
-        zwater, sig_water,sig_water_bar, d_water, Scale,specScale, beta, surface_new = param_unfold(parameter,param_usage, surface_tmp, use_bulk_water)
-        bulk = bulk_tmp #shift_bulk(zwater, bulk_tmp)
+        global_parms, surface_new = param_unfold(parameter,param_usage, surface_tmp, use_bulk_water, use_lay_el)
+        bulk = bulk_tmp 
         surface = RB_update(rigid_bodies, surface_new, parameter, allrasd.cell)
 
         cell = allrasd.cell
         g_inv = allrasd.g_inv
         allrasd.ndata = 0
+        allrasd.RMS = 0
         
         for dat in rasddata:
             n = len(dat)
@@ -580,7 +648,7 @@ def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodie
                         Q = Num.array([tmp[1],tmp[2],tmp[3]], float)
                         Rasd.Q = Q
                         Rasd.mod_Q = Num.dot(Num.dot(Q,g_inv),Q)**0.5
-                        Rasd.re_FNR ,Rasd.im_FNR = calcFNR(Q,sig_water,sig_water_bar,d_water,zwater, cell, bulk, surface, database, g_inv, use_bulk_water)
+                        Rasd.re_FNR ,Rasd.im_FNR = calcFNR(Q,global_parms, cell, bulk, surface, database, g_inv, use_bulk_water, use_lay_el, el)
                     
                     Rasd.E = Num.append(Rasd.E, int(round(float(tmp[0]))))
                     Rasd.F = Num.append(Rasd.F, float(tmp[4])**2)
@@ -607,8 +675,23 @@ def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodie
         
             allrasd.list.append(Rasd)
         allrasd.dims = len(allrasd.list)
+        allrasd.RMS = allrasd.RMS / allrasd.ndata
 
         return allrasd
+####################################################################################################
+def write_rids(allrasd, filename):
+    f = file(filename, 'w')
+    for Rasd in allrasd.list:
+        if Rasd.use_in_Refine:
+            f.write('#\n#RIDS scan at: '+str(round(Rasd.Q[0],1))+' '+str(round(Rasd.Q[1],1))+' '+str(round(Rasd.Q[2],3))+'\n')
+            f.write('#AR = '+str(round(Rasd.AR,3))+' PR = '+str(round(Rasd.PR,3))+'\n')
+            f.write('#AR_model = '+str(round(Rasd.AR_refine,3))+' PR_model = '+str(round(Rasd.PR_refine,3))+'\n')
+            f.write('#chi**2 = '+str(round(Rasd.RMS,5))+'\n#\n')
+            f.write('#E               F**2            F_err**2        F_model**2 \n')
+            for i in range(len(Rasd.E)):
+                line = "%7.2f %15.5f %15.5f %15.5f\n" % (Rasd.E[i], Rasd.F[i]/Rasd.norm[i], Rasd.Ferr[i]/Rasd.norm[i], Rasd.F_calc[i]/Rasd.norm[i])
+                f.write(line)
+    f.close()
 ########################## absorption correction #####################################################
 def abs_correct(allrasd):
     if allrasd.do_abs_corr:
@@ -629,8 +712,7 @@ def abs_correct(allrasd):
             
     for i in range(len(allrasd.list)):
         allrasd.list[i] = RASD_Fourier(allrasd, i)            
-########################## Fit Fourier Components ####################################################    
-    
+########################## Fit Fourier Components ####################################################        
 def RASD_Fourier(allrasd, pnt):
     Rasd = allrasd.list[pnt]
     for i in range(Rasd.ndata):
@@ -682,79 +764,32 @@ def RASD_Fourier(allrasd, pnt):
     Rasd.RMS = Num.sum(Rasd.delta_F)/Rasd.ndata
     
     return Rasd
-
-#################  Fourier Synthese  ############################################
-def calc_rho(Fourier, r, ZR, V, cell):
+#################  Fourier Synthese  ###########################################
+def calc_rho(Fourier, r, ginv):
     rho = 0
-    ginv = calc_g_inv(cell)
     for F_comp in Fourier:
-        Q = Num.array([F_comp[0]*2*Num.pi*ginv[0][0]**0.5,F_comp[1]*2*Num.pi*ginv[1][1]**0.5,F_comp[2]*2*Num.pi*ginv[2][2]**0.5], float)
-        rho = rho + (F_comp[3] * Num.cos(2*Num.pi*F_comp[4] - Num.dot(r,Q)))
-    rho = rho * ZR / V
-
+        Q = Num.array([F_comp[0]*ginv[0][0]**0.5,F_comp[1]*ginv[1][1]**0.5,\
+                      F_comp[2]*ginv[2][2]**0.5], float)
+        rho = rho + (F_comp[3] * Num.cos(2*Num.pi*(F_comp[4] - Num.dot(r,Q))))
     return rho
 
-def Fourier_synthesis(Fourier, cell, ZR = 1, xf = 1, yf = 1, zf = 1, an = 11, bn = 11, cn = 61):
+def Fourier_synthesis(Fourier, cell, ZR, xf, yf, zf, an, bn, cn, zmin):
     
     Rho = Num.ndarray((an,bn,cn),float)
     sampx = cell[0]* xf
     sampy = cell[1]* yf
     sampz = cell[2]* zf
-    Auc = sampx* Num.sin(Num.radians(cell[5]))* sampy *an * bn
+    g_inv = calc_g_inv(cell)
+    g_inv2 = calc_g_inv([sampx,sampy,sampz,cell[3],cell[4],cell[5]])
+    V = Num.linalg.det(Num.linalg.inv(g_inv2))**0.5
     
-    i = 0
-    for i in range(Rho.shape[0]):
-        x = sampx /(Rho.shape[0]-1) * float(i)
-        j = 0
-        for j in range(Rho.shape[1]):
-            y = sampy /(Rho.shape[1]-1) * float(j)
-            k = 0
-            for k in range(Rho.shape[2]):
-                z = sampz /(Rho.shape[2]-1) * (float(k)-((Rho.shape[2]-1)/2))
-                if k == 0: zmin = z
-                if k == Rho.shape[2]-1: zmax = z
+    for i in range(int(an)):
+        x = sampx /an * float(i)
+        for j in range(int(bn)):
+            y = sampy /bn * float(j)
+            for k in range(int(cn)):
+                z = sampz /cn * float(k) + sampz/zf *zmin
                 R = Num.array([x,y,z],float)
-                Rho[i][j][k]= calc_rho(Fourier, R, ZR, Auc, cell)
-
-    Rho_XY = Num.sum(Rho, axis = 2)
-    Rho_XZ = Num.sum(Rho, axis = 1)
-    Rho_YZ = Num.sum(Rho, axis = 0)
-    Rho_YZ = Rho_YZ.transpose()
-
-    Max = Num.max(Rho)
-    xaxis = Num.arange(Rho.shape[2]) /(float(Rho.shape[2])-1) *(zmax-zmin) +zmin
-    figure(5, figsize = (12,9))
-    clf()
-    subplot(221)
-    plot(xaxis, Num.sum(Rho_XZ,axis=0),'-')
-    ylabel('rho_e-(Z)')
-    xlabel('Z')
-    subplot(222)
-    title('sum over X')
-    im = imshow(Rho_YZ, interpolation='bilinear', cmap=cm.hot, origin='lower', extent = [0,sampy,zmin,zmax])
-    xlabel('Y')
-    ylabel('Z')
-    subplot(223)
-    title('sum over Y')
-    im = imshow(Rho_XZ, interpolation='bilinear', cmap=cm.hot, origin='lower', extent = [zmin,zmax,0,sampx])
-    xlabel('Z')
-    ylabel('X')
-    subplot(224)
-    title('sum over Z')
-    imshow(Rho_XY, interpolation='bilinear', cmap=cm.hot, origin='lower', extent = [0,sampy,0,sampx])
-    xlabel('Y')
-    ylabel('X')
-
-    i = 0
-    figure(6, figsize = (19,6))
-    clf()
-    for i in range(9):
-        pl = '19'+str(i+1)
-        subplot(pl)
-        a = int(round(float(Rho.shape[0]-1)/8 *i))
-        if a > Rho.shape[0]-1: a = Rho.shape[0]-1
-        imshow(Rho[a].transpose(), interpolation='bilinear', cmap=cm.hot, origin='lower', vmin = 0, vmax = Max, extent = [0,sampy,zmin,zmax] )
-        title('X = '+str(round(sampx /8 * i,4)))
-        xlabel('Y')
-        if i == 0: ylabel('Z')
-
+                Rho[i][j][k]= calc_rho(Fourier, R, g_inv)
+    Rho = Rho * ZR/(V*2*Num.pi)
+    return Rho, [sampx,sampy,sampz]
