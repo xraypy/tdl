@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-3/14/2012
+3/22/2012
 '''
 
 import h5py
@@ -74,7 +74,7 @@ class filterGUI(wx.Frame, wxUtil):
         self.dateCases = None
         
         # The project to be built
-        self.projectTree = {}
+        self.projectDict = {}
         
         # Make the window
         self.fullWindow = wx.Panel(self)
@@ -228,6 +228,12 @@ class filterGUI(wx.Frame, wxUtil):
         self.rightAll = wx.Button(self.middlePanel, label='>>')
         self.leftAll = wx.Button(self.middlePanel, label='<<')
         
+        # Tooltips for the move buttons
+        self.rightOne.SetToolTipString('Move selected to project')
+        self.leftOne.SetToolTipString('Remove selected from project')
+        self.rightAll.SetToolTipString('Move all to project')
+        self.leftAll.SetToolTipString('Remove all from project')
+        
         # The new attribute adder line
         self.newAttributeSizer = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -317,7 +323,10 @@ class filterGUI(wx.Frame, wxUtil):
                                   flag=wx.EXPAND | wx.RIGHT, border=8)
         
         # The new project tree box
-        self.newProjectTree = wx.TreeCtrl(self.rightPanel)
+        self.newProjectTree = myTreeCtrl(self.rightPanel,
+                                         style=wx.TR_MULTIPLE |
+                                               wx.TR_EXTENDED | 
+                                               wx.TR_DEFAULT_STYLE)
         
         # The integrator buttons
         self.nextStepSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -401,13 +410,13 @@ class filterGUI(wx.Frame, wxUtil):
         # The reset button
         self.resetButton.Bind(wx.EVT_BUTTON, self.readFile)
         # The single right button
-        
+        self.rightOne.Bind(wx.EVT_BUTTON, self.moveOneRight)
         # The single left button
-        
+        self.leftOne.Bind(wx.EVT_BUTTON, self.moveOneLeft)
         # The all right button
-        
+        self.rightAll.Bind(wx.EVT_BUTTON, self.moveAllRight)
         # The all left button
-        
+        self.leftAll.Bind(wx.EVT_BUTTON, self.moveAllLeft)
         # The new attribute button
         self.attrAdd.Bind(wx.EVT_BUTTON, self.addAttribute)
         # The new button
@@ -415,6 +424,8 @@ class filterGUI(wx.Frame, wxUtil):
         # The append button
         
         
+        # Lost focus on the project name box (rename project tree)
+        self.projectNameBox.Bind(wx.EVT_KILL_FOCUS, self.newName)
         # dataTable click
         self.dataTable.Bind(wx.EVT_LIST_ITEM_SELECTED, self.tableClick)
         
@@ -540,31 +551,6 @@ class filterGUI(wx.Frame, wxUtil):
                 self.allSpecs[scan[0]] = [int(scan[1])]
             else:
                 self.allSpecs[scan[0]].append(int(scan[1]))
-            # Something with the numbers
-            
-            # Gather all the HK pairs
-            '''if scan[2].startswith('--'):
-                if ('--', '--') not in self.allHK:
-                    self.allHK[('--', '--')] = [1, 'N/A']
-                else:
-                    self.allHK[('--', '--')][0] += 1
-            elif (scan[2], scan[3]) not in self.allHK:
-                hVal = scan[2]
-                kVal = scan[3]
-                hValInd = list(self.filterFile[scan[9]]['param_labs']).index('g_aa_s')
-                kValInd = list(self.filterFile[scan[9]]['param_labs']).index('g_bb_s')
-                tValInd = list(self.filterFile[scan[9]]['param_labs']).index('g_ga_s')
-                hValD = float(self.filterFile[scan[9]]['param_data'][hValInd])
-                kValD = float(self.filterFile[scan[9]]['param_data'][kValInd])
-                tValD = float(self.filterFile[scan[9]]['param_data'][tValInd])
-                tValD = math.radians(180-tValD)
-                hkDist = round(((float(hVal)*hValD)**2 + \
-                                (float(kVal)*kValD)**2 - \
-                                2*float(hVal)*hValD*float(kVal)*kValD*\
-                                math.cos(tValD))**0.5, 8)
-                self.allHK[(hVal, kVal)] = [1, hkDist]
-            else:
-                self.allHK[(scan[2], scan[3])][0] += 1'''
             # Establish the min and max L values:
             try:
                 #if float(scan[4]) < self.LMin: self.LMin = float(scan[4])
@@ -617,9 +603,27 @@ class filterGUI(wx.Frame, wxUtil):
             for entry in self.scanItems:
                 if entry[10] in self.activeFilters:
                     self.dataTable.Append(entry)
+                    try:
+                        if self.projectDict[entry[0]][entry[1]] is not None:
+                            item = self.dataTable.GetItemCount()-1
+                            self.dataTable.SetItemTextColour(item,
+                                                             wx.Color(128,
+                                                                      128,
+                                                                      128))
+                    except:
+                        pass
         else:
             for entry in self.scanItems:
                 self.dataTable.Append(entry)
+                try:
+                    if self.projectDict[entry[0]][entry[1]] is not None:
+                        item = self.dataTable.GetItemCount()-1
+                        self.dataTable.SetItemTextColour(item,
+                                                         wx.Color(128,
+                                                                  128,
+                                                                  128))
+                except:
+                    pass
         return
     
     # Update the 'More Info:' panel when a selection is made
@@ -630,10 +634,9 @@ class filterGUI(wx.Frame, wxUtil):
         '''
         
         tableSelection = event.GetItem()
-        #if tableSelection.m_itemId == 4:
-        #    print 'nope'
-        #    event.veto()
-        selectionPath = self.scanItems[tableSelection.m_itemId][10]
+        specName = self.dataTable.GetItem(tableSelection.m_itemId, 0).Text
+        scanNumber = self.dataTable.GetItem(tableSelection.m_itemId, 1).Text
+        selectionPath = '/'+specName+'/'+scanNumber
         selectionItem = self.filterFile[selectionPath]
         selectionAttrs = selectionItem.attrs
         toShow = 'Command: ' + selectionAttrs.get('cmd', 'N/A') + \
@@ -673,9 +676,141 @@ class filterGUI(wx.Frame, wxUtil):
             deleteThis = self.attrList.FindItemData(-1, deleteThis)
             self.attrList.DeleteItem(deleteThis)
     
+    # Convert a dictionary to a tree
+    def dictToTree(self, thisDict, thisTree, thisRoot):
+        for key, value in thisDict.items():
+            if type(value) == dict:
+                parentItem = thisTree.AppendItem(thisRoot, key)
+                self.dictToTree(value, thisTree, parentItem)
+            else:
+                thisTree.AppendItem(thisRoot, str(key) + ': ' + str(value))
+        thisTree.SortChildren(thisRoot)
+    
+    # Update the file name in the project tree
+    def newName(self, event):
+        if not self.projectNameBox.GetValue().endswith('.h5'):
+            self.projectNameBox.SetValue(self.projectNameBox.GetValue()+'.h5')
+        try:
+            self.newProjectTree.SetItemText(self.newProjectTree.GetRootItem(),
+                                            self.projectNameBox.GetValue())
+        except:
+            pass
+    
     # Move the selected scans to the project tree
     def moveOneRight(self, event):
-        pass
+        item = self.dataTable.GetFirstSelected()
+        if item == -1:
+            return
+        while item != -1:
+            specName = self.dataTable.GetItem(item, 0).Text
+            scanNumber = self.dataTable.GetItem(item, 1).Text
+            if specName in self.projectDict:
+                if scanNumber not in self.projectDict[specName]:
+                    self.projectDict[specName][scanNumber] = self.attrDict.copy()
+                else:
+                    print 'Specfile ' + specName + ', scan ' + \
+                          scanNumber + ' is already in the tree.'
+            else:
+                self.projectDict[specName] = {}
+                self.projectDict[specName][scanNumber] = self.attrDict.copy()
+            self.dataTable.SetItemTextColour(item, wx.Color(128, 128, 128))
+            item = self.dataTable.GetNextSelected(item)
+        self.newProjectTree.DeleteAllItems()
+        projectRoot = \
+                self.newProjectTree.AddRoot(self.projectNameBox.GetValue())
+        self.dictToTree(self.projectDict, self.newProjectTree, projectRoot)
+        self.newProjectTree.Expand(projectRoot)
+
+    # Move all the scans to the project tree
+    def moveAllRight(self, event):
+        item = self.dataTable.GetNextItem(-1)
+        if item == -1:
+            return
+        while item != -1:
+            specName = self.dataTable.GetItem(item, 0).Text
+            scanNumber = self.dataTable.GetItem(item, 1).Text
+            if specName in self.projectDict:
+                if scanNumber not in self.projectDict[specName]:
+                    self.projectDict[specName][scanNumber] = self.attrDict.copy()
+                else:
+                    print 'Specfile ' + specName + ', scan ' + \
+                          scanNumber + ' is already in the tree.'
+            else:
+                self.projectDict[specName] = {}
+                self.projectDict[specName][scanNumber] = self.attrDict.copy()
+            self.dataTable.SetItemTextColour(item, wx.Color(128, 128, 128))
+            item = self.dataTable.GetNextItem(item)
+        self.newProjectTree.DeleteAllItems()
+        projectRoot = \
+                self.newProjectTree.AddRoot(self.projectNameBox.GetValue())
+        self.dictToTree(self.projectDict, self.newProjectTree, projectRoot)
+        self.newProjectTree.Expand(projectRoot)
+    
+    # Move the selected scans out of the project tree
+    def moveOneLeft(self, event):
+        allSelected = self.newProjectTree.GetSelections()
+        allSelected.sort(key = lambda selection: self.newProjectTree.getLevel(selection))
+        '''for item in allSelected:
+            print self.newProjectTree.GetItemText(item)
+        '''
+        for selection in allSelected:
+            try:
+                selectionLevel = self.newProjectTree.getLevel(selection)
+            except:
+                selectionLevel = -1
+            if selectionLevel == 0:
+                self.moveAllLeft(event)
+                return
+            elif selectionLevel == 1:
+                specName = self.newProjectTree.GetItemText(selection)
+                item = self.dataTable.GetNextItem(-1)
+                while item != -1:
+                    if self.dataTable.GetItem(item, 0).Text == specName:
+                        self.dataTable.SetItemTextColour(item, wx.BLACK)
+                    item = self.dataTable.GetNextItem(item)
+                self.projectDict.pop(specName)
+                self.newProjectTree.Delete(selection)
+            elif selectionLevel == 2:
+                scanParent = self.newProjectTree.GetItemParent(selection)
+                scanNumber = self.newProjectTree.GetItemText(selection)
+                specName = self.newProjectTree.GetItemText(scanParent)
+                item = self.dataTable.GetNextItem(-1)
+                while item != -1:
+                    if self.dataTable.GetItem(item, 0).Text == specName and \
+                            self.dataTable.GetItem(item, 1).Text == scanNumber:
+                        self.dataTable.SetItemTextColour(item, wx.BLACK)
+                        break
+                    item = self.dataTable.GetNextItem(item)
+                self.projectDict[specName].pop(scanNumber)
+                self.newProjectTree.Delete(selection)
+            else:
+                pass
+        popUs = []
+        for key in self.projectDict:
+            if self.projectDict[key] == {}:
+                popUs.append(key)
+        for key in popUs:
+            self.projectDict.pop(key)
+        projectRoot = self.newProjectTree.GetRootItem()
+        if not projectRoot.IsOk():
+            return
+        if self.newProjectTree.GetChildrenCount(projectRoot) == 0:
+            self.newProjectTree.Delete(projectRoot)
+        else:
+            item, cookie = self.newProjectTree.GetFirstChild(projectRoot)
+            while item.IsOk():
+                if self.newProjectTree.GetChildrenCount(item) == 0:
+                    self.newProjectTree.Delete(item)
+                item, cookie = self.newProjectTree.GetNextChild(item, cookie)
+    
+    # Move all the scans out of the project tree
+    def moveAllLeft(self, event):
+        self.newProjectTree.DeleteAllItems()
+        self.projectDict = {}
+        item = self.dataTable.GetNextItem(-1)
+        while item != -1:
+            self.dataTable.SetItemTextColour(item, wx.BLACK)
+            item = self.dataTable.GetNextItem(item)
     
     # Keep only the selected scans by faking a filtered result
     def keepSelected(self, event):
@@ -1470,7 +1605,32 @@ class NumberListCtrl(wx.ListCtrl, listmix.CheckListCtrlMixin,
                      wx.PyCommandEvent(wx.EVT_CHECKBOX.typeId,
                                        self.GetId()))
         
+
+class myTreeCtrl(wx.TreeCtrl):
+    '''Tree class identical to a regular wx.TreeCtrl except for
+        an overridden sort function and a getLevel function that
+        returns the number of layers down from the root the item
+        is (root is 0, root's child is 1, etc).
+    
+    '''
+    def __init__(self, *args, **kwargs):
+        wx.TreeCtrl.__init__(self, *args, **kwargs)
         
+    def getLevel(self, item):
+        level = 0
+        rootItem = self.GetRootItem()
+        while item != rootItem:
+            level += 1
+            item = self.GetItemParent(item)
+        return level
+    
+    def OnCompareItems(self, item1, item2):
+        try:
+            return cmp(int(self.GetItemText(item1)),
+                       int(self.GetItemText(item2)))
+        except:
+            return cmp(self.GetItemText(item1), self.GetItemText(item2))
+
         
 if __name__ == '__main__':
     app = wx.App()
