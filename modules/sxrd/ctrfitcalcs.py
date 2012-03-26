@@ -14,6 +14,17 @@ import random
 import wx
 
 from tdl.modules.xtal.bv_params import bv_params
+
+try:
+    import pp
+    jobserver = pp.Server()
+    parallel = True
+except ImportError:
+    print """Could not find PARALLEL PYTHON - install it -
+             (http://www.parallelpython.com/content/view/18/32/)   
+             and experience the performance ;-)
+             (in case you have more than one CPU on your machine)"""
+    parallel = False
 ######################  general calculations  ##################################
 def calc_g_inv(cell):
     g = Num.ndarray((3,3),float)
@@ -242,25 +253,31 @@ def calc_Fuc(hkl,bulk,g_inv,database):
         b = b + (f * Num.sin(2*Num.pi*(hkl[0]*bulk[i][1] + hkl[1]*bulk[i][2] + hkl[2]*bulk[i][3])))
     return a, b
 
-def calc_Fsurf(hkl,surface,g_inv,database,exp=Num.exp,low=str.lower,dot=Num.dot,pi=Num.pi,cosinus=Num.cos,sinus = Num.sin,U= Num.ndarray((3,3),float)):
+def Fatom(atom,database, U,qd4pi,pi,q_Ang,hkl,low,exp,dot,cosinus, sinus):
+    f_par = database[low(atom[0])]
+    U[0][0] = atom[4]
+    U[0][1] = U[1][0] = atom[7]*(atom[4]*atom[5])**0.5
+    U[0][2] = U[2][0] = atom[8]*(atom[4]*atom[6])**0.5
+    U[1][1] = atom[5]
+    U[1][2] = U[2][1] = atom[9]*(atom[5]*atom[6])**0.5
+    U[2][2] = atom[6]  
+    f = (f_par[0]*exp(-(qd4pi)**2*f_par[1]) + f_par[2]*exp(-(qd4pi)**2*f_par[3]) +\
+        f_par[4]*exp(-(qd4pi)**2*f_par[5]) + f_par[6]*exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
+        exp(-2* pi**2*(dot(q_Ang,dot(U,q_Ang)))) * atom[10]
+    x = 2*pi*(hkl[0]*atom[1] + hkl[1]*atom[2] + hkl[2]*atom[3])
+    return [f*cosinus(x), f*sinus(x)]
+    
+def calc_Fsurf(hkl,surface,g_inv,database,exp=Num.exp,low=str.lower,dot=Num.dot,pi=Num.pi,cosinus=Num.cos,\
+               sinus = Num.sin,U= Num.ndarray((3,3),float)):
     q_Ang = [hkl[0]*g_inv[0][0]**0.5, hkl[1]*g_inv[1][1]**0.5, hkl[2]*g_inv[2][2]**0.5]
     qd4pi = (dot(dot(hkl,g_inv),hkl))**0.5/4/pi
     a = b = 0
-    for atom in surface:
-        f_par = database[low(atom[0])]
-        U[0][0] = atom[4]
-        U[0][1] = U[1][0] = atom[7]*(atom[4]*atom[5])**0.5
-        U[0][2] = U[2][0] = atom[8]*(atom[4]*atom[6])**0.5
-        U[1][1] = atom[5]
-        U[1][2] = U[2][1] = atom[9]*(atom[5]*atom[6])**0.5
-        U[2][2] = atom[6]  
-        f = (f_par[0]*exp(-(qd4pi)**2*f_par[1]) + f_par[2]*exp(-(qd4pi)**2*f_par[3]) +\
-            f_par[4]*exp(-(qd4pi)**2*f_par[5]) + f_par[6]*exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
-            exp(-2* pi**2*(dot(q_Ang,dot(U,q_Ang)))) * atom[10]
-        x = 2*pi*(hkl[0]*atom[1] + hkl[1]*atom[2] + hkl[2]*atom[3])
-        a = a+(f * cosinus(x))
-        b = b+(f * sinus(x))
-    return a, b
+    jobs = [(atom, Fatom(atom,database,U,qd4pi,pi,q_Ang,hkl, low,exp,dot,cosinus, sinus)) for atom in surface]
+    a=b=0
+    for atom, job in jobs:
+        a = a+job[0]
+        b = b+job[1]
+    return a,b
 
 def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
     zinv = g_inv[2][2]**0.5
@@ -310,7 +327,7 @@ def calc_F_layered_el(hkl, occ, K, sig, sig_bar, d, d0, g_inv, f_par):
     return re, im
         
 def calcF(ctr,global_parms,cell,surface,g_inv,NLayers,database, use_bulk_water, RMS_flag, use_lay_el, el):
-    occ_el, K,sig_el,sig_el_bar,d_el,d0_el,sig_water,sig_water_bar, d_water,zwater, Scale,specScale,beta = global_parms
+    (occ_el, K,sig_el,sig_el_bar,d_el,d0_el,sig_water,sig_water_bar, d_water,zwater, Scale,specScale,beta) = global_parms
     ctr.bulk = Num.ndarray((len(ctr.L)),float)
     ctr.Fcalc = Num.ndarray((len(ctr.L)),float)
     ctr.water = Num.ndarray((len(ctr.L)),float)
@@ -379,6 +396,7 @@ def calcF(ctr,global_parms,cell,surface,g_inv,NLayers,database, use_bulk_water, 
                 ctr.difference[i] = -ctr.difference[i] 
     elif RMS_flag == 4:
         ctr.difference = ((ctr.F - ctr.Fcalc)/ctr.Ferr)**2
+    return ctr
 ################################################################################
 def calc_CTRs(parameter,param_usage, dat, cell, surface_tmp, NLayers, database,\
               g_inv, Rod_weight, rigid_bodies, use_bulk_water,\
@@ -386,12 +404,16 @@ def calc_CTRs(parameter,param_usage, dat, cell, surface_tmp, NLayers, database,\
 
     global_parms, surface_new = param_unfold(parameter,param_usage,surface_tmp,\
                                              use_bulk_water, use_lay_el)
-    surface_new = RB_update(rigid_bodies, surface_new, parameter, cell) 
-                      
-    for ctr in dat:
-        calcF(ctr,global_parms,cell,surface_new,g_inv,NLayers,database, \
-              use_bulk_water, RMS_flag, use_lay_el, el)
-
+    surface_new = RB_update(rigid_bodies, surface_new, parameter, cell)
+    if parallel:
+        jobs = [(ctr, jobserver.submit(calcF, (ctr,global_parms,cell,surface_new,g_inv,NLayers,database,\
+                        use_bulk_water,RMS_flag, use_lay_el, el), (calc_Fsurf, calc_Fwater_layered, calc_F_layered_el, Fatom),("numpy as Num",))) for ctr in dat]
+        dat = []
+        for ctr, job in jobs:
+            dat.append(job())
+    else:
+        jobs = [(ctr, calcF(ctr,global_parms,cell,surface_new,g_inv,NLayers,database,\
+                        use_bulk_water,RMS_flag, use_lay_el, el)) for ctr in dat]
     RMS = 0
     n = 0
     b = 0
@@ -1172,18 +1194,6 @@ def fdiff2rho(Fk, Fu, cell, xf, yf, zf, an, bn, cn, zmin, flag, parent):
     dialog.Destroy()
     return rho, [sampx,sampy,sampz]
 ################################################################################
-######################  PSYCHO IMPORT  #########################################
-try:
-    import psyco
-    psyco.bind(calc_Fsurf)
-    psyco.bind(fdiff2rho)
-    psyco.bind(simulated_annealing)
-except ImportError:
-    print '\n COULD NOT FIND PSYCO IN YOUR PYTHON SIDEPACKAGES!!'
-    print 'THE USE OF PSYCO SPEEDS UP PISURF BY ~25%!'
-    pass
-
-
 
     
     

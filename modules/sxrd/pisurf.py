@@ -11,6 +11,7 @@ Frank Heberling (Frank.Heberling@kit.edu)
 import wx
 import os
 import time
+import numpy as Num
 
 from tdl.modules.sxrd.ctrfitcalcs import *
 from tdl.modules.sxrd.simplex import simplex
