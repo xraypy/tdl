@@ -44,9 +44,9 @@ def summarize(lines):
 
         summary = []
         lineno = 0
-        (spec_name, mnames, cmnd, date, xtime, g_vals, q, p_vals, atten,
+        (spec_name, epoch, mnames, cmnd, date, xtime, g_vals, q, p_vals, atten,
         energy, lab, aborted) = \
-            (None, None, None, None, None, None, None, None, None,
+            (None, None, None, None, None, None, None, None, None, None,
             None, None, False)
         point_data = []
         (index, ncols, n_sline) = (0, 0, 0)
@@ -56,6 +56,9 @@ def summarize(lines):
             # get the name of the specfile, should only appear once
             if (i.startswith('#F')):
                 spec_name = i[3:]
+            # get the starting epoch
+            if (i.startswith('#E ')):
+                epoch = int(i[3:])
             # get motor names: they should be at the top of the file
             # but they can be reset anywhere in the file
             elif (i.startswith('#O')):
@@ -131,6 +134,7 @@ def summarize(lines):
                     L_stop = point_data[-1][L_pos]
                 current_dict = {'index':index,
                                      'spec_name':spec_name,
+                                     'init_epoch':epoch,
                                      'nl_start':n_sline,
                                      'cmd':cmnd,
                                      'date':date,
@@ -315,12 +319,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
-                            scan_group.attrs['epoch'] = \
+                            scan_group.attrs['init_epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
         elif scan.get('cmd', '').split()[0] == 'a4scan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -347,12 +351,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
                             scan_group.attrs['epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
         elif scan.get('cmd', '').split()[0] == 'ascan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -370,12 +374,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
                             scan_group.attrs['epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
         elif scan.get('cmd', '').split()[0] == 'Escan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -392,12 +396,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
                             scan_group.attrs['epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
         elif scan.get('cmd', '').split()[0] == 'hklscan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -418,12 +422,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
                             scan_group.attrs['epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
         elif scan.get('cmd', '').split()[0] == 'rodscan':
             for key in scan.keys():
                 if key == 'cmd':
@@ -444,12 +448,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
                             scan_group.attrs['epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
             # Calculate the HK distance
             h_val = scan_group.attrs['h_val']
             k_val = scan_group.attrs['k_val']
@@ -479,12 +483,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
                             scan_group.attrs['epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
         else:
             for key in scan.keys():
                 if key not in ['labels', 'point_data',
@@ -493,12 +497,12 @@ def spec_to_hdf(args):
                     if scan_key is None:
                         scan_key = 'None'
                     scan_group.attrs[key] = scan_key
-                    if key.startswith('date'):
+                    '''if key.startswith('date'):
                         try:
                             scan_group.attrs['epoch'] = \
                                         time.mktime(time.strptime(scan_key))
                         except:
-                            pass
+                            pass'''
         # Set the image directory for the scan
         this_dir = image_dir + 'S%03d\\' % scan['index']
         # Print the directory (to give users a sense of progress made)
