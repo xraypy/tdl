@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-3/22/2012
+4/20/2012
 '''
 
 import h5py
@@ -14,12 +14,13 @@ import wx.lib.mixins.listctrl as listmix
 import wx.lib.agw.ultimatelistctrl as ULC
 
 import tdl.modules.specfile.filtertools as ft
+import tdl.modules.specfile.mastertoproject as mtp
 from pds.pcgui.wxUtil import wxUtil
 
 POSSIBLE_ATTRIBUTES = ['bad_pixel_map', 'beam_slits', 'bgrflag',
                               'cnbgr', 'colormap', 'cpow', 'ctan', 'cwidth',
-                              'det_slits', 'rnbgr', 'roi', 'rotangle', 'rpow',
-                              'rtan', 'rwidth', 'sample_angle',
+                              'det_slits', 'geom', 'rnbgr', 'roi', 'rotangle',
+                              'rpow', 'rtan', 'rwidth', 'sample_angles',
                               'sample_diameter', 'sample_polygon', 'scale']
 
 class filterGUI(wx.Frame, wxUtil):
@@ -420,7 +421,7 @@ class filterGUI(wx.Frame, wxUtil):
         # The new attribute button
         self.attrAdd.Bind(wx.EVT_BUTTON, self.addAttribute)
         # The new button
-        
+        self.newIntegrator.Bind(wx.EVT_BUTTON, self.newProject)
         # The append button
         
         
@@ -659,7 +660,7 @@ class filterGUI(wx.Frame, wxUtil):
         attrText = self.attrSelect.GetStringSelection()
         if attrText == '' or attrText in self.attrDict:
             return
-        attrValue = self.attrSpecify.GetValue()
+        attrValue = str(self.attrSpecify.GetValue())
         if attrValue == '':
             return
         self.attrDict[attrText] = attrValue
@@ -811,6 +812,18 @@ class filterGUI(wx.Frame, wxUtil):
         while item != -1:
             self.dataTable.SetItemTextColour(item, wx.BLACK)
             item = self.dataTable.GetNextItem(item)
+    
+    # Create a new HDF project file, then open it in an integrator window
+    def newProject(self, event):
+        #print self.projectDict
+        print 'Start: ', time.ctime(time.time())
+        self.fileDirectory, holding = os.path.split(self.filterFile.filename)
+        
+        mtp.master_to_project(self.filterFile.filename, self.projectDict,
+                                self.fileDirectory + '\\' + \
+                                self.projectNameBox.GetValue())
+                                #'C:\\Users\\biwer\\Desktop\\HDFFiles\\testProject2.h5')
+        print 'Finish: ', time.ctime(time.time())
     
     # Keep only the selected scans by faking a filtered result
     def keepSelected(self, event):
