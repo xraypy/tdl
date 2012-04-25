@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-4/20/2012
+4/24/2012
 '''
 
 import h5py
@@ -423,7 +423,7 @@ class filterGUI(wx.Frame, wxUtil):
         # The new button
         self.newIntegrator.Bind(wx.EVT_BUTTON, self.newProject)
         # The append button
-        
+        self.appendIntegrator.Bind(wx.EVT_BUTTON, self.appendTo)
         
         # Lost focus on the project name box (rename project tree)
         self.projectNameBox.Bind(wx.EVT_KILL_FOCUS, self.newName)
@@ -816,14 +816,51 @@ class filterGUI(wx.Frame, wxUtil):
     # Create a new HDF project file, then open it in an integrator window
     def newProject(self, event):
         #print self.projectDict
-        print 'Start: ', time.ctime(time.time())
+        if self.projectDict == {}:
+            print 'No scans selected'
+            return
         self.fileDirectory, holding = os.path.split(self.filterFile.filename)
-        
-        mtp.master_to_project(self.filterFile.filename, self.projectDict,
-                                self.fileDirectory + '\\' + \
-                                self.projectNameBox.GetValue())
-                                #'C:\\Users\\biwer\\Desktop\\HDFFiles\\testProject2.h5')
-        print 'Finish: ', time.ctime(time.time())
+        file_types = 'HDF files (*.h5)|*.h5|All files (*.*)|*'
+        save_dialog = wx.FileDialog(self, message='Create file...',
+                                    defaultDir=self.fileDirectory,
+                                    defaultFile=self.projectNameBox.GetValue(),
+                                    wildcard=file_types,
+                                    style=wx.SAVE | wx.OVERWRITE_PROMPT)
+        if save_dialog.ShowModal() == wx.ID_OK:
+            print 'Start: ', time.ctime(time.time())
+            out_file = save_dialog.GetPath()
+            try:
+                mtp.master_to_project(self.filterFile.filename,
+                                      self.projectDict,
+                                      out_file, append=False, gui=True)
+            except:
+                print 'Error generating project file'
+            print 'Finish: ', time.ctime(time.time())
+        save_dialog.Destroy()
+    
+    # Append scans to an existing HDF project file, then open it
+    def appendTo(self, event):
+        if self.projectDict == {}:
+            print 'No scans selected'
+            return
+        self.fileDirectory, holding = os.path.split(self.filterFile.filename)
+        file_types = 'HDF files (*.h5)|*.h5|All files (*.*)|*'
+        save_dialog = wx.FileDialog(self, message='Append to...',
+                                    defaultDir=self.fileDirectory,
+                                    defaultFile=self.projectNameBox.GetValue(),
+                                    wildcard=file_types,
+                                    style=wx.SAVE)
+        if save_dialog.ShowModal() == wx.ID_OK:
+            print 'Start: ', time.ctime(time.time())
+            out_file = save_dialog.GetPath()
+            try:
+                mtp.master_to_project(self.filterFile.filename,
+                                      self.projectDict,
+                                      out_file, append=True, gui=True)
+            except:
+                print 'Error saving to project file'
+            print 'Finish: ', time.ctime(time.time())
+        save_dialog.Destroy()
     
     # Keep only the selected scans by faking a filtered result
     def keepSelected(self, event):
