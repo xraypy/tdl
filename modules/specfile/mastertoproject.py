@@ -39,7 +39,8 @@ DETECTOR_PARAMETERS = {'beam_slits': [],
                        'name': 'pilatus'
                       }
                       
-def master_to_project(master_file, desired_scans, project_file):
+def master_to_project(master_file, desired_scans, project_file, append=True, 
+                      gui=False):
     '''Convert a list of scans from a master file
         (potentially with some listed attributes)
         to a project file.
@@ -56,35 +57,85 @@ def master_to_project(master_file, desired_scans, project_file):
     '''
     
     read_this = h5py.File(master_file, 'r')
-    write_this = h5py.File(project_file, 'a')
+    if append:
+        # Open the project in append mode, get the last point
+        # number written, and gather all the unique names already
+        # in the project file. This allows new points to be
+        # added without overwriting anything (items() gives 
+        # the list in alphabetical order, so the largest number
+        # comes last). This breaks for projects with more than
+        # 999999 points, labeled sequentially (no point 0).
+        # Once a project has a point with a 7-digit name, appending
+        # may cause overwrites.
+        write_this = h5py.File(project_file, 'a')
+        point_counter = int(write_this.items()[-1][0]) + 1
+        all_names = set()
+        for item in write_this.items():
+            all_names.add(item[1].attrs.get('name'))
+    else:
+        # Open the project in write mode (overwriting any
+        # existing data), set the naming counter to 1,
+        # and clear the existing names.
+        write_this = h5py.File(project_file, 'w')
+        point_counter = 1
+        all_names = set()
     
     # The starting point number (this only works if
     # the file consists of sequentially numbered
     # points, starting at 1 with no gaps).
-    point_counter = len(write_this) + 1
+    #point_counter = len(write_this) + 1
+    
+    progress_continue = True
+    if gui:
+        key_count = 0
+        project_progress = 0
+        for spec_name in desired_scans.keys():
+            for scan_number in desired_scans[spec_name].keys():
+                key_count += \
+                            len(read_this[spec_name][scan_number]['point_data'])
+        import wx
+        progress_box = wx.ProgressDialog('Building file...', 'Progress:',
+                                              key_count,
+                                              style=wx.PD_CAN_ABORT | 
+                                                    wx.PD_APP_MODAL |
+                                                    wx.PD_AUTO_HIDE |
+                                                    wx.PD_ELAPSED_TIME |
+                                                    wx.PD_REMAINING_TIME)
+    
     
     for spec_name in desired_scans.keys():
+        if not progress_continue:
+            break
         for scan_number in desired_scans[spec_name].keys():
+            if not progress_continue:
+                break
             read_head = read_this[spec_name][scan_number]
             num_points = len(read_head['point_data'])
+            specified_attrs = desired_scans[spec_name][scan_number]
+            file_epoch = read_head.attrs.get('init_epoch', 0)
+            epoch_loc = list(read_head['point_labs']).index('Epoch')
             #add_time = 0
             for i in range(num_points):
+                
+                # The epoch offset of the point
+                point_epoch = read_head['point_data'][i][epoch_loc]
+                
+                uniq_name = str(spec_name + ':S' + scan_number +':P' + \
+                                str(i+1) + '/' + str(num_points) + ':' + \
+                                str(point_epoch + file_epoch))
+                
+                if uniq_name in all_names:
+                    if gui:
+                        print uniq_name, ' already in ', project_file
+                    continue
+                
                 point_name = '%6.6i' % point_counter
                 point_group = write_this.create_group(point_name)
                 point_counter += 1
                 
-                specified_attrs = desired_scans[spec_name][scan_number]
-                
-                # The epoch of the point (specfile creation time + point offset)
-                file_epoch = read_head.attrs.get('init_epoch', 0)
-                epoch_loc = list(read_head['point_labs']).index('Epoch')
-                point_epoch = read_head['point_data'][i][epoch_loc]
-                
                 # The unique identifier
-                point_group.attrs['name'] = str(spec_name + ':S' + \
-                                                scan_number +':P' + str(i) + \
-                                                '/' + str(num_points) + ':' + \
-                                                str(point_epoch + file_epoch))
+                point_group.attrs['name'] = uniq_name
+                all_names.add(uniq_name)
                 # The scan type
                 point_group.attrs['type'] = read_head.attrs.get('s_type', 'NA')
                 # Info about the point; initialized to the spec command
@@ -205,7 +256,7 @@ def master_to_project(master_file, desired_scans, project_file):
                 for label in int_labels:
                     no_show = INTEGRATION_PARAMETERS.get(label, 'NA')
                     int_values.append(str(specified_attrs.get(label, no_show)))
-                det_group.create_dataset('int_values', data=int_values)
+                det_group.create_dataset('int_values.1', data=int_values)
                 # Correction parameters
                 corr_labels = ['bad_pixel_map', 'bad_point',
                                'image_changed', 'image_max',
@@ -217,7 +268,7 @@ def master_to_project(master_file, desired_scans, project_file):
                 for label in corr_labels:
                     no_show = CORRECTION_PARAMETERS.get(label, 'NA')
                     corr_values.append(str(specified_attrs.get(label, no_show)))
-                det_group.create_dataset('corr_values', data=corr_values)
+                det_group.create_dataset('corr_values.1', data=corr_values)
                 # Detector parameters
                 det_labels = ['beam_slits', 'det_slits']
                 det_group.create_dataset('det_labels', data=det_labels)
@@ -225,26 +276,38 @@ def master_to_project(master_file, desired_scans, project_file):
                 for label in det_labels:
                     no_show = DETECTOR_PARAMETERS.get(label, 'NA')
                     det_values.append(str(specified_attrs.get(label, no_show)))
-                det_group.create_dataset('det_values', data=det_values)
+                det_group.create_dataset('det_values.1', data=det_values)
                 # Results
                 res_labels = ['alpha', 'beta', 'ctot', 'F', 'F_changed', 'Ferr',
                               'I', 'I_c', 'I_r', 'Ibgr', 'Ibgr_c', 'Ibgr_r',
                               'Ierr', 'Ierr_c', 'Ierr_r']
                 res_values = [0, 0, 0, 0, True, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 det_group.create_dataset('result_labels', data=res_labels)
-                det_group.create_dataset('result_values', data=res_values)
+                det_group.create_dataset('result_values.1', data=res_values)
                 
-                '''
-                for attr in DEFAULT_ATTRIBUTES.keys():
-                    if attr not in desired_scans[spec_name][scan_number].keys():
-                        point_group.attrs[attr] = DEFAULT_ATTRIBUTES[attr]
-                    else:
-                        point_group.attrs[attr] = str(desired_scans[spec_name][scan_number][attr])
-                point_group.create_dataset('raw_data', data=read_head['point_data'][i])
-                try:
-                    point_group.create_dataset('image_data', data=read_head['image_data'][i], compression='szip')
-                except:
-                    pass'''
+                if gui:
+                    project_progress += 1
+                    progress_continue, holding = \
+                                        progress_box.Update(project_progress)
+                    while wx.GetApp().Pending():
+                        wx.GetApp().Dispatch()
+                        wx.GetApp().Yield(True)
+                        
+    if gui:
+        progress_continue = False
+        progress_box.Destroy()
+                
+        '''
+        for attr in DEFAULT_ATTRIBUTES.keys():
+            if attr not in desired_scans[spec_name][scan_number].keys():
+                point_group.attrs[attr] = DEFAULT_ATTRIBUTES[attr]
+            else:
+                point_group.attrs[attr] = str(desired_scans[spec_name][scan_number][attr])
+        point_group.create_dataset('raw_data', data=read_head['point_data'][i])
+        try:
+            point_group.create_dataset('image_data', data=read_head['image_data'][i], compression='szip')
+        except:
+            pass'''
     
     read_this.close()
     write_this.close()
