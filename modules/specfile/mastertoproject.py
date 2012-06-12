@@ -57,6 +57,9 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
     '''
     
     read_this = h5py.File(master_file, 'r')
+    # Define a data type for an array of variable-length strings
+    var_len_strs = h5py.new_vlen(str)
+    
     if append:
         # Open the project in append mode, get the last point
         # number written, and gather all the unique names already
@@ -248,7 +251,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                 except:
                     pass
                 # Integration parameters
-                int_labels = ['bgrflag', 'cnbrg', 'compress', 'cpow', 'ctan',
+                int_labels = ['bgrflag', 'cnbgr', 'compress', 'cpow', 'ctan',
                               'cwidth', 'filter', 'integrated', 'nline',
                               'rnbgr', 'roi', 'rpow', 'rtan', 'rwidth']
                 det_group.create_dataset('int_labels', data=int_labels)
@@ -256,7 +259,8 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                 for label in int_labels:
                     no_show = INTEGRATION_PARAMETERS.get(label, 'NA')
                     int_values.append(str(specified_attrs.get(label, no_show)))
-                det_group.create_dataset('int_values.1', data=int_values)
+                det_group.create_dataset('int_values.1', data=int_values,
+                                         dtype=var_len_strs)
                 # Correction parameters
                 corr_labels = ['bad_pixel_map', 'bad_point',
                                'image_changed', 'image_max',
@@ -268,7 +272,8 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                 for label in corr_labels:
                     no_show = CORRECTION_PARAMETERS.get(label, 'NA')
                     corr_values.append(str(specified_attrs.get(label, no_show)))
-                det_group.create_dataset('corr_values.1', data=corr_values)
+                det_group.create_dataset('corr_values.1', data=corr_values,
+                                         dtype=var_len_strs)
                 # Detector parameters
                 det_labels = ['beam_slits', 'det_slits']
                 det_group.create_dataset('det_labels', data=det_labels)
@@ -276,7 +281,8 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                 for label in det_labels:
                     no_show = DETECTOR_PARAMETERS.get(label, 'NA')
                     det_values.append(str(specified_attrs.get(label, no_show)))
-                det_group.create_dataset('det_values.1', data=det_values)
+                det_group.create_dataset('det_values.1', data=det_values,
+                                         dtype=var_len_strs)
                 # Results
                 res_labels = ['alpha', 'beta', 'ctot', 'F', 'F_changed', 'Ferr',
                               'I', 'I_c', 'I_r', 'Ibgr', 'Ibgr_c', 'Ibgr_r',
