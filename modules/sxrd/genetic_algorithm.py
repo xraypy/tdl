@@ -111,7 +111,8 @@ def genetic(panel, dat, cell, surface, NLayers, database,\
                 individual = individuals[i][:]
                 j = random.randrange(m)
                 key = used_params[j]
-                individual[j] = individuals[i][j]+ random.uniform(((parameter[key][1]-individuals[i][j])*jump),((parameter[key][2]-individuals[i][j])*jump))
+                individual[j] = individuals[i][j]+ random.uniform(((parameter[key][1]-individuals[i][j])*jump),\
+                                                                  ((parameter[key][2]-individuals[i][j])*jump))
                     
                 parameter = insert(used_params, individual, parameter)
                 dat, fit = calc_CTRs(parameter,param_usage,\
@@ -170,12 +171,8 @@ def genetic(panel, dat, cell, surface, NLayers, database,\
             fitness = Num.append(fitness, fit_child2)
             individuals = Num.append(individuals, Num.array([child1]), axis = 0)
             individuals = Num.append(individuals, Num.array([child2]), axis = 0)
-        # sort population and keep only the n fittest individuals
+        # sort population 
         fitness, individuals = sort_population(fitness, individuals)
-        fitness = fitness[:n]
-        individuals = individuals[:n]
-        #report intermediate results
-        fig3 = parameter_plot(fig3,used_params,parameter,individuals,0)
         parameter = insert(used_params, individuals[0], parameter)
         dat, fittest = calc_CTRs(parameter,param_usage,\
                                                 dat, cell,surface,\
@@ -184,8 +181,24 @@ def genetic(panel, dat, cell, surface, NLayers, database,\
                                                 use_bulk_water, use_BVC,\
                                                 BVclusters, RMS_flag,\
                                                 use_lay_el, el)
-        fig1 = plot_rods(fig1, dat, plot_dims, plot_bulk, plot_surf, plot_rough,\
-                         plot_water, fittest)
+        #make sure the sorting is correct
+        while fitness[0] != fittest:
+            fitness, individuals = sort_population(fitness, individuals)
+            parameter = insert(used_params, individuals[0], parameter)
+            dat, fittest = calc_CTRs(parameter,param_usage,\
+                                                dat, cell,surface,\
+                                                NLayers, database, g_inv,\
+                                                Rod_weight, rigid_bodies,\
+                                                use_bulk_water, use_BVC,\
+                                                BVclusters, RMS_flag,\
+                                                use_lay_el, el)
+        #and keep only the n fittest individuals
+        fitness = fitness[:n]
+        individuals = individuals[:n]
+        #report intermediate results
+        fig3 = parameter_plot(fig3,used_params,parameter,individuals,0)
+        fig1 = plot_rods(fig1, dat, plot_dims, plot_bulk, plot_surf,\
+                         plot_rough, plot_water, fittest)
         fig1.canvas.draw()
         statusstring ='generation '+str(z)+', best R = '\
                        +str(round(fittest,7))

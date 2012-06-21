@@ -212,13 +212,10 @@ def Rasd_difference(allrasd, surface_tmp, parameter, param_usage, use_bulk_water
 
                 U = Num.ndarray((3,3),float)
                 U[0][0] = surface[n][4]
-                U[0][1] = surface[n][7]*(surface[n][4])**0.5*(surface[n][5])**0.5
-                U[0][2] = surface[n][8]*(surface[n][4])**0.5*(surface[n][6])**0.5
-                U[1][0] = U[0][1]
+                U[0][1] = U[1][0] = surface[n][7]*(surface[n][4]*surface[n][5])**0.5
+                U[0][2] = U[2][0] = surface[n][8]*(surface[n][4]*surface[n][6])**0.5
                 U[1][1] = surface[n][5]
-                U[1][2] = surface[n][9]*(surface[n][5])**0.5*(surface[n][6])**0.5
-                U[2][0] = U[0][2]
-                U[2][1] = U[1][2]
+                U[1][2] = U[2][1] = surface[n][9]*(surface[n][5]*surface[n][6])**0.5
                 U[2][2] = surface[n][6]
                 
                 theta = surface[n][10]
@@ -274,9 +271,7 @@ def Rasd_difference(allrasd, surface_tmp, parameter, param_usage, use_bulk_water
     return allrasd
 
 def calc_F_lay_el(hkl, occ, K, sig, sig_bar, d, d0, g_inv):
-    zinv = g_inv[2][2]**0.5
-    q = hkl[2]* zinv
-    qd4pi = q/4/Num.pi
+    q = hkl[2]* g_inv[2][2]**0.5
     f = Num.exp(-2 * Num.pi**2 * q**2 * sig)*occ
     x = Num.pi * q * d
     al = 2 * Num.pi**2 * q**2 * sig_bar + K * d

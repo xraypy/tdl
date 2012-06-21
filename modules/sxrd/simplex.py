@@ -216,7 +216,7 @@ def parameter_plot(fig,used_params,parameter,points,mini):
     fig.suptitle('Parameter Plot', fontsize = 20)
     plot = fig.add_subplot(111)
     plot.set_xticks(range(len(used_params)))
-    plot.set_xticklabels(used_params,rotation = 30)
+    plot.set_xticklabels(used_params,rotation = 90)
     low = []
     spread = []
     for i in used_params:
@@ -229,6 +229,7 @@ def parameter_plot(fig,used_params,parameter,points,mini):
             plot.plot(range(len(used_params)),(points[i]-low)/spread,'bo')
         plot.plot(range(len(used_params)),(points[mini]-low)/spread,'ro')
     plot.set_xlim(-1,len(used_params)+1)
-    #plot.set_ylim(0,1)
+    plot.vlines(range(len(used_params)),ymin = 0,ymax = 1, color = 'k', linestyles = 'dashed')
+    plot.set_ylim(0,1)
     plot.figure.canvas.draw()
     return fig       

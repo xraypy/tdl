@@ -20,10 +20,7 @@ try:
     jobserver = pp.Server()
     parallel = True
 except ImportError:
-    print """Could not find PARALLEL PYTHON - install it -
-             (http://www.parallelpython.com/content/view/18/32/)   
-             and experience the performance ;-)
-             (in case you have more than one CPU on your machine)"""
+    print "could not find Parallel Python"
     parallel = False
 ######################  general calculations  ##################################
 def calc_g_inv(cell):
@@ -253,7 +250,7 @@ def calc_Fuc(hkl,bulk,g_inv,database):
         b = b + (f * Num.sin(2*Num.pi*(hkl[0]*bulk[i][1] + hkl[1]*bulk[i][2] + hkl[2]*bulk[i][3])))
     return a, b
 
-def Fatom(atom,database, U,qd4pi,pi,q_Ang,hkl,low,exp,dot,cosinus, sinus):
+def Fatom(atom,database, U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus):
     f_par = database[low(atom[0])]
     U[0][0] = atom[4]
     U[0][1] = U[1][0] = atom[7]*(atom[4]*atom[5])**0.5
@@ -272,7 +269,7 @@ def calc_Fsurf(hkl,surface,g_inv,database,exp=Num.exp,low=str.lower,dot=Num.dot,
     q_Ang = [hkl[0]*g_inv[0][0]**0.5, hkl[1]*g_inv[1][1]**0.5, hkl[2]*g_inv[2][2]**0.5]
     qd4pi = (dot(dot(hkl,g_inv),hkl))**0.5/4/pi
     a = b = 0
-    jobs = [(atom, Fatom(atom,database,U,qd4pi,pi,q_Ang,hkl, low,exp,dot,cosinus, sinus)) for atom in surface]
+    jobs = [(atom, Fatom(atom,database,U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus)) for atom in surface]
     a=b=0
     for atom, job in jobs:
         a = a+job[0]
@@ -280,8 +277,7 @@ def calc_Fsurf(hkl,surface,g_inv,database,exp=Num.exp,low=str.lower,dot=Num.dot,
     return a,b
 
 def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
-    zinv = g_inv[2][2]**0.5
-    q = hkl[2]* zinv
+    q = hkl[2]* g_inv[2][2]**0.5
     qd4pi = q/4/Num.pi
     Auc = cell[0]* Num.sin(Num.radians(cell[5]))* cell[1]
     f = Auc * d * 0.033456 * (f_par[0]*Num.exp(-(qd4pi)**2*f_par[1]) + f_par[2]*Num.exp(-(qd4pi)**2*f_par[3]) +\
@@ -293,7 +289,7 @@ def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
     b = Num.exp(al)*Num.sin(-2*x)
     c = 4 * Num.cos(x)**2 * Num.sinh(al/2)**2 - 4 * Num.sin(x)**2 * Num.cosh(al/2)**2
     d = -2 * Num.sin(2*x) * Num.sinh(al)
-    wert = 2*Num.pi*q*zwater/zinv
+    wert = 2*Num.pi*hkl[2]*zwater
     rez = Num.cos(wert)
     imz = Num.sin(wert)
     wert = c**2 + d**2
@@ -304,8 +300,7 @@ def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
     return re, im
         
 def calc_F_layered_el(hkl, occ, K, sig, sig_bar, d, d0, g_inv, f_par):
-    zinv = g_inv[2][2]**0.5
-    q = hkl[2]* zinv
+    q = hkl[2]* g_inv[2][2]**0.5
     qd4pi = q/4/Num.pi
     f = (f_par[0]*Num.exp(-(qd4pi)**2*f_par[1]) + f_par[2]*Num.exp(-(qd4pi)**2*f_par[3]) +\
             f_par[4]*Num.exp(-(qd4pi)**2*f_par[5]) + f_par[6]*Num.exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
@@ -406,13 +401,15 @@ def calc_CTRs(parameter,param_usage, dat, cell, surface_tmp, NLayers, database,\
                                              use_bulk_water, use_lay_el)
     surface_new = RB_update(rigid_bodies, surface_new, parameter, cell)
     if parallel:
-        jobs = [(ctr, jobserver.submit(calcF, (ctr,global_parms,cell,surface_new,g_inv,NLayers,database,\
-                        use_bulk_water,RMS_flag, use_lay_el, el), (calc_Fsurf, calc_Fwater_layered, calc_F_layered_el, Fatom),("numpy as Num",))) for ctr in dat]
+        jobs = [(ctr, jobserver.submit(calcF, (ctr,global_parms,cell,\
+                 surface_new,g_inv,NLayers,database,use_bulk_water,RMS_flag,\
+                 use_lay_el, el), (calc_Fsurf, calc_Fwater_layered,\
+                 calc_F_layered_el, Fatom),("numpy as Num",)))for ctr in dat]
         dat = []
         for ctr, job in jobs:
             dat.append(job())
     else:
-        jobs = [(ctr, calcF(ctr,global_parms,cell,surface_new,g_inv,NLayers,database,\
+        jobs = [(ctr,calcF(ctr,global_parms,cell,surface_new,g_inv,NLayers,database,\
                         use_bulk_water,RMS_flag, use_lay_el, el)) for ctr in dat]
     RMS = 0
     n = 0
@@ -987,14 +984,20 @@ def plot_edensity(Fig, surface, param, param_use, cell, database, rigid_bodies,\
 ################################################################################
 ######################  CHECKS  ################################################
 def check_model_consistency(param_labels, parameter, parameter_usage,\
-                            rigid_bodies, use_bulk_water):
+                            rigid_bodies, use_bulk_water, use_lay_el):
     used_params = []
     for i in param_labels:
         if parameter[i][3]: used_params.append(i)
     if use_bulk_water:
+        global_parameters = ['zwater','sig_water','sig_water_bar',\
+                             'd_water','Scale','specScale','beta']
+    elif use_lay_el:
         global_parameters = ['z_el','d_el','sig_el','sig_el_bar','K',\
-                             'occ_el_0','zwater','sig_water','Scale',\
-                             'specScale','beta']
+                             'occ_el_0','Scale','specScale','beta']
+    elif use_lay_el and use_bulk_water:
+        global_parameters = ['z_el','d_el','sig_el','sig_el_bar','K',\
+                             'occ_el_0','zwater','sig_water','sig_water_bar',\
+                             'd_water','Scale','specScale','beta']  
     else:
         global_parameters = ['Scale','specScale','beta']
     global_flag = True

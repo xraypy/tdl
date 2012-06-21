@@ -1251,7 +1251,7 @@ class MainControlPanel(wx.Panel):
             pass
     ################################################################################################################################
     def OnClickStartFit(self,e):
-        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.UBW_flag)
+        flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.UBW_flag, self.use_lay_el)
         if flag:
             self.param_best = {}
             self.RMS = -1
@@ -1381,6 +1381,5 @@ class ParameterPanel(wx.ScrolledWindow):
 ############################################################################################################
 def start():
     frame = wxCtrFitFrame(parent = None, title = u"\u03c0-surf,  Python Interface StrUcture ReFinement", size = (800,750))
-    return frame
 
 
