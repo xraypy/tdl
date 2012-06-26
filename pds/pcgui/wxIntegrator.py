@@ -1,17 +1,14 @@
 '''
 Specfile Integrator
 Author: Craig Biwer (cbiwer@uchicago.edu)
-Last modified: 2.29.2012
+Last modified: 6.26.2012
 '''
 
 import os
 import math
-#import sys
+import sys
 import time
 import copy
-#import linecache
-#import threading
-#import Queue
 
 import wx
 import matplotlib
@@ -22,7 +19,6 @@ from matplotlib.widgets import Cursor
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
 from wx.lib.splitter import MultiSplitterWindow
 from wx.tools.Editra.src.eclib import pstatbar
-#import xml.etree.cElementTree as xmlTree
 
 from tdl.modules.ana_upgrade import image_data
 from tdl.modules.ana_upgrade import ctr_data
@@ -31,9 +27,6 @@ from tdl.modules.geom import gonio_psic
 from pds.pcgui import wxHDFToTree
 from pds.pcgui.wxUtil import wxUtil
 from pds.shellutil import mod_import
-
-#queueLock = threading.RLock()
-#scanData = None
 
 # This class is the interface for integrating data
 class Integrator(wx.Frame, wx.Notebook, wxUtil):
@@ -1063,6 +1056,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     self.hdfTree.SelectItem(dataLookup[allLs[thisPoint]])#item)
                 except:
                     print 'Error: can\'t locate point.'
+                self.hdfTree.SetFocus()
         
         # Copy parameters from one set of points to another by closest L value
         def copyFromTo(self, event):
@@ -2056,7 +2050,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 
         # Write a file to the current directory containing the index, H, K,
         # L, F, and Ferr values for each point
-        def saveHKLFFerr(self, event):#                                         NOT DONE
+        def saveHKLFFerr(self, event):
             self.customSelection.customTree.Expand(\
                     self.customSelection.customRoot)
             self.customSelection.CenterOnParent()
@@ -2067,64 +2061,48 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             treeSelections = self.customSelection.customTree.GetSelections()
             saveThese = []
             for selected in treeSelections:
-                if selected == self.customSelection.customRoot:
-                    item1, cookie1 = self.hdfTree.GetFirstChild(self.hdfRoot)
-                    while item1:
-                        item2, cookie2 = self.hdfTree.GetFirstChild(item1)
-                        while item2:
-                            part1 = self.hdfTree.GetItemText(item1).split()
-                            part1 = part1[1][:-1]
-                            part2 = self.hdfTree.GetItemText(item2).split()[1]
-                            saveThese.append((part1, part2))
-                            item2, cookie2 = self.hdfTree.GetNextChild(item1,
-                                                                        cookie2)
-                        item1, cookie1 = \
-                                self.hdfTree.GetNextChild(self.hdfRoot,
-                                                           cookie1)
-                    break
-                elif self.customSelection.customTree.GetItemParent(selected) ==\
-                        self.customSelection.customRoot:
-                    item1, cookie1 = self.customSelection.\
-                                        customTree.GetFirstChild(selected)
-                    while item1:
-                        saveThese.append((self.customSelection.customTree.GetItemText(selected).split()[1][:-1],
-                                            self.customSelection.customTree.GetItemText(item1).split()[1]))
-                        item1, cookie1 = self.customSelection.customTree.GetNextChild(item1, cookie1)
-                else:
-                    parentSelected = self.customSelection.customTree.GetItemParent(selected)
-                    saveThese.append((self.customSelection.customTree.GetItemText(parentSelected).split()[1][:-1],
-                                        self.customSelection.customTree.GetItemText(selected).split()[1]))
-
+                saveThese.extend(self.customTreeObject.getRelevantChildren(\
+                                        self.customSelection.customTree,
+                                        self.hdfObject,
+                                        selected))
             saveThese = list(set(saveThese))
-            saveThese = sorted(saveThese, key=lambda selection: int(selection[1]))
-            saveThese = sorted(saveThese, key=lambda selection: int(selection[0]))
+            saveThese.sort()
             
-            
-            saveDialog = wx.FileDialog(self, message='Save file as...', defaultDir=self.directory,
-                                        defaultFile='', wildcard='lst files (*.lst)|*.lst|All files (*.*)|*',
-                                        style=wx.SAVE | wx.OVERWRITE_PROMPT)
+            saveDialog = wx.FileDialog(self, message='Save file as...',
+                                       defaultDir=os.getcwd(), defaultFile='',
+                                       wildcard='lst files (*.lst)|*.lst|' + \
+                                                'All files (*.*)|*',
+                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:
+                    allHs = self.hdfObject.get_all('H', saveThese)
+                    allKs = self.hdfObject.get_all('K', saveThese)
+                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
+                    allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
+                                                      saveThese)
                     f = open(fname, 'w')
-                    header = "#idx %5s %5s %5s %7s %7s\n" % ('H','K','L','F','Ferr')
+                    header = "  #idx %5s %5s %5s %7s %7s\n" % \
+                                  ('H','K','L','F','Ferr')
                     f.write(header)
-                    i = 0
-                    for parentNumber, myNumber in saveThese:
-                        if not scanData[parentNumber][myNumber]['badPoint']:
-                            line = "%4i %3.2f %3.2f %6.3f %6.6g %6.6g\n" % (i,
-                                                                            scanData[parentNumber][myNumber]['H'],
-                                                                            scanData[parentNumber][myNumber]['K'],
-                                                                            scanData[parentNumber][myNumber]['L'],
-                                                                            scanData[parentNumber][myNumber]['F'],
-                                                                            scanData[parentNumber][myNumber]['Ferr'])
+                    for iterData in saveThese:
+                        if not eval(self.hdfObject[iterData]['det_0']\
+                                                            ['bad_point']):
+                            line = "%6s %3.2f %3.2f %6.3f %6.6g %6.6g\n" % \
+                                   (iterData,
+                                    allHs[iterData],
+                                    allKs[iterData],
+                                    allLs[iterData],
+                                    allFs[iterData],
+                                    allFerrs[iterData])
                             f.write(line)
-                            i += 1
                     f.close()
-                except error:
-                    oops = wx.MessageDialog(self, 'Error saving file\n' + str(error))
+                except Exception:
+                    oops = wx.MessageDialog(self, 'Error saving file\n' + str(Exception))
                     oops.ShowModal()
                     oops.Destroy()
+                    raise
             saveDialog.Destroy()
         
         # Resize the cancel button in the status bar

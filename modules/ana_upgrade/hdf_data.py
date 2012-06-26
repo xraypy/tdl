@@ -203,13 +203,21 @@ class HdfDataFile:
         """
         
         if self.point != 0 and self.point_dict != {}:
-            self.write_point(self.point_dict, self.point)
+            try:
+                self.write_point(self.point_dict, self.point)
+            except:
+                pass
         
         self.point = 0
         self.point_dict = {}
-        
-        self.file.flush()
-        self.file.close()
+        try:
+            self.file.flush()
+            self.file.close()
+        except:
+            pass
+        del self.file
+        del self.all_items
+        del self
     
     def __getitem__(self,arg):
         """
@@ -240,7 +248,20 @@ class HdfDataFile:
         return self.point_dict
     
     def close(self):
-        self.__del__()
+        """
+        If the object is going to be closed, make sure
+        the current point is written back to the file first.
+        
+        """
+        
+        if self.point != 0 and self.point_dict != {}:
+            self.write_point(self.point_dict, self.point)
+        
+        self.point = 0
+        self.point_dict = {}
+        
+        self.file.flush()
+        self.file.close()
     
     def delete(self, item):
         """Delete a point from the file."""
