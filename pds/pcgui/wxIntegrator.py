@@ -1432,6 +1432,11 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                             self.customSelection.customRoot)
                 pickMe = self.customTreeObject.reverseLookup[itemData]
                 self.customSelection.customTree.SelectItem(pickMe)
+                pickMe = self.customSelection.customTree.GetItemParent(pickMe)
+                while pickMe != self.customSelection.customRoot:
+                    self.customSelection.customTree.Expand(pickMe)
+                    pickMe = \
+                        self.customSelection.customTree.GetItemParent(pickMe)
             self.customSelection.CenterOnParent()
             userReply = self.customSelection.ShowModal()
             self.hdfTree.SetFocus()
