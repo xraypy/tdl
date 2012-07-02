@@ -1,7 +1,7 @@
 '''
 Spec to HDF5 converter / parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-3/8/2012
+Last modified: 7/2/2012
 '''
 
 import array
@@ -272,15 +272,18 @@ def spec_to_hdf(args):
     for scan in summary:
         scan_group = spec_group.require_group(str(scan['index']))
         try:
-            del scan_group['point_labs']
-        except KeyError:
-            pass
-        scan_group.create_dataset('point_labs', data=scan['labels'])
-        try:
+            if len(scan_group['point_data']) == scan['nl_dat']:
+                print 'Skipping scan' + str(scan['index'])
+                continue
             del scan_group['point_data']
         except KeyError:
             pass
         scan_group.create_dataset('point_data', data=scan['point_data'])
+        try:
+            del scan_group['point_labs']
+        except KeyError:
+            pass
+        scan_group.create_dataset('point_labs', data=scan['labels'])
         try:
             del scan_group['param_labs']
         except KeyError:
