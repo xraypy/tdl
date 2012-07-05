@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-4/24/2012
+7/05/2012
 '''
 
 import h5py
@@ -258,9 +258,9 @@ class filterGUI(wx.Frame, wxUtil):
         # The added attribute list
         self.attrList = ULC.UltimateListCtrl(self.middlePanel,
                                              agwStyle=wx.LC_REPORT |
-                                                      wx.LC_VRULES |
-                                                      wx.LC_HRULES |
-                                                      ULC.ULC_HAS_VARIABLE_ROW_HEIGHT)
+                                                wx.LC_VRULES |
+                                                wx.LC_HRULES |
+                                                ULC.ULC_HAS_VARIABLE_ROW_HEIGHT)
         self.attrList.InsertColumn(0, 'Attribute', width=108)
         self.attrList.InsertColumn(1, 'Value', width=40)
         self.attrList.InsertColumn(2, '', width=36)
@@ -668,9 +668,11 @@ class filterGUI(wx.Frame, wxUtil):
         self.attrDict[attrText] = attrValue
         self.attrList.Append([attrText, attrValue, ''])
         self.attrList.SetItemData(self.attrList.GetItemCount()-1, attrText)
-        thisButton = wx.Button(self.attrList, label='X', size=(32, 15), name=attrText)
+        thisButton = wx.Button(self.attrList, label='X', size=(32, 15),
+                               name=attrText)
         thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
-        self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2, wnd=thisButton)
+        self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2,
+                                    wnd=thisButton)
     
     # Delete an attribute both from the dictionary and the on-screen list
     def deleteMe(self, event):
@@ -708,10 +710,13 @@ class filterGUI(wx.Frame, wxUtil):
                         continue
                     self.attrDict[line[0]] = line[1]
                     self.attrList.Append([line[0], line[1], ''])
-                    self.attrList.SetItemData(self.attrList.GetItemCount()-1, line[0])
-                    thisButton = wx.Button(self.attrList, label='X', size=(32, 15), name=line[0])
+                    self.attrList.SetItemData(self.attrList.GetItemCount()-1,
+                                              line[0])
+                    thisButton = wx.Button(self.attrList, label='X',
+                                           size=(32, 15), name=line[0])
                     thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
-                    self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2, wnd=thisButton)
+                    self.attrList.SetItemWindow(self.attrList.GetItemCount()-1,
+                                                col=2, wnd=thisButton)
                 attributeFile.close()
             except:
                 print 'Error reading attribute file'
@@ -750,7 +755,8 @@ class filterGUI(wx.Frame, wxUtil):
             scanNumber = self.dataTable.GetItem(item, 1).Text
             if specName in self.projectDict:
                 if scanNumber not in self.projectDict[specName]:
-                    self.projectDict[specName][scanNumber] = self.attrDict.copy()
+                    self.projectDict[specName][scanNumber] = \
+                                                            self.attrDict.copy()
                 else:
                     print 'Specfile ' + specName + ', scan ' + \
                           scanNumber + ' is already in the tree.'
@@ -775,7 +781,8 @@ class filterGUI(wx.Frame, wxUtil):
             scanNumber = self.dataTable.GetItem(item, 1).Text
             if specName in self.projectDict:
                 if scanNumber not in self.projectDict[specName]:
-                    self.projectDict[specName][scanNumber] = self.attrDict.copy()
+                    self.projectDict[specName][scanNumber] = \
+                                                            self.attrDict.copy()
                 else:
                     print 'Specfile ' + specName + ', scan ' + \
                           scanNumber + ' is already in the tree.'
@@ -793,7 +800,8 @@ class filterGUI(wx.Frame, wxUtil):
     # Move the selected scans out of the project tree
     def moveOneLeft(self, event):
         allSelected = self.newProjectTree.GetSelections()
-        allSelected.sort(key = lambda selection: self.newProjectTree.getLevel(selection))
+        allSelected.sort(key = lambda selection: \
+                                        self.newProjectTree.getLevel(selection))
         '''for item in allSelected:
             print self.newProjectTree.GetItemText(item)
         '''
@@ -984,7 +992,7 @@ class SpecWindow(wx.Dialog):
                                                   treemix.TR_MULTIPLE |
                                                   treemix.TR_EXTENDED | 
                                                   treemix.TR_AUTO_CHECK_CHILD |
-                                                  treemix.TR_AUTO_CHECK_PARENT)# |
+                                                  treemix.TR_AUTO_CHECK_PARENT)
         
         # Populate the list
         self.allSpec = allSpec
@@ -992,7 +1000,8 @@ class SpecWindow(wx.Dialog):
             self.currentSpec = currentSpec
         else:
             self.currentSpec = allSpec
-        self.allRoot = self.list.AddRoot(self.GetParent().fileName.GetLabel(), ct_type=1)
+        self.allRoot = self.list.AddRoot(self.GetParent().fileName.GetLabel(),
+                                         ct_type=1)
         specKeys = self.allSpec.keys()
         specKeys.sort()
         for spec in specKeys:
