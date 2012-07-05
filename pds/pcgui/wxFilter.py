@@ -381,6 +381,7 @@ class filterGUI(wx.Frame, wxUtil):
         # The file menu
         self.fileMenu = wx.Menu()
         self.loadFile = self.fileMenu.Append(-1, 'Load HDF file...')
+        self.loadAttr = self.fileMenu.Append(-1, 'Load attribute file...')
         self.exitWindow = self.fileMenu.Append(-1, 'Exit')
         
         self.menuBar.Append(self.fileMenu, 'File')
@@ -392,8 +393,9 @@ class filterGUI(wx.Frame, wxUtil):
         ###############################################################
         
         # Menu bindings
-        self.Bind(wx.EVT_MENU, self.onClose, self.exitWindow)
         self.Bind(wx.EVT_MENU, self.loadHDF, self.loadFile)
+        self.Bind(wx.EVT_MENU, self.loadAttributes, self.loadAttr)
+        self.Bind(wx.EVT_MENU, self.onClose, self.exitWindow)
         
         # Button bindings
         # The specfile / number button
@@ -449,7 +451,7 @@ class filterGUI(wx.Frame, wxUtil):
         loadDialog = wx.FileDialog(self, message='Load file...',
                                    defaultDir=os.getcwd(), defaultFile='',
                                    wildcard='HDF files (*.h5)|*.h5|'+\
-                                             'All files(*.*)|*',
+                                             'All files (*.*)|*',
                                    style=wx.OPEN)
         if loadDialog.ShowModal() == wx.ID_OK:
             print 'Loading ' + loadDialog.GetPath()
@@ -676,6 +678,47 @@ class filterGUI(wx.Frame, wxUtil):
             del self.attrDict[deleteThis]
             deleteThis = self.attrList.FindItemData(-1, deleteThis)
             self.attrList.DeleteItem(deleteThis)
+    
+    # Load a tab-delimited file of attributes
+    def loadAttributes(self, event):
+        '''Load in a file with attribute / value pairs, separated by
+        a tab.
+        
+        '''
+        loadDialog = wx.FileDialog(self, message='Load file...',
+                                   defaultDir=os.getcwd(), defaultFile='',
+                                   wildcard='txt files (*.txt)|*.txt|'+\
+                                            'All files (*.*)|*',
+                                   style=wx.OPEN)
+        if loadDialog.ShowModal() == wx.ID_OK:
+            print 'Loading attribute file ' + loadDialog.GetPath()
+            try:
+                attributeFile = open(loadDialog.GetPath())
+            except:
+                print 'Error opening attribute file'
+                loadDialog.Destroy()
+                raise
+            try:
+                for line in attributeFile:
+                    line = line.strip().split('\t')
+                    if len(line) != 2 or \
+                            line[0] not in POSSIBLE_ATTRIBUTES or \
+                            line[0] in self.attrDict.keys() or \
+                            line[1] is '':
+                        continue
+                    self.attrDict[line[0]] = line[1]
+                    self.attrList.Append([line[0], line[1], ''])
+                    self.attrList.SetItemData(self.attrList.GetItemCount()-1, line[0])
+                    thisButton = wx.Button(self.attrList, label='X', size=(32, 15), name=line[0])
+                    thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
+                    self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2, wnd=thisButton)
+                attributeFile.close()
+            except:
+                print 'Error reading attribute file'
+                loadDialog.Destroy()
+                raise
+        loadDialog.Destroy()
+                    
     
     # Convert a dictionary to a tree
     def dictToTree(self, thisDict, thisTree, thisRoot):
