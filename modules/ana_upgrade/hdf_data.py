@@ -505,7 +505,12 @@ class HdfDataFile:
                 key_loc = DET_KEYS[key]
                 key_loc_path = key_loc[0].split('/')[1] % self.version
                 for point in points:
-                    self.file[point][det_name][key_loc_path][key_loc[1]] = value
+                    try:
+                        self.file[point][det_name][key_loc_path][key_loc[1]] = \
+                                                                           value
+                    except IOError:
+                        self.file[point][det_name][key_loc_path][key_loc[1]] = \
+                                                              numpy.float(value)
             elif key in DET_ATT_KEYS:
                 if self.point in points:
                     self.point_dict[det_name][key] = value
@@ -558,8 +563,12 @@ class HdfDataFile:
                     try:
                         key_loc = DET_KEYS[det_key]
                         key_loc_path = key_loc[0].split('/')[1] % self.version
-                        self.file[num][key][key_loc_path][key_loc[1]] = \
-                                data[key][det_key]
+                        try:
+                            self.file[num][key][key_loc_path][key_loc[1]] = \
+                                                              data[key][det_key]
+                        except IOError:
+                            self.file[num][key][key_loc_path][key_loc[1]] = \
+                                                 numpy.float(data[key][det_key])
                     except KeyError:
                         pass
             else:

@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-7/05/2012
+7/7/2012
 '''
 
 import h5py
@@ -208,12 +208,14 @@ class filterGUI(wx.Frame, wxUtil):
         # The static text
         self.fileLabel = wx.StaticText(self.middlePanel, label='File Name: ')
         
-        # The dynamic text
-        self.fileName = wx.StaticText(self.middlePanel, label='')
+        # The load master file button (changes label based on current file)
+        self.fileButton = wx.Button(self.middlePanel,
+                                    label='Load Master File...')
         
         # Populate the sizer:
-        self.fileSizer.Add(self.fileLabel)
-        self.fileSizer.Add(self.fileName)
+        self.fileSizer.Add(self.fileLabel, flag=wx.CENTER)
+        self.fileSizer.Add(self.fileButton, proportion=1,
+                           flag=wx.EXPAND | wx.RIGHT, border=20)
         
         # The middle contents
         # The 'More Info:' label
@@ -266,6 +268,25 @@ class filterGUI(wx.Frame, wxUtil):
         self.attrList.InsertColumn(2, '', width=36)
         self.attrList.SetColumnWidth(1, ULC.ULC_AUTOSIZE_FILL)
         
+        # The load / save attribute buttons file line
+        self.loadSaveAttributeSizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        # The load attribute button
+        self.loadAttrButton = wx.Button(self.middlePanel,
+                                        label='Load Attribute File...')
+        # The save attribute button
+        self.saveAttrButton = wx.Button(self.middlePanel,
+                                        label='Save Attribute File...')
+                                  
+        # Arrange the load / save attribute buttons line
+        self.loadSaveAttributeSizer.Add(self.loadAttrButton, proportion=1,
+                                        flag=wx.EXPAND | wx.LEFT,
+                                        border=32)
+        self.loadSaveAttributeSizer.AddSpacer(16)
+        self.loadSaveAttributeSizer.Add(self.saveAttrButton, proportion=1,
+                                        flag=wx.EXPAND | wx.RIGHT,
+                                        border=32)
+        
         # Arrange the middle panel
         self.middleSizer.Add(self.fileSizer, proportion=0,
                             flag=wx.EXPAND | wx.TOP | wx.LEFT, border=20)
@@ -290,9 +311,11 @@ class filterGUI(wx.Frame, wxUtil):
                              flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP,
                              border=24)
         self.middleSizer.Add(self.attrList, proportion=1,
-                             flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+                             flag=wx.EXPAND | wx.LEFT | wx.RIGHT,
                              border=24)
-        self.middleSizer.AddSpacer(10)
+        self.middleSizer.AddSpacer(6)
+        self.middleSizer.Add(self.loadSaveAttributeSizer, flag=wx.EXPAND)
+        self.middleSizer.AddSpacer(6)
 
         self.middlePanel.SetSizerAndFit(self.middleSizer)
         
@@ -333,7 +356,8 @@ class filterGUI(wx.Frame, wxUtil):
         self.nextStepSizer = wx.BoxSizer(wx.HORIZONTAL)
         
         # Create a new integrator window
-        self.newIntegrator = wx.Button(self.rightPanel, label='New Integrator')
+        self.newIntegrator = wx.Button(self.rightPanel,
+                                       label='New Project File')
         
         # Append scans to an existing integrator window
         self.appendIntegrator = wx.Button(self.rightPanel,
@@ -412,6 +436,8 @@ class filterGUI(wx.Frame, wxUtil):
         self.keepButton.Bind(wx.EVT_BUTTON, self.keepSelected)
         # The reset button
         self.resetButton.Bind(wx.EVT_BUTTON, self.readFile)
+        # The load project file button
+        self.fileButton.Bind(wx.EVT_BUTTON, self.loadHDF)
         # The single right button
         self.rightOne.Bind(wx.EVT_BUTTON, self.moveOneRight)
         # The single left button
@@ -422,6 +448,10 @@ class filterGUI(wx.Frame, wxUtil):
         self.leftAll.Bind(wx.EVT_BUTTON, self.moveAllLeft)
         # The new attribute button
         self.attrAdd.Bind(wx.EVT_BUTTON, self.addAttribute)
+        # The load attribute file button
+        self.loadAttrButton.Bind(wx.EVT_BUTTON, self.loadAttributes)
+        # The save attribute file button
+        self.saveAttrButton.Bind(wx.EVT_BUTTON, self.saveAttributes)
         # The new button
         self.newIntegrator.Bind(wx.EVT_BUTTON, self.newProject)
         # The append button
@@ -450,7 +480,7 @@ class filterGUI(wx.Frame, wxUtil):
         
         loadDialog = wx.FileDialog(self, message='Load file...',
                                    defaultDir=os.getcwd(), defaultFile='',
-                                   wildcard='HDF files (*.h5)|*.h5|'+\
+                                   wildcard='Master files (*.mh5)|*.mh5|'+\
                                              'All files (*.*)|*',
                                    style=wx.OPEN)
         if loadDialog.ShowModal() == wx.ID_OK:
@@ -470,10 +500,14 @@ class filterGUI(wx.Frame, wxUtil):
                 raise
             
             self.readFile(None)
-            self.fileName.SetLabel(os.path.split(loadDialog.GetPath())[-1])
+            self.fileButton.SetLabel(os.path.split(loadDialog.GetPath())[-1])
+            if self.projectNameBox.GetValue() == '':
+                projName = os.path.basename(loadDialog.GetPath())
+                projName = projName.rsplit('.', 1)[0] + '.ph5'
+                self.projectNameBox.SetValue(projName)
+            self.newProjectTree.DeleteAllItems()
+            self.projectDict = {}
         loadDialog.Destroy()
-        if self.projectNameBox.GetValue() == '':
-            self.projectNameBox.SetValue('Project1.h5')
         self.dataTable.SetFocus()
     
     # Reset all filters and read in an HDF file
@@ -673,6 +707,7 @@ class filterGUI(wx.Frame, wxUtil):
         thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
         self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2,
                                     wnd=thisButton)
+        self.attrList.SortItems(cmp)
     
     # Delete an attribute both from the dictionary and the on-screen list
     def deleteMe(self, event):
@@ -718,12 +753,43 @@ class filterGUI(wx.Frame, wxUtil):
                     self.attrList.SetItemWindow(self.attrList.GetItemCount()-1,
                                                 col=2, wnd=thisButton)
                 attributeFile.close()
+                self.attrList.SortItems(cmp)
             except:
                 print 'Error reading attribute file'
                 loadDialog.Destroy()
                 raise
         loadDialog.Destroy()
                     
+    # Save the current attribute table into a tab-delimited file
+    def saveAttributes(self, event):
+        '''Save a file with attribute / value pairs, separated by
+        a tab.
+        
+        '''
+        
+        saveDialog = wx.FileDialog(self, message='Save file...',
+                                   defaultDir=os.getcwd(), defaultFile='',
+                                   wildcard='txt files (*.txt)|*.txt|'+\
+                                            'All files (*.*)|*',
+                                   style=wx.SAVE)
+        if saveDialog.ShowModal() == wx.ID_OK:
+            print 'Saving attribute file ' + saveDialog.GetPath()
+            try:
+                attributeFile = open(saveDialog.GetPath(), 'a')
+            except:
+                print 'Error opening attribute file'
+                saveDialog.Destroy()
+                raise
+            try:
+                for key, value in self.attrDict.iteritems():
+                    attributeFile.write(key + '\t' + value + '\n')
+            except:
+                print 'Error writing to file'
+                attributeFile.close()
+                saveDialog.Destroy()
+                raise
+            attributeFile.close()
+        saveDialog.Destroy()
     
     # Convert a dictionary to a tree
     def dictToTree(self, thisDict, thisTree, thisRoot):
@@ -737,8 +803,8 @@ class filterGUI(wx.Frame, wxUtil):
     
     # Update the file name in the project tree
     def newName(self, event):
-        if not self.projectNameBox.GetValue().endswith('.h5'):
-            self.projectNameBox.SetValue(self.projectNameBox.GetValue()+'.h5')
+        if not self.projectNameBox.GetValue().endswith('.ph5'):
+            self.projectNameBox.SetValue(self.projectNameBox.GetValue()+'.ph5')
         try:
             self.newProjectTree.SetItemText(self.newProjectTree.GetRootItem(),
                                             self.projectNameBox.GetValue())
@@ -871,7 +937,7 @@ class filterGUI(wx.Frame, wxUtil):
             print 'No scans selected'
             return
         self.fileDirectory, holding = os.path.split(self.filterFile.filename)
-        file_types = 'HDF files (*.h5)|*.h5|All files (*.*)|*'
+        file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
         save_dialog = wx.FileDialog(self, message='Create file...',
                                     defaultDir=self.fileDirectory,
                                     defaultFile=self.projectNameBox.GetValue(),
@@ -895,7 +961,7 @@ class filterGUI(wx.Frame, wxUtil):
             print 'No scans selected'
             return
         self.fileDirectory, holding = os.path.split(self.filterFile.filename)
-        file_types = 'HDF files (*.h5)|*.h5|All files (*.*)|*'
+        file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
         save_dialog = wx.FileDialog(self, message='Append to...',
                                     defaultDir=self.fileDirectory,
                                     defaultFile=self.projectNameBox.GetValue(),
@@ -1000,7 +1066,7 @@ class SpecWindow(wx.Dialog):
             self.currentSpec = currentSpec
         else:
             self.currentSpec = allSpec
-        self.allRoot = self.list.AddRoot(self.GetParent().fileName.GetLabel(),
+        self.allRoot = self.list.AddRoot(self.GetParent().fileButton.GetLabel(),
                                          ct_type=1)
         specKeys = self.allSpec.keys()
         specKeys.sort()
@@ -1173,7 +1239,9 @@ class HKWindow(wx.Dialog):
             for spec in specKids:
                 if spec.IsChecked():
                     specName = spec.GetText().split(':')[0]
-                    selectedHK[hkText][specName] = self.allHK[hkText][specName]
+                    allHKText = tuple(map(str, hkText))
+                    selectedHK[hkText][specName] = \
+                                    self.allHK[allHKText][specName]
         self.GetParent().hkCases = None
         if self.allHK == selectedHK:
             self.GetParent().hkResult = None
@@ -1184,10 +1252,10 @@ class HKWindow(wx.Dialog):
                 if selectedHK[hk] != {}:
                     thisCase = ft.cases(self.GetParent().filterFile,
                                         'h_val',
-                                        '== ' + hk[0])
+                                        '== ' + str(hk[0]))
                     thatCase = ft.cases(self.GetParent().filterFile,
                                         'k_val',
-                                        '== ' + hk[1])
+                                        '== ' + str(hk[1]))
                     otherCase = ft.cases(self.GetParent().filterFile,
                                          'spec_name',
                                          'in ' + str(selectedHK[hk].keys()))

@@ -197,30 +197,34 @@ def spec_to_hdf(args):
         if not os.path.isfile(input):
             print 'Error: file not found'
             return
-        print 'Please enter the name of the HDF file:'
+        print 'Please enter the name of the master file:'
         output = raw_input('> ')
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
-                                or (C)ancel (A/W/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+                               'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
+            elif choice == '':
+                choice = 'a'
     elif len(args) == 1:
         input = args[0]
-        print 'Please enter the name of the HDF file:'
+        print 'Please enter the name of the master file:'
         output = raw_input('> ')
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
-                                or (C)ancel (A/W/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+                               'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
+            elif choice == '':
+                choice = 'a'
     elif len(args) == 2:
         input = args[0]
         if not os.path.isfile(input):
@@ -228,14 +232,16 @@ def spec_to_hdf(args):
             return
         output = args[1]
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
-                                or (C)ancel (A/W/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+                               'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
+            elif choice == '':
+                choice = 'a'
     else:
         options = args[2:]
         choice = None
@@ -249,9 +255,9 @@ def spec_to_hdf(args):
             return
         output = args[1]
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
             if choice == 'c':
                 return

@@ -45,7 +45,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             
             self.menuBar = wx.MenuBar()
             self.fileMenu = wx.Menu()
-            self.loadHDF = self.fileMenu.Append(-1, 'Load HDF File...')
+            self.loadHDF = self.fileMenu.Append(-1, 'Load Project File...')
             self.saveHKL = self.fileMenu.Append(-1, 'Save HKLFFerr...',
                                                 'Write H, K, L, F, and Ferr \
                                                 values to a file')
@@ -935,7 +935,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
         def loadFileDialog(self, event):
             loadDialog = wx.FileDialog(self, message='Load file...',
                                        defaultDir=os.getcwd(), defaultFile='',
-                                       wildcard='HDF files (*.h5)|*.h5|'+\
+                                       wildcard='HDF files (*.ph5)|*.ph5|'+\
                                                 'All file(*.*)|*',
                                        style=wx.OPEN)
             if loadDialog.ShowModal() == wx.ID_OK:
@@ -963,6 +963,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.hdfTreeObject = wxHDFToTree.hdfToTree()
             self.hdfTreeObject.populateTree(self.hdfTree, self.hdfObject)
             self.hdfRoot = self.hdfTree.GetRootItem()
+            self.hdfTree.Expand(self.hdfRoot)
             
             self.customTreeObject = wxHDFToTree.hdfToTree()
             self.customTreeObject.populateTree(self.customSelection.customTree,
@@ -1103,7 +1104,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             toThese = list(set(toThese))
             
             for itemData in toThese:
-                print itemData
+                #print itemData
                 toL = self.hdfObject.get_all('L', [itemData])
                 toL = toL[itemData]
                 copyFrom = closestL(toL, possibleLs)
@@ -1563,6 +1564,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                           ['F_changed'] = True
                     except:
                         print 'Error updating selection'
+                        raise
             if fOnly:
                 self.updateF(itemData)
             self.updateRodPlot(myParent, itemData)

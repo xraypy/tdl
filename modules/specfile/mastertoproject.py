@@ -5,6 +5,7 @@ Author: Craig Biwer (cbiwer@uchicago.edu)
 '''
 
 import h5py
+import numpy
 import sys
 
 INTEGRATION_PARAMETERS = {'bgrflag': 1,
@@ -119,7 +120,6 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                 epoch_loc = list(read_head['point_labs']).index('Epoch')
                 #add_time = 0
                 for i in range(num_points):
-                    
                     # The epoch offset of the point
                     point_epoch = read_head['point_data'][i][epoch_loc]
                     
@@ -313,7 +313,8 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     res_values = [0, 0, 0, 0, True, 0, 0,
                                   0, 0, 0, 0, 0, 0, 0, 0]
                     det_group.create_dataset('result_labels', data=res_labels)
-                    det_group.create_dataset('result_values.1', data=res_values)
+                    det_group.create_dataset('result_values.1',
+                                             data=res_values, dtype=numpy.float)
                     
                     if gui:
                         project_progress += 1
