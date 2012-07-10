@@ -2,7 +2,7 @@
 File Locker
 Author: Evan Fosmark
 http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python
-Last modified: 5.22.2012 by Craig Biwer (cbiwer@uchicago.edu)
+Last modified: 7.10.2012 by Craig Biwer (cbiwer@uchicago.edu)
 """
 
 
@@ -43,10 +43,13 @@ class FileLock(object):
                 self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
                 break;
             except OSError as e:
-                if e.errno != errno.EEXIST:
+                if e.errno != errno.EEXIST and e.errno != errno.EACCES:
                     raise 
                 if (time.time() - start_time) >= self.timeout:
-                    raise FileLockException("Timeout occured.")
+                    if e.errno == errno.EEXIST:
+                        raise FileLockException("Timeout occured.")
+                    else:
+                        raise FileLockException("Access denied.")
                 time.sleep(self.delay)
         self.is_locked = True
  

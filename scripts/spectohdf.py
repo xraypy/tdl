@@ -5,6 +5,7 @@ Last modified: 7/2/2012
 '''
 
 import array
+import errno
 import math
 import os
 import sys
@@ -185,9 +186,7 @@ def read_image(file):
         return None
 
 # Main conversion function, takes user input and converts
-# specified .spc file to .h5
-# Only works if a file doesn't exist: appending and overwriting
-# have not been implemented yet
+# specified .spc file to .mh5
 def spec_to_hdf(args):
     choice = 'a'
     if len(args) == 0:
@@ -272,6 +271,17 @@ def spec_to_hdf(args):
     this_file.close()
     summary = summarize(lines)
 
+    # Obtain a lock for the HDF file. If the file is already
+    # locked, retry for 10 seconds before returning.
+    lockFile = FileLock(output)
+    try:
+        print 'Attempting to lock file...'
+        lockFile.acquire()
+        print 'Lock acquired'
+    except FileLockException as e:
+        print 'Error: ' + str(e)
+        return
+    
     master_file = h5py.File(output, choice)
     spec_group = master_file.require_group(spec_name)
     
@@ -541,8 +551,97 @@ def spec_to_hdf(args):
                                          compression='szip')
     
     master_file.close()
+    
+    lockFile.release()
+    print 'Lock released'
+    
     time2 = time.time()
     print 'Total time:', (time2-time1)/60, 'minutes.'
+
+"""
+File Locker
+Author: Evan Fosmark
+http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python
+Last modified: 7.10.2012 by Craig Biwer (cbiwer@uchicago.edu)
+"""
+ 
+class FileLockException(Exception):
+    pass
+ 
+class FileLock(object):
+    """ A file locking mechanism that has context-manager support so 
+        you can use it in a with statement. This should be relatively cross
+        compatible as it doesn't rely on msvcrt or fcntl for the locking.
+    """
+ 
+    def __init__(self, file_name, timeout=10, delay=.05):
+        """ Prepare the file locker. Specify the file to lock and optionally
+            the maximum timeout and the delay between each attempt to lock.
+        """
+        self.is_locked = False
+        #self.lockfile = os.path.join(os.getcwd(), "%s.lock" % file_name)
+        self.lockfile = file_name + '.lock'
+        self.file_name = file_name
+        self.timeout = timeout
+        self.delay = delay
+ 
+ 
+    def acquire(self):
+        """ Acquire the lock, if possible. If the lock is in use, it check again
+            every `wait` seconds. It does this until it either gets the lock or
+            exceeds `timeout` number of seconds, in which case it throws 
+            an exception.
+        """
+        start_time = time.time()
+        while True:
+            try:
+                self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+                break;
+            except OSError as e:
+                if e.errno != errno.EEXIST and e.errno != errno.EACCES:
+                    raise 
+                if (time.time() - start_time) >= self.timeout:
+                    if e.errno == errno.EEXIST:
+                        raise FileLockException("Timeout occured.")
+                    else:
+                        raise FileLockException("Access denied.")
+                time.sleep(self.delay)
+        self.is_locked = True
+ 
+ 
+    def release(self):
+        """ Get rid of the lock by deleting the lockfile. 
+            When working in a `with` statement, this gets automatically 
+            called at the end.
+        """
+        if self.is_locked:
+            os.close(self.fd)
+            os.unlink(self.lockfile)
+            self.is_locked = False
+ 
+ 
+    def __enter__(self):
+        """ Activated when used in the with statement. 
+            Should automatically acquire a lock to be used in the with block.
+        """
+        if not self.is_locked:
+            self.acquire()
+        return self
+ 
+ 
+    def __exit__(self, type, value, traceback):
+        """ Activated at the end of the with statement.
+            It automatically releases the lock if it isn't locked.
+        """
+        if self.is_locked:
+            self.release()
+ 
+ 
+    def __del__(self):
+        """ Make sure that the FileLock instance doesn't leave a lockfile
+            lying around.
+        """
+        self.release()
 
 if __name__ == '__main__':    
     args = sys.argv[1:]

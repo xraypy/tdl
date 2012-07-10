@@ -13,6 +13,7 @@ import wx.lib.agw.customtreectrl as treemix
 import wx.lib.mixins.listctrl as listmix
 import wx.lib.agw.ultimatelistctrl as ULC
 
+from tdl.modules.ana_upgrade import file_locker
 import tdl.modules.specfile.filtertools as ft
 import tdl.modules.specfile.mastertoproject as mtp
 from pds.pcgui.wxUtil import wxUtil
@@ -35,6 +36,8 @@ class filterGUI(wx.Frame, wxUtil):
         
         # The file being filtered
         self.filterFile = None
+        # The associated lock file
+        self.filterLock = None
         #self.set_data('filter_file', self.filterFile)
         
         # All the scans parsed from the file
@@ -55,6 +58,8 @@ class filterGUI(wx.Frame, wxUtil):
         self.possibleYears = []
         # The earliest and latest scan dates (epoch format)
         self.dateMin, self.dateMax = (float('inf'), float('-inf'))
+        # The 'More Info:' text
+        self.allInfo = {}
         
         # The total filter results
         self.activeFilters = []
@@ -462,6 +467,9 @@ class filterGUI(wx.Frame, wxUtil):
         # dataTable click
         self.dataTable.Bind(wx.EVT_LIST_ITEM_SELECTED, self.tableClick)
         
+        # Window closed
+        self.Bind(wx.EVT_CLOSE, self.onClose)
+        
         ###############################################################
         # End bindings
         ###############################################################
@@ -487,19 +495,25 @@ class filterGUI(wx.Frame, wxUtil):
             print 'Loading ' + loadDialog.GetPath()
             try:
                 self.filterFile.close()
-                del self.filterFile
-                self.filterFile = None
+                self.filterLock.release()
+                print 'Lock released'
             except:
                 pass
-            try:
-                self.filterFile = h5py.File(loadDialog.GetPath(), 'r')
-                #self.set_data('filter_file', self.filterFile)
-            except:
-                print 'Error reading file'
-                loadDialog.Destroy()
-                raise
+
+            del self.filterFile
+            self.filterFile = None
+            self.filterFileName = None
+            self.filterLock = None
+            self.filterFile = loadDialog.GetPath()
+            if not os.path.isfile(self.filterFile):
+                print 'Error: File does not exist'
+                return
+            self.filterFileName = loadDialog.GetPath()
+            self.filterLock = file_locker.FileLock(self.filterFileName)
+            result = self.readFile(None)
+            if result == 0:
+                return
             
-            self.readFile(None)
             self.fileButton.SetLabel(os.path.split(loadDialog.GetPath())[-1])
             if self.projectNameBox.GetValue() == '':
                 projName = os.path.basename(loadDialog.GetPath())
@@ -519,7 +533,25 @@ class filterGUI(wx.Frame, wxUtil):
         
         if self.filterFile is None:
             print 'Error: no file selected'
-            return
+            return 0
+        try:
+            print 'Attempting to lock file...'
+            while wx.GetApp().Pending():
+                wx.GetApp().Dispatch()
+                wx.GetApp().Yield(True)
+            self.filterLock.acquire()
+            print 'Lock acquired'
+        except file_locker.FileLockException as e:
+            print 'Error: ' + str(e)
+            return 0
+        try:
+            self.filterFile = h5py.File(self.filterFile, 'r')
+            #self.set_data('filter_file', self.filterFile)
+        except IOError:
+            print 'Error opening file'
+            self.filterLock.release()
+            return 0
+
             
         # Reset all the hdf-related variables
         self.scanItems = []
@@ -529,6 +561,7 @@ class filterGUI(wx.Frame, wxUtil):
         self.allTypes = {}
         self.possibleYears = []
         self.dateMin, self.dateMax = (float('inf'), float('-inf'))
+        self.allInfo = {}
         self.activeFilters = []
         self.specResult = None
         self.specCases = None
@@ -541,6 +574,8 @@ class filterGUI(wx.Frame, wxUtil):
         self.dateResult = None
         self.dateCases = None
         
+        # Iterate over the items in the HDF file, building the
+        # list that will be used to populate the filter table
         filterItems = self.filterFile.items()
         filterItems.sort()
         for spec, group in filterItems:
@@ -551,6 +586,13 @@ class filterGUI(wx.Frame, wxUtil):
                     sAbort = ''
                 elif sAbort == 1:
                     sAbort = 'True'
+                toShow = 'Command: ' + scanAttrs.get('cmd', 'N/A') + \
+                         '\n\n' + \
+                         'Attenuators: ' + scanAttrs.get('atten', 'N/A') + \
+                         '\n\n' + \
+                         'Energy: ' + str(scanAttrs.get('energy', 'N/A')) + \
+                         '\n\n' + \
+                         'Data points: ' + str(scanAttrs.get('nl_dat', 'N/A'))
                 self.scanItems.append([scanAttrs.get('spec_name', 'N/A'),
                                        str(scanAttrs.get('index', '0')),
                                        str(scanAttrs.get('h_val', '--')),
@@ -561,15 +603,19 @@ class filterGUI(wx.Frame, wxUtil):
                                        sAbort,
                                        scanAttrs.get('date', 'N/A'),
                                        scanAttrs.get('hk_dist', '--'),
-                                       scan.name])
-        # A bit more list formatting, as well as information gathering
+                                       scan.name,
+                                       toShow])
+        # Some list formatting and specialized group formation
         for scan in self.scanItems:
+            # Make a dictionary of {scan type: frequency} pairs
             if scan[6] not in self.allTypes:
                 self.allTypes[scan[6]] = 1
             else:
                 self.allTypes[scan[6]] += 1
             # Unless it's a rodscan, don't bother cluttering
             # the display with the L start and stop values
+            # If it is a rodscan, populate the dictionary:
+            # {HK Pair: {Specfile : [HK Distance, count]}}
             if scan[6] != 'rodscan':
                 scan[4] = '--'
                 scan[5] = '--'
@@ -613,6 +659,9 @@ class filterGUI(wx.Frame, wxUtil):
                                    self.dateMax)
             except:
                 pass
+            # Make a dictionary of {(Specname, scan number): information
+            # to be displayed when the scan is selected
+            self.allInfo[(scan[0], scan[1])] = scan[11]
         # Sort the scans by index first
         self.scanItems.sort(key=lambda scan : int(scan[1]))
         # Then sort the scans by specfile name, resulting in 
@@ -673,16 +722,7 @@ class filterGUI(wx.Frame, wxUtil):
         tableSelection = event.GetItem()
         specName = self.dataTable.GetItem(tableSelection.m_itemId, 0).Text
         scanNumber = self.dataTable.GetItem(tableSelection.m_itemId, 1).Text
-        selectionPath = '/'+specName+'/'+scanNumber
-        selectionItem = self.filterFile[selectionPath]
-        selectionAttrs = selectionItem.attrs
-        toShow = 'Command: ' + selectionAttrs.get('cmd', 'N/A') + \
-                  '\n\n' + \
-                  'Attenuators: ' + selectionAttrs.get('atten', 'N/A') + \
-                  '\n\n' + \
-                  'Energy: ' + str(selectionAttrs.get('energy', 'N/A')) + \
-                  '\n\n' + \
-                  'Data points: ' + str(selectionAttrs.get('nl_dat', 'N/A'))
+        toShow = self.allInfo.get((specName, scanNumber), '')
         self.moreBox.SetValue(toShow)
     
     # Add an attribute both to the attribute dictionary and the on-screen list
@@ -936,7 +976,7 @@ class filterGUI(wx.Frame, wxUtil):
         if self.projectDict == {}:
             print 'No scans selected'
             return
-        self.fileDirectory, holding = os.path.split(self.filterFile.filename)
+        self.fileDirectory, holding = os.path.split(self.filterFileName)
         file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
         save_dialog = wx.FileDialog(self, message='Create file...',
                                     defaultDir=self.fileDirectory,
@@ -947,7 +987,7 @@ class filterGUI(wx.Frame, wxUtil):
             print 'Start: ', time.ctime(time.time())
             out_file = save_dialog.GetPath()
             try:
-                mtp.master_to_project(self.filterFile.filename,
+                mtp.master_to_project(self.filterFileName,
                                       self.projectDict,
                                       out_file, append=False, gui=True)
             except:
@@ -960,7 +1000,7 @@ class filterGUI(wx.Frame, wxUtil):
         if self.projectDict == {}:
             print 'No scans selected'
             return
-        self.fileDirectory, holding = os.path.split(self.filterFile.filename)
+        self.fileDirectory, holding = os.path.split(self.filterFileName)
         file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
         save_dialog = wx.FileDialog(self, message='Append to...',
                                     defaultDir=self.fileDirectory,
@@ -971,7 +1011,7 @@ class filterGUI(wx.Frame, wxUtil):
             print 'Start: ', time.ctime(time.time())
             out_file = save_dialog.GetPath()
             try:
-                mtp.master_to_project(self.filterFile.filename,
+                mtp.master_to_project(self.filterFileName,
                                       self.projectDict,
                                       out_file, append=True, gui=True)
             except:
@@ -1038,6 +1078,8 @@ class filterGUI(wx.Frame, wxUtil):
     def onClose(self, event):
         try:
             self.filterFile.close()
+            self.filterLock.release()
+            print 'Lock released'
         except:
             pass
         self.Destroy()
