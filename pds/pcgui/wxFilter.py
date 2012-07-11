@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-7/7/2012
+7/11/2012
 '''
 
 import h5py
@@ -492,7 +492,9 @@ class filterGUI(wx.Frame, wxUtil):
                                              'All files (*.*)|*',
                                    style=wx.OPEN)
         if loadDialog.ShowModal() == wx.ID_OK:
-            print 'Loading ' + loadDialog.GetPath()
+            if not os.path.isfile(loadDialog.GetPath()):
+                print 'Error: File does not exist'
+                return
             try:
                 self.filterFile.close()
                 self.filterLock.release()
@@ -500,19 +502,58 @@ class filterGUI(wx.Frame, wxUtil):
             except:
                 pass
 
+            # Since filterFile is now closed, clear all variables
+            # and update the table to prevent attempted access
             del self.filterFile
             self.filterFile = None
             self.filterFileName = None
             self.filterLock = None
+            self.scanItems = []
+            self.allSpecs = {}
+            self.allHK = {}
+            self.LMin, self.LMax = (float('inf'), float('-inf'))
+            self.allTypes = {}
+            self.possibleYears = []
+            self.dateMin, self.dateMax = (float('inf'), float('-inf'))
+            self.allInfo = {}
+            self.activeFilters = []
+            self.specResult = None
+            self.specCases = None
+            self.hkResult = None
+            self.hkCases = None
+            self.LResult = None
+            self.LCases = None
+            self.typeResult = None
+            self.typeCases = None
+            self.dateResult = None
+            self.dateCases = None
+            self.updateTable()
+            
+            print 'Loading ' + loadDialog.GetPath()
             self.filterFile = loadDialog.GetPath()
-            if not os.path.isfile(self.filterFile):
-                print 'Error: File does not exist'
-                return
             self.filterFileName = loadDialog.GetPath()
             self.filterLock = file_locker.FileLock(self.filterFileName)
-            result = self.readFile(None)
-            if result == 0:
+            try:
+                print 'Attempting to lock file...'
+                while wx.GetApp().Pending():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
+                self.filterLock.acquire()
+                print 'Lock acquired'
+                while wx.GetApp().Pending():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
+            except file_locker.FileLockException as e:
+                print 'Error: ' + str(e)
                 return
+            try:
+                self.filterFile = h5py.File(self.filterFile, 'r')
+                #self.set_data('filter_file', self.filterFile)
+            except IOError:
+                print 'Error opening file'
+                self.filterLock.release()
+                return
+            self.readFile(None)
             
             self.fileButton.SetLabel(os.path.split(loadDialog.GetPath())[-1])
             if self.projectNameBox.GetValue() == '':
@@ -533,24 +574,7 @@ class filterGUI(wx.Frame, wxUtil):
         
         if self.filterFile is None:
             print 'Error: no file selected'
-            return 0
-        try:
-            print 'Attempting to lock file...'
-            while wx.GetApp().Pending():
-                wx.GetApp().Dispatch()
-                wx.GetApp().Yield(True)
-            self.filterLock.acquire()
-            print 'Lock acquired'
-        except file_locker.FileLockException as e:
-            print 'Error: ' + str(e)
-            return 0
-        try:
-            self.filterFile = h5py.File(self.filterFile, 'r')
-            #self.set_data('filter_file', self.filterFile)
-        except IOError:
-            print 'Error opening file'
-            self.filterLock.release()
-            return 0
+            return
 
             
         # Reset all the hdf-related variables
@@ -984,6 +1008,17 @@ class filterGUI(wx.Frame, wxUtil):
                                     wildcard=file_types,
                                     style=wx.SAVE | wx.OVERWRITE_PROMPT)
         if save_dialog.ShowModal() == wx.ID_OK:
+            lockFile = file_locker.FileLock(save_dialog.GetPath())
+            try:
+                print 'Attempting to lock file...'
+                while wx.GetApp().Pending():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
+                lockFile.acquire()
+                print 'Lock acquired'
+            except file_locker.FileLockException as e:
+                print 'Error: ' + str(e)
+                return
             print 'Start: ', time.ctime(time.time())
             out_file = save_dialog.GetPath()
             try:
@@ -992,7 +1027,11 @@ class filterGUI(wx.Frame, wxUtil):
                                       out_file, append=False, gui=True)
             except:
                 print 'Error generating project file'
+                lockFile.release()
+                print 'Lock released'
             print 'Finish: ', time.ctime(time.time())
+            lockFile.release()
+            print 'Lock released'
         save_dialog.Destroy()
     
     # Append scans to an existing HDF project file, then open it
@@ -1008,6 +1047,17 @@ class filterGUI(wx.Frame, wxUtil):
                                     wildcard=file_types,
                                     style=wx.SAVE)
         if save_dialog.ShowModal() == wx.ID_OK:
+            lockFile = file_locker.FileLock(save_dialog.GetPath())
+            try:
+                print 'Attempting to lock file...'
+                while wx.GetApp().Pending():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
+                lockFile.acquire()
+                print 'Lock acquired'
+            except file_locker.FileLockException as e:
+                print 'Error: ' + str(e)
+                return
             print 'Start: ', time.ctime(time.time())
             out_file = save_dialog.GetPath()
             try:
@@ -1016,7 +1066,11 @@ class filterGUI(wx.Frame, wxUtil):
                                       out_file, append=True, gui=True)
             except:
                 print 'Error saving to project file'
+                lockFile.release()
+                print 'Lock released'
             print 'Finish: ', time.ctime(time.time())
+            lockFile.release()
+            print 'Lock released'
         save_dialog.Destroy()
     
     # Keep only the selected scans by faking a filtered result

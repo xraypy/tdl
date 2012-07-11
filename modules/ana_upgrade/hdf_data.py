@@ -186,14 +186,24 @@ class HdfDataFile:
     Container for data stored in HDF files
     """
     def __init__(self,fname):
-        #
+        # Initialize variables
         self.fname = fname
-        self.file = h5py.File(self.fname,'r+')
-        self.all_items = self.file.items()
-        #self.all_items = None
         self.point = 0
         self.point_dict = {}
         self.version = 1
+        self.file = None
+        self.all_items = None
+        
+        self.lock_file = file_locker.FileLock(self.fname)
+        print 'Attempting to lock file...'
+        self.lock_file.acquire()
+        print 'Lock acquired'
+        try:
+            self.file = h5py.File(self.fname,'r+')
+        except:
+            print 'Error: unable to open file'
+            raise
+        self.all_items = self.file.items()
         
     def __del__(self):
         """
@@ -213,6 +223,8 @@ class HdfDataFile:
         try:
             self.file.flush()
             self.file.close()
+            self.lock_file.release()
+            print 'Lock released'
         except:
             pass
         del self.file
@@ -262,6 +274,8 @@ class HdfDataFile:
         
         self.file.flush()
         self.file.close()
+        self.lock_file.release()
+        print 'Lock released'
     
     def delete(self, item):
         """Delete a point from the file."""

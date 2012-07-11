@@ -1,7 +1,7 @@
 '''
 Specfile Integrator
 Author: Craig Biwer (cbiwer@uchicago.edu)
-Last modified: 6.26.2012
+Last modified: 7.11.2012
 '''
 
 import os
@@ -20,6 +20,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
 from wx.lib.splitter import MultiSplitterWindow
 from wx.tools.Editra.src.eclib import pstatbar
 
+from tdl.modules.ana_upgrade import file_locker
 from tdl.modules.ana_upgrade import image_data
 from tdl.modules.ana_upgrade import ctr_data
 from tdl.modules.ana_upgrade import hdf_data
@@ -939,6 +940,30 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                                 'All file(*.*)|*',
                                        style=wx.OPEN)
             if loadDialog.ShowModal() == wx.ID_OK:
+                if not os.path.isfile(loadDialog.GetPath()):
+                    print 'Error: File does not exist'
+                    return
+                try:
+                    self.hdfObject.close()
+                    self.lockFile.release()
+                    print 'Lock released'
+                except:
+                    pass
+                
+                # Since hdfObject is now closed, clear all variables
+                # to prevent attempted read / writes
+                self.newFile = True
+                self.firstOpen = True
+                self.hdfTree.DeleteAllItems()
+                del self.hdfRoot
+                del self.hdfObject
+                del self.hdfTreeObject
+                del self.customTreeObject
+                self.hdfRoot = None
+                self.hdfObject = None
+                self.hdfTreeObject = None
+                self.customTreeObject = None
+                
                 print 'Loading ' + loadDialog.GetPath()
                 self.loadFile(loadDialog.GetPath())
             loadDialog.Destroy()
@@ -946,19 +971,13 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
         # Load an HDF file into an hdf_data object and parse
         # it into a tree.
         def loadFile(self, fileName):
-            self.newFile = True
-            self.firstOpen = True
-            self.hdfTree.DeleteAllItems()
-            del self.hdfRoot
-            del self.hdfObject
-            del self.hdfTreeObject
-            del self.customTreeObject
-            self.hdfRoot = None
-            self.hdfObject = None
-            self.hdfTreeObject = None
-            self.customTreeObject = None
-            
-            self.hdfObject = hdf_data.HdfDataFile(fileName)
+            try:
+                self.hdfObject = hdf_data.HdfDataFile(fileName)
+            except file_locker.FileLockException as e:
+                print 'Error: ' + str(e)
+                return
+            except:
+                return
             #self.set_data('hdfObject', self.hdfObject)
             self.hdfTreeObject = wxHDFToTree.hdfToTree()
             self.hdfTreeObject.populateTree(self.hdfTree, self.hdfObject)
