@@ -1,11 +1,12 @@
 '''
 Master to Project Parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-4/20/2012
+7/12/2012
 '''
 
 import h5py
 import numpy
+import re
 import sys
 
 INTEGRATION_PARAMETERS = {'bgrflag': 1,
@@ -72,17 +73,18 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
         # Once a project has a point with a 7-digit name, appending
         # may cause overwrites.
         write_this = h5py.File(project_file, 'a')
-        point_counter = int(write_this.items()[-1][0]) + 1
-        all_names = set()
-        for item in write_this.items():
-            all_names.add(item[1].attrs.get('name'))
+        this_items = write_this.items()
+        point_counter = int(this_items[-1][0]) + 1
+        all_names = {}
+        for item in this_items:
+            all_names[item[1].attrs.get('name')] = item[1]
     else:
         # Open the project in write mode (overwriting any
         # existing data), set the naming counter to 1,
         # and clear the existing names.
         write_this = h5py.File(project_file, 'w')
         point_counter = 1
-        all_names = set()
+        all_names = {}
     
     # The starting point number (this only works if
     # the file consists of sequentially numbered
@@ -124,12 +126,20 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     point_epoch = read_head['point_data'][i][epoch_loc]
                     
                     uniq_name = str(spec_name + ':S' + scan_number +':P' + \
-                                    str(i+1) + '/' + str(num_points) + ':' + \
-                                    str(point_epoch + file_epoch))
+                                    str(i+1) + '/' + str(num_points) + \
+                                    ':' + str(point_epoch + file_epoch))
+                    uniq_pattern = str(spec_name + ':S' + scan_number +':P' + \
+                                       str(i+1) + '/[0-9]+:' + \
+                                       str(point_epoch + file_epoch))
                     
-                    if uniq_name in all_names:
+                    matches = [word for word in all_names.keys() if \
+                                                   re.match(uniq_pattern, word)]
+                    if matches:
+                        all_names[matches[0]].attrs['name'] = uniq_name
                         if gui:
-                            print uniq_name, ' already in ', project_file
+                            print matches[0], ' already in ', project_file
+                            if matches[0] != uniq_name:
+                                print 'Renamed to ' + uniq_name
                         continue
                     
                     point_name = '%6.6i' % point_counter
@@ -138,7 +148,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     
                     # The unique identifier
                     point_group.attrs['name'] = uniq_name
-                    all_names.add(uniq_name)
+                    all_names[uniq_name] = point_group
                     # The scan type
                     point_group.attrs['type'] = read_head.attrs.get('s_type',
                                                                     'NA')

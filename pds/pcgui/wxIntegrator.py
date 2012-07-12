@@ -1,7 +1,7 @@
 '''
 Specfile Integrator
 Author: Craig Biwer (cbiwer@uchicago.edu)
-Last modified: 7.11.2012
+Last modified: 7.12.2012
 '''
 
 import os
@@ -955,6 +955,10 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 self.newFile = True
                 self.firstOpen = True
                 self.hdfTree.DeleteAllItems()
+                try:
+                    self.customSelection.customTree.DeleteAllItems()
+                except:
+                    pass
                 del self.hdfRoot
                 del self.hdfObject
                 del self.hdfTreeObject
@@ -983,6 +987,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.hdfTreeObject.populateTree(self.hdfTree, self.hdfObject)
             self.hdfRoot = self.hdfTree.GetRootItem()
             self.hdfTree.Expand(self.hdfRoot)
+            self.hdfTree.SelectItem(self.hdfRoot)
             
             self.customTreeObject = wxHDFToTree.hdfToTree()
             self.customTreeObject.populateTree(self.customSelection.customTree,
@@ -1355,12 +1360,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                                 self.sampleDiameterField),
                      self.samplePolygonField: ('sample_polygon', list,
                                                self.samplePolygonField)}
-            #myText = self.hdfTree.GetItemText(ofMe)
-            #myNumber = myText.split()[1]
             myParent = self.hdfTree.GetItemParent(ofMe)
-            #parentText = self.hdfTree.GetItemText(myParent)
-            #parentNumber = parentText.split()[1][:-1]
-            #siblingCount = self.hdfTree.GetChildrenCount(myParent)
             whatButton = event.GetEventObject()
             toChange = []
             if whatButton == self.applyScan:
@@ -1370,30 +1370,34 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     whatButton.SetValue(str(self.hdfObject[itemData]['det_0']\
                                                           ['bad_pixel_map']))
                     return
+                elif whatButton.GetValue() == \
+                        str(self.hdfObject[itemData]['det_0']['bad_pixel_map']):
+                    return
                 else:
+                    updateThese = []
                     item, cookie = self.hdfTree.GetFirstChild(myParent)
                     while item:
-                        iterData = self.hdfTree.GetItemPyData(item)
-                        if str(self.hdfObject[iterData]\
-                                             ['det_0']['bad_pixel_map']) == \
-                                                        whatButton.GetValue():
-                            pass
-                        else:
-                            self.hdfObject[iterData]['det_0']['badPixelMap'] = \
-                                                        whatButton.GetValue()
-                            self.hdfObject[iterData]['det_0']\
-                                                    ['pixel_map_changed'] = \
-                                                                        'True'
-                            self.hdfObject[iterData]['det_0']\
-                                                    ['image_changed'] = 'True'
-                            self.hdfObject[iterData]['det_0']\
-                                                    ['F_changed'] = True
+                        updateThese.append(self.hdfTree.GetItemPyData(item))
                         item, cookie = \
                                 self.hdfTree.GetNextChild(myParent, cookie)
-                    self.hdfObject[itemData]['det_0']['pixel_map_changed'] = \
-                                                                        'False'
-                    self.hdfObject.write_point(self.hdfObject[itemData])
-                    self.hdfObject.read_point(itemData)
+                    del item
+                    allBPM = self.hdfObject.get_all(('det_0', 'bad_pixel_map'),
+                                                    updateThese)
+                    updateThese = [item for item in updateThese if \
+                                str(allBPM[item]) != str(whatButton.GetValue())]
+                    self.hdfObject.set_all(('det_0', 'bad_pixel_map'),
+                                           str(whatButton.GetValue()),
+                                           updateThese)
+                    self.hdfObject.set_all(('det_0', 'pixel_map_changed'),
+                                           'True', updateThese)
+                    self.hdfObject.set_all(('det_0', 'image_changed'),
+                                           'True', updateThese)
+                    self.hdfObject.set_all(('det_0', 'F_changed'),
+                                           True, updateThese)
+                    #self.hdfObject[itemData]['det_0']['pixel_map_changed'] = \
+                    #                                                    'False'
+                    #self.hdfObject.write_point(self.hdfObject[itemData])
+                    #self.hdfObject.read_point(itemData)
                     self.updateFourPlot(myParent, itemData)
                     self.updateF(itemData)
                     self.updateRodPlot(myParent, itemData)
@@ -1407,26 +1411,31 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 fOnly = True
             else:
                 fOnly = False
+            updateThese = []
             item, cookie = self.hdfTree.GetFirstChild(myParent)
             while item:
-                iterData = self.hdfTree.GetItemPyData(item)
-                for updateThis, ofType, whatField in toChange:
-                    try:
-                        if self.hdfObject[iterData]['det_0'][updateThis] == \
-                                    str(ofType(eval(whatField.GetValue()))):
-                            pass
-                        else:
-                            self.hdfObject[iterData]['det_0'][updateThis] = \
-                                    str(ofType(eval(whatField.GetValue())))
-                            if not fOnly:
-                                self.hdfObject[iterData]\
-                                             ['det_0']['image_changed'] = 'True'
-                            self.hdfObject[iterData]\
-                                          ['det_0']['F_changed'] = True
-                    except:
-                        whatField.SetValue(str(\
-                                self.hdfObject[itemData]['det_0'][updateThis]))
-                item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
+                updateThese.append(self.hdfTree.GetItemPyData(item))
+                item, cookie = \
+                        self.hdfTree.GetNextChild(myParent, cookie)
+            del item
+            for updateThis, ofType, whatField in toChange:
+                try:
+                    allValues = self.hdfObject.get_all(('det_0', updateThis),
+                                                       updateThese)
+                    justThese = [item for item in updateThese if \
+                            str(allValues[item]) != \
+                            str(ofType(eval(whatField.GetValue())))]
+                    self.hdfObject.set_all(('det_0', updateThis),
+                                        str(ofType(eval(whatField.GetValue()))),
+                                        justThese)
+                    if not fOnly:
+                        self.hdfObject.set_all(('det_0', 'image_changed'),
+                                               'True', justThese)
+                    self.hdfObject.set_all(('det_0', 'F_changed'),
+                                           True, justThese)
+                except:
+                    whatField.SetValue(str(\
+                            self.hdfObject[itemData]['det_0'][updateThis]))
             if fOnly:
                 self.updateF(itemData)
             self.updateRodPlot(myParent, itemData)
@@ -1445,6 +1454,9 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             if itemData is None and \
                                 event.GetEventObject() != self.integrateCustom:
                 return
+            while itemData is None:
+                ofMe = self.hdfTree.GetFirstChild(ofMe)[0]
+                itemData = self.hdfTree.GetItemPyData(ofMe)
             myParent = self.hdfTree.GetItemParent(ofMe)
             if self.firstOpen:
                 self.firstOpen = False
@@ -1550,40 +1562,42 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 fOnly = True
             else:
                 toChange = [possibilities1[whatButton]]
-            for iterData in updateThese:
-                for updateThis, ofType, whatField in toChange:
-                    try:
-                        if updateThis.startswith('bad_pixel_map'):
-                            if str(self.hdfObject[iterData]\
-                                                 ['det_0'][updateThis]) == \
-                                                    self.badMapField.GetValue():
-                                pass
-                            else:
-                                self.hdfObject[iterData]\
-                                              ['det_0'][updateThis] = \
-                                                    self.badMapField.GetValue()
-                                self.hdfObject[iterData]['det_0']\
-                                              ['pixel_map_changed'] = 'True'
-                                self.hdfObject[iterData]['det_0']\
-                                              ['image_changed'] = 'True'
-                                self.hdfObject[iterData]['det_0']\
-                                              ['F_changed'] = True
-                                fOnly = False
-                        
-                        elif self.hdfObject[iterData]['det_0'][updateThis] == \
-                                        str(ofType(eval(whatField.GetValue()))):
-                            pass
-                        else:
-                            self.hdfObject[iterData]['det_0'][updateThis] = \
-                                        str(ofType(eval(whatField.GetValue())))
-                            if not fOnly:
-                                self.hdfObject[iterData]['det_0']\
-                                              ['image_changed'] = 'True'
-                            self.hdfObject[iterData]['det_0']\
-                                          ['F_changed'] = True
-                    except:
-                        print 'Error updating selection'
-                        raise
+            for updateThis, ofType, whatField in toChange:
+                try:
+                    if updateThis.startswith('bad_pixel_map'):
+                        allBPM = self.hdfObject.get_all(('det_0', 'bad_pixel_map'),
+                                                        updateThese)
+                        justThese = [item for item in updateThese if \
+                                    str(allBPM[item]) != str(self.badMapField.GetValue())]
+                        self.hdfObject.set_all(('det_0', 'bad_pixel_map'),
+                                               str(self.badMapField.GetValue()),
+                                               justThese)
+                        self.hdfObject.set_all(('det_0', 'pixel_map_changed'),
+                                               'True', justThese)
+                        self.hdfObject.set_all(('det_0', 'image_changed'),
+                                               'True', justThese)
+                        self.hdfObject.set_all(('det_0', 'F_changed'),
+                                               True, justThese)
+                        if justThese:
+                            fOnly = False
+                    else:
+                        allValues = self.hdfObject.get_all(('det_0',
+                                                            updateThis),
+                                                           updateThese)
+                        justThese = [item for item in updateThese if \
+                                     str(allValues[item]) != \
+                                     str(ofType(eval(whatField.GetValue())))]
+                        self.hdfObject.set_all(('det_0', updateThis),
+                                       str(ofType(eval(whatField.GetValue()))),
+                                       justThese)
+                        if not fOnly:
+                            self.hdfObject.set_all(('det_0', 'image_changed'),
+                                                   'True', justThese)
+                        self.hdfObject.set_all(('det_0', 'F_changed'),
+                                               True, justThese)
+                except:
+                    print 'Error updating selection'
+                    raise
             if fOnly:
                 self.updateF(itemData)
             self.updateRodPlot(myParent, itemData)

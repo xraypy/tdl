@@ -1,5 +1,4 @@
 import wx
-import h5py
 import time
 
 class hdfToTree():
