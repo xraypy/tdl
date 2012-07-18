@@ -503,6 +503,29 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             
             self.basicPage.SetSizerAndFit(self.basicSizer1)
             
+            # Add a text field to the 'More' page for notes
+            self.histSizer = wx.BoxSizer(wx.VERTICAL)
+            self.histLabel = wx.StaticText(self.morePage, label='Notes: ')
+            self.histBox = wx.TextCtrl(self.morePage,
+                                       style=wx.PROCESS_ENTER | wx.TE_MULTILINE)
+            self.histButtonSizer = wx.BoxSizer(wx.HORIZONTAL)
+            self.histApplyLbl = wx.StaticText(self.morePage, label='Apply to:')
+            self.histScan = wx.Button(self.morePage, label='Scan')
+            self.histCustom = wx.Button(self.morePage, label='Custom')
+            self.histButtonSizer.Add(self.histApplyLbl,
+                                     flag=wx.RIGHT | wx.ALIGN_CENTER, border=4)
+            self.histButtonSizer.Add(self.histScan, proportion=1,
+                                     flag=wx.EXPAND | wx.RIGHT, border=4)
+            self.histButtonSizer.Add(self.histCustom, proportion=1,
+                                     flag=wx.EXPAND)
+            self.histSizer.Add(self.histLabel, flag=wx.TOP | wx.LEFT, border=4)
+            self.histSizer.Add(self.histBox, proportion=1,
+                               flag=wx.EXPAND | wx.ALL, border=4)
+            self.histSizer.Add(self.histButtonSizer,
+                               flag=wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT,
+                               border=4)
+            self.morePage.SetSizerAndFit(self.histSizer)
+            
             ####################################################################
             # END POINT BASIC PARAM SIZERS
             ####################################################################
@@ -855,6 +878,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.roiField.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
             self.rotateField.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
             
+            self.histBox.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
+            
             self.scaleField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
             self.beamSlitField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
             self.detSlitField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
@@ -896,6 +921,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.rotateScan.Bind(wx.EVT_BUTTON, self.applyToScan)
             self.applyScan.Bind(wx.EVT_BUTTON, self.applyToScan)
             
+            self.histScan.Bind(wx.EVT_BUTTON, self.applyToScan)
+            
             # Bind the custom buttons to copying the chosen
             # parameter(s) to a chosen subset
             self.colNbgrCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
@@ -909,6 +936,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.rotateCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
             self.applyCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
             self.applyCorrCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
+            
+            self.histCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
             
             # Bind the integrate button to integrating a chosen subset
             self.integrateCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
@@ -1312,6 +1341,9 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             parentNumber = parentText.split()[1][:-1]
             #print possibilities[event.GetEventObject()]
             whatField = event.GetEventObject()
+            if whatField == self.histBox:
+                self.hdfObject[itemData]['hist'] = str(self.histBox.GetValue())
+                return
             updateThis, ofType = possibilities[whatField]
             #print event.GetEventObject()#.GetValue()
             try:
@@ -2045,7 +2077,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     self.hdfObject.read_point(itemData)
                 if self.keepMaxToggle.GetValue():
                     self.hdfObject[itemData]['det_0']['image_max'] = \
-                            int(self.imageMaxField.GetValue())
+                            str(self.imageMaxField.GetValue())
                 possibilities = {self.colNbgrFreeze: (self.colNbgrField,
                                                       'cnbgr', int),
                                     self.colPowerFreeze: (self.colPowerField,

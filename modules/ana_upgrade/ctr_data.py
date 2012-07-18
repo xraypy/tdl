@@ -37,7 +37,7 @@ from tdl.modules.utils import plotter
 from tdl.modules.utils.mathutil import cosd, sind, tand
 from tdl.modules.utils.mathutil import arccosd, arcsind, arctand
 
-from tdl.modules.ana import image_data
+#from tdl.modules.ana import image_data
 from tdl.modules.geom.active_area import active_area
 from tdl.modules.geom import gonio_psic 
 

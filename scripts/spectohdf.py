@@ -1,7 +1,7 @@
 '''
 Spec to HDF5 converter / parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-Last modified: 7/2/2012
+Last modified: 7/16/2012
 '''
 
 import array
@@ -264,6 +264,8 @@ def spec_to_hdf(args):
     time1 = time.time()
     
     spec_dir = os.path.split(input)[0]
+    if spec_dir == '':
+        spec_dir = '.'
     spec_name = os.path.split(input)[-1]
     image_dir = spec_dir + '\\images\\%s\\' % spec_name[:-4]
     this_file = open(input)
@@ -562,7 +564,7 @@ def spec_to_hdf(args):
 File Locker
 Author: Evan Fosmark
 http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python
-Last modified: 7.10.2012 by Craig Biwer (cbiwer@uchicago.edu)
+Last modified: 7.16.2012 by Craig Biwer (cbiwer@uchicago.edu)
 """
  
 class FileLockException(Exception):
@@ -596,6 +598,9 @@ class FileLock(object):
         while True:
             try:
                 self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+                os.write(self.fd, os.environ['USERNAME'] + '\n')
+                os.write(self.fd, os.environ['COMPUTERNAME'] + '\n')
+                os.write(self.fd, time.ctime(time.time()))
                 break;
             except OSError as e:
                 if e.errno != errno.EEXIST and e.errno != errno.EACCES:

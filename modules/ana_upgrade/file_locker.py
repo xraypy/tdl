@@ -2,7 +2,7 @@
 File Locker
 Author: Evan Fosmark
 http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python
-Last modified: 7.10.2012 by Craig Biwer (cbiwer@uchicago.edu)
+Last modified: 7.16.2012 by Craig Biwer (cbiwer@uchicago.edu)
 """
 
 
@@ -41,6 +41,9 @@ class FileLock(object):
         while True:
             try:
                 self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+                os.write(self.fd, os.environ['USERNAME'] + '\n')
+                os.write(self.fd, os.environ['COMPUTERNAME'] + '\n')
+                os.write(self.fd, time.ctime(time.time()))
                 break;
             except OSError as e:
                 if e.errno != errno.EEXIST and e.errno != errno.EACCES:

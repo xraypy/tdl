@@ -121,7 +121,7 @@ GEN_KEYS = {'chi': ['angle_values', 0],
 ATT_KEYS = ['date_stamp',
             'energy',
             'geom',
-            'hist.%i',
+            'hist',
             'info',
             'name',
             'type']
@@ -266,16 +266,24 @@ class HdfDataFile:
         
         """
         
-        if self.point != 0 and self.point_dict != {}:
-            self.write_point(self.point_dict, self.point)
+        try:
+            if self.point != 0 and self.point_dict != {}:
+                self.write_point(self.point_dict, self.point)
+        except ValueError:
+            print 'Error writing point; file may already be closed'
         
-        self.point = 0
-        self.point_dict = {}
-        
-        self.file.flush()
-        self.file.close()
-        self.lock_file.release()
-        print 'Lock released'
+        try:
+            self.point = 0
+            self.point_dict = {}
+            self.file.flush()
+            self.file.close()
+            self.lock_file.release()
+            print 'Lock released'
+            
+        except:
+            print 'Error: file may not have closed cleanly,'
+            print 'though it may have already been closed'
+            
     
     def delete(self, item):
         """Delete a point from the file."""
@@ -328,11 +336,14 @@ class HdfDataFile:
                     all_results[self.point] = self.point_dict[key]
             elif key in ATT_KEYS:
                 if key.startswith('hist'):
-                    key = key % self.version
+                    key = key + '.' + str(self.version)
                 for point in points:
                     all_results[point] = self.file[point].attrs[key]
                 if self.point in points:
-                    all_results[self.point] = self.point_dict[key]
+                    if key.startswith('hist'):
+                        all_results[self.point] = self.point_dict['hist']
+                    else:
+                        all_results[self.point] = self.point_dict[key]
             elif key in MISC_KEYS:
                 for point in points:
                     all_results[point] = self.file[point][key]
@@ -419,8 +430,10 @@ class HdfDataFile:
             self.point_dict[key] = self.file[num]['scaler_values'][key_loc]
         for key in ATT_KEYS:
             if key.startswith('hist'):
-                key = key % self.version
-            self.point_dict[key] = self.file[num].attrs[key]
+                key = key + '.' + str(self.version)
+                self.point_dict['hist'] = self.file[num].attrs[key]
+            else:
+                self.point_dict[key] = self.file[num].attrs[key]
         for key in MISC_KEYS:
             self.point_dict[key] = self.file[num][key]
         current_det_num = 0
@@ -500,7 +513,7 @@ class HdfDataFile:
                 if self.point in points:
                     self.point_dict[key] = value
                 if key.startswith('hist'):
-                    key = key % self.version
+                    key = key + '.' + str(self.version)
                 for point in points:
                     self.file[point].attrs[key] = value
             elif key in MISC_KEYS:
@@ -570,7 +583,8 @@ class HdfDataFile:
             num = self.point
         for key in data:
             if key.startswith('hist'):
-                self.file[num].attrs[key] = data[key]
+                key = key + '.' + str(self.version)
+                self.file[num].attrs[key] = data['hist']
             elif key.startswith('det_'):
                 det_dict = data[key]
                 for det_key in det_dict:
