@@ -283,6 +283,12 @@ class HdfDataFile:
         except:
             print 'Error: file may not have closed cleanly,'
             print 'though it may have already been closed'
+        # Try releasing the lock again, in the event
+        # that closing the file threw an error
+        try:
+            self.lock_file.release()
+        except:
+            pass
             
     
     def delete(self, item):
@@ -362,7 +368,7 @@ class HdfDataFile:
                         all_results[point] = \
                                 self.file[point]['scaler_values'][key_loc]
                     else:
-                        print 'Error (unrecognized key): ' , key
+                        print 'Unrecognized Key Error: ' , key
                 if self.point in points and key in self.point_dict.keys():
                     all_results[self.point] = self.point_dict[key]
         elif isinstance(key, tuple):
@@ -497,16 +503,18 @@ class HdfDataFile:
                 key_loc = GEN_KEYS[key]
                 for point in points:
                     self.file[point][key_loc[0]][key_loc[1]] = value
-            elif key in self.file[num]['position_labels']:
+            elif key in self.file[self.point]['position_labels']:
                 if self.point in points:
                     self.point_dict[key] = value
-                key_loc = list(self.file[num]['position_labels']).index(key)
+                key_loc = \
+                       list(self.file[self.point]['position_labels']).index(key)
                 for point in points:
                     self.file[point]['position_values'][key_loc] = value
-            elif key in self.file[num]['scaler_labels']:
+            elif key in self.file[self.point]['scaler_labels']:
                 if self.point in points:
                     self.point_dict[key] = value
-                key_loc = list(self.file[num]['scaler_labels']).index(key)
+                key_loc = \
+                       list(self.file[self.point]['scaler_labels']).index(key)
                 for point in points:
                     self.file[point]['scaler_values'][key_loc] = value
             elif key in ATT_KEYS:

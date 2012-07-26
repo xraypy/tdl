@@ -1060,20 +1060,6 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                 self.customSelection.customTree, self.hdfObject)
                 self.customSelection.customRoot = \
                                 self.customSelection.customTree.GetRootItem()
-                '''item, cookie = self.hdfTree.GetFirstChild(myParent)
-                while item:
-                    print self.hdfTree.GetItemPyData(item)
-                    item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
-                item, cookie = self.customSelection.customTree.GetFirstChild(\
-                        self.customSelection.customRoot)
-                while item and \
-                        self.customSelection.customTree.GetItemText(item) != \
-                        self.hdfTree.GetItemText(myParent):
-                    item, cookie = \
-                            self.customSelection.customTree.GetNextChild(\
-                                    self.customSelection.customRoot, cookie)
-                #self.hdfTree.Delete(myParent)
-                #self.customSelection.customTree.Delete(item)'''
         
         # Updates the status bar text with the L and F coordinates
         # of the cursor
@@ -1434,6 +1420,15 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     self.updateF(itemData)
                     self.updateRodPlot(myParent, itemData)
                     return
+            elif whatButton == self.histScan:
+                updateThese = []
+                item, cookie = self.hdfTree.GetFirstChild(myParent)
+                while item:
+                    updateThese.append(self.hdfTree.GetItemPyData(item))
+                    item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
+                self.hdfObject.set_all('hist', str(self.histBox.GetValue()),
+                                       updateThese)
+                return
             else:
                 toChange = [possibilities[whatButton]]
             if whatButton in [self.scaleField, self.beamSlitField,
@@ -1447,8 +1442,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             item, cookie = self.hdfTree.GetFirstChild(myParent)
             while item:
                 updateThese.append(self.hdfTree.GetItemPyData(item))
-                item, cookie = \
-                        self.hdfTree.GetNextChild(myParent, cookie)
+                item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             del item
             for updateThis, ofType, whatField in toChange:
                 try:
@@ -1561,6 +1555,10 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 self.integrateCancel.Hide()
                 self.statusBar.Stop()
                 return
+            elif event.GetEventObject() == self.histCustom:
+                self.hdfObject.set_all('hist', str(self.histBox.GetValue()),
+                                       updateThese)
+                return
             
             possibilities1 = \
                     {self.colNbgrCustom: ('cnbgr', int, self.colNbgrField),
@@ -1665,6 +1663,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     str(self.hdfObject[itemData]['det_0']['roi']))
             self.rotateField.SetValue(\
                     str(self.hdfObject[itemData]['det_0']['rotangle']))
+            
+            self.histBox.SetValue(str(self.hdfObject[itemData]['hist']))
             
             self.scaleField.SetValue(\
                     str(self.hdfObject[itemData]['det_0']['scale']))
@@ -2035,6 +2035,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             if not self.rotateFreeze.GetValue():
                 self.rotateField.Clear()
             
+            self.histBox.Clear()
+            
             self.scaleField.Clear()
             self.beamSlitField.Clear()
             self.detSlitField.Clear()
@@ -2058,6 +2060,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
         
         # What to do when a new selection is made
         def newSelected(self, event):
+            #print 'New selected'
             ofMe = event.GetItem()
             myParent = self.hdfTree.GetItemParent(ofMe)
             itemData = self.hdfTree.GetItemPyData(ofMe)

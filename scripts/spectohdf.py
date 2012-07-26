@@ -57,6 +57,7 @@ def summarize(lines):
             # get the name of the specfile, should only appear once
             if (i.startswith('#F')):
                 spec_name = i[3:]
+                spec_name = os.path.split(spec_name)[-1]
             # get the starting epoch
             if (i.startswith('#E ')):
                 epoch = int(i[3:])
@@ -99,10 +100,10 @@ def summarize(lines):
             # this to i.startswith('#ATTEN ') or put it after an 
             # i.startswith('#ATTEN_F') check.
             elif (i.startswith('#AT')):
-                atten = i[6:]
+                atten = i[6:].strip()
             # Get the beam energy
             elif (i.startswith('#EN')):
-                energy = i[8:]
+                energy = float(i[8:])
             # Get the column header info, as well as the following data
             # Also check for comments following the data containing
             # the word 'aborted'
@@ -147,8 +148,8 @@ def summarize(lines):
                                      'Q':q,
                                      'ncols':ncols,
                                      'labels':lab,
-                                     'atten':atten.strip(),
-                                     'energy':float(energy),
+                                     'atten':atten,
+                                     'energy':energy,
                                      'lineno':lineno,
                                      'aborted':aborted,
                                      'point_data':point_data,
@@ -544,6 +545,7 @@ def spec_to_hdf(args):
                             image_data.append(holding)
                 except:
                     print 'Error reading image ' + image_path
+                    raise
             if image_data != []:
                 try:
                     del scan_group['image_data']
