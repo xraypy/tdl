@@ -629,7 +629,7 @@ class filterGUI(wx.Frame, wxUtil):
             # the display with the L start and stop values
             # If it is a rodscan, populate the dictionary:
             # {HK Pair: {Specfile : [HK Distance, count]}}
-            if scan[6] != 'rodscan':
+            if scan[6] not in ['rodscan', 'Escan', 'hklscan']:
                 scan[4] = '--'
                 scan[5] = '--'
             else:
@@ -835,7 +835,7 @@ class filterGUI(wx.Frame, wxUtil):
         if saveDialog.ShowModal() == wx.ID_OK:
             print 'Saving attribute file ' + saveDialog.GetPath()
             try:
-                attributeFile = open(saveDialog.GetPath(), 'a')
+                attributeFile = open(saveDialog.GetPath(), 'w')
             except:
                 print 'Error opening attribute file'
                 saveDialog.Destroy()
@@ -1496,12 +1496,14 @@ class LWindow(wx.Dialog):
             #                    'real_L_start',
             #                    '>= ' + str(fromL))
             thisCase = [scan[10] for scan in self.GetParent().scanItems if \
-                      scan[6].startswith('rodscan') and float(scan[4]) >= fromL]
+                      scan[6] in ['rodscan', 'Escan', 'hklscan'] and \
+                      scan[4] != '--' and float(scan[4]) >= fromL]
             #thatCase = ft.cases(self.GetParent().filterFile,
             #                    'real_L_stop',
             #                    '<= ' + str(toL))
             thatCase = [scan[10] for scan in self.GetParent().scanItems if \
-                      scan[6].startswith('rodscan') and float(scan[5]) <= toL]
+                      scan[6] in ['rodscan', 'Escan', 'hklscan'] and \
+                      scan[4] != '--' and float(scan[5]) <= toL]
             #otherCase = ft.cases(self.GetParent().filterFile,
             #                     's_type',
             #                     '.startswith("rodscan")')

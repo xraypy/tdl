@@ -205,7 +205,7 @@ class HdfDataFile:
             raise
         self.all_items = self.file.items()
         
-    def __del__(self):
+    '''def __del__(self):
         """
         If the object is going to be destroyed, make sure
         the current point is written back to the file first.
@@ -224,12 +224,13 @@ class HdfDataFile:
             self.file.flush()
             self.file.close()
             self.lock_file.release()
-            print 'Lock released'
+            print 'Lock released??'
+            print 'Why?'
         except:
             pass
         del self.file
         del self.all_items
-        del self
+        del self'''
     
     def __getitem__(self,arg):
         """

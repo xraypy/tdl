@@ -276,7 +276,7 @@ def spec_to_hdf(args):
 
     # Obtain a lock for the HDF file. If the file is already
     # locked, retry for 10 seconds before returning.
-    lockFile = FileLock(output)
+    lockFile = FileLock(output, timeout=1)
     try:
         print 'Attempting to lock file...'
         lockFile.acquire()
@@ -412,8 +412,13 @@ def spec_to_hdf(args):
                     scan_group.attrs['energy_stop'] = float(split_cmd[2])
                     scan_group.attrs['num_points'] = float(split_cmd[3])
                     scan_group.attrs['count_time'] = float(split_cmd[4])
+                elif key.startswith('Q'):
+                    scan_group.attrs['h_val'] = \
+                                        round(float(scan[key].split()[0]), 1)
+                    scan_group.attrs['k_val'] = \
+                                        round(float(scan[key].split()[1]), 1)
                 elif key not in ['labels', 'point_data',
-                               'g_labs', 'mnames', 'G', 'P']:
+                               'g_labs', 'mnames', 'G', 'P', 'Q']:
                     scan_key = scan[key]
                     if scan_key is None:
                         scan_key = 'None'
@@ -430,8 +435,10 @@ def spec_to_hdf(args):
                     scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['h_val'] = round(float(split_cmd[1]), 1)
                     scan_group.attrs['h_start'] = float(split_cmd[1])
                     scan_group.attrs['h_stop'] = float(split_cmd[2])
+                    scan_group.attrs['k_val'] = round(float(split_cmd[3]), 1)
                     scan_group.attrs['k_start'] = float(split_cmd[3])
                     scan_group.attrs['k_stop'] = float(split_cmd[4])
                     scan_group.attrs['L_start'] = float(split_cmd[5])

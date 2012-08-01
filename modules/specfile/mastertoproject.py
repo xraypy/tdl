@@ -140,6 +140,12 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                             print matches[0], ' already in ', project_file
                             if matches[0] != uniq_name:
                                 print 'Renamed to ' + uniq_name
+                            project_progress += 1
+                            progress_continue, holding = \
+                                        progress_box.Update(project_progress)
+                            while wx.GetApp().Pending():
+                                wx.GetApp().Dispatch()
+                                wx.GetApp().Yield(True)
                         continue
                     
                     point_name = '%6.6i' % point_counter

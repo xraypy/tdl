@@ -29,6 +29,8 @@ from pds.pcgui import wxHDFToTree
 from pds.pcgui.wxUtil import wxUtil
 from pds.shellutil import mod_import
 
+import wx.lib.inspection
+
 # This class is the interface for integrating data
 class Integrator(wx.Frame, wx.Notebook, wxUtil):
 
@@ -50,6 +52,9 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.saveHKL = self.fileMenu.Append(-1, 'Save HKLFFerr...',
                                                 'Write H, K, L, F, and Ferr \
                                                 values to a file')
+            self.saveHKLE = self.fileMenu.Append(-1, 'Save HKLEFFerr...',
+                                                 'Write H, K, L, E, F, and\n' + 
+                                                 'Ferr values to a file')
             self.menuBar.Append(self.fileMenu, 'File')
             
             self.editMenu = wx.Menu()
@@ -694,9 +699,16 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.dataLbl = wx.StaticText(self.infoPanel,
                                          label='Point Information:')
             
-            # The 'Integrate Custom' button
+            # The 'Integrate Scan' and 'Integrate Custom' sizer and buttons
+            self.integrateSizer = wx.BoxSizer(wx.HORIZONTAL)
+            self.integrateScan = wx.Button(self.infoPanel,
+                                           label='Integrate Scan')
             self.integrateCustom = wx.Button(self.infoPanel,
                                              label='Integrate Custom...')
+            self.integrateSizer.Add(self.integrateScan, proportion=1,
+                                    flag=wx.EXPAND)
+            self.integrateSizer.Add(self.integrateCustom, proportion=1,
+                                    flag=wx.EXPAND)
             
             # The sizers to hold the entire section and
             # the point information, respectively
@@ -785,7 +797,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.dataSizer1.Add(self.dataLbl, flag=wx.LEFT, border=4)
             self.dataSizer1.Add(self.dataPanel, proportion=1,
                                 flag=wx.EXPAND | wx.LEFT, border=4)
-            self.dataSizer1.Add(self.integrateCustom,
+            self.dataSizer1.Add(self.integrateSizer,
                                 flag=wx.EXPAND | wx.LEFT, border=4)
             
             ####################################################################
@@ -840,6 +852,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.Bind(wx.EVT_CLOSE, self.onClose)
             
             # Menu bindings
+            self.Bind(wx.EVT_MENU, self.saveHKLEFFerr, self.saveHKLE)
             self.Bind(wx.EVT_MENU, self.saveHKLFFerr, self.saveHKL)
             self.Bind(wx.EVT_MENU, self.loadFileDialog, self.loadHDF)
             #self.Bind(wx.EVT_MENU, self.saveSession, self.saveWork)
@@ -939,6 +952,9 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             
             self.histCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
             
+            # Bind the 'Integrate Scan' button to integrating the
+            # currently selected scan
+            self.integrateScan.Bind(wx.EVT_BUTTON, self.integrateSelectedScan)
             # Bind the integrate button to integrating a chosen subset
             self.integrateCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
             
@@ -1085,7 +1101,10 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     dataLookup[iterData] = item
                     item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
                 allLs = {}
-                allLs = self.hdfObject.get_all('L', childrenList)
+                if self.hdfObject.get_all('type', [childrenList[0]])[childrenList[0]].startswith('Escan'):
+                    allLs = self.hdfObject.get_all('Energy', childrenList)
+                else:
+                    allLs = self.hdfObject.get_all('L', childrenList)
                 allLs = dict([L,child] for child,L in allLs.iteritems())
                 thisPoint = closestL(event.xdata, allLs.keys())
                 #item, cookie = self.hdfTree.GetFirstChild(myParent)
@@ -1345,6 +1364,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     self.hdfObject[itemData]['det_0']['F_changed'] = True
                     self.updateFourPlot(myParent, itemData)
                     self.updateRodPlot(myParent, itemData)
+                    self.updateLabels(itemData)
             except:
                 whatField.SetValue(self.hdfObject[itemData]\
                                                  ['det_0'][updateThis])
@@ -1633,6 +1653,69 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.updateRodPlot(myParent, itemData)
             self.updateLabels(itemData)
         
+        # Integrate the currently-selected scan
+        def integrateSelectedScan(self, event):
+            ofMe = self.hdfTree.GetSelection()
+            itemData = self.hdfTree.GetItemPyData(ofMe)
+            updateThese = []
+            if itemData is None:
+                firstChild, cookie = self.hdfTree.GetFirstChild(ofMe)
+                childData = self.hdfTree.GetItemPyData(firstChild)
+                if childData is None:
+                    return
+                while firstChild:
+                    childData = self.hdfTree.GetItemPyData(firstChild)
+                    updateThese.append(childData)
+                    firstChild, cookie = self.hdfTree.GetNextChild(ofMe, cookie)
+            else:
+                myParent = self.hdfTree.GetItemParent(ofMe)
+                item, cookie = self.hdfTree.GetFirstChild(myParent)
+                while item:
+                    iterData = self.hdfTree.GetItemPyData(item)
+                    updateThese.append(iterData)
+                    item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
+                
+            self.integrateContinue = True
+            integrateProgress = 0
+            self.statusBar.SetRange(len(updateThese))
+            self.statusBar.SetProgress(0)
+            self.onSize(None)
+            self.integrateCancel.Show()
+            self.statusBar.Start()
+            for iterData in updateThese:
+                iterItem = self.hdfTreeObject.reverseLookup[iterData]
+                iterString = \
+                        self.hdfTreeObject.statusString(self.hdfTree,
+                                                        self.hdfObject,
+                                                        iterItem)
+                self.statusBar.SetStatusText("Integrating " + iterString, 2)
+                if not self.integrateContinue:
+                    print 'Integration aborted on ' + iterString.lower()
+                    break
+                try:
+                    if eval(self.hdfObject[iterData]['det_0']\
+                                                    ['image_changed']):
+                        self.integratePoint(iterData)
+                    if self.hdfObject[iterData]['det_0']['F_changed']:
+                        self.updateF(iterData)
+                except:
+                    print 'Error reading ' + iterString.lower()
+                    raise
+                integrateProgress += 1
+                self.statusBar.SetProgress(integrateProgress)
+                while wx.GetApp().Pending():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
+            self.integrateContinue = False
+            self.hdfTree.SetFocus()
+            if self.hdfTree.GetSelection() == ofMe and itemData is not None:
+                self.updateFourPlot(myParent, itemData)
+                self.updateRodPlot(myParent, itemData)
+            self.statusBar.SetStatusText('', 2)
+            self.integrateCancel.Hide()
+            self.statusBar.Stop()
+            return
+        
         # Gets the values of the parameters from the
         # hdfObject and writes them to the appropriate
         # entry fields.
@@ -1834,7 +1917,10 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     self.hdfObject.get_all(('det_0', 'image_changed'), iterList)
             iterFChanged = self.hdfObject.get_all(('det_0', 'F_changed'),
                                                   iterList)
-            iterLList = self.hdfObject.get_all('L', iterList)
+            if self.hdfObject[itemData]['type'].startswith('Escan'):
+                iterLList = self.hdfObject.get_all('Energy', iterList)
+            else:
+                iterLList = self.hdfObject.get_all('L', iterList)
             iterFList = self.hdfObject.get_all(('det_0', 'F'), iterList)
             iterFerrList = self.hdfObject.get_all(('det_0', 'Ferr'), iterList)
             for key in iterImageChanged.keys():
@@ -1861,10 +1947,15 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                  fmt ='b', linestyle='')
             except:
                 pass
-            rodPlot.plot(self.hdfObject[itemData]['L'],
-                         self.hdfObject[itemData]['det_0']['F'], 'ro')
+            if self.hdfObject[itemData]['type'].startswith('Escan'):
+                rodPlot.plot(self.hdfObject[itemData]['Energy'],
+                             self.hdfObject[itemData]['det_0']['F'], 'ro')
+            else:
+                rodPlot.plot(self.hdfObject[itemData]['L'],
+                             self.hdfObject[itemData]['det_0']['F'], 'ro')
             try:
-                rodPlot.semilogy()
+                if not self.hdfObject[itemData]['type'].startswith('Escan'):
+                    rodPlot.semilogy()
             except:
                 pass
             doneLList.extend(pendingLList)
@@ -2169,6 +2260,65 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                     allHs[iterData],
                                     allKs[iterData],
                                     allLs[iterData],
+                                    allFs[iterData],
+                                    allFerrs[iterData])
+                            f.write(line)
+                    f.close()
+                except Exception:
+                    oops = wx.MessageDialog(self, 'Error saving file\n' + str(Exception))
+                    oops.ShowModal()
+                    oops.Destroy()
+                    raise
+            saveDialog.Destroy()
+            
+        # Write a file to the current directory containing the index, H, K,
+        # L, E, F, and Ferr values for each point
+        def saveHKLEFFerr(self, event):
+            self.customSelection.customTree.Expand(\
+                    self.customSelection.customRoot)
+            self.customSelection.CenterOnParent()
+            userReply = self.customSelection.ShowModal()
+            if userReply == wx.ID_CANCEL:
+                self.hdfTree.SetFocus()
+                return
+            treeSelections = self.customSelection.customTree.GetSelections()
+            saveThese = []
+            for selected in treeSelections:
+                saveThese.extend(self.customTreeObject.getRelevantChildren(\
+                                        self.customSelection.customTree,
+                                        self.hdfObject,
+                                        selected))
+            saveThese = list(set(saveThese))
+            saveThese.sort()
+            
+            saveDialog = wx.FileDialog(self, message='Save file as...',
+                                       defaultDir=os.getcwd(), defaultFile='',
+                                       wildcard='lst files (*.lst)|*.lst|' + \
+                                                'All files (*.*)|*',
+                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+            if saveDialog.ShowModal() == wx.ID_OK:
+                fname = saveDialog.GetPath()
+                try:
+                    allHs = self.hdfObject.get_all('H', saveThese)
+                    allKs = self.hdfObject.get_all('K', saveThese)
+                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allEs = self.hdfObject.get_all('Energy', saveThese)
+                    allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
+                    allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
+                                                      saveThese)
+                    f = open(fname, 'w')
+                    header = "  #idx %5s %5s %5s %5s %7s %7s\n" % \
+                                  ('H','K','L','E','F','Ferr')
+                    f.write(header)
+                    for iterData in saveThese:
+                        if not eval(self.hdfObject[iterData]['det_0']\
+                                                            ['bad_point']):
+                            line = "%6s %3.2f %3.2f %6.3f %6.5f %6.6g %6.6g\n" % \
+                                   (iterData,
+                                    allHs[iterData],
+                                    allKs[iterData],
+                                    allLs[iterData],
+                                    allEs[iterData],
                                     allFs[iterData],
                                     allFerrs[iterData])
                             f.write(line)
