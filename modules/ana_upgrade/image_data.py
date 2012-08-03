@@ -96,6 +96,24 @@ def read(file,pixel_map=None):
     return image
 
 #######################################################################
+def correct_image(image,pixel_map=None):
+    """
+    Given an image and a path to a bad pixel map,
+    return the corrected image.
+    """
+
+    if pixel_map is None or pixel_map.startswith('[]') or \
+                                                pixel_map.startswith('None'):
+        return image
+    else:
+        try:
+            pixel_map = eval(pixel_map)
+            (bad_pixels,good_pixels) = pixel_map
+        except:
+            (bad_pixels,good_pixels) = ([], [])
+        return pixel_mask(image, bad_pixels, good_pixels)
+        
+#######################################################################
 def read_files(file_prefix,start=0,end=100,nfmt=3,pixel_map=None):
     """
     read files that have a numerical suffix

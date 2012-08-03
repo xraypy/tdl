@@ -54,6 +54,7 @@ def list_intersect(*args):
 # The heart of the filtering process
 # Given an opened h5 file, filters on the given criteria
 # and returns a list of the matched scans / points
+# NOTE: No longer used in the wxFilter window
 def cases(in_here, of_this, such_that, this_level='scan'):
     '''
     Filters the given file or list of scans and returns those that pass the

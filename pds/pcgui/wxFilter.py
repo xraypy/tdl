@@ -1,7 +1,7 @@
 '''
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
-4/24/2012
+7/17/2012
 '''
 
 import h5py
@@ -13,12 +13,13 @@ import wx.lib.agw.customtreectrl as treemix
 import wx.lib.mixins.listctrl as listmix
 import wx.lib.agw.ultimatelistctrl as ULC
 
+from tdl.modules.ana_upgrade import file_locker
 import tdl.modules.specfile.filtertools as ft
 import tdl.modules.specfile.mastertoproject as mtp
 from pds.pcgui.wxUtil import wxUtil
 
 POSSIBLE_ATTRIBUTES = ['bad_pixel_map', 'beam_slits', 'bgrflag',
-                              'cnbgr', 'colormap', 'cpow', 'ctan', 'cwidth',
+                              'cnbgr', 'cpow', 'ctan', 'cwidth',
                               'det_slits', 'geom', 'rnbgr', 'roi', 'rotangle',
                               'rpow', 'rtan', 'rwidth', 'sample_angles',
                               'sample_diameter', 'sample_polygon', 'scale']
@@ -35,6 +36,8 @@ class filterGUI(wx.Frame, wxUtil):
         
         # The file being filtered
         self.filterFile = None
+        # The associated lock file
+        self.filterLock = None
         #self.set_data('filter_file', self.filterFile)
         
         # All the scans parsed from the file
@@ -55,6 +58,8 @@ class filterGUI(wx.Frame, wxUtil):
         self.possibleYears = []
         # The earliest and latest scan dates (epoch format)
         self.dateMin, self.dateMax = (float('inf'), float('-inf'))
+        # The 'More Info:' text
+        self.allInfo = {}
         
         # The total filter results
         self.activeFilters = []
@@ -172,14 +177,20 @@ class filterGUI(wx.Frame, wxUtil):
         
         # Reset Button
         self.resetButton = wx.Button(self.leftPanel,
-                                     label='Reset Filters and Reread Data')
+                                     label='Reset Filters')# and Reread Data')
+        
+        # Reread Button
+        self.rereadButton = wx.Button(self.leftPanel, label='Reread Data')
         
         # Populate the sizer
         self.managementSizer.Add(self.keepButton, proportion=2,
                                  flag=wx.EXPAND | wx.BOTTOM, border=2)
         self.managementSizer.AddStretchSpacer(5)
-        self.managementSizer.Add(self.resetButton, proportion=3,
-                                 flag=wx.EXPAND | wx.BOTTOM, border=2)
+        self.managementSizer.Add(self.resetButton, proportion=2,
+                                 flag=wx.EXPAND | wx.BOTTOM | wx.RIGHT,
+                                 border=2)
+        self.managementSizer.Add(self.rereadButton, proportion=2,
+                                 flag=wx.EXPAND | wx.BOTTOM | wx.LEFT, border=2)
         # Add a border line
         self.managementSizer.Add(wx.StaticLine(self.leftPanel, size=(2, 24)),
                                  flag=wx.LEFT, border=16)
@@ -208,12 +219,14 @@ class filterGUI(wx.Frame, wxUtil):
         # The static text
         self.fileLabel = wx.StaticText(self.middlePanel, label='File Name: ')
         
-        # The dynamic text
-        self.fileName = wx.StaticText(self.middlePanel, label='')
+        # The load master file button (changes label based on current file)
+        self.fileButton = wx.Button(self.middlePanel,
+                                    label='Load Master File...')
         
         # Populate the sizer:
-        self.fileSizer.Add(self.fileLabel)
-        self.fileSizer.Add(self.fileName)
+        self.fileSizer.Add(self.fileLabel, flag=wx.CENTER)
+        self.fileSizer.Add(self.fileButton, proportion=1,
+                           flag=wx.EXPAND | wx.RIGHT, border=20)
         
         # The middle contents
         # The 'More Info:' label
@@ -258,13 +271,32 @@ class filterGUI(wx.Frame, wxUtil):
         # The added attribute list
         self.attrList = ULC.UltimateListCtrl(self.middlePanel,
                                              agwStyle=wx.LC_REPORT |
-                                                      wx.LC_VRULES |
-                                                      wx.LC_HRULES |
-                                                      ULC.ULC_HAS_VARIABLE_ROW_HEIGHT)
+                                                wx.LC_VRULES |
+                                                wx.LC_HRULES |
+                                                ULC.ULC_HAS_VARIABLE_ROW_HEIGHT)
         self.attrList.InsertColumn(0, 'Attribute', width=108)
         self.attrList.InsertColumn(1, 'Value', width=40)
         self.attrList.InsertColumn(2, '', width=36)
         self.attrList.SetColumnWidth(1, ULC.ULC_AUTOSIZE_FILL)
+        
+        # The load / save attribute buttons file line
+        self.loadSaveAttributeSizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        # The load attribute button
+        self.loadAttrButton = wx.Button(self.middlePanel,
+                                        label='Load Attribute File...')
+        # The save attribute button
+        self.saveAttrButton = wx.Button(self.middlePanel,
+                                        label='Save Attribute File...')
+                                  
+        # Arrange the load / save attribute buttons line
+        self.loadSaveAttributeSizer.Add(self.loadAttrButton, proportion=1,
+                                        flag=wx.EXPAND | wx.LEFT,
+                                        border=32)
+        self.loadSaveAttributeSizer.AddSpacer(16)
+        self.loadSaveAttributeSizer.Add(self.saveAttrButton, proportion=1,
+                                        flag=wx.EXPAND | wx.RIGHT,
+                                        border=32)
         
         # Arrange the middle panel
         self.middleSizer.Add(self.fileSizer, proportion=0,
@@ -290,9 +322,11 @@ class filterGUI(wx.Frame, wxUtil):
                              flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP,
                              border=24)
         self.middleSizer.Add(self.attrList, proportion=1,
-                             flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+                             flag=wx.EXPAND | wx.LEFT | wx.RIGHT,
                              border=24)
-        self.middleSizer.AddSpacer(10)
+        self.middleSizer.AddSpacer(6)
+        self.middleSizer.Add(self.loadSaveAttributeSizer, flag=wx.EXPAND)
+        self.middleSizer.AddSpacer(6)
 
         self.middlePanel.SetSizerAndFit(self.middleSizer)
         
@@ -333,7 +367,8 @@ class filterGUI(wx.Frame, wxUtil):
         self.nextStepSizer = wx.BoxSizer(wx.HORIZONTAL)
         
         # Create a new integrator window
-        self.newIntegrator = wx.Button(self.rightPanel, label='New Integrator')
+        self.newIntegrator = wx.Button(self.rightPanel,
+                                       label='New Project File')
         
         # Append scans to an existing integrator window
         self.appendIntegrator = wx.Button(self.rightPanel,
@@ -381,6 +416,7 @@ class filterGUI(wx.Frame, wxUtil):
         # The file menu
         self.fileMenu = wx.Menu()
         self.loadFile = self.fileMenu.Append(-1, 'Load HDF file...')
+        self.loadAttr = self.fileMenu.Append(-1, 'Load attribute file...')
         self.exitWindow = self.fileMenu.Append(-1, 'Exit')
         
         self.menuBar.Append(self.fileMenu, 'File')
@@ -392,8 +428,9 @@ class filterGUI(wx.Frame, wxUtil):
         ###############################################################
         
         # Menu bindings
-        self.Bind(wx.EVT_MENU, self.onClose, self.exitWindow)
         self.Bind(wx.EVT_MENU, self.loadHDF, self.loadFile)
+        self.Bind(wx.EVT_MENU, self.loadAttributes, self.loadAttr)
+        self.Bind(wx.EVT_MENU, self.onClose, self.exitWindow)
         
         # Button bindings
         # The specfile / number button
@@ -409,7 +446,11 @@ class filterGUI(wx.Frame, wxUtil):
         # The keep button
         self.keepButton.Bind(wx.EVT_BUTTON, self.keepSelected)
         # The reset button
-        self.resetButton.Bind(wx.EVT_BUTTON, self.readFile)
+        self.resetButton.Bind(wx.EVT_BUTTON, self.resetFilters)
+        # The reread button
+        self.rereadButton.Bind(wx.EVT_BUTTON, self.readFile)
+        # The load project file button
+        self.fileButton.Bind(wx.EVT_BUTTON, self.loadHDF)
         # The single right button
         self.rightOne.Bind(wx.EVT_BUTTON, self.moveOneRight)
         # The single left button
@@ -420,6 +461,10 @@ class filterGUI(wx.Frame, wxUtil):
         self.leftAll.Bind(wx.EVT_BUTTON, self.moveAllLeft)
         # The new attribute button
         self.attrAdd.Bind(wx.EVT_BUTTON, self.addAttribute)
+        # The load attribute file button
+        self.loadAttrButton.Bind(wx.EVT_BUTTON, self.loadAttributes)
+        # The save attribute file button
+        self.saveAttrButton.Bind(wx.EVT_BUTTON, self.saveAttributes)
         # The new button
         self.newIntegrator.Bind(wx.EVT_BUTTON, self.newProject)
         # The append button
@@ -429,6 +474,9 @@ class filterGUI(wx.Frame, wxUtil):
         self.projectNameBox.Bind(wx.EVT_KILL_FOCUS, self.newName)
         # dataTable click
         self.dataTable.Bind(wx.EVT_LIST_ITEM_SELECTED, self.tableClick)
+        
+        # Window closed
+        self.Bind(wx.EVT_CLOSE, self.onClose)
         
         ###############################################################
         # End bindings
@@ -448,30 +496,47 @@ class filterGUI(wx.Frame, wxUtil):
         
         loadDialog = wx.FileDialog(self, message='Load file...',
                                    defaultDir=os.getcwd(), defaultFile='',
-                                   wildcard='HDF files (*.h5)|*.h5|'+\
-                                             'All files(*.*)|*',
+                                   wildcard='Master files (*.mh5)|*.mh5|'+\
+                                             'All files (*.*)|*',
                                    style=wx.OPEN)
         if loadDialog.ShowModal() == wx.ID_OK:
+            if not os.path.isfile(loadDialog.GetPath()):
+                print 'Error: File does not exist'
+                return
+
+            # Clear all variables and update the table to
+            # prevent accidental access to the wrong file
+            del self.filterFile
+            self.filterFile = None
+            self.filterFileName = None
+            self.filterLock = None
+            self.scanItems = []
+            self.allSpecs = {}
+            self.allHK = {}
+            self.LMin, self.LMax = (float('inf'), float('-inf'))
+            self.allTypes = {}
+            self.possibleYears = []
+            self.dateMin, self.dateMax = (float('inf'), float('-inf'))
+            self.allInfo = {}
+            self.projectNameBox.SetValue('')
+            self.resetFilters(None)
+            self.updateTable()
+            self.projectDict = {}
+            
             print 'Loading ' + loadDialog.GetPath()
-            try:
-                self.filterFile.close()
-                del self.filterFile
-                self.filterFile = None
-            except:
-                pass
-            try:
-                self.filterFile = h5py.File(loadDialog.GetPath(), 'r')
-                #self.set_data('filter_file', self.filterFile)
-            except:
-                print 'Error reading file'
-                loadDialog.Destroy()
-                raise
+            self.filterFile = loadDialog.GetPath()
+            self.filterFileName = loadDialog.GetPath()
+            self.filterLock = file_locker.FileLock(self.filterFileName)
             
             self.readFile(None)
-            self.fileName.SetLabel(os.path.split(loadDialog.GetPath())[-1])
+            
+            self.fileButton.SetLabel(os.path.split(loadDialog.GetPath())[-1])
+            if self.projectNameBox.GetValue() == '':
+                projName = os.path.basename(loadDialog.GetPath())
+                projName = projName.rsplit('.', 1)[0] + '.ph5'
+                self.projectNameBox.SetValue(projName)
+            self.newProjectTree.DeleteAllItems()
         loadDialog.Destroy()
-        if self.projectNameBox.GetValue() == '':
-            self.projectNameBox.SetValue('Project1.h5')
         self.dataTable.SetFocus()
     
     # Reset all filters and read in an HDF file
@@ -484,7 +549,33 @@ class filterGUI(wx.Frame, wxUtil):
         if self.filterFile is None:
             print 'Error: no file selected'
             return
-            
+
+        # If a file is being reread, make sure it tries
+        # to open the filename, not the closed file
+        self.filterFile = self.filterFileName
+        
+        try:
+            print 'Attempting to lock file...'
+            while wx.GetApp().Pending():
+                wx.GetApp().Dispatch()
+                wx.GetApp().Yield(True)
+            self.filterLock.acquire()
+            print 'Lock acquired'
+            while wx.GetApp().Pending():
+                wx.GetApp().Dispatch()
+                wx.GetApp().Yield(True)
+        except file_locker.FileLockException as e:
+            print 'Error: ' + str(e)
+            return
+        try:
+            self.filterFile = h5py.File(self.filterFile, 'r')
+            #self.set_data('filter_file', self.filterFile)
+        except IOError:
+            print 'Error opening file'
+            self.filterLock.release()
+            print 'Lock released'
+            return
+        
         # Reset all the hdf-related variables
         self.scanItems = []
         self.allSpecs = {}
@@ -493,18 +584,11 @@ class filterGUI(wx.Frame, wxUtil):
         self.allTypes = {}
         self.possibleYears = []
         self.dateMin, self.dateMax = (float('inf'), float('-inf'))
-        self.activeFilters = []
-        self.specResult = None
-        self.specCases = None
-        self.hkResult = None
-        self.hkCases = None
-        self.LResult = None
-        self.LCases = None
-        self.typeResult = None
-        self.typeCases = None
-        self.dateResult = None
-        self.dateCases = None
+        self.allInfo = {}
+        #self.resetFilters(None)
         
+        # Iterate over the items in the HDF file, building the
+        # list that will be used to populate the filter table
         filterItems = self.filterFile.items()
         filterItems.sort()
         for spec, group in filterItems:
@@ -515,6 +599,13 @@ class filterGUI(wx.Frame, wxUtil):
                     sAbort = ''
                 elif sAbort == 1:
                     sAbort = 'True'
+                toShow = 'Command: ' + scanAttrs.get('cmd', 'N/A') + \
+                         '\n\n' + \
+                         'Attenuators: ' + scanAttrs.get('atten', 'N/A') + \
+                         '\n\n' + \
+                         'Energy: ' + str(scanAttrs.get('energy', 'N/A')) + \
+                         '\n\n' + \
+                         'Data points: ' + str(scanAttrs.get('nl_dat', 'N/A'))
                 self.scanItems.append([scanAttrs.get('spec_name', 'N/A'),
                                        str(scanAttrs.get('index', '0')),
                                        str(scanAttrs.get('h_val', '--')),
@@ -525,16 +616,20 @@ class filterGUI(wx.Frame, wxUtil):
                                        sAbort,
                                        scanAttrs.get('date', 'N/A'),
                                        scanAttrs.get('hk_dist', '--'),
-                                       scan.name])
-        # A bit more list formatting, as well as information gathering
+                                       scan.name,
+                                       toShow])
+        # Some list formatting and specialized group formation
         for scan in self.scanItems:
+            # Make a dictionary of {scan type: frequency} pairs
             if scan[6] not in self.allTypes:
                 self.allTypes[scan[6]] = 1
             else:
                 self.allTypes[scan[6]] += 1
             # Unless it's a rodscan, don't bother cluttering
             # the display with the L start and stop values
-            if scan[6] != 'rodscan':
+            # If it is a rodscan, populate the dictionary:
+            # {HK Pair: {Specfile : [HK Distance, count]}}
+            if scan[6] not in ['rodscan', 'Escan', 'hklscan']:
                 scan[4] = '--'
                 scan[5] = '--'
             else:
@@ -577,6 +672,9 @@ class filterGUI(wx.Frame, wxUtil):
                                    self.dateMax)
             except:
                 pass
+            # Make a dictionary of {(Specname, scan number): information
+            # to be displayed when the scan is selected
+            self.allInfo[(scan[0], scan[1])] = scan[11]
         # Sort the scans by index first
         self.scanItems.sort(key=lambda scan : int(scan[1]))
         # Then sort the scans by specfile name, resulting in 
@@ -584,6 +682,13 @@ class filterGUI(wx.Frame, wxUtil):
         self.scanItems.sort(key=lambda scan : scan[0])
         # Update the data table with the new scan information
         self.updateTable()
+        # Close the file and release the lock
+        try:
+            self.filterFile.close()
+            self.filterLock.release()
+            print 'Lock released'
+        except:
+            print 'Error closing file'
     
     # Delete everything in the table, then add the appropriate scans
     def updateTable(self):
@@ -637,16 +742,7 @@ class filterGUI(wx.Frame, wxUtil):
         tableSelection = event.GetItem()
         specName = self.dataTable.GetItem(tableSelection.m_itemId, 0).Text
         scanNumber = self.dataTable.GetItem(tableSelection.m_itemId, 1).Text
-        selectionPath = '/'+specName+'/'+scanNumber
-        selectionItem = self.filterFile[selectionPath]
-        selectionAttrs = selectionItem.attrs
-        toShow = 'Command: ' + selectionAttrs.get('cmd', 'N/A') + \
-                  '\n\n' + \
-                  'Attenuators: ' + selectionAttrs.get('atten', 'N/A') + \
-                  '\n\n' + \
-                  'Energy: ' + str(selectionAttrs.get('energy', 'N/A')) + \
-                  '\n\n' + \
-                  'Data points: ' + str(selectionAttrs.get('nl_dat', 'N/A'))
+        toShow = self.allInfo.get((specName, scanNumber), '')
         self.moreBox.SetValue(toShow)
     
     # Add an attribute both to the attribute dictionary and the on-screen list
@@ -666,9 +762,12 @@ class filterGUI(wx.Frame, wxUtil):
         self.attrDict[attrText] = attrValue
         self.attrList.Append([attrText, attrValue, ''])
         self.attrList.SetItemData(self.attrList.GetItemCount()-1, attrText)
-        thisButton = wx.Button(self.attrList, label='X', size=(32, 15), name=attrText)
+        thisButton = wx.Button(self.attrList, label='X', size=(32, 15),
+                               name=attrText)
         thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
-        self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2, wnd=thisButton)
+        self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2,
+                                    wnd=thisButton)
+        self.attrList.SortItems(cmp)
     
     # Delete an attribute both from the dictionary and the on-screen list
     def deleteMe(self, event):
@@ -676,6 +775,81 @@ class filterGUI(wx.Frame, wxUtil):
             del self.attrDict[deleteThis]
             deleteThis = self.attrList.FindItemData(-1, deleteThis)
             self.attrList.DeleteItem(deleteThis)
+    
+    # Load a tab-delimited file of attributes
+    def loadAttributes(self, event):
+        '''Load in a file with attribute / value pairs, separated by
+        a tab.
+        
+        '''
+        loadDialog = wx.FileDialog(self, message='Load file...',
+                                   defaultDir=os.getcwd(), defaultFile='',
+                                   wildcard='txt files (*.txt)|*.txt|'+\
+                                            'All files (*.*)|*',
+                                   style=wx.OPEN)
+        if loadDialog.ShowModal() == wx.ID_OK:
+            print 'Loading attribute file ' + loadDialog.GetPath()
+            try:
+                attributeFile = open(loadDialog.GetPath())
+            except:
+                print 'Error opening attribute file'
+                loadDialog.Destroy()
+                raise
+            try:
+                for line in attributeFile:
+                    line = line.strip().split('\t')
+                    if len(line) != 2 or \
+                            line[0] not in POSSIBLE_ATTRIBUTES or \
+                            line[0] in self.attrDict.keys() or \
+                            line[1] is '':
+                        continue
+                    self.attrDict[line[0]] = line[1]
+                    self.attrList.Append([line[0], line[1], ''])
+                    self.attrList.SetItemData(self.attrList.GetItemCount()-1,
+                                              line[0])
+                    thisButton = wx.Button(self.attrList, label='X',
+                                           size=(32, 15), name=line[0])
+                    thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
+                    self.attrList.SetItemWindow(self.attrList.GetItemCount()-1,
+                                                col=2, wnd=thisButton)
+                attributeFile.close()
+                self.attrList.SortItems(cmp)
+            except:
+                print 'Error reading attribute file'
+                loadDialog.Destroy()
+                raise
+        loadDialog.Destroy()
+                    
+    # Save the current attribute table into a tab-delimited file
+    def saveAttributes(self, event):
+        '''Save a file with attribute / value pairs, separated by
+        a tab.
+        
+        '''
+        
+        saveDialog = wx.FileDialog(self, message='Save file...',
+                                   defaultDir=os.getcwd(), defaultFile='',
+                                   wildcard='txt files (*.txt)|*.txt|'+\
+                                            'All files (*.*)|*',
+                                   style=wx.SAVE)
+        if saveDialog.ShowModal() == wx.ID_OK:
+            print 'Saving attribute file ' + saveDialog.GetPath()
+            try:
+                attributeFile = open(saveDialog.GetPath(), 'w')
+            except:
+                print 'Error opening attribute file'
+                saveDialog.Destroy()
+                raise
+            try:
+                for key, value in self.attrDict.iteritems():
+                    attributeFile.write(key + '\t' + value + '\n')
+            except:
+                print 'Error writing to file'
+                attributeFile.close()
+                saveDialog.Destroy()
+                raise
+            attributeFile.close()
+        saveDialog.Destroy()
     
     # Convert a dictionary to a tree
     def dictToTree(self, thisDict, thisTree, thisRoot):
@@ -689,8 +863,8 @@ class filterGUI(wx.Frame, wxUtil):
     
     # Update the file name in the project tree
     def newName(self, event):
-        if not self.projectNameBox.GetValue().endswith('.h5'):
-            self.projectNameBox.SetValue(self.projectNameBox.GetValue()+'.h5')
+        if not self.projectNameBox.GetValue().endswith('.ph5'):
+            self.projectNameBox.SetValue(self.projectNameBox.GetValue()+'.ph5')
         try:
             self.newProjectTree.SetItemText(self.newProjectTree.GetRootItem(),
                                             self.projectNameBox.GetValue())
@@ -707,7 +881,8 @@ class filterGUI(wx.Frame, wxUtil):
             scanNumber = self.dataTable.GetItem(item, 1).Text
             if specName in self.projectDict:
                 if scanNumber not in self.projectDict[specName]:
-                    self.projectDict[specName][scanNumber] = self.attrDict.copy()
+                    self.projectDict[specName][scanNumber] = \
+                                                            self.attrDict.copy()
                 else:
                     print 'Specfile ' + specName + ', scan ' + \
                           scanNumber + ' is already in the tree.'
@@ -732,7 +907,8 @@ class filterGUI(wx.Frame, wxUtil):
             scanNumber = self.dataTable.GetItem(item, 1).Text
             if specName in self.projectDict:
                 if scanNumber not in self.projectDict[specName]:
-                    self.projectDict[specName][scanNumber] = self.attrDict.copy()
+                    self.projectDict[specName][scanNumber] = \
+                                                            self.attrDict.copy()
                 else:
                     print 'Specfile ' + specName + ', scan ' + \
                           scanNumber + ' is already in the tree.'
@@ -750,7 +926,8 @@ class filterGUI(wx.Frame, wxUtil):
     # Move the selected scans out of the project tree
     def moveOneLeft(self, event):
         allSelected = self.newProjectTree.GetSelections()
-        allSelected.sort(key = lambda selection: self.newProjectTree.getLevel(selection))
+        allSelected.sort(key = lambda selection: \
+                                        self.newProjectTree.getLevel(selection))
         '''for item in allSelected:
             print self.newProjectTree.GetItemText(item)
         '''
@@ -819,23 +996,42 @@ class filterGUI(wx.Frame, wxUtil):
         if self.projectDict == {}:
             print 'No scans selected'
             return
-        self.fileDirectory, holding = os.path.split(self.filterFile.filename)
-        file_types = 'HDF files (*.h5)|*.h5|All files (*.*)|*'
+        self.fileDirectory, holding = os.path.split(self.filterFileName)
+        file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
         save_dialog = wx.FileDialog(self, message='Create file...',
                                     defaultDir=self.fileDirectory,
                                     defaultFile=self.projectNameBox.GetValue(),
                                     wildcard=file_types,
                                     style=wx.SAVE | wx.OVERWRITE_PROMPT)
         if save_dialog.ShowModal() == wx.ID_OK:
+            mlockFile = file_locker.FileLock(self.filterFileName)
+            plockFile = file_locker.FileLock(save_dialog.GetPath())
+            try:
+                print 'Attempting to lock files...'
+                while wx.GetApp().Pending():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
+                mlockFile.acquire()
+                plockFile.acquire()
+                print 'Locks acquired'
+            except file_locker.FileLockException as e:
+                print 'Error: ' + str(e)
+                return
             print 'Start: ', time.ctime(time.time())
             out_file = save_dialog.GetPath()
             try:
-                mtp.master_to_project(self.filterFile.filename,
+                mtp.master_to_project(self.filterFileName,
                                       self.projectDict,
                                       out_file, append=False, gui=True)
             except:
                 print 'Error generating project file'
+                mlockFile.release()
+                plockFile.release()
+                print 'Locks released'
             print 'Finish: ', time.ctime(time.time())
+            mlockFile.release()
+            plockFile.release()
+            print 'Locks released'
         save_dialog.Destroy()
     
     # Append scans to an existing HDF project file, then open it
@@ -843,23 +1039,42 @@ class filterGUI(wx.Frame, wxUtil):
         if self.projectDict == {}:
             print 'No scans selected'
             return
-        self.fileDirectory, holding = os.path.split(self.filterFile.filename)
-        file_types = 'HDF files (*.h5)|*.h5|All files (*.*)|*'
+        self.fileDirectory, holding = os.path.split(self.filterFileName)
+        file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
         save_dialog = wx.FileDialog(self, message='Append to...',
                                     defaultDir=self.fileDirectory,
                                     defaultFile=self.projectNameBox.GetValue(),
                                     wildcard=file_types,
                                     style=wx.SAVE)
         if save_dialog.ShowModal() == wx.ID_OK:
+            mlockFile = file_locker.FileLock(self.filterFileName)
+            plockFile = file_locker.FileLock(save_dialog.GetPath())
+            try:
+                print 'Attempting to lock files...'
+                while wx.GetApp().Pending():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
+                mlockFile.acquire()
+                plockFile.acquire()
+                print 'Locks acquired'
+            except file_locker.FileLockException as e:
+                print 'Error: ' + str(e)
+                return
             print 'Start: ', time.ctime(time.time())
             out_file = save_dialog.GetPath()
             try:
-                mtp.master_to_project(self.filterFile.filename,
+                mtp.master_to_project(self.filterFileName,
                                       self.projectDict,
                                       out_file, append=True, gui=True)
             except:
                 print 'Error saving to project file'
+                mlockFile.release()
+                plockFile.release()
+                print 'Locks released'
             print 'Finish: ', time.ctime(time.time())
+            mlockFile.release()
+            plockFile.release()
+            print 'Locks released'
         save_dialog.Destroy()
     
     # Keep only the selected scans by faking a filtered result
@@ -868,7 +1083,7 @@ class filterGUI(wx.Frame, wxUtil):
         if item == -1:
             return
         self.specResult = {}
-        self.specCases = []
+        self.specCases = None
         while item != -1:
             specName = self.dataTable.GetItem(item, 0).Text
             scanNumber = self.dataTable.GetItem(item, 1).Text
@@ -876,11 +1091,23 @@ class filterGUI(wx.Frame, wxUtil):
                 self.specResult[specName].append(int(scanNumber))
             else:
                 self.specResult[specName] = [int(scanNumber)]
-            self.specCases.append('/'+specName+'/'+scanNumber)
+            #self.specCases.append('/'+specName+'/'+scanNumber)
             item = self.dataTable.GetNextSelected(item)
         for key in self.allSpecs:
             if key not in self.specResult:
                 self.specResult[key] = []
+        if self.specResult == self.allSpecs:
+            self.specResult = None
+        else:
+            for spec in self.specResult.keys():
+                bothCases = []
+                if self.specResult[spec] != []:
+                    thisCase = [scan[10] for scan in self.scanItems if \
+                                scan[0].startswith(spec)]
+                    thatCase = [scan[10] for scan in self.scanItems if \
+                                int(scan[1]) in self.specResult[spec]]
+                    bothCases = ft.list_intersect(thisCase, thatCase)
+                    self.specCases = ft.list_union(bothCases, self.specCases)
         self.updateTable()
     
     # Filter by specfile and scan number
@@ -917,10 +1144,27 @@ class filterGUI(wx.Frame, wxUtil):
                                   self.dateResult).ShowModal()
         return
         
+    # Reset all the filters
+    def resetFilters(self, event):
+        self.activeFilters = []
+        self.specResult = None
+        self.specCases = None
+        self.hkResult = None
+        self.hkCases = None
+        self.LResult = None
+        self.LCases = None
+        self.typeResult = None
+        self.typeCases = None
+        self.dateResult = None
+        self.dateCases = None
+        self.updateTable()
+    
     # Close the window
     def onClose(self, event):
         try:
             self.filterFile.close()
+            self.filterLock.release()
+            print 'Lock released'
         except:
             pass
         self.Destroy()
@@ -941,7 +1185,7 @@ class SpecWindow(wx.Dialog):
                                                   treemix.TR_MULTIPLE |
                                                   treemix.TR_EXTENDED | 
                                                   treemix.TR_AUTO_CHECK_CHILD |
-                                                  treemix.TR_AUTO_CHECK_PARENT)# |
+                                                  treemix.TR_AUTO_CHECK_PARENT)
         
         # Populate the list
         self.allSpec = allSpec
@@ -949,7 +1193,8 @@ class SpecWindow(wx.Dialog):
             self.currentSpec = currentSpec
         else:
             self.currentSpec = allSpec
-        self.allRoot = self.list.AddRoot(self.GetParent().fileName.GetLabel(), ct_type=1)
+        self.allRoot = self.list.AddRoot(self.GetParent().fileButton.GetLabel(),
+                                         ct_type=1)
         specKeys = self.allSpec.keys()
         specKeys.sort()
         for spec in specKeys:
@@ -1015,11 +1260,15 @@ class SpecWindow(wx.Dialog):
             for spec in selectedSpec.keys():
                 bothCases = []
                 if selectedSpec[spec] != []:
-                    thisCase = ft.cases(self.GetParent().filterFile,
-                                        'spec_name',
-                                        '.startswith("' + spec + '")')
-                    thatCase = ft.cases(self.GetParent().filterFile, 'index',
-                                        'in ' + str(selectedSpec[spec]))
+                    #thisCase = ft.cases(self.GetParent().filterFile,
+                    #                    'spec_name',
+                    #                    '.startswith("' + spec + '")')
+                    thisCase = [scan[10] for scan in self.GetParent().scanItems\
+                                if scan[0].startswith(spec)]
+                    #thatCase = ft.cases(self.GetParent().filterFile, 'index',
+                    #                    'in ' + str(selectedSpec[spec]))
+                    thatCase = [scan[10] for scan in self.GetParent().scanItems\
+                                if int(scan[1]) in selectedSpec[spec]]
                     bothCases = ft.list_intersect(thisCase, thatCase)
                     self.GetParent().specCases = \
                             ft.list_union(bothCases, self.GetParent().specCases)
@@ -1116,12 +1365,14 @@ class HKWindow(wx.Dialog):
         hkKids = self.allRoot.GetChildren()
         for hk in hkKids:
             specKids = hk.GetChildren()
-            hkText = eval(hk.GetText())
+            hkText = tuple(map(str, eval(hk.GetText())))
             selectedHK[hkText] = {}
             for spec in specKids:
                 if spec.IsChecked():
                     specName = spec.GetText().split(':')[0]
-                    selectedHK[hkText][specName] = self.allHK[hkText][specName]
+                    allHKText = tuple(map(str, hkText))
+                    selectedHK[hkText][specName] = \
+                                    self.allHK[allHKText][specName]
         self.GetParent().hkCases = None
         if self.allHK == selectedHK:
             self.GetParent().hkResult = None
@@ -1130,15 +1381,22 @@ class HKWindow(wx.Dialog):
             for hk in selectedHK.keys():
                 bothCases = []
                 if selectedHK[hk] != {}:
-                    thisCase = ft.cases(self.GetParent().filterFile,
-                                        'h_val',
-                                        '== ' + hk[0])
-                    thatCase = ft.cases(self.GetParent().filterFile,
-                                        'k_val',
-                                        '== ' + hk[1])
-                    otherCase = ft.cases(self.GetParent().filterFile,
-                                         'spec_name',
-                                         'in ' + str(selectedHK[hk].keys()))
+                    #thisCase = ft.cases(self.GetParent().filterFile,
+                    #                    'h_val',
+                    #                    '== ' + str(hk[0]))
+                    thisCase = [scan[10] for scan in self.GetParent().scanItems\
+                                if scan[2] == str(hk[0])]
+                    #thatCase = ft.cases(self.GetParent().filterFile,
+                    #                    'k_val',
+                    #                    '== ' + str(hk[1]))
+                    thatCase = [scan[10] for scan in self.GetParent().scanItems\
+                                if scan[3] == str(hk[1])]
+                    #otherCase = ft.cases(self.GetParent().filterFile,
+                    #                     'spec_name',
+                    #                     'in ' + str(selectedHK[hk].keys()))
+                    otherCase = [scan[10] for scan in \
+                                 self.GetParent().scanItems if scan[0] in \
+                                 str(selectedHK[hk].keys())]
                     bothCases = ft.list_intersect(thisCase, thatCase, otherCase)
                     self.GetParent().hkCases = \
                             ft.list_union(bothCases, self.GetParent().hkCases)
@@ -1238,16 +1496,22 @@ class LWindow(wx.Dialog):
             self.GetParent().LResult = None
         else:
             self.GetParent().LResult = (fromL, toL)
-            thisCase = ft.cases(self.GetParent().filterFile,
-                                'real_L_start',
-                                '>= ' + str(fromL))
-            thatCase = ft.cases(self.GetParent().filterFile,
-                                'real_L_stop',
-                                '<= ' + str(toL))
-            otherCase = ft.cases(self.GetParent().filterFile,
-                                 's_type',
-                                 '.startswith("rodscan")')
-            bothCases = ft.list_intersect(thisCase, thatCase, otherCase)
+            #thisCase = ft.cases(self.GetParent().filterFile,
+            #                    'real_L_start',
+            #                    '>= ' + str(fromL))
+            thisCase = [scan[10] for scan in self.GetParent().scanItems if \
+                      scan[6] in ['rodscan', 'Escan', 'hklscan'] and \
+                      scan[4] != '--' and float(scan[4]) >= fromL]
+            #thatCase = ft.cases(self.GetParent().filterFile,
+            #                    'real_L_stop',
+            #                    '<= ' + str(toL))
+            thatCase = [scan[10] for scan in self.GetParent().scanItems if \
+                      scan[6] in ['rodscan', 'Escan', 'hklscan'] and \
+                      scan[4] != '--' and float(scan[5]) <= toL]
+            #otherCase = ft.cases(self.GetParent().filterFile,
+            #                     's_type',
+            #                     '.startswith("rodscan")')
+            bothCases = ft.list_intersect(thisCase, thatCase)#, otherCase)
             self.GetParent().LCases = bothCases
         self.GetParent().updateTable()
         self.Destroy()
@@ -1388,9 +1652,11 @@ class TypeWindow(wx.Dialog):
             self.GetParent().typeResult = None
         else:
             self.GetParent().typeResult = selectedTypes
-            thisCase = ft.cases(self.GetParent().filterFile,
-                                's_type',
-                                'in ' + str(selectedTypes))
+            #thisCase = ft.cases(self.GetParent().filterFile,
+            #                    's_type',
+            #                    'in ' + str(selectedTypes))
+            thisCase = [scan[10] for scan in self.GetParent().scanItems if \
+                        scan[6] in selectedTypes]
             self.GetParent().typeCases = thisCase
         self.GetParent().updateTable()
         self.Destroy()
@@ -1610,12 +1876,16 @@ class DateWindow(wx.Dialog):
             self.GetParent().dateResult = None
         else:
             self.GetParent().dateResult = (fromDate, toDate)
-            thisCase = ft.cases(self.GetParent().filterFile,
-                                'epoch',
-                                '>= ' + str(fromDate))
-            thatCase = ft.cases(self.GetParent().filterFile,
-                                'epoch',
-                                '<= ' + str(toDate))
+            #thisCase = ft.cases(self.GetParent().filterFile,
+            #                    'epoch',
+            #                    '>= ' + str(fromDate))
+            thisCase = [scan[10] for scan in self.GetParent().scanItems if \
+                        time.mktime(time.strptime(scan[8])) >= fromDate]
+            #thatCase = ft.cases(self.GetParent().filterFile,
+            #                    'epoch',
+            #                    '<= ' + str(toDate))
+            thatCase = [scan[10] for scan in self.GetParent().scanItems if \
+                        time.mktime(time.strptime(scan[8])) <= toDate]
             bothCases = ft.list_intersect(thisCase, thatCase)
             self.GetParent().dateCases = bothCases
         self.GetParent().updateTable()

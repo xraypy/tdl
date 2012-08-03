@@ -1,10 +1,11 @@
 '''
 Spec to HDF5 converter / parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-3/8/2012
+Last modified: 7/16/2012
 '''
 
 import array
+import errno
 import math
 import os
 import sys
@@ -56,6 +57,7 @@ def summarize(lines):
             # get the name of the specfile, should only appear once
             if (i.startswith('#F')):
                 spec_name = i[3:]
+                spec_name = os.path.split(spec_name)[-1]
             # get the starting epoch
             if (i.startswith('#E ')):
                 epoch = int(i[3:])
@@ -98,10 +100,10 @@ def summarize(lines):
             # this to i.startswith('#ATTEN ') or put it after an 
             # i.startswith('#ATTEN_F') check.
             elif (i.startswith('#AT')):
-                atten = i[6:]
+                atten = i[6:].strip()
             # Get the beam energy
             elif (i.startswith('#EN')):
-                energy = i[8:]
+                energy = float(i[8:])
             # Get the column header info, as well as the following data
             # Also check for comments following the data containing
             # the word 'aborted'
@@ -146,8 +148,8 @@ def summarize(lines):
                                      'Q':q,
                                      'ncols':ncols,
                                      'labels':lab,
-                                     'atten':atten.strip(),
-                                     'energy':float(energy),
+                                     'atten':atten,
+                                     'energy':energy,
                                      'lineno':lineno,
                                      'aborted':aborted,
                                      'point_data':point_data,
@@ -185,9 +187,7 @@ def read_image(file):
         return None
 
 # Main conversion function, takes user input and converts
-# specified .spc file to .h5
-# Only works if a file doesn't exist: appending and overwriting
-# have not been implemented yet
+# specified .spc file to .mh5
 def spec_to_hdf(args):
     choice = 'a'
     if len(args) == 0:
@@ -197,30 +197,34 @@ def spec_to_hdf(args):
         if not os.path.isfile(input):
             print 'Error: file not found'
             return
-        print 'Please enter the name of the HDF file:'
+        print 'Please enter the name of the master file:'
         output = raw_input('> ')
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
-                                or (C)ancel (A/W/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+                               'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
+            elif choice == '':
+                choice = 'a'
     elif len(args) == 1:
         input = args[0]
-        print 'Please enter the name of the HDF file:'
+        print 'Please enter the name of the master file:'
         output = raw_input('> ')
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
-                                or (C)ancel (A/W/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+                               'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
+            elif choice == '':
+                choice = 'a'
     elif len(args) == 2:
         input = args[0]
         if not os.path.isfile(input):
@@ -228,17 +232,18 @@ def spec_to_hdf(args):
             return
         output = args[1]
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, \
-                                or (C)ancel (A/W/C)? ').lower()
+            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+                               'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
+            elif choice == '':
+                choice = 'a'
     else:
         options = args[2:]
-        choice = None
         if '-a' in options:
             choice = 'a'
         elif '-w' in options:
@@ -249,9 +254,9 @@ def spec_to_hdf(args):
             return
         output = args[1]
         if output == '':
-            output = 'default.h5'
-        if not output.endswith('.h5'):
-            output = output + '.h5'
+            output = input
+        if not output.endswith('.mh5'):
+            output = output + '.mh5'
         if os.path.isfile(output):
             if choice == 'c':
                 return
@@ -259,6 +264,8 @@ def spec_to_hdf(args):
     time1 = time.time()
     
     spec_dir = os.path.split(input)[0]
+    if spec_dir == '':
+        spec_dir = '.'
     spec_name = os.path.split(input)[-1]
     image_dir = spec_dir + '\\images\\%s\\' % spec_name[:-4]
     this_file = open(input)
@@ -266,21 +273,35 @@ def spec_to_hdf(args):
     this_file.close()
     summary = summarize(lines)
 
+    # Obtain a lock for the HDF file. If the file is already
+    # locked, retry for 10 seconds before returning.
+    lockFile = FileLock(output, timeout=1)
+    try:
+        print 'Attempting to lock file...'
+        lockFile.acquire()
+        print 'Lock acquired'
+    except FileLockException as e:
+        print 'Error: ' + str(e)
+        return
+    
     master_file = h5py.File(output, choice)
     spec_group = master_file.require_group(spec_name)
     
     for scan in summary:
         scan_group = spec_group.require_group(str(scan['index']))
         try:
-            del scan_group['point_labs']
-        except KeyError:
-            pass
-        scan_group.create_dataset('point_labs', data=scan['labels'])
-        try:
+            if len(scan_group['point_data']) == scan['nl_dat']:
+                print 'Skipping scan' + str(scan['index'])
+                continue
             del scan_group['point_data']
         except KeyError:
             pass
         scan_group.create_dataset('point_data', data=scan['point_data'])
+        try:
+            del scan_group['point_labs']
+        except KeyError:
+            pass
+        scan_group.create_dataset('point_labs', data=scan['labels'])
         try:
             del scan_group['param_labs']
         except KeyError:
@@ -390,8 +411,13 @@ def spec_to_hdf(args):
                     scan_group.attrs['energy_stop'] = float(split_cmd[2])
                     scan_group.attrs['num_points'] = float(split_cmd[3])
                     scan_group.attrs['count_time'] = float(split_cmd[4])
+                elif key.startswith('Q'):
+                    scan_group.attrs['h_val'] = \
+                                        round(float(scan[key].split()[0]), 1)
+                    scan_group.attrs['k_val'] = \
+                                        round(float(scan[key].split()[1]), 1)
                 elif key not in ['labels', 'point_data',
-                               'g_labs', 'mnames', 'G', 'P']:
+                               'g_labs', 'mnames', 'G', 'P', 'Q']:
                     scan_key = scan[key]
                     if scan_key is None:
                         scan_key = 'None'
@@ -408,8 +434,10 @@ def spec_to_hdf(args):
                     scan_group.attrs['cmd'] = scan[key]
                     split_cmd = scan[key].split()
                     scan_group.attrs['s_type'] = split_cmd[0]
+                    scan_group.attrs['h_val'] = round(float(split_cmd[1]), 1)
                     scan_group.attrs['h_start'] = float(split_cmd[1])
                     scan_group.attrs['h_stop'] = float(split_cmd[2])
+                    scan_group.attrs['k_val'] = round(float(split_cmd[3]), 1)
                     scan_group.attrs['k_start'] = float(split_cmd[3])
                     scan_group.attrs['k_stop'] = float(split_cmd[4])
                     scan_group.attrs['L_start'] = float(split_cmd[5])
@@ -523,6 +551,7 @@ def spec_to_hdf(args):
                             image_data.append(holding)
                 except:
                     print 'Error reading image ' + image_path
+                    raise
             if image_data != []:
                 try:
                     del scan_group['image_data']
@@ -532,8 +561,100 @@ def spec_to_hdf(args):
                                          compression='szip')
     
     master_file.close()
+    
+    lockFile.release()
+    print 'Lock released'
+    
     time2 = time.time()
     print 'Total time:', (time2-time1)/60, 'minutes.'
+
+"""
+File Locker
+Author: Evan Fosmark
+http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python
+Last modified: 7.16.2012 by Craig Biwer (cbiwer@uchicago.edu)
+"""
+ 
+class FileLockException(Exception):
+    pass
+ 
+class FileLock(object):
+    """ A file locking mechanism that has context-manager support so 
+        you can use it in a with statement. This should be relatively cross
+        compatible as it doesn't rely on msvcrt or fcntl for the locking.
+    """
+ 
+    def __init__(self, file_name, timeout=10, delay=.05):
+        """ Prepare the file locker. Specify the file to lock and optionally
+            the maximum timeout and the delay between each attempt to lock.
+        """
+        self.is_locked = False
+        #self.lockfile = os.path.join(os.getcwd(), "%s.lock" % file_name)
+        self.lockfile = file_name + '.lock'
+        self.file_name = file_name
+        self.timeout = timeout
+        self.delay = delay
+ 
+ 
+    def acquire(self):
+        """ Acquire the lock, if possible. If the lock is in use, it check again
+            every `wait` seconds. It does this until it either gets the lock or
+            exceeds `timeout` number of seconds, in which case it throws 
+            an exception.
+        """
+        start_time = time.time()
+        while True:
+            try:
+                self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+                os.write(self.fd, os.environ['USERNAME'] + '\n')
+                os.write(self.fd, os.environ['COMPUTERNAME'] + '\n')
+                os.write(self.fd, time.ctime(time.time()))
+                break;
+            except OSError as e:
+                if e.errno != errno.EEXIST and e.errno != errno.EACCES:
+                    raise 
+                if (time.time() - start_time) >= self.timeout:
+                    if e.errno == errno.EEXIST:
+                        raise FileLockException("Timeout occured.")
+                    else:
+                        raise FileLockException("Access denied.")
+                time.sleep(self.delay)
+        self.is_locked = True
+ 
+ 
+    def release(self):
+        """ Get rid of the lock by deleting the lockfile. 
+            When working in a `with` statement, this gets automatically 
+            called at the end.
+        """
+        if self.is_locked:
+            os.close(self.fd)
+            os.unlink(self.lockfile)
+            self.is_locked = False
+ 
+ 
+    def __enter__(self):
+        """ Activated when used in the with statement. 
+            Should automatically acquire a lock to be used in the with block.
+        """
+        if not self.is_locked:
+            self.acquire()
+        return self
+ 
+ 
+    def __exit__(self, type, value, traceback):
+        """ Activated at the end of the with statement.
+            It automatically releases the lock if it isn't locked.
+        """
+        if self.is_locked:
+            self.release()
+ 
+ 
+    def __del__(self):
+        """ Make sure that the FileLock instance doesn't leave a lockfile
+            lying around.
+        """
+        self.release()
 
 if __name__ == '__main__':    
     args = sys.argv[1:]

@@ -88,3 +88,9 @@ class menuApps:
         wxFilter = mod_import(wxFilter)
         self.wxFilter = wxFilter.filterGUI(self)
         self.wxFilter.CenterOnScreen()
+    
+    def on_menuAppsIntegrator_select(self, event):
+        from pds.pcgui import wxIntegrator
+        wxIntegrator = mod_import(wxIntegrator, True)
+        self.wxIntegrator = wxIntegrator.Integrator(self)
+        self.wxIntegrator.CenterOnScreen()
