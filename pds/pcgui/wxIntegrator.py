@@ -1460,7 +1460,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     updateThese = [item for item in updateThese if \
                                 str(allBPM[item]) != str(whatButton.GetValue())]
                     self.hdfObject.set_all(('det_0', 'bad_pixel_map'),
-                                           str(whatButton.GetValue()),
+                                           str(self.hdfObject[itemData]\
+                                                    ['det_0']['bad_pixel_map']),
                                            updateThese)
                     self.hdfObject.set_all(('det_0', 'pixel_map_changed'),
                                            'True', updateThese)
