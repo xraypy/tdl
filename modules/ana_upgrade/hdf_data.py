@@ -26,7 +26,7 @@ from tdl.modules.ana_upgrade import image_data
 ##############################################################################
 
 # Standard data attributes for a point (ie read returns, write requires)
-DEFAULT_DETECTOR = {'name':'default',
+'''DEFAULT_DETECTOR = {'name':'default',
                     'detector_params':{},
                     'integrate_params':{},
                     'correction_params':{},
@@ -57,7 +57,7 @@ DEFAULT_POINT_DATA = {'name':'default',
                       'scaler_lbls':[],
                       'scaler':[],
                       'scaler_scale':[],
-                      'detector_1':DEFAULT_DETECTOR}
+                      'detector_1':DEFAULT_DETECTOR}'''
 
 # DOES NOT INCLUDE THE VALUES IN 'position_values'
 # OR 'scaler_labels' BECAUSE THESE CHANGE BASED ON
@@ -398,8 +398,15 @@ class HdfDataFile:
                 for point in points:
                     try:
                         point_image = \
-                          numpy.array(self.file[point][det_str]['image_data'])
-                        point_mask = self.point_dict[det_str]['bad_pixel_map']
+                          numpy.array(self.file[point][det_name]['image_data'])
+                        bpm_loc = DET_KEYS['bad_pixel_map']
+                        current_corr = bpm_loc[0].split('/')[1] % self.version
+                        point_mask = str(self.file[point][det_name]\
+                                                  [current_corr][bpm_loc[1]])
+                        if not point_mask.startswith('(') and \
+                           not point_mask.startswith('['):
+                            point_mask = \
+                                    str(image_data.read_pixel_map(point_mask))
                         all_results[point] = \
                                 image_data.correct_image(point_image,
                                                          point_mask)
@@ -461,7 +468,11 @@ class HdfDataFile:
                     point_image = \
                             numpy.array(self.file[num][det_str]['image_data'])
                     self.point_dict[det_str]['image_data'] = point_image
-                    point_mask = self.point_dict[det_str]['bad_pixel_map']
+                    point_mask = str(self.point_dict[det_str]['bad_pixel_map'])
+                    if not point_mask.startswith('(') and \
+                       not point_mask.startswith('['):
+                        point_mask = str(image_data.read_pixel_map(point_mask))
+                        self.point_dict[det_str]['bad_pixel_map'] = point_mask
                     corrected_image = image_data.correct_image(point_image,
                                                                point_mask)
                     self.point_dict[det_str]['corrected_image'] = \

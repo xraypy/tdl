@@ -521,6 +521,7 @@ class filterGUI(wx.Frame, wxUtil):
             self.projectNameBox.SetValue('')
             self.resetFilters(None)
             self.updateTable()
+            self.projectDict = {}
             
             print 'Loading ' + loadDialog.GetPath()
             self.filterFile = loadDialog.GetPath()
@@ -535,7 +536,6 @@ class filterGUI(wx.Frame, wxUtil):
                 projName = projName.rsplit('.', 1)[0] + '.ph5'
                 self.projectNameBox.SetValue(projName)
             self.newProjectTree.DeleteAllItems()
-            self.projectDict = {}
         loadDialog.Destroy()
         self.dataTable.SetFocus()
     
@@ -1047,14 +1047,16 @@ class filterGUI(wx.Frame, wxUtil):
                                     wildcard=file_types,
                                     style=wx.SAVE)
         if save_dialog.ShowModal() == wx.ID_OK:
-            lockFile = file_locker.FileLock(save_dialog.GetPath())
+            mlockFile = file_locker.FileLock(self.filterFileName)
+            plockFile = file_locker.FileLock(save_dialog.GetPath())
             try:
-                print 'Attempting to lock file...'
+                print 'Attempting to lock files...'
                 while wx.GetApp().Pending():
                     wx.GetApp().Dispatch()
                     wx.GetApp().Yield(True)
-                lockFile.acquire()
-                print 'Lock acquired'
+                mlockFile.acquire()
+                plockFile.acquire()
+                print 'Locks acquired'
             except file_locker.FileLockException as e:
                 print 'Error: ' + str(e)
                 return
@@ -1066,11 +1068,13 @@ class filterGUI(wx.Frame, wxUtil):
                                       out_file, append=True, gui=True)
             except:
                 print 'Error saving to project file'
-                lockFile.release()
-                print 'Lock released'
+                mlockFile.release()
+                plockFile.release()
+                print 'Locks released'
             print 'Finish: ', time.ctime(time.time())
-            lockFile.release()
-            print 'Lock released'
+            mlockFile.release()
+            plockFile.release()
+            print 'Locks released'
         save_dialog.Destroy()
     
     # Keep only the selected scans by faking a filtered result

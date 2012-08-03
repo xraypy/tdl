@@ -49,9 +49,12 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.menuBar = wx.MenuBar()
             self.fileMenu = wx.Menu()
             self.loadHDF = self.fileMenu.Append(-1, 'Load Project File...')
+            self.fileMenu.AppendSeparator()
+            self.saveAttributes = self.fileMenu.Append(-1, 'Save attributes...')
+            self.fileMenu.AppendSeparator()
             self.saveHKL = self.fileMenu.Append(-1, 'Save HKLFFerr...',
-                                                'Write H, K, L, F, and Ferr \
-                                                values to a file')
+                                                'Write H, K, L, F, and Ferr\n' +
+                                                'values to a file')
             self.saveHKLE = self.fileMenu.Append(-1, 'Save HKLEFFerr...',
                                                  'Write H, K, L, E, F, and\n' + 
                                                  'Ferr values to a file')
@@ -841,8 +844,6 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             # END TOOLTIPS
             ####################################################################
             
-            #self.integrateCustom.Disable()
-            
             ####################################################################
             # START BINDINGS
             ####################################################################
@@ -854,19 +855,20 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             # Menu bindings
             self.Bind(wx.EVT_MENU, self.saveHKLEFFerr, self.saveHKLE)
             self.Bind(wx.EVT_MENU, self.saveHKLFFerr, self.saveHKL)
+            self.Bind(wx.EVT_MENU, self.saveAttrFile, self.saveAttributes)
             self.Bind(wx.EVT_MENU, self.loadFileDialog, self.loadHDF)
-            #self.Bind(wx.EVT_MENU, self.saveSession, self.saveWork)
-            #self.Bind(wx.EVT_MENU, self.loadSession, self.loadWork)
-            #self.Bind(wx.EVT_MENU, self.exportToPlotter, self.exportScans)
             
             self.Bind(wx.EVT_MENU, self.copyFromTo, self.copyParams)
             
             self.Bind(wx.EVT_MENU, self.showAreaCorrection,
                       self.viewAreaCorrection)
             
-            # Escape key binding
+            # Escape and delete key bindings
             self.Bind(wx.EVT_CHAR_HOOK, self.escapeKey)
             self.Bind(wx.EVT_CHAR_HOOK, self.deleteItem)
+            
+            # Freeze ROI key binding
+            self.Bind(wx.EVT_CHAR_HOOK, self.freezeROI)
             
             # Bind switching items in the tree to
             # updating the graphs and data fields
@@ -874,6 +876,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             
             # Bind the bad point toggle to updating the current selection
             self.badPointToggle.Bind(wx.EVT_CHECKBOX, self.updateBadPoint)
+            self.Bind(wx.EVT_CHAR_HOOK, self.updateBadPoint)
             
             # Bind the image max field to updating the current selection
             self.imageMaxField.Bind(wx.EVT_TEXT_ENTER, self.updateImageMax)
@@ -1077,6 +1080,13 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 self.customSelection.customRoot = \
                                 self.customSelection.customTree.GetRootItem()
         
+        # Toggle the 'Freeze ROI' box when the 'F2' key is pressed
+        def freezeROI(self, event):
+            event.Skip()
+            if event.GetKeyCode() == wx.WXK_F2:
+                if not self.roiField.GetValue() == '':
+                    self.roiFreeze.SetValue(not self.roiFreeze.GetValue())
+        
         # Updates the status bar text with the L and F coordinates
         # of the cursor
         def updateCursorStatus(self, event):
@@ -1101,8 +1111,14 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     dataLookup[iterData] = item
                     item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
                 allLs = {}
-                if self.hdfObject.get_all('type', [childrenList[0]])[childrenList[0]].startswith('Escan'):
+                if self.hdfObject.get_all('type',
+                        [childrenList[0]])[childrenList[0]].startswith('Escan'):
                     allLs = self.hdfObject.get_all('Energy', childrenList)
+                elif self.hdfObject.get_all('type',
+                        [childrenList[0]])[childrenList[0]].startswith('ascan'):
+                    get_this = self.hdfObject.get_all('info',
+                            [childrenList[0]])[childrenList[0]].split()[1]
+                    allLs = self.hdfObject.get_all(get_this, childrenList)
                 else:
                     allLs = self.hdfObject.get_all('L', childrenList)
                 allLs = dict([L,child] for child,L in allLs.iteritems())
@@ -1268,8 +1284,22 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
         
         # Update a point when the bad point checkbox is toggled
         def updateBadPoint(self, event):
-            ofMe = self.hdfTree.GetSelection()
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            event.Skip()
+            try:
+                if event.GetKeyCode() != wx.WXK_F4:
+                    return
+                else:
+                    self.badPointToggle.SetValue(not \
+                                                 self.badPointToggle.GetValue())
+            except:
+                pass
+            try:
+                ofMe = self.hdfTree.GetSelection()
+                itemData = self.hdfTree.GetItemPyData(ofMe)
+            except:
+                print 'Error getting tree selection'
+                self.badPointToggle.SetValue(False)
+                return
             if itemData is None:
                 self.badPointToggle.SetValue(False)
                 return
@@ -1284,6 +1314,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     str(self.badPointToggle.GetValue())
             self.updateF(itemData)
             self.updateRodPlot(myParent, itemData)
+            self.updateLabels(itemData)
         
         # Update a point when the image max is changed
         def updateImageMax(self, event):
@@ -1325,8 +1356,13 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
         def updateItem(self, event):
             #print 'Updating item'
             event.Skip()
-            ofMe = self.hdfTree.GetSelection()
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            try:
+                ofMe = self.hdfTree.GetSelection()
+                itemData = self.hdfTree.GetItemPyData(ofMe)
+            except:
+                print 'Error getting tree selection'
+                self.clearFields()
+                return
             if itemData is None:
                 self.clearFields()
                 return
@@ -1489,7 +1525,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
         
         # Interrupt the current integration
         def integrateStop(self, event):
-            self.integrateContinue=False
+            self.integrateContinue = False
         
         # Apply a given parameter or all parameters
         # to a custom selection of scans and points
@@ -1569,7 +1605,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 self.integrateContinue = False
                 self.hdfTree.SetFocus()
                 if self.hdfTree.GetSelection() == ofMe:
-                    self.updateFourPlot(myParent, itemData)
+                    #self.updateFourPlot(myParent, itemData)
                     self.updateRodPlot(myParent, itemData)
                 self.statusBar.SetStatusText('', 2)
                 self.integrateCancel.Hide()
@@ -1593,7 +1629,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                 
             possibilities2 = \
                     {self.scaleField: ('scale', float, self.scaleField),
-                     self.beamSlitField: ('beam_slits', dict, self.beamSlitField),
+                     self.beamSlitField: ('beam_slits', dict, 
+                                          self.beamSlitField),
                      self.detSlitField: ('det_slits', dict, self.detSlitField),
                      self.sampleAngleField: ('sample_angles', dict,
                                                     self.sampleAngleField),
@@ -1615,10 +1652,12 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             for updateThis, ofType, whatField in toChange:
                 try:
                     if updateThis.startswith('bad_pixel_map'):
-                        allBPM = self.hdfObject.get_all(('det_0', 'bad_pixel_map'),
-                                                        updateThese)
+                        allBPM = self.hdfObject.get_all(\
+                                                    ('det_0', 'bad_pixel_map'),
+                                                    updateThese)
                         justThese = [item for item in updateThese if \
-                                    str(allBPM[item]) != str(self.badMapField.GetValue())]
+                                    str(allBPM[item]) != \
+                                               str(self.badMapField.GetValue())]
                         self.hdfObject.set_all(('det_0', 'bad_pixel_map'),
                                                str(self.badMapField.GetValue()),
                                                justThese)
@@ -1709,7 +1748,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.integrateContinue = False
             self.hdfTree.SetFocus()
             if self.hdfTree.GetSelection() == ofMe and itemData is not None:
-                self.updateFourPlot(myParent, itemData)
+                #self.updateFourPlot(myParent, itemData)
                 self.updateRodPlot(myParent, itemData)
             self.statusBar.SetStatusText('', 2)
             self.integrateCancel.Hide()
@@ -1919,6 +1958,9 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                                   iterList)
             if self.hdfObject[itemData]['type'].startswith('Escan'):
                 iterLList = self.hdfObject.get_all('Energy', iterList)
+            elif self.hdfObject[itemData]['type'].startswith('ascan'):
+                get_this = self.hdfObject[itemData]['info'].split()[1]
+                iterLList = self.hdfObject.get_all(get_this, iterList)
             else:
                 iterLList = self.hdfObject.get_all('L', iterList)
             iterFList = self.hdfObject.get_all(('det_0', 'F'), iterList)
@@ -1950,11 +1992,15 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             if self.hdfObject[itemData]['type'].startswith('Escan'):
                 rodPlot.plot(self.hdfObject[itemData]['Energy'],
                              self.hdfObject[itemData]['det_0']['F'], 'ro')
+            elif self.hdfObject[itemData]['type'].startswith('ascan'):
+                rodPlot.plot(self.hdfObject[itemData][get_this],
+                             self.hdfObject[itemData]['det_0']['F'], 'ro')
             else:
                 rodPlot.plot(self.hdfObject[itemData]['L'],
                              self.hdfObject[itemData]['det_0']['F'], 'ro')
             try:
-                if not self.hdfObject[itemData]['type'].startswith('Escan'):
+                if not self.hdfObject[itemData]['type'].startswith('Escan') and\
+                   not self.hdfObject[itemData]['type'].startswith('ascan'):
                     rodPlot.semilogy()
             except:
                 pass
@@ -2167,8 +2213,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                 if eval(self.hdfObject[itemData]['det_0']['pixel_map_changed']):
                     self.hdfObject[itemData]['det_0']['pixel_map_changed'] = \
                                                                         'False'
-                    self.hdfObject.write_point(self.hdfObject[itemData])
-                    self.hdfObject.read_point(itemData)
+                    #self.hdfObject.write_point(self.hdfObject[itemData])
+                    #self.hdfObject.read_point(itemData)
                 if self.keepMaxToggle.GetValue():
                     self.hdfObject[itemData]['det_0']['image_max'] = \
                             str(self.imageMaxField.GetValue())
@@ -2213,7 +2259,48 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                                              ofMe)
                 self.statusBar.SetStatusText(statusText)
 
-                
+        # Save the current point's attributes into a tab-delimited file
+        def saveAttrFile(self, event):
+            try:
+                ofMe = self.hdfTree.GetSelection()
+                itemData = self.hdfTree.GetItemPyData(ofMe)
+            except:
+                print 'Error getting tree selection'
+                return
+            if itemData is None:
+                return
+            
+            saveDialog = wx.FileDialog(self, message='Save file...',
+                                       defaultDir=os.getcwd(), defaultFile='',
+                                       wildcard='txt files (*.txt)|*.txt|'+\
+                                                'All files (*.*)|*',
+                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+            if saveDialog.ShowModal() == wx.ID_OK:
+                print 'Saving attribute file ' + saveDialog.GetPath()
+                try:
+                    attributeFile = open(saveDialog.GetPath(), 'w')
+                except:
+                    print 'Error opening attribute file'
+                    saveDialog.Destroy()
+                    raise
+                try:
+                    for key in ['bad_pixel_map', 'beam_slits', 'bgrflag',
+                                'cnbgr', 'cpow', 'ctan', 'cwidth',
+                                'det_slits', 'rnbgr', 'roi', 'rotangle',
+                                'rpow', 'rtan', 'rwidth', 'sample_angles',
+                                'sample_diameter', 'sample_polygon', 'scale']:
+                        value = self.hdfObject[itemData]['det_0'][key]
+                        attributeFile.write(key + '\t' + value + '\n')
+                    attributeFile.write('geom\t' + \
+                                        self.hdfObject[itemData]['geom'])
+                except:
+                    print 'Error writing to file'
+                    attributeFile.close()
+                    saveDialog.Destroy()
+                    raise
+                attributeFile.close()
+            saveDialog.Destroy()
+        
         # Write a file to the current directory containing the index, H, K,
         # L, F, and Ferr values for each point
         def saveHKLFFerr(self, event):
@@ -2242,6 +2329,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:
+                    allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
+                                                      saveThese)
                     allHs = self.hdfObject.get_all('H', saveThese)
                     allKs = self.hdfObject.get_all('K', saveThese)
                     allLs = self.hdfObject.get_all('L', saveThese)
@@ -2253,8 +2342,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                   ('H','K','L','F','Ferr')
                     f.write(header)
                     for iterData in saveThese:
-                        if not eval(self.hdfObject[iterData]['det_0']\
-                                                            ['bad_point']):
+                        if not eval(allBadPs[iterData]):
                             line = "%6s %3.2f %3.2f %6.3f %6.6g %6.6g\n" % \
                                    (iterData,
                                     allHs[iterData],
@@ -2299,6 +2387,8 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:
+                    allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
+                                                      saveThese)
                     allHs = self.hdfObject.get_all('H', saveThese)
                     allKs = self.hdfObject.get_all('K', saveThese)
                     allLs = self.hdfObject.get_all('L', saveThese)
@@ -2311,8 +2401,7 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                                   ('H','K','L','E','F','Ferr')
                     f.write(header)
                     for iterData in saveThese:
-                        if not eval(self.hdfObject[iterData]['det_0']\
-                                                            ['bad_point']):
+                        if not eval(allBadPs[iterData]):
                             line = "%6s %3.2f %3.2f %6.3f %6.5f %6.6g %6.6g\n" % \
                                    (iterData,
                                     allHs[iterData],

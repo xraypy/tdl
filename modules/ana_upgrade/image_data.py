@@ -101,13 +101,15 @@ def correct_image(image,pixel_map=None):
     Given an image and a path to a bad pixel map,
     return the corrected image.
     """
-    
-    if pixel_map is None or pixel_map.startswith('None'):
+
+    if pixel_map is None or pixel_map.startswith('[]') or \
+                                                pixel_map.startswith('None'):
         return image
     else:
         try:
-            (bad_pixels,good_pixels) = read_pixel_map(pixel_map)
-        except ValueError:
+            pixel_map = eval(pixel_map)
+            (bad_pixels,good_pixels) = pixel_map
+        except:
             (bad_pixels,good_pixels) = ([], [])
         return pixel_mask(image, bad_pixels, good_pixels)
         

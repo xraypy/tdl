@@ -244,7 +244,6 @@ def spec_to_hdf(args):
                 choice = 'a'
     else:
         options = args[2:]
-        choice = None
         if '-a' in options:
             choice = 'a'
         elif '-w' in options:

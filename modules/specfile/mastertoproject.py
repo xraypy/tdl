@@ -25,7 +25,7 @@ INTEGRATION_PARAMETERS = {'bgrflag': 1,
                           'rpow': 0,
                           'rtan': False,
                           'rwidth': 15}
-CORRECTION_PARAMETERS = {'bad_pixel_map': 'None',
+CORRECTION_PARAMETERS = {'bad_pixel_map': [],
                          'bad_point': False,
                          'image_changed': True,
                          'image_max': -1,
@@ -41,6 +41,37 @@ DETECTOR_PARAMETERS = {'beam_slits': {},
                        'name': 'pilatus'
                       }
                       
+
+def read_pixel_map(fname):
+    """
+    read pixel map file
+
+    assume the file format is
+    (bad pixel)  (good pixel)
+    """
+    bad_pixels = []
+    good_pixels = []
+    try:
+        bad = []
+        good = []
+        f  = open(fname)
+        for line in f.readlines():
+            tmp = line.strip().split()
+            bad.append(tmp[0])
+            if len(tmp)>1:
+                good.append(tmp[1])
+        f.close()
+        for p in bad:
+            pp = p.split(',')
+            bad_pixels.append(map(int,pp))
+        for p in good:
+            pp = p.split(',')
+            good_pixels.append(map(int,pp))
+        return bad_pixels, good_pixels
+    except:
+        print "Error reading file: %s" % fname
+        return []
+
 def master_to_project(master_file, desired_scans, project_file, append=True, 
                       gui=False):
     '''Convert a list of scans from a master file
@@ -308,8 +339,15 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     corr_values = []
                     for label in corr_labels:
                         no_show = CORRECTION_PARAMETERS.get(label, 'NA')
-                        corr_values.append(\
-                                    str(specified_attrs.get(label, no_show)))
+                        if label.startswith('bad_pixel_map'):
+                            this_map = str(specified_attrs.get(label, no_show))
+                            if not this_map.startswith('(') and \
+                               not this_map.startswith('['):
+                                this_map = str(read_pixel_map(this_map))
+                            corr_values.append(this_map)
+                        else:
+                            corr_values.append(\
+                                       str(specified_attrs.get(label, no_show)))
                     det_group.create_dataset('corr_values.1', data=corr_values,
                                              dtype=var_len_strs)
                     # Detector parameters
