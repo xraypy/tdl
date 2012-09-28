@@ -14,12 +14,10 @@ import time
 import numpy as Num
 
 from tdl.modules.sxrd.ctrfitcalcs import *
-from tdl.modules.sxrd.simplex import simplex
-from tdl.modules.sxrd.genetic_algorithm import genetic
+from tdl.modules.sxrd.simplex import simplex, statistics, single_param_sensitivities
 from tdl.modules.sxrd.pisurf_resonant import ResonantDataPanel
 from tdl.modules.sxrd.pisurf_resonant import read_RSD, read_f1f2 
 from tdl.modules.sxrd.pisurf_resonant import RASD_Fourier, write_rids
-from tdl.modules.sxrd.fourierframe import createfourierframe
 
 from tdl.modules.xtab.atomic import f0data as database
 ###############################################################################
@@ -105,11 +103,9 @@ class wxCtrFitFrame(wx.Frame):
             self.filename[0] = dlg.GetFilename()
             self.dirname[0] = dlg.GetDirectory()
             self.nb.data = read_data(self.dirname[0]+'/'+self.filename[0])
-            self.nb.MainControlPage.Rdata = calc_Rdata(self.nb.data)
             self.nb.MainControlPage.datafile.SetValue(self.filename[0])
             self.nb.MainControlPage.Rod_weight = []
             self.nb.MainControlPage.rodweight = []
-            self.nb.MainControlPage.rmsflaglog.SetValue(self.nb.MainControlPage.RMS_flag_log[self.nb.MainControlPage.RMS_flag]+self.nb.MainControlPage.Rdata[self.nb.MainControlPage.RMS_flag])
             if self.nb.bulk != []:
                 for x in self.nb.data:
                     x.calcFbulk(self.nb.cell, self.nb.bulk, self.nb.g_inv, database)
@@ -176,42 +172,47 @@ class wxCtrFitFrame(wx.Frame):
                         
             for i in range(len(self.nb.param_labels)):
 
-                control0_tmp = wx.StaticText(self.nb.ParameterPage, label = self.nb.param_labels[i], pos=(20, 23*(i+1)+25), size=(120, 20))
+                control0_tmp = wx.Button(self.nb.ParameterPage, 20000+i+7*len(self.nb.param_labels), label = self.nb.param_labels[i], pos=(20, 23*(i+1)+20), size=(120, 20))
                 self.nb.ParameterPage.control0.append(control0_tmp)
+                self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.clicklabel , self.nb.ParameterPage.control0[i])
                 
-                control1_tmp = wx.TextCtrl(self.nb.ParameterPage,2000+i, pos=(150, 23*(i+1)+20), size=(120,20))
+                control1_tmp = wx.TextCtrl(self.nb.ParameterPage,20000+i, pos=(150, 23*(i+1)+20), size=(120,20))
                 self.nb.ParameterPage.control1.append(control1_tmp)
                 self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparvalue, self.nb.ParameterPage.control1[i])
                 
-                control2_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+len(self.nb.param_labels), pos=(280, 23*(i+1)+20), size=(80,20)))
+                control2_tmp = (wx.TextCtrl(self.nb.ParameterPage,20000+i+len(self.nb.param_labels), pos=(370, 23*(i+1)+20), size=(80,20)))
                 self.nb.ParameterPage.control2.append(control2_tmp)
                 self.nb.ParameterPage.control2[i].SetValue(str(self.nb.parameter[self.nb.param_labels[i]][1]))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparmin, self.nb.ParameterPage.control2[i])
                 
-                control3_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+2*len(self.nb.param_labels), pos=(370, 23*(i+1)+20), size=(80,20)))
+                control3_tmp = (wx.TextCtrl(self.nb.ParameterPage,20000+i+2*len(self.nb.param_labels), pos=(460, 23*(i+1)+20), size=(80,20)))
                 self.nb.ParameterPage.control3.append(control3_tmp)
                 self.nb.ParameterPage.control3[i].SetValue(str(self.nb.parameter[self.nb.param_labels[i]][2]))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparmax, self.nb.ParameterPage.control3[i])
                                 
-                control4_tmp = (wx.CheckBox(self.nb.ParameterPage,2000+i+3*len(self.nb.param_labels), label = '', pos = (460, 23*(i+1)+25)))
+                control4_tmp = (wx.CheckBox(self.nb.ParameterPage,20000+i+3*len(self.nb.param_labels), label = '', pos = (550, 23*(i+1)+25)))
                 self.nb.ParameterPage.control4.append(control4_tmp)
                 self.nb.ParameterPage.control4[i].SetValue(self.nb.parameter[self.nb.param_labels[i]][3])
                 wx.EVT_CHECKBOX(self.nb.ParameterPage, self.nb.ParameterPage.control4[i].GetId(), self.nb.ParameterPage.editparstate)
 
-                control5_tmp = wx.Button(self.nb.ParameterPage, 2000+i+4*len(self.nb.param_labels), label = '<', pos = (520, 23*(i+1)+20), size = (20,20))
+                control5_tmp = wx.Button(self.nb.ParameterPage, 20000+i+4*len(self.nb.param_labels), label = '<', pos = (610, 23*(i+1)+20), size = (20,20))
                 self.nb.ParameterPage.control5.append(control5_tmp)
                 self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleminus , self.nb.ParameterPage.control5[i])
 
-                control6_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+5*len(self.nb.param_labels), pos=(550, 23*(i+1)+20), size=(50,20)))
+                control6_tmp = (wx.TextCtrl(self.nb.ParameterPage,20000+i+5*len(self.nb.param_labels), pos=(640, 23*(i+1)+20), size=(50,20)))
                 self.nb.ParameterPage.control6.append(control6_tmp)
                 self.nb.ParameterPage.control6[i].SetValue('0')
                 self.nb.ParameterPage.togglesteps.append(0)
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.togglestep, self.nb.ParameterPage.control6[i])
 
-                control7_tmp = wx.Button(self.nb.ParameterPage,2000+i+6*len(self.nb.param_labels), label = '>', pos = (610, 23*(i+1)+20), size = (20,20))
+                control7_tmp = wx.Button(self.nb.ParameterPage,20000+i+6*len(self.nb.param_labels), label = '>', pos = (700, 23*(i+1)+20), size = (20,20))
                 self.nb.ParameterPage.control7.append(control7_tmp)
                 self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleplus , self.nb.ParameterPage.control7[i])
+                
+                control8_tmp = wx.TextCtrl(self.nb.ParameterPage,20000+i+7*len(self.nb.param_labels), pos=(280, 23*(i+1)+20), size=(80,20))
+                self.nb.ParameterPage.control8.append(control8_tmp)
+                self.nb.ParameterPage.control8[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][4], 8)))
 
             self.nb.ParameterPage.SetScrollbars(0, 10, 0, int((len(self.nb.param_labels)+4)*2.3)+1)
             self.nb.SetSelection(0)
@@ -265,11 +266,9 @@ class wxCtrFitFrame(wx.Frame):
         if ok:
             #read data
             self.nb.data = read_data(self.dirname[0]+'/'+self.filename[0])
-            self.nb.MainControlPage.Rdata = calc_Rdata(self.nb.data)
             self.nb.MainControlPage.datafile.SetValue(self.filename[0])
             self.nb.MainControlPage.Rod_weight = []
             self.nb.MainControlPage.rodweight = []
-            self.nb.MainControlPage.rmsflaglog.SetValue(self.nb.MainControlPage.RMS_flag_log[self.nb.MainControlPage.RMS_flag]+self.nb.MainControlPage.Rdata[self.nb.MainControlPage.RMS_flag])
             for i in range(len(self.nb.data)):
                 wx.StaticText(self.nb.MainControlPage, label = (str(int(self.nb.data[i].H))+' '+str(int(self.nb.data[i].K))+' L'), pos=(350,25*i+67), size=(40,20))
                 self.nb.MainControlPage.rodweight.append(wx.TextCtrl(self.nb.MainControlPage,1000+i, pos=(400,25*i+65), size=(30,20)))
@@ -305,42 +304,47 @@ class wxCtrFitFrame(wx.Frame):
             self.nb.AddPage(self.nb.ParameterPage, " Parameters " )            
             for i in range(len(self.nb.param_labels)):
 
-                control0_tmp = wx.StaticText(self.nb.ParameterPage, label = self.nb.param_labels[i], pos=(20, 23*(i+1)+25), size=(120, 20))
+                control0_tmp = wx.Button(self.nb.ParameterPage, 20000+i+7*len(self.nb.param_labels), label = self.nb.param_labels[i], pos=(20, 23*(i+1)+20), size=(120, 20))
                 self.nb.ParameterPage.control0.append(control0_tmp)
+                self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.clicklabel , self.nb.ParameterPage.control0[i])
                 
-                control1_tmp = wx.TextCtrl(self.nb.ParameterPage,2000+i, pos=(150, 23*(i+1)+20), size=(120,20))
+                control1_tmp = wx.TextCtrl(self.nb.ParameterPage,20000+i, pos=(150, 23*(i+1)+20), size=(120,20))
                 self.nb.ParameterPage.control1.append(control1_tmp)
                 self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparvalue, self.nb.ParameterPage.control1[i])
                 
-                control2_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+len(self.nb.param_labels), pos=(280, 23*(i+1)+20), size=(80,20)))
+                control2_tmp = (wx.TextCtrl(self.nb.ParameterPage,20000+i+len(self.nb.param_labels), pos=(370, 23*(i+1)+20), size=(80,20)))
                 self.nb.ParameterPage.control2.append(control2_tmp)
                 self.nb.ParameterPage.control2[i].SetValue(str(self.nb.parameter[self.nb.param_labels[i]][1]))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparmin, self.nb.ParameterPage.control2[i])
                 
-                control3_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+2*len(self.nb.param_labels), pos=(370, 23*(i+1)+20), size=(80,20)))
+                control3_tmp = (wx.TextCtrl(self.nb.ParameterPage,20000+i+2*len(self.nb.param_labels), pos=(460, 23*(i+1)+20), size=(80,20)))
                 self.nb.ParameterPage.control3.append(control3_tmp)
                 self.nb.ParameterPage.control3[i].SetValue(str(self.nb.parameter[self.nb.param_labels[i]][2]))
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.editparmax, self.nb.ParameterPage.control3[i])
                                 
-                control4_tmp = (wx.CheckBox(self.nb.ParameterPage,2000+i+3*len(self.nb.param_labels), label = '', pos = (460, 23*(i+1)+25)))
+                control4_tmp = (wx.CheckBox(self.nb.ParameterPage,20000+i+3*len(self.nb.param_labels), label = '', pos = (550, 23*(i+1)+25)))
                 self.nb.ParameterPage.control4.append(control4_tmp)
                 self.nb.ParameterPage.control4[i].SetValue(self.nb.parameter[self.nb.param_labels[i]][3])
                 wx.EVT_CHECKBOX(self.nb.ParameterPage, self.nb.ParameterPage.control4[i].GetId(), self.nb.ParameterPage.editparstate)
 
-                control5_tmp = wx.Button(self.nb.ParameterPage, 2000+i+4*len(self.nb.param_labels), label = '<', pos = (520, 23*(i+1)+20), size = (20,20))
+                control5_tmp = wx.Button(self.nb.ParameterPage, 20000+i+4*len(self.nb.param_labels), label = '<', pos = (610, 23*(i+1)+20), size = (20,20))
                 self.nb.ParameterPage.control5.append(control5_tmp)
                 self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleminus , self.nb.ParameterPage.control5[i])
 
-                control6_tmp = (wx.TextCtrl(self.nb.ParameterPage,2000+i+5*len(self.nb.param_labels), pos=(550, 23*(i+1)+20), size=(50,20)))
+                control6_tmp = (wx.TextCtrl(self.nb.ParameterPage,20000+i+5*len(self.nb.param_labels), pos=(640, 23*(i+1)+20), size=(50,20)))
                 self.nb.ParameterPage.control6.append(control6_tmp)
                 self.nb.ParameterPage.control6[i].SetValue('0')
                 self.nb.ParameterPage.togglesteps.append(0)
                 self.Bind(wx.EVT_TEXT, self.nb.ParameterPage.togglestep, self.nb.ParameterPage.control6[i])
 
-                control7_tmp = wx.Button(self.nb.ParameterPage,2000+i+6*len(self.nb.param_labels), label = '>', pos = (610, 23*(i+1)+20), size = (20,20))
+                control7_tmp = wx.Button(self.nb.ParameterPage,20000+i+6*len(self.nb.param_labels), label = '>', pos = (700, 23*(i+1)+20), size = (20,20))
                 self.nb.ParameterPage.control7.append(control7_tmp)
                 self.Bind(wx.EVT_BUTTON, self.nb.ParameterPage.toggleplus , self.nb.ParameterPage.control7[i])
+                
+                control8_tmp = wx.TextCtrl(self.nb.ParameterPage,20000+i+7*len(self.nb.param_labels), pos=(280, 23*(i+1)+20), size=(80,20))
+                self.nb.ParameterPage.control8.append(control8_tmp)
+                self.nb.ParameterPage.control8[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][4], 8)))
 
             self.nb.ParameterPage.SetScrollbars(0, 10, 0, int((len(self.nb.param_labels)+4)*2.3)+1)
             #read rigid bodies
@@ -454,58 +458,54 @@ class wxCtrFitFrame(wx.Frame):
                                                         self.nb.MainControlPage.el, dirname, self)
 
             n = len(self.nb.ResonantDataPage.allrasd.list)
+            self.nb.ResonantDataPage.allrasd.RMS = 0
             for i in range(n):
                 self.nb.ResonantDataPage.allrasd.list[i] = RASD_Fourier(self.nb.ResonantDataPage.allrasd, i)
 
                 AR = self.nb.ResonantDataPage.allrasd.list[i].AR
+                dAR = self.nb.ResonantDataPage.allrasd.list[i].AR_err
                 PR = self.nb.ResonantDataPage.allrasd.list[i].PR
-
-                if AR < 0 and PR < 0 and PR > -0.5:
-                    PR = PR + 0.5
-                    AR = -AR
-                elif AR > 0 and PR < 0:
-                    PR = PR + 1
-                elif AR < 0 and PR > 0.5:
-                    AR = -AR
-                    PR = PR -0.5
-                elif AR < 0 and PR < 0.5 and PR > 0:
-                    AR = -AR
-                    PR = PR +0.5
-                if PR > 1: PR = PR -1
-                self.nb.ResonantDataPage.allrasd.list[i].AR = AR
-                self.nb.ResonantDataPage.allrasd.list[i].PR = PR
+                dPR = self.nb.ResonantDataPage.allrasd.list[i].PR_err
 
                 self.nb.ResonantDataPage.allrasd.RMS = self.nb.ResonantDataPage.allrasd.RMS + Num.sum(self.nb.ResonantDataPage.allrasd.list[i].delta_F)
                  
                 
-                control0_tmp = wx.Button(self.nb.ResonantDataPage, 3000+i, label = self.nb.ResonantDataPage.allrasd.list[i].file, pos = (290, 23*(i+1)+20), size = (120,20))
+                control0_tmp = wx.Button(self.nb.ResonantDataPage, 10000+i, label = self.nb.ResonantDataPage.allrasd.list[i].file, pos = (290, 23*(i+1)+20), size = (120,20))
                 self.nb.ResonantDataPage.datacontrol0.append(control0_tmp)
                 self.Bind(wx.EVT_BUTTON, self.nb.ResonantDataPage.ClickDataButton , self.nb.ResonantDataPage.datacontrol0[i])
 
-                control1_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+n, pos=(420, 23*(i+1)+20), size=(60,20), style = wx.TE_READONLY)
+                control1_tmp = wx.TextCtrl(self.nb.ResonantDataPage,10000+i+n, pos=(420, 23*(i+1)+20), size=(40,20), style = wx.TE_READONLY)
                 self.nb.ResonantDataPage.datacontrol1.append(control1_tmp)
                 self.nb.ResonantDataPage.datacontrol1[i].SetValue(str(round(AR, 3)))
 
-                control2_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+2*n, pos=(490, 23*(i+1)+20), size=(60,20))
+                control2_tmp = wx.TextCtrl(self.nb.ResonantDataPage,10000+i+2*n, pos=(462, 23*(i+1)+20), size=(40,20))
                 self.nb.ResonantDataPage.datacontrol2.append(control2_tmp)
-                self.nb.ResonantDataPage.datacontrol2[i].SetValue(str(round(PR, 3)))
-                self.Bind(wx.EVT_TEXT, self.nb.ResonantDataPage.editPR, self.nb.ResonantDataPage.datacontrol2[i])
+                self.nb.ResonantDataPage.datacontrol2[i].SetValue(str(round(dAR, 3)))
 
-                control4_tmp = wx.CheckBox(self.nb.ResonantDataPage,3000+i+4*n, label = '', pos = (560, 23*(i+1)+25))
+                control3_tmp = wx.TextCtrl(self.nb.ResonantDataPage,10000+i+3*n, pos = (515, 23*(i+1)+20), size=(40,20))
+                self.nb.ResonantDataPage.datacontrol3.append(control3_tmp)
+                self.nb.ResonantDataPage.datacontrol3[i].SetValue(str(round(PR, 3)))
+                self.Bind(wx.EVT_TEXT, self.nb.ResonantDataPage.editPR, self.nb.ResonantDataPage.datacontrol3[i])
+
+                control8_tmp = wx.TextCtrl(self.nb.ResonantDataPage,10000+i+8*n, pos = (557, 23*(i+1)+20), size=(40,20))
+                self.nb.ResonantDataPage.datacontrol8.append(control8_tmp)
+                self.nb.ResonantDataPage.datacontrol8[i].SetValue(str(round(dPR, 3)))
+
+                control4_tmp = wx.CheckBox(self.nb.ResonantDataPage,10000+i+4*n, label = '', pos = (610, 23*(i+1)+25))
                 self.nb.ResonantDataPage.datacontrol4.append(control4_tmp)
                 self.nb.ResonantDataPage.datacontrol4[i].SetValue(False)
                 wx.EVT_CHECKBOX(self.nb.ResonantDataPage, self.nb.ResonantDataPage.datacontrol4[i].GetId(), self.nb.ResonantDataPage.editUIF)
 
-                control5_tmp = wx.CheckBox(self.nb.ResonantDataPage,3000+i+5*n, label = '', pos = (590, 23*(i+1)+25))
+                control5_tmp = wx.CheckBox(self.nb.ResonantDataPage,10000+i+5*n, label = '', pos = (630, 23*(i+1)+25))
                 self.nb.ResonantDataPage.datacontrol5.append(control5_tmp)
                 self.nb.ResonantDataPage.datacontrol5[i].SetValue(False)
                 wx.EVT_CHECKBOX(self.nb.ResonantDataPage, self.nb.ResonantDataPage.datacontrol5[i].GetId(), self.nb.ResonantDataPage.editUIR)
 
-                control6_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+6*n, pos=(620, 23*(i+1)+20), size=(60,20), style = wx.TE_READONLY)
+                control6_tmp = wx.TextCtrl(self.nb.ResonantDataPage,10000+i+6*n, pos=(655, 23*(i+1)+20), size=(40,20), style = wx.TE_READONLY)
                 self.nb.ResonantDataPage.datacontrol6.append(control6_tmp)
                 self.nb.ResonantDataPage.datacontrol6[i].SetValue('')
 
-                control7_tmp = wx.TextCtrl(self.nb.ResonantDataPage,3000+i+7*n, pos=(690, 23*(i+1)+20), size=(60,20), style = wx.TE_READONLY)
+                control7_tmp = wx.TextCtrl(self.nb.ResonantDataPage,10000+i+7*n, pos=(700, 23*(i+1)+20), size=(40,20), style = wx.TE_READONLY)
                 self.nb.ResonantDataPage.datacontrol7.append(control7_tmp)
                 self.nb.ResonantDataPage.datacontrol7[i].SetValue('')
 
@@ -523,7 +523,15 @@ class wxCtrFitFrame(wx.Frame):
             filename = dlg.GetFilename()
             dirname = dlg.GetDirectory()
             os.chdir(dirname)
-            write_rids(self.nb.ResonantDataPage.allrasd, filename)
+            res_param_usage = []
+            res_surface = []
+            for i in range(len(self.nb.surface)):
+                if self.nb.surface[i][0] == self.nb.MainControlPage.el:
+                    res_surface.append(self.nb.surface[i])
+                    res_param_usage.append(self.nb.parameter_usage[i])
+                    
+            write_rids(self.nb.ResonantDataPage.allrasd, filename, self.nb.ResonantDataPage.Qmax, res_surface, self.nb.parameter, \
+                       res_param_usage, self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_lay_el)
         dlg.Destroy()
         
         
@@ -570,40 +578,26 @@ class MainControlPanel(wx.Panel):
         self.use_BVC = False
 
         self.Rod_weight = [] #List of Rod weights
-        self.param_best = {}
         self.RMS = -1
-        self.Rdata = ['','','','','']
         self.RMS_flag = 1
-        self.RMS_options = ['1','2','3','4']
-        self.RMS_flag_log = [' invalid R flag ',' R = norm. average of |log(F) - log(Fcalc)|, Rdata = ',' R = norm. average |F - Fcalc|, Rdata = ',' R = norm. Ferr weighted average of |F - Fcalc|, Rdata = ', ' R = norm. chi**2, Rdata = ']
         self.UBW_flag = False
         self.use_lay_el = False
         self.el = 'h'
-        
-        self.sim_an_params = [50, 20, 0.7, 10, 0.01, 500000, False]
-        self.simplex_params = [1.0,0.5,2.0,1.0,0.0001,0.001,10000, False]
-        self.genetic_params = [0.7,0.5,3.0,1000,0.5,10,0.001,0.0001, False]
 
-        self.opt_options = ['Simulated Annealing', 'Genetic Algorithm', 'Downhill Simplex']
-        self.opt_flag = 2
+        self.sensitivities = Num.array([])
+        self.correl_matrix = Num.array([])
+        self.fpc = 0.0001
+        self.used_params = ['None']
+        
+        self.simplex_params = [1.0,0.5,2.0,0.2,1e-6,10000, False]
+
         self.nb = self.GetParent()
-
-        self.xf = 1.
-        self.yf = 1.
-        self.zf = 3.
-        self.an = 10
-        self.bn = 10
-        self.cn = 60
-        self.zmin = 0.
-        self.flag = 0
-        self.DFMoptions = ['F_obs', 'F model', 'F_bulk', 'F obs - F model', 'F obs - F bulk']
-        self.fframe = None
-        
+       
         self.Figure1 = None
         self.Figure2 = None
         self.Figure3 = None
         self.StopFit = False
-
+        
         #Panel Headings
         wx.StaticText(self, label = 'File Information: ', pos=(20, 12), size=(100, 20))
         wx.StaticText(self, label = 'Data Information: ', pos=(290, 12), size=(100, 20))
@@ -612,10 +606,8 @@ class MainControlPanel(wx.Panel):
         wx.StaticLine(self, pos = (500,0), size = (5,650), style = wx.LI_VERTICAL)
         wx.StaticLine(self, pos = (0,265), size = (270,5), style = wx.LI_HORIZONTAL)
         wx.StaticLine(self, pos = (0,515), size = (270,5), style = wx.LI_HORIZONTAL)
-        wx.StaticLine(self, pos = (270,425), size = (230,5), style = wx.LI_HORIZONTAL)
-        wx.StaticLine(self, pos = (500,165), size = (285,5), style = wx.LI_HORIZONTAL)
-        wx.StaticLine(self, pos = (500,280), size = (285,5), style = wx.LI_HORIZONTAL)
-        wx.StaticLine(self, pos = (500,420), size = (285,5), style = wx.LI_HORIZONTAL)
+        wx.StaticLine(self, pos = (500,90), size = (285,5), style = wx.LI_HORIZONTAL)
+        wx.StaticLine(self, pos = (500,205), size = (285,5), style = wx.LI_HORIZONTAL)
         wx.StaticLine(self, pos = (500,560), size = (285,5), style = wx.LI_HORIZONTAL)
 
         wx.StaticText(self, label = 'Rods:', pos=(350,42), size=(40,20))
@@ -684,185 +676,64 @@ class MainControlPanel(wx.Panel):
         self.calc_BVS = wx.Button(self, label = 'calculate Bond Valence Sums', pos =(20,600), size =(230, 35))
         self.Bind(wx.EVT_BUTTON, self.on_calc_BVS, self.calc_BVS)
 
-        #Fourier Mapping
-        wx.StaticText(self, label = 'Fourier Maps:', pos=(290, 440), size=(160, 20))
-        wx.StaticText(self, label = 'cells in x', pos=(290, 467), size=(40, 20))
-        self.getxf = wx.TextCtrl(self, pos=(340,465), size=(40,20))
-        self.getxf.SetValue(str(self.xf))
-        self.Bind(wx.EVT_TEXT, self.setxf, self.getxf)
-
-        wx.StaticText(self, label = '         y', pos=(290, 492), size=(40, 20))
-        self.getyf = wx.TextCtrl(self, pos=(340,490), size=(40,20))
-        self.getyf.SetValue(str(self.yf))
-        self.Bind(wx.EVT_TEXT, self.setyf, self.getyf)
-
-        wx.StaticText(self, label = '         z', pos=(290, 517), size=(40, 20))
-        self.getzf = wx.TextCtrl(self, pos=(340,515), size=(40,20))
-        self.getzf.SetValue(str(self.zf))
-        self.Bind(wx.EVT_TEXT, self.setzf, self.getzf)
-
-        wx.StaticText(self, label = '      zmin', pos=(290, 542), size=(40, 20))
-        self.getzmin = wx.TextCtrl(self, pos=(340,540), size=(40,20))
-        self.getzmin.SetValue(str(self.zmin))
-        self.Bind(wx.EVT_TEXT, self.setzmin, self.getzmin)
-
-        wx.StaticText(self, label = 'pixels in x', pos=(390, 467), size=(50, 20))
-        self.getan = wx.TextCtrl(self, pos=(450,465), size=(40,20))
-        self.getan.SetValue(str(self.an))
-        self.Bind(wx.EVT_TEXT, self.setan, self.getan)
-
-        wx.StaticText(self, label = '          y', pos=(390, 492), size=(50, 20))
-        self.getbn = wx.TextCtrl(self, pos=(450,490), size=(40,20))
-        self.getbn.SetValue(str(self.bn))
-        self.Bind(wx.EVT_TEXT, self.setbn, self.getbn)
-
-        wx.StaticText(self, label = '          z', pos=(390, 517), size=(50, 20))
-        self.getcn = wx.TextCtrl(self, pos=(450,515), size=(40,20))
-        self.getcn.SetValue(str(self.cn))
-        self.Bind(wx.EVT_TEXT, self.setcn, self.getcn)
-
-        self.DFMchoice = wx.ComboBox(self,-1, value=self.DFMoptions[self.flag],\
-                                     pos=(340,570),size=(150,20),\
-                                     choices=self.DFMoptions,style=wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.SelectDFM,self.DFMchoice)
-
-        self.DFMButton1 = wx.Button(self, label = 'Fourier Synthesis', pos =(290,600), size=(200,35))
-        self.Bind(wx.EVT_BUTTON, self.OnClickDFM1, self.DFMButton1)
-
-        # Fitting options, choose optimization method
-        self.opt_choice = wx.ComboBox(self,-1, value=self.opt_options[self.opt_flag],\
-                                     pos=(520,35),size=(240,20),\
-                                     choices=self.opt_options,style=wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.Select_opt,self.opt_choice)
-        
-        #Fitting option use bulk water
-        self.douse_bulk_water = wx.CheckBox(self, label = '  use bulk water', pos = (520, 65))
+        #Fitting option use bulk water #########################################################################
+        self.douse_bulk_water = wx.CheckBox(self, label = '  use bulk water', pos = (520, 40))
         self.douse_bulk_water.SetValue(False)
         wx.EVT_CHECKBOX(self, self.douse_bulk_water.GetId(), self.set_bulk_water)
 
         #Fitting option use random start parameters 
-        self.random_pars = wx.CheckBox(self, label = '  start Fit with random parameters', pos = (520, 90))
+        self.random_pars = wx.CheckBox(self, label = '  start Fit with random parameters', pos = (520, 65))
         self.random_pars.SetValue(False)
         wx.EVT_CHECKBOX(self, self.random_pars.GetId(), self.setrandom_pars)
-        
-        # R-flags
-        wx.StaticText(self, label = 'R flag', pos=(520, 117), size=(140, 20))
-        self.getrmsflag = wx.ComboBox(self,-1, value=self.RMS_options[self.RMS_flag-1],\
-                                     pos=(700, 115), size=(60,20),\
-                                     choices=self.RMS_options,style=wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.setrmsflag, self.getrmsflag)
-        self.rmsflaglog = wx.TextCtrl(self, pos=(520, 140), size=(240,20), style = wx.TE_READONLY)
-        self.rmsflaglog.SetValue(self.RMS_flag_log[self.RMS_flag]+self.Rdata[self.RMS_flag])
-
-        #Simulated annealing parameters and options
-        wx.StaticText(self, label = 'Simulated Annealing Parameters:  ', pos=(520, 182), size=(240, 20))
-
-        wx.StaticText(self, label = 'T start ', pos=(520, 207), size=(40, 20))
-        self.Tstart = wx.TextCtrl(self, pos=(570,205), size=(60,20))
-        self.Tstart.SetValue(str(self.sim_an_params[0]))
-        self.Bind(wx.EVT_TEXT, self.setTstart, self.Tstart)
-
-        wx.StaticText(self, label = 'T end ', pos=(640, 207), size=(50, 20))
-        self.Tend = wx.TextCtrl(self, pos=(700,205), size=(60,20))
-        self.Tend.SetValue(str(self.sim_an_params[1]))
-        self.Bind(wx.EVT_TEXT, self.setTend, self.Tend)
-
-        wx.StaticText(self, label = 'cooling ', pos=(520, 232), size=(40, 20))
-        self.cool = wx.TextCtrl(self, pos=(570,230), size=(60,20))
-        self.cool.SetValue(str(self.sim_an_params[2]))
-        self.Bind(wx.EVT_TEXT, self.setcool, self.cool)
-
-        wx.StaticText(self, label = 'iter/T ', pos=(640, 232), size=(50, 20))
-        self.iter = wx.TextCtrl(self, pos=(700,230), size=(60,20))
-        self.iter.SetValue(str(self.sim_an_params[3]))
-        self.Bind(wx.EVT_TEXT, self.setiter, self.iter)
-
-        wx.StaticText(self, label = 'Boltzmann ', pos=(640, 257), size=(50, 20))
-        self.Boltz = wx.TextCtrl(self, pos=(700,255), size=(60,20))
-        self.Boltz.SetValue(str(self.sim_an_params[5]))
-        self.Bind(wx.EVT_TEXT, self.setBoltz, self.Boltz)
-        
-        #### Genetic algorithm parameters and options #################################### 
-        wx.StaticText(self, label = 'Genetic Algorithm Parameters:  ', pos=(520, 295), size=(200, 20))
-
-        wx.StaticText(self, label = 'mutate', pos=(520, 322), size=(40, 20))
-        self.km = wx.TextCtrl(self, pos=(570,320), size=(60,20))
-        self.km.SetValue(str(self.genetic_params[0]))
-        self.Bind(wx.EVT_TEXT, self.setkm, self.km)
-
-        wx.StaticText(self, label = 'crossover', pos=(640, 322), size=(50, 20))
-        self.kc = wx.TextCtrl(self, pos=(700,320), size=(60,20))
-        self.kc.SetValue(str(self.genetic_params[1]))
-        self.Bind(wx.EVT_TEXT, self.setkc, self.kc)
-
-        wx.StaticText(self, label = 'jump', pos=(520, 347), size=(40, 20))
-        self.jump = wx.TextCtrl(self, pos=(570,345), size=(60,20))
-        self.jump.SetValue(str(self.genetic_params[4]))
-        self.Bind(wx.EVT_TEXT, self.setjump, self.jump)
-
-        wx.StaticText(self, label = 'popmult', pos=(640, 347), size=(50, 20))
-        self.popmult = wx.TextCtrl(self, pos=(700,345), size=(60,20))
-        self.popmult.SetValue(str(self.genetic_params[2]))
-        self.Bind(wx.EVT_TEXT, self.setpopmult, self.popmult)
-
-        wx.StaticText(self, label = 'Ftol', pos=(520, 372), size=(40, 20))
-        self.genftol = wx.TextCtrl(self, pos=(570,370), size=(60,20))
-        self.genftol.SetValue(str(self.genetic_params[7]))
-        self.Bind(wx.EVT_TEXT, self.setgenftol, self.genftol)
-
-        wx.StaticText(self, label = 'Xtol', pos=(640, 372), size=(50, 20))
-        self.genxtol = wx.TextCtrl(self, pos=(700,370), size=(60,20))
-        self.genxtol.SetValue(str(self.genetic_params[6]))
-        self.Bind(wx.EVT_TEXT, self.setgenxtol, self.genxtol)
-
-        wx.StaticText(self, label = 'stagn.', pos=(520, 397), size=(40, 20))
-        self.stagnate = wx.TextCtrl(self, pos=(570,395), size=(60,20))
-        self.stagnate.SetValue(str(self.genetic_params[5]))
-        self.Bind(wx.EVT_TEXT, self.setstagnate, self.stagnate)
-
-        wx.StaticText(self, label = 'maxgen', pos=(640, 397), size=(50, 20))
-        self.maxgen = wx.TextCtrl(self, pos=(700,395), size=(60,20))
-        self.maxgen.SetValue(str(self.genetic_params[3]))
-        self.Bind(wx.EVT_TEXT, self.setmaxgen, self.maxgen)
-        
+       
         #### Downhill Simplex parameters and options #################################### 
-        wx.StaticText(self, label = 'Downhill Simplex Parameters:  ', pos=(520, 435), size=(200, 20))
+        wx.StaticText(self, label = 'Simplex Parameters:  ', pos=(520, 105), size=(200, 20))
 
-        wx.StaticText(self, label = 'alpha:    ', pos=(520, 462), size=(40, 20))
-        self.alpha = wx.TextCtrl(self, pos=(570,460), size=(60,20))
+        wx.StaticText(self, label = 'alpha:    ', pos=(520, 132), size=(40, 20))
+        self.alpha = wx.TextCtrl(self, pos=(570,130), size=(60,20))
         self.alpha.SetValue(str(self.simplex_params[0]))
         self.Bind(wx.EVT_TEXT, self.setalpha, self.alpha)
 
-        wx.StaticText(self, label = 'beta:    ', pos=(640, 462), size=(50, 20))
-        self.beta = wx.TextCtrl(self, pos=(700,460), size=(60,20))
+        wx.StaticText(self, label = 'beta:    ', pos=(640, 132), size=(50, 20))
+        self.beta = wx.TextCtrl(self, pos=(700,130), size=(60,20))
         self.beta.SetValue(str(self.simplex_params[1]))
         self.Bind(wx.EVT_TEXT, self.setbeta, self.beta)
 
-        wx.StaticText(self, label = 'gamma:    ', pos=(520, 487), size=(40, 20))
-        self.gamma = wx.TextCtrl(self, pos=(570,485), size=(60,20))
+        wx.StaticText(self, label = 'gamma:    ', pos=(520, 157), size=(40, 20))
+        self.gamma = wx.TextCtrl(self, pos=(570,155), size=(60,20))
         self.gamma.SetValue(str(self.simplex_params[2]))
         self.Bind(wx.EVT_TEXT, self.setgamma, self.gamma)
 
-        wx.StaticText(self, label = 'delta:    ', pos=(640, 487), size=(50, 20))
-        self.delta = wx.TextCtrl(self, pos=(700,485), size=(60,20))
+        wx.StaticText(self, label = 'delta:    ', pos=(640, 157), size=(50, 20))
+        self.delta = wx.TextCtrl(self, pos=(700,155), size=(60,20))
         self.delta.SetValue(str(self.simplex_params[3]))
         self.Bind(wx.EVT_TEXT, self.setdelta, self.delta)
 
-        wx.StaticText(self, label = 'Ftol:    ', pos=(520, 512), size=(40, 20))
-        self.ftol = wx.TextCtrl(self, pos=(570,510), size=(60,20))
+        wx.StaticText(self, label = 'Ftol:    ', pos=(520, 182), size=(40, 20))
+        self.ftol = wx.TextCtrl(self, pos=(570,180), size=(60,20))
         self.ftol.SetValue(str(self.simplex_params[4]))
         self.Bind(wx.EVT_TEXT, self.setftol, self.ftol)
 
-        wx.StaticText(self, label = 'Xtol:    ', pos=(640, 512), size=(50, 20))
-        self.xtol = wx.TextCtrl(self, pos=(700,510), size=(60,20))
-        self.xtol.SetValue(str(self.simplex_params[5]))
-        self.Bind(wx.EVT_TEXT, self.setxtol, self.xtol)
-
-        wx.StaticText(self, label = 'maxiter:    ', pos=(640, 537), size=(50, 20))
-        self.maxiter = wx.TextCtrl(self, pos=(700,535), size=(60,20))
-        self.maxiter.SetValue(str(self.simplex_params[6]))
+        wx.StaticText(self, label = 'maxiter:    ', pos=(640, 182), size=(50, 20))
+        self.maxiter = wx.TextCtrl(self, pos=(700,180), size=(60,20))
+        self.maxiter.SetValue(str(self.simplex_params[5]))
         self.Bind(wx.EVT_TEXT, self.setmaxiter, self.maxiter)
+        
+        ################### statistics input ###################################################
+        wx.StaticText(self, label = 'Parameter Statistics:  ', pos=(520, 220), size=(200, 20))
 
+        wx.StaticText(self, label = 'fract. param. change: ', pos=(520, 247), size=(110, 20))
+        self.fpc_control = wx.TextCtrl(self, pos=(700,245), size=(60,20))
+        self.fpc_control.SetValue(str(self.fpc))
+        self.Bind(wx.EVT_TEXT, self.setfpc, self.fpc_control)
+
+        self.statisticsbutton = wx.Button(self, label = 'calculate parameter statistics', pos =(520,270), size=(240,25))
+        self.Bind(wx.EVT_BUTTON, self.OnClickStatistics, self.statisticsbutton)
+
+        self.getparam = wx.ComboBox(self,-1, value=self.used_params[-1],\
+                                     pos=(640, 305), size=(120,20),\
+                                     choices=self.used_params,style=wx.CB_READONLY)
+        self.Bind(wx.EVT_COMBOBOX, self.setparam, self.getparam)
         
         # Start and Stop Fit ###################################################################
         self.Startfitbutton = wx.Button(self, label = 'Start Fit', pos =(520,575), size=(170,60))
@@ -924,267 +795,12 @@ class MainControlPanel(wx.Panel):
             for j in range(len(dist)):
                 print str(round(dist[j],5))
             print '\n'
-    ###########################Differenz Fourier Map param setting and execution##########################################
-    def setxf(self,e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0 and value <=1:
-                self.xf = value
-            else:
-                print 'the fractional cell size in x direction should be 1/dH_min (>0 and <1)'
-        except ValueError:
-            pass
-    def setyf(self,e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0 and value <=1:
-                self.yf = value
-            else:
-                print 'the fractional cell size in y direction should be 1/dK_min (>0 and <1)'
-        except ValueError:
-            pass
-    def setzf(self,e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0:
-                self.zf = value
-            else:
-                print 'the fractional cell size in z direction should be > 0 (~1/dL)'
-        except ValueError:
-            pass
-    def setzmin(self,e):
-        a = e.GetString()
-        try:
-            self.zmin = float(a)
-        except ValueError:
-            pass
-    def setan(self,e):
-        a = e.GetString()
-        try:
-            value = int(a)
-            if value > 0:
-                self.an = value
-            else:
-                print 'an must be >=1 '
-        except ValueError:
-            pass
-    def setbn(self,e):
-        a = e.GetString()
-        try:
-            value = int(a)
-            if value > 0:
-                self.bn = value
-            else:
-                print 'bn must be >=1 '
-        except ValueError:
-            pass
-    def setcn(self,e):
-        a = e.GetString()
-        try:
-            value = int(a)
-            if value > 0:
-                self.cn = value
-            else:
-                print 'cn must be >=1 '
-        except ValueError:
-            pass
-    def SelectDFM(self,e):
-        self.flag = e.GetSelection()
-    def OnClickDFM1(self,e):
-        self.nb.frame.SetStatusText('Preparing Fourier Components')
-        if self.flag==0:
-            F_u = None
-            F_k = create_F_obs(self.nb.data,self.nb.surface,self.nb.g_inv,\
-                                 self.nb.cell,self.nb.runningDB,\
-                                 self.nb.parameter,self.nb.parameter_usage,\
-                                 self.nb.rigid_bodies,self.UBW_flag,\
-                                 self.nb.MainControlPage.use_lay_el,\
-                                 self.nb.NLayers)
-        if self.flag==1:
-            F_u = None
-            F_k = create_F_model(self.nb.data,self.nb.surface,self.nb.g_inv,\
-                                 self.nb.cell,self.nb.runningDB,\
-                                 self.nb.parameter,self.nb.parameter_usage,\
-                                 self.nb.rigid_bodies,self.UBW_flag,\
-                                 self.nb.MainControlPage.use_lay_el)
-        elif self.flag==2:
-            F_u = None
-            F_k= create_F_bulk(self.nb.data)
-            
-        elif self.flag==3:
-            F_u = create_F_data(self.nb.data)
-            F_k = create_F_model(self.nb.data,self.nb.surface,self.nb.g_inv,\
-                                 self.nb.cell,self.nb.runningDB,\
-                                 self.nb.parameter,self.nb.parameter_usage,\
-                                 self.nb.rigid_bodies,self.UBW_flag,\
-                                 self.nb.MainControlPage.use_lay_el)
-        elif self.flag==4:
-            F_u = create_F_data(self.nb.data)
-            F_k= create_F_bulk(self.nb.data)
-        
-        self.nb.frame.SetStatusText('Performing Fourier Synthesis')
-        rho, Fcell = fdiff2rho(F_k,F_u,self.nb.cell,self.xf,self.yf,\
-                               self.zf,self.an,self.bn,self.cn,self.zmin,self.flag,\
-                               self)        
-        if self.fframe != None:
-            self.fframe.Close()
-            self.fframe = None
-        self.fframe = createfourierframe(self,rho,Fcell,\
-                                         self.zmin*self.nb.cell[2])
-        self.fframe.Show(True)
-        self.nb.frame.SetStatusText('Done, have a nice day!')
-        
-    ################################# Fitting options event functions #########################################
-    def Select_opt(self, e):
-        self.opt_flag = e.GetSelection()
-        
+    ################################# Fitting options event functions #########################################       
     def setrandom_pars(self,e):
-        self.sim_an_params[6] = self.random_pars.GetValue()
-        self.simplex_params[7] = self.random_pars.GetValue()
-        self.genetic_params[8] = self.random_pars.GetValue()      
+        self.simplex_params[6] = self.random_pars.GetValue()    
         
     def set_bulk_water(self,event):
         self.UBW_flag = self.douse_bulk_water.GetValue()
-
-    def setrmsflag(self,event):
-        self.RMS_flag = event.GetSelection()+1
-        self.rmsflaglog.SetValue(self.RMS_flag_log[self.RMS_flag]+self.Rdata[self.RMS_flag])
-                                     
-    ################################# Simulated Annealing options event functions #########################################
-    def setTstart(self,event):
-        a = event.GetString()
-        try:
-            value = float(a)
-            if value > self.sim_an_params[1]:
-                self.sim_an_params[0] = value
-            else:
-                print 'T start should be > T end'
-        except ValueError:
-            pass    
-    def setTend(self,event):
-        a = event.GetString()
-        try:
-            value = float(a)
-            if value < self.sim_an_params[0]:
-                self.sim_an_params[1] = value
-            else:
-                print 'T end should be < T start'
-        except ValueError:
-            pass        
-    def setcool(self,event):
-        a = event.GetString()
-        try:
-            value = float(a)
-            if value > 0 and value < 1:
-                self.sim_an_params[2] = value
-            else:
-                print 'the cooling factor should be between 0 and 1'
-        except ValueError:
-            pass   
-    def setiter(self,event):
-        a = event.GetString()
-        try:
-            value = int(a)
-            if value > 0:
-                self.sim_an_params[3] = value
-            else:
-                print 'you must allow at least one iteration at each Temperature'
-        except ValueError:
-            pass   
-    def setBoltz(self,event):
-        a = event.GetString()
-        try:
-            value = float(a)
-            if value > 1000:
-                self.sim_an_params[5] = value
-            else:
-                print 'the Boltzmann weight should be > 1000'
-        except ValueError:
-            pass  
-    ###########################################################################################
-    def setkc(self, e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0 and value <=1:
-                self.genetic_params[1] = value
-            else:
-                print 'the crossover probability should be between 0 and 1'
-        except ValueError:
-            pass
-    def setkm(self, e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0 and value <=1:
-                self.genetic_params[0] = value
-            else:
-                print 'the muataion probability should be between 0 and 1'
-        except ValueError:
-            pass
-    def setjump(self, e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0 and value <=1:
-                self.genetic_params[4] = value
-            else:
-                print 'the maximum fractional mutation JUMP should be between 0 and 1'
-        except ValueError:
-            pass
-    def setpopmult(self, e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value >= 1:
-                self.genetic_params[2] = value
-            else:
-                print 'popmult should be > 1'
-        except ValueError:
-            pass
-    def setgenftol(self, e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0:
-                self.genetic_params[7] = value
-            else:
-                print 'Ftol must be > 0'
-        except ValueError:
-            pass
-    def setgenxtol(self, e):
-        a = e.GetString()
-        try:
-            value = float(a)
-            if value > 0:
-                self.genetic_params[6] = value
-            else:
-                print 'Xtol must be > 0'
-        except ValueError:
-            pass
-    def setstagnate(self, e):
-        a = e.GetString()
-        try:
-            value = int(a)
-            if value >= 2:
-                self.genetic_params[5] = value
-            else:
-                print 'stagnate must be >= 2'
-        except ValueError:
-            pass
-    def setmaxgen(self, e):
-        a = e.GetString()
-        try:
-            value = int(a)
-            if value >= 1:
-                self.genetic_params[3] = value
-            else:
-                print 'maxgen must be >= 1'
-        except ValueError:
-            pass
     ################################# Simplex options event functions #########################################
     def setalpha(self,event):
         try:
@@ -1231,62 +847,101 @@ class MainControlPanel(wx.Panel):
                 self.simplex_params[4] = a
         except ValueError:
             pass
-    def setxtol(self,event):
-        try:
-            a = float(event.GetString())
-            if a <= 0:
-                print 'xtol must be > 0'
-            else:
-                self.simplex_params[5] = a
-        except ValueError:
-            pass
     def setmaxiter(self,event):
         try:
             a = int(event.GetString())
             if a <= 0:
                 print 'maxiter must be > 0'
             else:
-                self.simplex_params[6] = a
+                self.simplex_params[5] = a
         except ValueError:
             pass
+    ##############################################################################
+    def setparam(self, event):
+        param = event.GetSelection()
+        sens = self.sensitivities[param]
+        parameter = self.used_params[param]
+        dp = self.nb.parameter[parameter][4]
+        self.Figure1 = plot_sens(self.Figure1,self.nb.data, self.plotdims, dp, sens, parameter)
+        self.Figure1.canvas.draw()
+        pass
+    def setfpc(self, event):
+        try:
+            a = float(event.GetString())
+            if a <= 0 or a > 0.1:
+                print 'fpc must be > 0 and <= 0.1'
+            else:
+                self.fpc = a
+        except ValueError:
+            pass
+    ################################################################################################################################
+    def OnClickStatistics(self,e):
+        self.nb.frame.SetStatusText(' computing parameter statistics ', 0)
+        self.nb.parameter, self.sensitivities, self.correl_matrix, self.used_params, self.RMS = statistics(self.fpc,self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell,self.nb.surface,\
+                                                                               self.nb.NLayers, self.nb.runningDB, self.nb.g_inv, self.Rod_weight, self.nb.rigid_bodies,\
+                                                                               self.UBW_flag,self.use_BVC, self.BVclusters, self.RMS_flag, self.use_lay_el, self.el)
+        
+        for i in range(len(self.nb.param_labels)):
+            self.nb.ParameterPage.control8[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][4], 8)))
+        if len(self.used_params) > 0:
+            self.getparam.Clear()
+            self.getparam.AppendItems(self.used_params)
+            self.getparam.SetSelection(0)
+        if self.correl_matrix[0][0] != 0:
+            b = len(self.correl_matrix)
+            print '\nParameter Correlations: \n'
+            print '\nParameter Correlations between 0.95 and 1.00: \n'
+            n = 0
+            for i in range(b):
+                for j in range(b):
+                    if j > i:
+                        if self.correl_matrix[i][j] >= 0.95 and self.correl_matrix[i][j] <= 1.0:
+                            n = n+1
+                            print self.used_params[i] + ' & ' + self.used_params[j] + ': ' + str(round(self.correl_matrix[i][j],5))
+            if n == 0: print 'None \n'
+            else: print '\n'
+            n = 0
+            print '\nParameter Correlations between 0.8 and 0.95: \n'
+            for i in range(b):
+                for j in range(b):
+                    if j > i:
+                        if self.correl_matrix[i][j] >= 0.8 and self.correl_matrix[i][j] < 0.95:
+                            n = n+1
+                            print self.used_params[i] + ' & ' + self.used_params[j] + ': ' + str(round(self.correl_matrix[i][j],5))
+            if n == 0: print 'None \n'
+            else: print '\n'
+            n = 0
+            print '\nParameter Correlations between 0.5 and 0.8: \n'
+            for i in range(b):
+                for j in range(b):
+                    if j > i:
+                        if self.correl_matrix[i][j] >= 0.5 and self.correl_matrix[i][j] < 0.5:
+                            n = n+1
+                            print self.used_params[i] + ' & ' + self.used_params[j] + ': ' + str(round(self.correl_matrix[i][j],5))
+            if n == 0: print 'None \n'
+            else: print '\n'
+        self.nb.frame.SetStatusText(' statistics calculation finished, chi**2 = '+str(round(self.RMS,3)), 0)
+        pass
+    
     ################################################################################################################################
     def OnClickStartFit(self,e):
         flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.UBW_flag, self.use_lay_el)
         if flag:
-            self.param_best = {}
             self.RMS = -1
             self.StopFit = False
-            if self.opt_flag == 0:
-                self.nb.data, self.param_best, self.RMS = simulated_annealing(self.nb.data, self.nb.cell, self.nb.NLayers, self.nb.surface,\
-                                                                          self.nb.runningDB, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self)
-                while wx.GetApp().Pending():
-                    wx.GetApp().Dispatch()
-                    wx.GetApp().Yield(True)
-            elif self.opt_flag == 1:
-                self.nb.data, self.param_best, self.RMS = genetic(self, self.nb.data, self.nb.cell, self.nb.surface, self.nb.NLayers, self.nb.runningDB,\
-                                                                  self.nb.rigid_bodies, self.nb.parameter, self.nb.parameter_usage)
-                while wx.GetApp().Pending():
-                    wx.GetApp().Dispatch()
-                    wx.GetApp().Yield(True)
-            elif self.opt_flag == 2:
-                self.nb.data, self.param_best, self.RMS = simplex(self.nb.frame,self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.surface, \
+            self.nb.data, self.nb.parameter, self.RMS = simplex(self.nb.frame,self.nb.parameter, self.nb.parameter_usage, self.nb.data, self.nb.cell, self.nb.surface, \
                                         self.nb.NLayers, self.nb.runningDB, self.nb.rigid_bodies, self)
-                while wx.GetApp().Pending():
-                    wx.GetApp().Dispatch()
-                    wx.GetApp().Yield(True)
+            while wx.GetApp().Pending():
+                wx.GetApp().Dispatch()
+                wx.GetApp().Yield(True)
             self.Figure1 = plot_rods(self.Figure1,self.nb.data, self.plotdims, self.doplotbulk, self.doplotsurf, self.doplotrough, self.doplotwater, self.RMS)
             self.Figure1.canvas.draw()
             check_vibes(self.nb.surface,self.nb.parameter, self.nb.parameter_usage)
-            dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
-            if dlg.ShowModal() == wx.ID_YES:
-                for i in range(len(self.nb.param_labels)):
-                    self.nb.parameter[self.nb.param_labels[i]][0] = self.param_best[self.nb.param_labels[i]][0]
-                    self.nb.ParameterPage.control1[i].SetValue(str(round(self.param_best[self.nb.param_labels[i]][0], 12)))
-            dlg.Destroy()
+            for i in range(len(self.nb.param_labels)):
+                self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
             self.nb.SetSelection(2)
     def OnClickStopFit(self,e):
-        self.StopFit = True
-
+        self.StopFit = True   
 ##########################################################################################################################
 class ParameterPanel(wx.ScrolledWindow):
     def __init__(self,parent):
@@ -1300,17 +955,19 @@ class ParameterPanel(wx.ScrolledWindow):
         self.control5 = []
         self.control6 = []
         self.control7 = []
+        self.control8 = []
         self.togglesteps = []
 
         wx.StaticText(self, label = 'value', pos=(170, 10), size=(100, 20))
-        wx.StaticText(self, label = 'min', pos=(300, 10), size=(70, 20))
-        wx.StaticText(self, label = 'max', pos=(390, 10), size=(70, 20))
-        wx.StaticText(self, label = 'refine', pos=(455, 10), size=(60, 15))
-        wx.StaticText(self, label = ' - ', pos=(525, 10), size=(20, 20))
-        wx.StaticText(self, label = ' step ', pos=(560, 10), size=(40, 20))
-        wx.StaticText(self, label = ' + ', pos=(615, 10), size=(20, 20))
+        wx.StaticText(self, label = 'std.-dev.', pos=(290, 10), size=(100, 20))
+        wx.StaticText(self, label = 'min', pos=(390, 10), size=(70, 20))
+        wx.StaticText(self, label = 'max', pos=(480, 10), size=(70, 20))
+        wx.StaticText(self, label = 'refine', pos=(545, 10), size=(60, 15))
+        wx.StaticText(self, label = ' - ', pos=(615, 10), size=(20, 20))
+        wx.StaticText(self, label = ' step ', pos=(660, 10), size=(40, 20))
+        wx.StaticText(self, label = ' + ', pos=(705, 10), size=(20, 20))
 
-        self.uncheckbutton = wx.Button(self, label = 'u', pos =(459,25), size=(15,15))
+        self.uncheckbutton = wx.Button(self, label = 'u', pos =(549,25), size=(15,15))
         self.Bind(wx.EVT_BUTTON, self.uncheck, self.uncheckbutton)
         
         self.nb = self.GetParent()
@@ -1320,29 +977,45 @@ class ParameterPanel(wx.ScrolledWindow):
             self.nb.parameter[self.nb.param_labels[i]][3] = False
             self.control4[i].SetValue(False)
 
+    def clicklabel(self, e):
+        item = e.GetId()-7*len(self.nb.param_labels)-20000
+        param_label = self.nb.param_labels[item]
+        sensitivities, dp = single_param_sensitivities(param_label, self.nb.MainControlPage.fpc, self.nb.parameter,self.nb.parameter_usage, \
+                                                    self.nb.data, self.nb.cell, self.nb.surface, self.nb.NLayers, self.nb.runningDB,\
+                                                    self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
+                                                    self.nb.MainControlPage.UBW_flag,self.nb.MainControlPage.use_BVC, \
+                                                    self.nb.MainControlPage.BVclusters, self.nb.MainControlPage.RMS_flag, \
+                                                    self.nb.MainControlPage.use_lay_el, self.nb.MainControlPage.el)
+        self.nb.parameter[self.nb.param_labels[item]][4] = dp
+        self.control8[item].SetValue(str(round(self.nb.parameter[self.nb.param_labels[item]][4],8)))
+        self.nb.MainControlPage.Figure1 = plot_sens(self.nb.MainControlPage.Figure1,self.nb.data, self.nb.MainControlPage.plotdims, \
+                                                    dp, sensitivities, param_label)
+        self.nb.MainControlPage.Figure1.canvas.draw()
+
+
     def editparvalue(self,event):
-        item = event.GetId()-2000
+        item = event.GetId()-20000
         try:
             self.nb.parameter[self.nb.param_labels[item]][0] = float(event.GetString())
         except ValueError:
             pass        
     def editparmin(self,event):
-        item = event.GetId()-len(self.nb.param_labels)-2000
+        item = event.GetId()-len(self.nb.param_labels)-20000
         try:
             self.nb.parameter[self.nb.param_labels[item]][1] = float(event.GetString())
         except ValueError:
             pass        
     def editparmax(self,event):
-        item = event.GetId()-2*len(self.nb.param_labels)-2000
+        item = event.GetId()-2*len(self.nb.param_labels)-20000
         try:
             self.nb.parameter[self.nb.param_labels[item]][2] = float(event.GetString())
         except ValueError:
             pass        
     def editparstate(self,event):
-        item = event.GetId()- 3*len(self.nb.param_labels)-2000
+        item = event.GetId()- 3*len(self.nb.param_labels)-20000
         self.nb.parameter[self.nb.param_labels[item]][3] = self.control4[item].GetValue()
     def toggleminus(self, event):
-        item = event.GetId()-4*len(self.nb.param_labels)-2000
+        item = event.GetId()-4*len(self.nb.param_labels)-20000
         step = self.togglesteps[item]
         self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] - step
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
@@ -1357,13 +1030,13 @@ class ParameterPanel(wx.ScrolledWindow):
         self.nb.MainControlPage.Figure2.canvas.draw()
         check_vibes(self.nb.surface,self.nb.parameter, self.nb.parameter_usage)
     def togglestep(self,event):
-        item = event.GetId()-5*len(self.nb.param_labels)-2000
+        item = event.GetId()-5*len(self.nb.param_labels)-20000
         try:
             self.togglesteps[item] = float(event.GetString())
         except ValueError:
             pass
     def toggleplus(self, event):
-        item = event.GetId()-6*len(self.nb.param_labels)-2000
+        item = event.GetId()-6*len(self.nb.param_labels)-20000
         step = self.togglesteps[item]
         self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] + step
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
@@ -1380,6 +1053,5 @@ class ParameterPanel(wx.ScrolledWindow):
 ############################################################################################################
 ############################################################################################################
 def start():
-    frame = wxCtrFitFrame(parent = None, title = u"\u03c0-surf,  Python Interface StrUcture ReFinement", size = (800,750))
-
+    frame = wxCtrFitFrame(parent = None, title = "Python Interface Structure Refinement", size = (800,750))
 

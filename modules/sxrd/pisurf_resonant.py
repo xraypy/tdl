@@ -13,7 +13,7 @@ from pylab import *
 import wx
 
 from tdl.modules.sxrd.ctrfitcalcs import param_unfold,RB_update
-from tdl.modules.sxrd.resonant_simplex import res_simplex
+from tdl.modules.sxrd.resonant_simplex import res_simplex, res_param_statistics
 from tdl.modules.sxrd.fourierframe import createfourierframe
 from tdl.modules.sxrd.resonant_calcs import *
 
@@ -34,24 +34,27 @@ class ResonantDataPanel(wx.ScrolledWindow):
 
         self.fframe = None
         self.fig7 = None
+        self.fig8 = None
 
-        self.simplex_params = [1.0,0.5,2.0,1.0,1e-4,1e-6,10000]
+        self.simplex_params = [1.0,0.5,2.0,0.5,1e-6,10000]
 
         self.datacontrol0 = []
         self.datacontrol1 = []
         self.datacontrol2 = []
+        self.datacontrol3 = []
         self.datacontrol4 = []
         self.datacontrol5 = []
         self.datacontrol6 = []
         self.datacontrol7 = []
+        self.datacontrol8 = []
 
-        wx.StaticText(self, label = ' Resonant Data ', pos=(290, 12), size=(120, 20))
-        wx.StaticText(self, label = ' AR ', pos=(420, 12), size=(60, 20))
-        wx.StaticText(self, label = ' PR ', pos=(490, 12), size=(60, 20))
-        wx.StaticText(self, label = 'UIF', pos=(560, 12), size=(20, 20))
-        wx.StaticText(self, label = 'UIR', pos=(590, 12), size=(20, 20))
-        wx.StaticText(self, label = ' AR ', pos=(620, 12), size=(60, 20))
-        wx.StaticText(self, label = ' PR ', pos=(690, 12), size=(60, 20))
+        wx.StaticText(self, label = ' Resonant Data ', pos=(290, 17), size=(120, 20))
+        wx.StaticText(self, label = ' AR    +/- dAr', pos=(420, 17), size=(80, 20))
+        wx.StaticText(self, label = ' PR    +/- dPr', pos=(515, 17), size=(80, 20))
+        wx.StaticText(self, label = 'UIF', pos=(610, 17), size=(20, 20))
+        wx.StaticText(self, label = 'UIR', pos=(630, 17), size=(20, 20))
+        wx.StaticText(self, label = ' AR_m ', pos=(655, 17), size=(60, 20))
+        wx.StaticText(self, label = ' PR_m ', pos=(700, 17), size=(60, 20))
 
         wx.StaticLine(self, pos = (270,0), size = (5,650), style = wx.LI_VERTICAL)
 
@@ -154,8 +157,11 @@ class ResonantDataPanel(wx.ScrolledWindow):
         self.PlotArPrQButton = wx.Button(self, label = 'Ar(Q) Pr(Q)', pos =(140,485), size=(110,25))
         self.Bind(wx.EVT_BUTTON, self.OnClickPlotArPrQ, self.PlotArPrQButton)
 		
-        self.RefineButton = wx.Button(self, label = 'Run Refinement', pos =(20,520), size=(230,100))
+        self.RefineButton = wx.Button(self, label = 'Run Refinement', pos =(20,520), size=(230,80))
         self.Bind(wx.EVT_BUTTON, self.OnClickRefine, self.RefineButton)
+
+        self.ResStatisticsButton = wx.Button(self, label = 'Calculate resonant parameter statistics', pos =(20,610), size=(230,30))
+        self.Bind(wx.EVT_BUTTON, self.OnClickResStatistics, self.ResStatisticsButton)
         
         wx.StaticLine(self, pos = (0,645), size = (270,5), style = wx.LI_HORIZONTAL)
         
@@ -198,29 +204,33 @@ class ResonantDataPanel(wx.ScrolledWindow):
         for item in range(len(self.allrasd.list)):
             self.allrasd.list[item] = RASD_Fourier(self.allrasd, item)
             self.datacontrol1[item].SetValue(str(round(self.allrasd.list[item].AR,3)))
-            self.datacontrol2[item].SetValue(str(round(self.allrasd.list[item].PR,3)))
+            self.datacontrol2[item].SetValue(str(round(self.allrasd.list[item].AR_err,3)))
+            self.datacontrol3[item].SetValue(str(round(self.allrasd.list[item].PR,3)))
+            self.datacontrol8[item].SetValue(str(round(self.allrasd.list[item].PR_err,3)))
             
     
     def ClickDataButton(self,e):
-        item = e.GetId()-3000
+        item = e.GetId()-10000
         self.allrasd.list[item] = RASD_Fourier(self.allrasd, item)
         self.datacontrol1[item].SetValue(str(round(self.allrasd.list[item].AR,3)))
-        self.datacontrol2[item].SetValue(str(round(self.allrasd.list[item].PR,3)))
+        self.datacontrol2[item].SetValue(str(round(self.allrasd.list[item].AR_err,3)))
+        self.datacontrol3[item].SetValue(str(round(self.allrasd.list[item].PR,3)))
+        self.datacontrol8[item].SetValue(str(round(self.allrasd.list[item].PR_err,3)))
         self.allrasd.list[item].plot(norm = self.plot_norm, fig = 4)
 
     def editPR(self,e):
-        item = e.GetId()-3000-2*len(self.allrasd.list)
+        item = e.GetId()-10000-3*len(self.allrasd.list)
         try:
             self.allrasd.list[item].PR = float(e.GetString())
         except ValueError:
             pass
 
     def editUIF(self,e):
-        item = e.GetId()-3000-4*len(self.allrasd.list)
+        item = e.GetId()-10000-4*len(self.allrasd.list)
         self.allrasd.list[item].use_in_Fourier = self.datacontrol4[item].GetValue()
 
     def editUIR(self,e):
-        item = e.GetId()-3000-5*len(self.allrasd.list)
+        item = e.GetId()-10000-5*len(self.allrasd.list)
         self.allrasd.list[item].use_in_Refine = self.datacontrol5[item].GetValue()
         
     def setdoabscorr(self,e): self.allrasd.do_abs_corr = self.getdoabscorr.GetValue()
@@ -246,8 +256,11 @@ class ResonantDataPanel(wx.ScrolledWindow):
     def OnClickabscorr(self,e):
         abs_correct(self.allrasd)
         for item in range(len(self.allrasd.list)):
+            self.allrasd.list[item] = RASD_Fourier(self.allrasd, item)
             self.datacontrol1[item].SetValue(str(round(self.allrasd.list[item].AR,3)))
-            self.datacontrol2[item].SetValue(str(round(self.allrasd.list[item].PR,3)))
+            self.datacontrol2[item].SetValue(str(round(self.allrasd.list[item].AR_err,3)))
+            self.datacontrol3[item].SetValue(str(round(self.allrasd.list[item].PR,3)))
+            self.datacontrol8[item].SetValue(str(round(self.allrasd.list[item].PR_err,3)))
 
     def setxf(self,e):
         try:
@@ -329,7 +342,9 @@ class ResonantDataPanel(wx.ScrolledWindow):
         for key in global_params:
             res_params[key] = self.nb.parameter[key]
 			
-        plot_Ar_Pr_Q(self.allrasd, self.Qmax, res_surface, res_params, res_param_usage, self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_lay_el)
+        self.fig8 = plot_Ar_Pr_Q(self.fig8,  self.allrasd, self.Qmax, res_surface, res_params, res_param_usage, self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_lay_el)
+        self.fig8.canvas.draw()
+        
     def OnClickRefine(self,e):
         res_param_usage = []
         res_surface = []
@@ -348,8 +363,8 @@ class ResonantDataPanel(wx.ScrolledWindow):
         for key in global_params:
             res_params[key] = self.nb.parameter[key]
    
-        self.allrasd, res_params = res_simplex(res_params,res_param_usage, self.allrasd, res_surface, self.simplex_params,\
-                                               self.nb.MainControlPage.UBW_flag, self.allrasd.Refine_Data, self.nb.MainControlPage.use_lay_el)
+        self.allrasd, res_params = res_simplex(self.nb.frame.statusbar,res_params,res_param_usage, self.allrasd, res_surface, self.simplex_params,\
+                                               self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_lay_el)
 
         if self.allrasd.Refine_Data:
             if self.fig7 == None:
@@ -397,14 +412,73 @@ class ResonantDataPanel(wx.ScrolledWindow):
                     self.datacontrol6[j].SetValue(str(round(Rasd.AR_refine,3)))
                     self.datacontrol7[j].SetValue(str(round(Rasd.PR_refine,3)))
                 j = j+1
-            
+        for key in res_params.keys():
+            self.nb.parameter[key] = res_params[key]
+        for i in range(len(self.nb.param_labels)):
+            self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
 
-        dlg = wx.MessageDialog(self, "Keep refined parameters ?","", wx.YES_NO | wx.STAY_ON_TOP)
-        if dlg.ShowModal() == wx.ID_YES:
-            for key in res_params.keys():
-                self.nb.parameter[key] = res_params[key]
-            for i in range(len(self.nb.param_labels)):
-                self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
-        dlg.Destroy()
+    def OnClickResStatistics(self,e):
+        self.nb.frame.SetStatusText(' computing parameter statistics ', 0)
+        res_param_usage = []
+        res_surface = []
+        for i in range(len(self.nb.surface)):
+            if self.nb.surface[i][0] == self.resel:
+                res_surface.append(self.nb.surface[i])
+                res_param_usage.append(self.nb.parameter_usage[i])
+
+        res_params = {}
+
+        global_params = ['z_el','d_el','sig_el','sig_el_bar','K','occ_el_0','zwater','sig_water','sig_water_bar','d_water','beta','Scale','specScale']
+        for i in range(len(res_param_usage)):
+            for j in range(1,20,2):
+                if res_param_usage[i][j] not in res_params and res_param_usage[i][j] != 'None':
+                    res_params[res_param_usage[i][j]] = self.nb.parameter[res_param_usage[i][j]]
+        for key in global_params:
+            res_params[key] = self.nb.parameter[key]
+        res_params, correl_matrix, used_params = res_param_statistics(self.nb.MainControlPage.fpc,res_params,res_param_usage,\
+                                                                                       self.allrasd, res_surface,self.nb.MainControlPage.UBW_flag, \
+                                                                                       self.nb.MainControlPage.use_lay_el)
+        
+        for i in res_params.keys():
+            if res_params[i][3]:
+                self.nb.parameter[i][4] = res_params[i][4]
+        for i in range(len(self.nb.param_labels)):    
+            self.nb.ParameterPage.control8[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][4], 8)))
+            
+        if correl_matrix[0][0] != 0:
+            b = len(correl_matrix)
+            print '\nParameter Correlations: \n'
+            print '\nParameter Correlations between 0.95 and 1.00: \n'
+            n = 0
+            for i in range(b):
+                for j in range(b):
+                    if j > i:
+                        if correl_matrix[i][j] >= 0.95 and correl_matrix[i][j] <= 1.0:
+                            n = n+1
+                            print used_params[i] + ' & ' + used_params[j] + ': ' + str(round(correl_matrix[i][j],5))
+            if n == 0: print 'None \n'
+            else: print '\n'
+            n = 0
+            print '\nParameter Correlations between 0.8 and 0.95: \n'
+            for i in range(b):
+                for j in range(b):
+                    if j > i:
+                        if correl_matrix[i][j] >= 0.8 and correl_matrix[i][j] < 0.95:
+                            n = n+1
+                            print used_params[i] + ' & ' + used_params[j] + ': ' + str(round(correl_matrix[i][j],5))
+            if n == 0: print 'None \n'
+            else: print '\n'
+            n = 0
+            print '\nParameter Correlations between 0.5 and 0.8: \n'
+            for i in range(b):
+                for j in range(b):
+                    if j > i:
+                        if correl_matrix[i][j] >= 0.5 and correl_matrix[i][j] < 0.5:
+                            n = n+1
+                            print used_params[i] + ' & ' + used_params[j] + ': ' + str(round(correl_matrix[i][j],5))
+            if n == 0: print 'None \n'
+            else: print '\n'
+        self.nb.frame.SetStatusText(' statistics calculation finished, chi**2 = '+str(round(self.allrasd.RMS,3)), 0)
+        pass
 ########################################################################################################
 

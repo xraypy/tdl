@@ -13,7 +13,6 @@ import random
 import wx
 
 from tdl.modules.sxrd.ctrfitcalcs import *
-
 ############################### methods used by simplex ############################################################################################
 def insert(used_params, point, parameter):
     for i in range(len(used_params)):
@@ -74,22 +73,38 @@ def compression(X, mini):
         Y = Num.append(Y,[x],axis = 0)
     return Y
 
-def calc_xdist(Xmin, Xmax, used_params, parameter):
+def parameter_plot(fig,used_params,parameter,points,mini):
+    if fig == None:
+        fig = figure(3,figsize=[15,5])
+    fig.clear()
+    fig.suptitle('Parameter Plot', fontsize = 20)
+    plot = fig.add_subplot(111)
+    plot.set_xticks(range(len(used_params)))
+    plot.set_xticklabels(used_params,rotation = 90)
     low = []
     spread = []
     for i in used_params:
         low.append(parameter[i][1])
         spread.append(parameter[i][2]-parameter[i][1])
-    Xmin = (Xmin - low)/spread
-    Xmax = (Xmax - low)/spread
-    xdist = 0
-    n = len(Xmin)
-    for i in range(n):
-        xdist =  xdist + (Xmax[i]-Xmin[i])**2
-    xdist = xdist**0.5
-    return xdist
-    
+    for i in range(len(points)):
+        if i == mini:
+            pass
+        else:
+            plot.plot(range(len(used_params)),(points[i]-low)/spread,'bo')
+        plot.plot(range(len(used_params)),(points[mini]-low)/spread,'ro')
+    plot.set_xlim(-1,len(used_params)+1)
+    plot.vlines(range(len(used_params)),ymin = 0,ymax = 1, color = 'k', linestyles = 'dashed')
+    plot.set_ylim(0,1)
+    plot.figure.canvas.draw()
+    return fig
 
+def calc_ftol(function_values):
+    av = Num.sum(function_values)/len(function_values)
+    sigma = 0
+    for i in function_values:
+        sigma = sigma + (i-av)**2
+    sigma = Num.sqrt(sigma/len(function_values))
+    return sigma
 #################################Simplex main routine###################################################################################################
 def simplex(StatusBar,parameter,param_usage, dat, cell, surface_tmp, NLayers, database, rigid_bodies, panel):
     Rod_weight = panel.Rod_weight
@@ -100,7 +115,7 @@ def simplex(StatusBar,parameter,param_usage, dat, cell, surface_tmp, NLayers, da
     RMS_flag = panel.RMS_flag
     use_lay_el = panel.use_lay_el
     el = panel.el
-    alpha, beta, gamma, delta, ftol, xtol, maxiter, random_pars = panel.simplex_params
+    alpha, beta, gamma, delta, ftol, maxiter, random_pars = panel.simplex_params
     StatusBar.SetStatusText('Preparing Simplex',0)
     used_params = []
     used_params_values = []
@@ -129,7 +144,7 @@ def simplex(StatusBar,parameter,param_usage, dat, cell, surface_tmp, NLayers, da
     not_converged = True
     z = 0
     mini, maxi = min_max(function_values)
-    statusstring ='iteration '+str(z)+', best R = '+str(round(function_values[mini],7))
+    statusstring ='iteration '+str(z)+', best chi**2 = '+str(round(function_values[mini],4))
     StatusBar.SetStatusText(statusstring,0)
     panel.Figure3 = parameter_plot(panel.Figure3,used_params,parameter,points,mini)
     old_mini = function_values[mini]
@@ -179,8 +194,9 @@ def simplex(StatusBar,parameter,param_usage, dat, cell, surface_tmp, NLayers, da
                         parameter = insert(used_params, points[i], parameter) 
                         dat, function_values[i] = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
         mini, maxi = min_max(function_values)
+        act_ftol = calc_ftol(function_values)
         if function_values[mini]<old_mini:
-            statusstring ='iteration '+str(z)+', best R = '+str(round(function_values[mini],7))
+            statusstring ='iteration '+str(z)+', best chi**2 = '+str(round(function_values[mini],4))+' ftol = '+str(round(act_ftol,6))
             StatusBar.SetStatusText(statusstring,0)
             panel.Figure1 = plot_rods(panel.Figure1, StatusBar.nb.data, \
                                                              StatusBar.nb.MainControlPage.plotdims, StatusBar.nb.MainControlPage.doplotbulk,\
@@ -190,46 +206,164 @@ def simplex(StatusBar,parameter,param_usage, dat, cell, surface_tmp, NLayers, da
             panel.Figure3 = parameter_plot(panel.Figure3,used_params,parameter,points,mini)
             old_mini = function_values[mini]
             
-        if function_values[mini] >= function_values[maxi]-ftol:
+        if act_ftol < ftol:
             not_converged = False
             print '\n CONVERGENCE REACHED DUE TO FTOL \n'
-        if calc_xdist(points[mini], points[maxi], used_params, parameter) <= xtol:
-            not_converged = False
-            print '\n CONVERGENCE REACHED DUE TO XTOL \n'
         if z >= maxiter:
             not_converged = False
             print '\n NO CONVERGENCE, STOP DUE TO MAXITER \n'
         z = z+1
     if not panel.StopFit: print ' Downhill Simplex stopped after '+str(z-1)+' iterations'
-    print 'best fit R = '+str(round(function_values[mini],7))
-    StatusBar.SetStatusText('End of Downhill Simplex, best R: '+str(round(function_values[mini],5)),0)
+    print 'best fit chi**2 = '+str(round(function_values[mini],7))+'\n'
+    StatusBar.SetStatusText('End of Downhill Simplex, best chi**2: '+str(round(function_values[mini],4)),0)
     StatusBar.SetStatusText('',1)
     param_best = points[mini]
     parameter = insert(used_params, param_best, parameter)
     data_best, RMS_best = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
     return data_best, parameter, RMS_best
-################################################################################################################################
-def parameter_plot(fig,used_params,parameter,points,mini):
-    if fig == None:
-        fig = figure(3,figsize=[15,5])
-    fig.clear()
-    fig.suptitle('Parameter Plot', fontsize = 20)
-    plot = fig.add_subplot(111)
-    plot.set_xticks(range(len(used_params)))
-    plot.set_xticklabels(used_params,rotation = 90)
-    low = []
-    spread = []
-    for i in used_params:
-        low.append(parameter[i][1])
-        spread.append(parameter[i][2]-parameter[i][1])
-    for i in range(len(points)):
-        if i == mini:
-            pass
-        else:
-            plot.plot(range(len(used_params)),(points[i]-low)/spread,'bo')
-        plot.plot(range(len(used_params)),(points[mini]-low)/spread,'ro')
-    plot.set_xlim(-1,len(used_params)+1)
-    plot.vlines(range(len(used_params)),ymin = 0,ymax = 1, color = 'k', linestyles = 'dashed')
-    plot.set_ylim(0,1)
-    plot.figure.canvas.draw()
-    return fig       
+
+#################################################################################################################################
+def extract_values(data):
+    y = Num.array([])
+    for i in range(len(data)):
+        for j in range(len(data[i].L)):
+            y = Num.append(y, data[i].Fcalc[j])
+    return y
+
+def statistics(fpc, parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el):
+    n = 0
+    used_params = []
+    for i in range(len(dat)):
+        n = n + len(dat[i].L)
+    w = Num.zeros((n,n))
+    n = 0
+    for i in range(len(dat)):
+        for j in range(len(dat[i].L)):
+            w[n][n] = (1/dat[i].Ferr[j])**2
+            n = n+1
+                   
+    for i in parameter.keys():
+        if parameter[i][3]:
+            used_params.append(i)
+    
+    b = len(used_params)
+    X = Num.zeros((b,n))
+    
+    for i in range(b):
+        h = parameter[used_params[i]][0] * fpc
+        if h == 0:
+            h = fpc
+        elif h < 0.:
+            h = -h
+        if parameter[used_params[i]][0] -0.5*h >= parameter[used_params[i]][1] and parameter[used_params[i]][0] +0.5*h <= parameter[used_params[i]][2]:
+            parameter[used_params[i]][0] = parameter[used_params[i]][0] -0.5*h
+            data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+            y1 = extract_values(data)
+            parameter[used_params[i]][0] = parameter[used_params[i]][0] +h
+            data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+            y2 = extract_values(data)
+            y1 = (y2 - y1)/h
+            parameter[used_params[i]][0] = parameter[used_params[i]][0] -0.5*h
+            
+        elif parameter[used_params[i]][0] -0.5*h < parameter[used_params[i]][1]:
+            data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+            y1 = extract_values(data)
+            parameter[used_params[i]][0] = parameter[used_params[i]][0] +h
+            data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+            y2 = extract_values(data)
+            y1 = (y2 - y1)/h
+            parameter[used_params[i]][0] = parameter[used_params[i]][0] -h
+            
+        elif parameter[used_params[i]][0] +0.5*h > parameter[used_params[i]][2]:
+            parameter[used_params[i]][0] = parameter[used_params[i]][0] -h
+            data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+            y1 = extract_values(data)
+            parameter[used_params[i]][0] = parameter[used_params[i]][0] +h
+            data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+            y2 = extract_values(data)
+            y1 = (y2 - y1)/h
+            
+        for j in range(n):
+            X[i][j] = y1[j] * parameter[used_params[i]][0] * Num.sqrt(w[j][j])
+
+    data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+            
+    V = Num.dot(X, Num.dot( w, Num.transpose(X)))
+    C = Num.zeros((b,b))
+    try:
+        V = R* Num.linalg.inv(V)
+        for i in range(b):
+            for j in range(b):
+                if i == j:
+                    C[i][j] = Num.sqrt(V[i][j])
+                    parameter[used_params[i]][4] = C[i][j]
+                else:
+                    C[i][j] = V[i][j]/Num.sqrt(V[i][i]*V[j][j])
+    except:
+        print "There's a hole in the matrix !!! \n"
+        
+    return parameter, X, C, used_params, R
+
+def single_param_sensitivities(param_label, fpc, parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el):
+    n = 0
+    for i in range(len(dat)):
+        n = n + len(dat[i].L)
+    w = Num.zeros((n,n))
+    n = 0
+    for i in range(len(dat)):
+        for j in range(len(dat[i].L)):
+            w[n][n] = (1/dat[i].Ferr[j])**2
+            n = n+1
+
+    X = Num.zeros((n))
+    
+    h = parameter[param_label][0] * fpc
+    if h == 0.:
+        h = fpc
+    elif h < 0.:
+        h = -h
+    if parameter[param_label][0] -0.5*h >= parameter[param_label][1] and parameter[param_label][0] +0.5*h <= parameter[param_label][2]:
+        parameter[param_label][0] = parameter[param_label][0] -0.5*h
+        data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+        y1 = extract_values(data)
+        parameter[param_label][0] = parameter[param_label][0] +h
+        data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+        y2 = extract_values(data)
+        y1 = (y2 - y1)/h
+        parameter[param_label][0] = parameter[param_label][0] -0.5*h
+            
+    elif parameter[param_label][0] -0.5*h < parameter[param_label][1]:
+        data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+        y1 = extract_values(data)
+        parameter[param_label][0] = parameter[param_label][0] +h
+        data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+        y2 = extract_values(data)
+        y1 = (y2 - y1)/h
+        parameter[param_label][0] = parameter[param_label][0] -h
+            
+    elif parameter[param_label][0] +0.5*h > parameter[param_label][2]:
+        parameter[param_label][0] = parameter[param_label][0] -h
+        data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+        y1 = extract_values(data)
+        parameter[param_label][0] = parameter[param_label][0] +h
+        data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+        y2 = extract_values(data)
+        y1 = (y2 - y1)/h
+            
+    for j in range(n):
+        X[j] = y1[j] * parameter[param_label][0] * Num.sqrt(w[j][j])
+
+    data, R = calc_CTRs(parameter,param_usage, dat, cell,surface_tmp, NLayers, database, g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag, use_lay_el, el)
+    V = Num.dot(X,Num.dot(w,Num.transpose(X)))
+    if V > 0:
+        dp = Num.sqrt(R/V)
+    else:
+        dp = 0.
+
+    return X, dp
+                              
+                              
+                              
+            
+    
+    

@@ -118,7 +118,7 @@ class BVcluster:
                                   self.neighborsyoffset[i],\
                                   surface[self.neighbors[i]][3]],float)
             vector = neighbor - center
-            dist = (Num.dot(vector,Num.dot(self.g,vector)))**0.5
+            dist = Num.sqrt(Num.dot(vector,Num.dot(self.g,vector)))
             distances.append(dist)
             BVS = BVS + Num.exp((self.r0s[i]-dist)/self.bs[i])
         return BVS, distances
@@ -127,8 +127,8 @@ def BV_impact(BVclusters, surface):
     impact = 0
     for i in BVclusters:
         BVS, dist = i.calc_BVS(surface)
-        eqval = (float(i.eqval) **2)**0.5
-        BV_offset = ((BVS - eqval)**2)**0.5 / eqval
+        eqval = Num.sqrt((float(i.eqval) **2))
+        BV_offset = Num.sqrt(((BVS - eqval)**2)) / eqval
         impact = impact + (i.ip[0] * BV_offset)**i.ip[1]
     return impact
 ################################################################################
@@ -240,7 +240,7 @@ class Fitting_Rod:
 def calc_Fuc(hkl,bulk,g_inv,database):
     a = 0
     b = 0
-    q = (Num.dot(Num.dot(hkl,g_inv),hkl))**0.5
+    q = Num.sqrt(Num.dot(Num.dot(hkl,g_inv),hkl))
     for i in range(shape(bulk)[0]):
         f_par = database[str.lower(bulk[i][0])]
         f = (f_par[0]*Num.exp(-(q/4/Num.pi)**2*f_par[1]) + f_par[2]*Num.exp(-(q/4/Num.pi)**2*f_par[3]) +\
@@ -250,13 +250,13 @@ def calc_Fuc(hkl,bulk,g_inv,database):
         b = b + (f * Num.sin(2*Num.pi*(hkl[0]*bulk[i][1] + hkl[1]*bulk[i][2] + hkl[2]*bulk[i][3])))
     return a, b
 
-def Fatom(atom,database, U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus):
+def Fatom(atom,database, U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus,sqrt):
     f_par = database[low(atom[0])]
     U[0][0] = atom[4]
-    U[0][1] = U[1][0] = atom[7]*(atom[4]*atom[5])**0.5
-    U[0][2] = U[2][0] = atom[8]*(atom[4]*atom[6])**0.5
+    U[0][1] = U[1][0] = atom[7]*sqrt((atom[4]*atom[5]))
+    U[0][2] = U[2][0] = atom[8]*sqrt((atom[4]*atom[6]))
     U[1][1] = atom[5]
-    U[1][2] = U[2][1] = atom[9]*(atom[5]*atom[6])**0.5
+    U[1][2] = U[2][1] = atom[9]*sqrt((atom[5]*atom[6]))
     U[2][2] = atom[6]  
     f = (f_par[0]*exp(-(qd4pi)**2*f_par[1]) + f_par[2]*exp(-(qd4pi)**2*f_par[3]) +\
         f_par[4]*exp(-(qd4pi)**2*f_par[5]) + f_par[6]*exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
@@ -265,11 +265,11 @@ def Fatom(atom,database, U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus):
     return [f*cosinus(x), f*sinus(x)]
     
 def calc_Fsurf(hkl,surface,g_inv,database,exp=Num.exp,low=str.lower,dot=Num.dot,pi=Num.pi,cosinus=Num.cos,\
-               sinus = Num.sin,U= Num.ndarray((3,3),float)):
-    q_Ang = [hkl[0]*g_inv[0][0]**0.5, hkl[1]*g_inv[1][1]**0.5, hkl[2]*g_inv[2][2]**0.5]
-    qd4pi = (dot(dot(hkl,g_inv),hkl))**0.5/4/pi
+               sinus = Num.sin,sqrt = Num.sqrt,U= Num.ndarray((3,3),float)):
+    q_Ang = [hkl[0]*sqrt(g_inv[0][0]), hkl[1]*sqrt(g_inv[1][1]), hkl[2]*sqrt(g_inv[2][2])]
+    qd4pi = (sqrt(dot(dot(hkl,g_inv),hkl)))/4/pi
     a = b = 0
-    jobs = [(atom, Fatom(atom,database,U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus)) for atom in surface]
+    jobs = [(atom, Fatom(atom,database,U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus,sqrt)) for atom in surface]
     a=b=0
     for atom, job in jobs:
         a = a+job[0]
@@ -277,7 +277,7 @@ def calc_Fsurf(hkl,surface,g_inv,database,exp=Num.exp,low=str.lower,dot=Num.dot,
     return a,b
 
 def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
-    q = hkl[2]* g_inv[2][2]**0.5
+    q = hkl[2]* Num.sqrt(g_inv[2][2])
     qd4pi = q/4/Num.pi
     Auc = cell[0]* Num.sin(Num.radians(cell[5]))* cell[1]
     f = Auc * d * 0.033456 * (f_par[0]*Num.exp(-(qd4pi)**2*f_par[1]) + f_par[2]*Num.exp(-(qd4pi)**2*f_par[3]) +\
@@ -300,7 +300,7 @@ def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
     return re, im
         
 def calc_F_layered_el(hkl, occ, K, sig, sig_bar, d, d0, g_inv, f_par):
-    q = hkl[2]* g_inv[2][2]**0.5
+    q = hkl[2]* Num.sqrt(g_inv[2][2])
     qd4pi = q/4/Num.pi
     f = (f_par[0]*Num.exp(-(qd4pi)**2*f_par[1]) + f_par[2]*Num.exp(-(qd4pi)**2*f_par[3]) +\
             f_par[4]*Num.exp(-(qd4pi)**2*f_par[5]) + f_par[6]*Num.exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
@@ -334,19 +334,20 @@ def calcF(ctr,global_parms,cell,surface,g_inv,NLayers,database, use_bulk_water, 
     pi = Num.pi
     cosinus = Num.cos
     sinus = Num.sin
+    sqrt = Num.sqrt
     U = Num.ndarray((3,3),float)
     f_par_water = database['o2-.']
     if use_lay_el:
         f_par_el = database[el]
     for i in range(len(ctr.L)):
         hkl = [ctr.H,ctr.K,ctr.L[i]]
-        re_surf, im_surf = calc_Fsurf(hkl,surface,g_inv,database,exp,low,dot,pi,cosinus,sinus,U)
+        re_surf, im_surf = calc_Fsurf(hkl,surface,g_inv,database,exp,low,dot,pi,cosinus,sinus,sqrt,U)
             
         if ctr.L[i] > 0:
             n = ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
         else:
             n = - ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
-        rough = (1-beta)/((1-beta)**2 + 4*beta*sinus(pi*(ctr.L[i] - n)/NLayers)**2)**0.5
+        rough = (1-beta)/Num.sqrt((1-beta)**2 + 4*beta*sinus(pi*(ctr.L[i] - n)/NLayers)**2)
            
         if hkl[0] == 0.0 and hkl[1] == 0.0:
             if not use_bulk_water:
@@ -355,42 +356,26 @@ def calcF(ctr,global_parms,cell,surface,g_inv,NLayers,database, use_bulk_water, 
                 ctr.water[i] = 0
             else:
                 re_water, im_water = calc_Fwater_layered(hkl, sig_water, sig_water_bar, d_water,zwater, g_inv, f_par_water, cell)
-                ctr.water[i] = specScale * ((re_water)**2 + (im_water)**2)**0.5
+                ctr.water[i] = specScale * Num.sqrt((re_water)**2 + (im_water)**2)
             if not use_lay_el:
                 re_el = 0
                 im_el = 0
             else:
                 re_el, im_el = calc_F_layered_el(hkl,occ_el,K, sig_el, sig_el_bar, d_el, d0_el, g_inv, f_par_el) 
                     
-            ctr.bulk[i] = specScale * (ctr.re_bulk[i]**2 + ctr.im_bulk[i]**2)**0.5
-            ctr.Fcalc[i] = specScale * rough * ((ctr.re_bulk[i] + re_surf + re_water+ re_el)**2 + (ctr.im_bulk[i] + im_surf + im_water+ im_el)**2)**0.5
+            ctr.bulk[i] = specScale * Num.sqrt(ctr.re_bulk[i]**2 + ctr.im_bulk[i]**2)
+            ctr.Fcalc[i] = specScale * rough * Num.sqrt((ctr.re_bulk[i] + re_surf + re_water+ re_el)**2 + (ctr.im_bulk[i] + im_surf + im_water+ im_el)**2)
               
             ctr.rough[i] = rough * specScale
-            ctr.surf[i] = (re_surf**2 + im_surf**2)**0.5 * specScale
+            ctr.surf[i] = Num.sqrt(re_surf**2 + im_surf**2) * specScale
         else:
-            ctr.bulk[i] = Scale * (ctr.re_bulk[i]**2 + ctr.im_bulk[i]**2)**0.5
-            ctr.Fcalc[i] = Scale * rough * ((ctr.re_bulk[i] + re_surf)**2 + (ctr.im_bulk[i] + im_surf)**2)**0.5
+            ctr.bulk[i] = Scale * Num.sqrt(ctr.re_bulk[i]**2 + ctr.im_bulk[i]**2)
+            ctr.Fcalc[i] = Scale * rough * Num.sqrt((ctr.re_bulk[i] + re_surf)**2 + (ctr.im_bulk[i] + im_surf)**2)
             ctr.water[i] = 0
             ctr.rough[i] = rough * Scale
-            ctr.surf[i] = (re_surf**2 + im_surf**2)**0.5 * Scale
-         
-    if RMS_flag == 1:
-        ctr.difference = Num.log(ctr.F) - Num.log(ctr.Fcalc)
-        for i in range(len(ctr.difference)):
-            if ctr.difference[i] <0:
-                ctr.difference[i] = -ctr.difference[i]                      
-    elif RMS_flag == 2:
-        ctr.difference = ctr.F - ctr.Fcalc
-        for i in range(len(ctr.difference)):
-            if ctr.difference[i] <0:
-                ctr.difference[i] = -ctr.difference[i] 
-    elif RMS_flag == 3:
-        ctr.difference = (ctr.F - ctr.Fcalc) * ctr.Ferr
-        for i in range(len(ctr.difference)):
-            if ctr.difference[i] <0:
-                ctr.difference[i] = -ctr.difference[i] 
-    elif RMS_flag == 4:
-        ctr.difference = ((ctr.F - ctr.Fcalc)/ctr.Ferr)**2
+            ctr.surf[i] = Num.sqrt(re_surf**2 + im_surf**2) * Scale                 
+    ctr.difference = ((ctr.F - ctr.Fcalc)/ctr.Ferr)**2
+    
     return ctr
 ################################################################################
 def calc_CTRs(parameter,param_usage, dat, cell, surface_tmp, NLayers, database,\
@@ -414,60 +399,19 @@ def calc_CTRs(parameter,param_usage, dat, cell, surface_tmp, NLayers, database,\
     RMS = 0
     n = 0
     b = 0
-    avgF = 0
+    for i in parameter.keys():
+        if parameter[i][3]: b= b+1
     for i in range(len(dat)):
         RMS = RMS + Num.sum(dat[i].difference)*Rod_weight[i]
-        if RMS_flag == 1:
-            n = n + len(dat[i].L)*Rod_weight[i]
-            avgF = avgF + Num.sum(Num.log(dat[i].F))*Rod_weight[i]
-        elif RMS_flag == 2:
-            avgF = avgF + Num.sum(dat[i].F)*Rod_weight[i]
-        elif RMS_flag == 3:
-            b = b + Num.sum(dat[i].Ferr)*Rod_weight[i]
-            n = n + len(dat[i].L)*Rod_weight[i]
-            avgF = avgF + Num.sum(dat[i].F)*Rod_weight[i]
-        elif RMS_flag == 4:
-            avgF = 100
-            n = n + len(dat[i].L)*Rod_weight[i]
-            
-    if RMS_flag == 1:
-        RMS = (RMS / n)
-        avgF = (avgF / n)
-        if avgF < 0: avgF = -avgF
-    elif RMS_flag == 3:
-        RMS = (RMS / b)
-        avgF = avgF / n
-    elif RMS_flag == 4:
-        RMS = RMS / n
-
-    RMS = (RMS/avgF)*100
+        n = n + len(dat[i].L)*Rod_weight[i]
+        
+    RMS = RMS/(n-b)
         
     if use_BVC:
         impact = BV_impact(BVclusters, surface_new)
         RMS = RMS * (1 + impact)
 
     return dat, RMS
-################################################################################
-def calc_Rdata(data):
-    n = 0
-    sumlogFerr = 0
-    sumlogF = 0
-    sumF = 0
-    sumFerr = 0
-    sumFerr2 = 0
-    for rod in data:
-        n = n + len(rod.F)
-        sumF = sumF + Num.sum(rod.F)
-        sumFerr = sumFerr + Num.sum(rod.Ferr)
-        sumFerr2 = sumFerr2 + Num.sum(rod.Ferr**2)
-        sumlogF = sumlogF + ((Num.sum(Num.log(rod.F)))**2)**0.5
-        sumlogFerr = sumlogFerr + ((Num.sum(Num.log(1+rod.Ferr/rod.F)))**2)**0.5
-    Rdata1 = sumlogFerr/sumlogF * 100
-    Rdata2 = sumFerr / sumF * 100
-    Rdata3 = sumFerr2*n / (sumFerr * sumF) * 100
-    return ['(:P)', str(round(Rdata1, 2)),str(round(Rdata2, 2)),\
-            str(round(Rdata3, 2)), '1.0']
-################################################################################
 ##############################  reading datafiles  #############################
 def read_bulk(bulkfile):
     bulk=[]
@@ -581,9 +525,15 @@ def read_parameters(parameterfile):
     for i in data:
         tmp = str.rsplit(i)
         if tmp[0] != '%':
-            parameter[tmp[0]]= [float(tmp[1]),float(tmp[2]),float(tmp[3]),False]
-            if tmp[4] == 'True':
-                parameter[tmp[0]][3] = True
+            if len(tmp) == 5:
+                parameter[tmp[0]]= [float(tmp[1]),float(tmp[2]),float(tmp[3]),False, 0.]
+                if tmp[4] == 'True':
+                    parameter[tmp[0]][3] = True
+            elif len(tmp) == 6:
+                parameter[tmp[0]]= [float(tmp[1]),float(tmp[3]),float(tmp[4]),False, float(tmp[2])]
+                if tmp[5] == 'True':
+                    parameter[tmp[0]][3] = True
+                
             param_labels.append(tmp[0])
 
     return parameter, param_labels
@@ -708,10 +658,11 @@ def write_cif(cell4, surface4,param4,param_use, rigid_bodies, use_bulk_water, us
 
 def write_par(parameter, param_labels, filename = 'parameters.new'):
     f = file(filename, 'w')
-    f.write('% param_label              start          min          max    '+\
+    f.write('% param_label              value     std-dev          min          max    '+\
             'refine_flag\n')
     for i in param_labels:
-        line = "%13s %18.12f %12.4f %12.4f %10s\n" % (i,parameter[i][0],
+        line = "%13s %18.12f %12.8f %12.4f %12.4f %10s\n" % (i,parameter[i][0],
+                                                      parameter[i][4],
                                                       parameter[i][1],
                                                       parameter[i][2],
                                                       parameter[i][3])
@@ -728,153 +679,13 @@ def write_data(data, filename = 'result.dat'):
                                                                                              i.bulk[j], i.surf[j], i.rough[j], i.water[j])                                                                                        
             f.write(line)
     f.close()
-
-################################################################################
-##############################  Simulated Annealing  ###########################
-def simulated_annealing(dat, cell, NLayers, surface, database, parameter, \
-                        param_usage, rigid_bodies, panel):
-
-    Tstart,Tend,cool,maxrun,MC,factor,random_parameters = panel.sim_an_params
-    g_inv = calc_g_inv(cell)
-    Rod_weight = panel.Rod_weight
-    use_bulk_water = panel.UBW_flag
-    use_lay_el = panel.use_lay_el
-    el = panel.el
-    use_BVC = panel.use_BVC
-    BVclusters = panel.BVclusters
-    RMS_flag = panel.RMS_flag
-    fig1 = panel.Figure1
-    fig3 = panel.Figure3
-    plot_dims = panel.plotdims
-    plot_bulk = panel.doplotbulk
-    plot_surf = panel.doplotsurf
-    plot_rough = panel.doplotrough
-    plot_water = panel.doplotwater
-    statusbar = panel.nb.frame.statusbar
-    
-    def plot_R(plot3,R_track):
-        plot3.plot(range(len(R_track)),R_track, 'ro')
-        plot3.figure.canvas.draw()
-        
-    if random_parameters:
-        for i in parameter.keys():
-            if parameter[i][3]:
-                parameter[i][0] = random.uniform(parameter[i][1],\
-                                                 parameter[i][2])
-      
-    dat, RMS = calc_CTRs(parameter, param_usage, dat, cell, surface, NLayers,\
-                         database, g_inv,Rod_weight, rigid_bodies, \
-                         use_bulk_water, use_BVC, BVclusters, RMS_flag,\
-                         use_lay_el, el)
-    guess = (int(Num.log(float(Tend)/float(Tstart))/Num.log(cool))+1)*maxrun
-    print '\n approximated number of iterations in Simulated Annealing: '\
-          +str( int(guess) )
-    print 'R start = '+str(RMS)
-    RMS_best = RMS
-    param_best = parameter
-    R_track =Num.array([RMS],float)
-    fig1 = plot_rods(fig1, dat, plot_dims, plot_bulk, plot_surf, plot_rough,\
-                     plot_water, RMS)
-    fig1.canvas.draw()
-                    
-    #counters
-    Random = 0
-    better = 0
-    rejected = 0
-    if fig3 == None:
-        fig3 = figure(3, figsize = [9,6])
-    else:
-        fig3.clear()
-    fig3.suptitle('R track', fontsize = 20)
-    plot3 = None
-    plot3 = fig3.add_subplot(111)
-    plot_R(plot3,R_track)
-    while Tstart > Tend:
-        z = 0
-        while (z < maxrun):
-            while wx.GetApp().Pending():
-                wx.GetApp().Dispatch()
-                wx.GetApp().Yield(True)
-            if panel.StopFit:
-                z= maxrun
-                Tstart = Tend
-            RMS_tmp = 0.
-            param_tmp = {}
-            #permutation of parameters 
-            for i in parameter.keys():
-                if parameter[i][3]:
-                    param_tmp[i] =  [parameter[i][0] + random.uniform((parameter[i][1]-parameter[i][0])*(MC * Tstart), (parameter[i][2]-parameter[i][0])*(MC * Tstart))]
-                    if param_tmp[i][0] < parameter[i][1]: param_tmp[i][0] = parameter[i][1]
-                    if param_tmp[i][0] > parameter[i][2]: param_tmp[i][0] = parameter[i][2]
-                else:
-                    param_tmp[i] =  [parameter[i][0]]
-   
-            dat, RMS_tmp = calc_CTRs(param_tmp,param_usage, dat, cell,surface, NLayers, database, g_inv,\
-                                     Rod_weight, rigid_bodies, use_bulk_water, use_BVC, BVclusters, RMS_flag,\
-                                     use_lay_el, el)
-            dR = (RMS - RMS_tmp) * factor
-
-            if dR > 0:
-                for i in parameter.keys():
-                    parameter[i][0] = param_tmp[i][0]
-                z = z+1
-                better = better+1
-                R_track = Num.append(R_track,RMS_tmp)
-                RMS = RMS_tmp
-                plot_R(plot3,R_track)
-                fig1 = plot_rods(fig1, dat,plot_dims, plot_bulk, plot_surf, plot_rough,plot_water, RMS)
-                fig1.canvas.draw()
-                statusbar.SetStatusText('better    '+str(round(RMS_tmp,5)),0)
-                statusbar.SetStatusText('T: '+str(round(Tstart,1))+', iteration: '+str(z),1) 
-                if RMS < RMS_best:
-                    RMS_best = RMS
-                    for i in parameter.keys():
-                        param_best[i][0] = parameter[i][0] 
-            elif dR <= 0:
-                Boltz = exp(dR / Tstart)
-                Rand = random.uniform(0,1)
-                if(Boltz > Rand):
-                    for i in parameter.keys():
-                        parameter[i][0] = param_tmp[i][0]
-                    z = maxrun
-                    Random = Random+1
-                    R_track = Num.append(R_track,RMS_tmp)
-                    plot_R(plot3,R_track)
-                    param_track.append(parameter)
-                    RMS = RMS_tmp
-                    statusbar.SetStatusText('random    '+str(round(RMS_tmp,5)),0)
-                    statusbar.SetStatusText('T: '+str(round(Tstart,1))+', iteration: '+str(z),1)
-                elif Boltz <= Rand:
-                    z = z+1
-                    rejected = rejected+1
-                    statusbar.SetStatusText('rejected    '+str(round(RMS_tmp,5)),0)
-                    statusbar.SetStatusText('T: '+str(round(Tstart,1))+', iteration: '+str(z),1)
-        Tstart = Tstart * cool
-
-    print '****************************'
-    print 'Number of cycles: '+str(Random+ better+ rejected)
-    print 'random: ' + str(Random)
-    print 'better: ' + str(better)
-    print 'rejected: '+ str(rejected)
-
-    data_best, RMS_best = calc_CTRs(param_best,param_usage, dat, cell,surface, NLayers, database,\
-                                    g_inv, Rod_weight, rigid_bodies, use_bulk_water, use_BVC,\
-                                    BVclusters, RMS_flag, use_lay_el, el)
-    statusbar.SetStatusText('End of Simulated Annealing, best R: '+str(round(RMS_best,5)),0)
-    statusbar.SetStatusText('',1)
-    print '\n####################################################\n'
-    print 'the best fit R = '+str(RMS_best)+'\n'
-    print '*************************************\n'
-
-    return data_best, param_best, RMS_best
-################################################################################
 ############################  Plotting  ########################################
 def plot_rods(fig1, dat, plot_dims, plot_bulk, plot_surf, plot_rough,\
               plot_water, RMS):
     if fig1 == None:
         fig1 = figure(1, figsize = [15,9])
     fig1.clear()
-    fig1.suptitle('R = '+str(round(RMS,7)), fontsize=20)
+    fig1.suptitle('chi**2 = '+str(round(RMS,7)), fontsize=20)
     subplots = []
     for i in range(len(dat)):
         pl = str(plot_dims[0])+str(plot_dims[1])+str(i+1)
@@ -888,6 +699,30 @@ def plot_rods(fig1, dat, plot_dims, plot_bulk, plot_surf, plot_rough,\
         subplots[i].errorbar(tmp.L,tmp.F,tmp.Ferr, fmt = 'bo')
         subplots[i].set_title(str(int(tmp.H))+str(int(tmp.K))+'L')
         subplots[i].semilogy()
+    return fig1
+
+def plot_sens(fig1, dat, plot_dims, dp, sens, parameter):
+    if fig1 == None:
+        fig1 = figure(1, figsize = [15,9])
+    fig1.clear()
+    fig1.suptitle('scaled sensitivities for parameter ' +parameter+ ', standard deviation = '+str(round(dp,6)), fontsize=16)
+    subplots = []
+    sensplots = []
+    n = 0
+    for i in range(len(dat)):
+        pl = str(plot_dims[0])+str(plot_dims[1])+str(i+1)
+        subplots.append(fig1.add_subplot(pl))
+        sensplots.append(subplots[i].twinx())
+        tmp = dat[i]
+        low = n
+        n = n + len(tmp.L)
+        sensitiv = sens[low:n]
+        subplots[i].plot(tmp.L,tmp.Fcalc,'k')
+        subplots[i].errorbar(tmp.L,tmp.F,tmp.Ferr, fmt = 'bo')
+        subplots[i].set_title(str(int(tmp.H))+str(int(tmp.K))+'L')
+        subplots[i].semilogy()
+        sensplots[i].bar(tmp.L,sensitiv, width = 0.03, bottom = 0, color = 'r', edgecolor = 'r')
+        
     return fig1
 
 def plot_edensity(Fig, surface, param, param_use, cell, database, rigid_bodies,\
@@ -1059,143 +894,6 @@ def check_vibes(surface, param, param_use):
                       ' (' + bad_labels[i] + '), '
         print message
     return
-################################################################################
-############################### Fourier Mapping ################################
-class Fourier_Rod:
-    def __init__(self):
-        self.H = float
-        self.K = float
-        self.L = []
-        self.A = []
-        self.P = []
-        self.Lb = []
-        self.Db = 2
-
-def create_F_data(dat):
-    F_data = []
-    for CTR in dat:
-        Rod = Fourier_Rod()
-        Rod.H = float(CTR.H)
-        Rod.K = float(CTR.K)
-        for i in range(len(CTR.L)):
-            Rod.L.append(CTR.L[i])
-            Rod.A.append(CTR.F[i] / CTR.rough[i])
-            Rod.P.append(0)
-        F_data.append(Rod)
-    return F_data
-
-def create_F_bulk(dat):
-    F_bulk = []
-    for CTR in dat:
-        Rod = Fourier_Rod()
-        Rod.H = float(CTR.H)
-        Rod.K = float(CTR.K)
-        for i in range(len(CTR.L)):
-            Rod.L.append(CTR.L[i])
-            re = CTR.re_bulk[i]
-            im = CTR.im_bulk[i]
-            P = Num.arctan(im/re)/(2*Num.pi)
-            Rod.A.append(re/Num.cos(2*Num.pi*P))
-            Rod.P.append(P)
-        F_bulk.append(Rod)
-    return F_bulk
-
-def create_F_model(dat, surface,g_inv,cell, database,parameter, param_usage,\
-                   rigid_bodies, use_bulk_water, use_lay_el):
-    F_model = []
-    global_parms, surface_new = param_unfold(parameter,param_usage, surface,\
-                                             use_bulk_water, use_lay_el)
-    surface_new = RB_update(rigid_bodies, surface_new, parameter, cell)
-    occ_el, K,sig_el,sig_el_bar,d_el,d0_el,sig_water,sig_water_bar, d_water,\
-            zwater, Scale,specScale,beta = global_parms
-
-    for CTR in dat:
-        Rod = Fourier_Rod()
-        Rod.H = float(CTR.H)
-        Rod.K = float(CTR.K)
-        f_par = database['o2-.']
-        for i in range(len(CTR.L)):
-            Rod.L.append(CTR.L[i])
-            hkl = Num.array([CTR.H,CTR.K,CTR.L[i]],float)
-            re_surf, im_surf = calc_Fsurf(hkl,surface_new,g_inv,database)
-            if use_bulk_water and hkl[0]==0 and hkl[1]==0:
-                re_water, im_water = calc_Fwater_layered(hkl, sig_water,\
-                                                         sig_water_bar, d_water\
-                                                         ,zwater, g_inv, \
-                                                         f_par, cell)
-            else:
-                re_water = 0
-                im_water = 0
-            re = CTR.re_bulk[i] + re_surf + re_water
-            im = CTR.im_bulk[i] + im_surf + im_water
-            P = Num.arctan(im/re)/(2*Num.pi)
-            Rod.A.append(re/Num.cos(2*Num.pi*P))
-            Rod.P.append(P)
-        F_model.append(Rod)
-    return F_model
-
-def create_F_obs(dat,surface,g_inv,cell, database,parameter, param_usage,\
-                   rigid_bodies, use_bulk_water, use_lay_el, NLayers):
-    F_model = create_F_model(dat, surface,g_inv,cell, database,parameter,\
-                             param_usage,rigid_bodies, use_bulk_water,\
-                             use_lay_el)
-    F_obs = create_F_data(dat)
-    for i in range(len(F_obs)):
-        F_obs[i].P = F_model[i].P
-    return F_obs
-
-def fdiff2rho(Fk, Fu, cell, xf, yf, zf, an, bn, cn, zmin, flag, parent):
-    """
-    calculate the difference fourier map from two sets of given
-    structure factors, one with known phases (Fk)
-    the other one with unknown phases (Fu)
-    """          
-        
-    rho = Num.zeros((an,bn,cn), float)
-    sampx = cell[0]* xf
-    sampy = cell[1]* yf
-    sampz = cell[2]* zf
-    g_inv = calc_g_inv(cell)
-    g_inv2 = calc_g_inv([sampx,sampy,sampz,cell[3],cell[4],cell[5]])
-    V = Num.linalg.det(Num.linalg.inv(g_inv2))**0.5
-    maxpro = int(an*bn*cn)
-    dialog = wx.ProgressDialog("Progress of Fourier Synthesis",\
-                               "Please be patient",maxpro,parent,\
-                               style=wx.PD_CAN_ABORT|wx.PD_ELAPSED_TIME|\
-                               wx.PD_AUTO_HIDE)
-    keepgoing = True
-    count = 0
-    for i in range(int(an)):
-        x = sampx/an * float(i)
-        for j in range(int(bn)):
-            y = sampy/bn * float(j)
-            for k in range(int(cn)):
-                z = sampz/cn * float(k) + sampz/zf *zmin
-                R = Num.array([x,y,z],float)
-                for r in range(len(Fk)):
-                    while wx.GetApp().Pending():
-                        wx.GetApp().Dispatch()
-                        wx.GetApp().Yield(True)
-                    for l in range(len(Fk[r].L)):
-                        Q = Num.array([Fk[r].H * g_inv[0][0]**0.5,\
-                                        Fk[r].K * g_inv[1][1]**0.5,\
-                                        Fk[r].L[l]* g_inv[2][2]**0.5],float)
-                        Ak = Fk[r].A[l]
-                        P = Fk[r].P[l]
-                        if flag < 3:
-                            rho[i][j][k] = rho[i][j][k] + Ak\
-                                       *Num.cos(2*Num.pi*(P - Num.dot(R,Q)))
-                        else:
-                            rho[i][j][k] = rho[i][j][k] + (Fu[r].A[l] - Ak)\
-                                *Num.cos(2*Num.pi*(P - Num.dot(R,Q)))
-                keepgoing = dialog.Update(count)
-                if not keepgoing:
-                    rho = Num.zeros((an,bn,cn), float)
-                    break
-                count = count+1        
-    rho = rho/(2*Num.pi*V)
-    dialog.Destroy()
-    return rho, [sampx,sampy,sampz]
 ################################################################################
 
     

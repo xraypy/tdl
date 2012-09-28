@@ -198,6 +198,8 @@ class RasdAna:
         self.delta_F = Num.array([], float)
         self.AR = 0.2
         self.PR = 0.5
+        self.AR_err = 0.0
+        self.PR_err = 0.0
         self.AR_refine = 0.
         self.PR_refine = 0.
         self.re_Fq = 0.
@@ -296,7 +298,10 @@ def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodie
                     Rasd.F = Num.append(Rasd.F, float(tmp[4])**2)
                     Rasd.f1 = Num.append(Rasd.f1, f1(Rasd.E[-1]))
                     Rasd.f2 = Num.append(Rasd.f2, f2(Rasd.E[-1]))
-                    Rasd.Ferr = Num.append(Rasd.Ferr, float(tmp[5])**2)
+                    if float(tmp[5])== 0:
+                        Rasd.Ferr = Num.append(Rasd.Ferr, 1.0)
+                    else:
+                        Rasd.Ferr = Num.append(Rasd.Ferr, float(tmp[5])**2)
                     Rasd.Alpha = Num.append(Rasd.Alpha, float(tmp[6]))
                     Rasd.Beta = Num.append(Rasd.Beta, float(tmp[7]))
             Rasd.E0 = allrasd.E0
@@ -312,18 +317,25 @@ def read_RSD(allrasd, bulk_tmp, surface_tmp, parameter, param_usage, rigid_bodie
 
         return allrasd
 ####################################################################################################
-def write_rids(allrasd, filename):
+def write_rids(allrasd, filename, Qmax, surface_tmp, parameter, param_usage, use_bulk_water, use_lay_el):
     f = file(filename, 'w')
     for Rasd in allrasd.list:
         if Rasd.use_in_Refine:
             f.write('#\n#RIDS scan at: '+str(round(Rasd.Q[0],1))+' '+str(round(Rasd.Q[1],1))+' '+str(round(Rasd.Q[2],3))+'\n')
-            f.write('#AR = '+str(round(Rasd.AR,3))+' PR = '+str(round(Rasd.PR,3))+'\n')
+            f.write('#AR = '+str(round(Rasd.AR,3))+' +/- '+str(round(Rasd.AR_err,3))+', PR = '+str(round(Rasd.PR,3))+' +/- '+str(round(Rasd.PR_err,3))+'\n')
             f.write('#AR_model = '+str(round(Rasd.AR_refine,3))+' PR_model = '+str(round(Rasd.PR_refine,3))+'\n')
             f.write('#chi**2 = '+str(round(Rasd.RMS,5))+'\n#\n')
             f.write('#E               F**2            F_err**2        F_model**2 \n')
             for i in range(len(Rasd.E)):
                 line = "%7.2f %15.5f %15.5f %15.5f\n" % (Rasd.E[i], Rasd.F[i]/Rasd.norm[i], Rasd.Ferr[i]/Rasd.norm[i], Rasd.F_calc[i]/Rasd.norm[i])
                 f.write(line)
+    f.write('\n\n')
+    f.write('Continuous AR_model and PR_model over 0,0,L\n')
+    f.write('H,      K,      L,      AR_model,       PR_model\n')
+    L, A, P =  calc_A_P_Q(Qmax, allrasd.g_inv, surface_tmp, parameter, param_usage, use_bulk_water, use_lay_el)
+    for i in range(len(L)):
+        line = "%7.2f %7.2f %7.2f %15.5f %15.5f\n" % (0.00, 0.00, L[i], A[i], P[i])
+        f.write(line)
     f.close()
 ########################## absorption correction #####################################################
 def abs_correct(allrasd):
@@ -383,8 +395,13 @@ def RASD_Fourier(allrasd, pnt):
                                                   ( Num.cos(2*Num.pi*PR)*AR*Rasd.f1- Num.sin(2*Num.pi*PR)*Rasd.f2*AR)*(Rasd.im_FNR + im_FR))
         return J
     
-    result = leastsq(Wiggle, vec,args = (Rasd), Dfun = Jacobi, col_deriv = 1)
+    result = leastsq(Wiggle, vec,args = (Rasd), Dfun = Jacobi, col_deriv = 1, full_output = 1)
     Rasd.a , Rasd.b, Rasd.AR, Rasd.PR = result[0]
+    X = Jacobi(result[0], Rasd)
+    w = Num.zeros((len(Rasd.Ferr),len(Rasd.Ferr)))
+    for i in range(len(Rasd.Ferr)):
+        w[i][i] = 1/Rasd.Ferr[i]**2
+    cov = Num.linalg.inv(Num.dot(X,Num.dot(w,Num.transpose(X))))  
                           
     re_Fq = Rasd.AR * Num.cos(2*Num.pi*Rasd.PR)
     im_Fq = Rasd.AR * Num.sin(2*Num.pi*Rasd.PR)
@@ -392,9 +409,25 @@ def RASD_Fourier(allrasd, pnt):
     Rasd.im_FR = Rasd.f1 * im_Fq + Rasd.f2 * re_Fq
 
     Rasd.F_calc = (Rasd.a + Rasd.b*(Rasd.E-Rasd.E0))* ((Rasd.re_FNR + Rasd.re_FR)**2 + (Rasd.im_FNR + Rasd.im_FR)**2)   
-    Rasd.delta_F = (Rasd.F - Rasd.F_calc)**2/Rasd.Ferr**2
+    Rasd.delta_F = ((Rasd.F - Rasd.F_calc)/Rasd.Ferr)**2
     Rasd.norm = (Rasd.a+Rasd.b*(Rasd.E-Rasd.E0))*(Rasd.re_FNR**2+Rasd.im_FNR**2)
-    Rasd.RMS = Num.sum(Rasd.delta_F)/Rasd.ndata
+    Rasd.RMS = Num.sum(Rasd.delta_F)/(Rasd.ndata-4)
+    Rasd.AR_err = Num.sqrt(Rasd.RMS*cov[2][2])
+    Rasd.PR_err = Num.sqrt(Rasd.RMS*cov[3][3])
+
+    if Rasd.AR < 0 and Rasd.PR < 0 and Rasd.PR > -0.5:
+        Rasd.PR = Rasd.PR + 0.5
+        Rasd.AR = -Rasd.AR
+    elif Rasd.AR > 0 and Rasd.PR < 0:
+        Rasd.PR = Rasd.PR + 1
+    elif Rasd.AR < 0 and Rasd.PR > 0.5:
+        Rasd.AR = -Rasd.AR
+        Rasd.PR = Rasd.PR -0.5
+    elif Rasd.AR < 0 and Rasd.PR < 0.5 and Rasd.PR > 0:
+        Rasd.AR = -Rasd.AR
+        Rasd.PR = Rasd.PR +0.5
+    if Rasd.PR > 1:
+        Rasd.PR = Rasd.PR -1
     
     return Rasd
 #################  Fourier Synthese  ###########################################
@@ -428,15 +461,16 @@ def Fourier_synthesis(Fourier, cell, ZR, xf, yf, zf, an, bn, cn, zmin):
     return Rho, [sampx,sampy,sampz]
 	
 ############################################################################################################################################	
-def plot_Ar_Pr_Q(allrasd, Qmax, surface_tmp, parameter, param_usage, use_bulk_water, use_lay_el):
+def calc_A_P_Q(Qmax, g_inv, surface_tmp, parameter, param_usage, use_bulk_water, use_lay_el):
     global_parms, surface = param_unfold(parameter,param_usage, surface_tmp, use_bulk_water, use_lay_el)
     natoms = len(surface)
     occ_el, K,sig_el,sig_el_bar,d_el,d0_el,sig_water, sig_water_bar, d_water, zwater, Scale, specScale, beta= global_parms
     A = []
     P = []
-    for l in Num.arange(0,Qmax,0.01):
+    L = Num.arange(0.1,Qmax,0.01)
+    for l in L:
 	Q = Num.array([0,0,l],float)
-	Q_ang = Num.array([0,0,l*allrasd.g_inv[2][2]**0.5],float)
+	Q_ang = Num.array([0,0,l*g_inv[2][2]**0.5],float)
 	re_Fq = 0
 	im_Fq = 0
         for n in range(natoms):
@@ -454,7 +488,7 @@ def plot_Ar_Pr_Q(allrasd, Qmax, surface_tmp, parameter, param_usage, use_bulk_wa
             re_Fq = re_Fq + (theta * Num.cos(2*Num.pi*(Q[0]*R[0]+Q[1]*R[1]+Q[2]*R[2])) * Num.exp(-2* Num.pi**2 * Num.dot(Num.dot(Q_ang,U),Q_ang)))
             im_Fq = im_Fq + (theta * Num.sin(2*Num.pi*(Q[0]*R[0]+Q[1]*R[1]+Q[2]*R[2])) * Num.exp(-2* Num.pi**2 * Num.dot(Num.dot(Q_ang,U),Q_ang)))
 	if use_lay_el:
-	    re_lay, im_lay = calc_F_lay_el(Q, occ_el, K, sig_el, sig_el_bar, d_el, d0_el, allrasd.g_inv)
+	    re_lay, im_lay = calc_F_lay_el(Q, occ_el, K, sig_el, sig_el_bar, d_el, d0_el, g_inv)
             re_Fq = re_Fq + re_lay
             im_Fq = im_Fq + im_lay                                    
 
@@ -476,23 +510,34 @@ def plot_Ar_Pr_Q(allrasd, Qmax, surface_tmp, parameter, param_usage, use_bulk_wa
             PR = PR -1			
         A.append(AR)
         P.append(PR)
+    return L, A, P
+
+def plot_Ar_Pr_Q(fig,allrasd, Qmax, surface_tmp, parameter, param_usage, use_bulk_water, use_lay_el):
+
+    L, A, P =  calc_A_P_Q(Qmax, allrasd.g_inv, surface_tmp, parameter, param_usage, use_bulk_water, use_lay_el)
     q_data = []
     A_data = []
+    Aerr_data = []
     P_data = []
-    for rasd in allrasd.list:
-        if rasd.Q[0] == 0 and rasd.Q[1] == 0:
-            q_data.append(rasd.Q[2])
-            A_data.append(rasd.AR)
-            P_data.append(rasd.PR)
+    Perr_data = []
+    for i in range(len(allrasd.list)):
+        if allrasd.list[i].Q[0] == 0 and allrasd.list[i].Q[1] == 0:
+            q_data.append(allrasd.list[i].Q[2])
+            A_data.append(allrasd.list[i].AR)
+            P_data.append(allrasd.list[i].PR)
+            Aerr_data.append(allrasd.list[i].AR_err)
+            Perr_data.append(allrasd.list[i].PR_err)
             
-    figure(8)
-    clf()
-    plot(Num.arange(0,Qmax,0.01),A,'b-')
-    plot(Num.arange(0,Qmax,0.01),P,'r-')
-    plot(q_data,A_data,'bo')
-    plot(q_data,P_data,'ro')
+    if fig == None:
+        fig = figure(8)
+    fig.clf()
+    plt = fig.add_subplot(111)
+    plt.plot(L,A,'b-')
+    plt.plot(L,P,'r-')
+    plt.errorbar(q_data, A_data, Aerr_data, fmt ='bo')
+    plt.errorbar(q_data, P_data, Perr_data, fmt ='ro')
 		
-    return
+    return fig
 ############################################ f1f2 transformation - Differential Kramers Kroning ####################################
 def f1f2(datafile, expfile, e0, e0shift, output ='exp.f1f2', n=30):
 
