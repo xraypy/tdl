@@ -662,14 +662,15 @@ class RasdData:
         """
         if fname == None: fname = 'rasd'+str(int(round(self.H[0])))+str(int(round(self.K[0])))+'_'+str(round(self.L[0],3))+'.rsd'
         f = open(fname, 'w')
-        header = "#%7s %5s %5s %5s %7s %7s\n" % ('Energy','H','K','L','F','Ferr')
+        header = "#%8s %8s %8s %8s %8s %8s %8s %8s\n" % ('Energy','H','K','L','F','Ferr','Alpha','Beta')
         f.write(header)
         for i in range(len(self.L)):
             if not i in self.bad:
-                line = "%6.1f %3.2f %3.2f %6.3f %6.6g %6.6g\n" % (self.E[i],round(self.H[i]),
+                line = "%8.2f %8.2f %8.2f %8.3f %8.6g %8.6g %8.6g %8.6g\n" % (self.E[i],round(self.H[i]),
                                                                   round(self.K[i]),
                                                                   self.L[i],self.F[i],
-                                                                  self.Ferr[i])
+                                                                  self.Ferr[i], self.scan[i].scalers['Alpha'][0],\
+                                                                  self.scan[i].scalers['Beta'][0])
                 f.write(line)
         f.close()
 
