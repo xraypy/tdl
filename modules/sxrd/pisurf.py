@@ -109,6 +109,10 @@ class wxCtrFitFrame(wx.Frame):
             if self.nb.bulk != []:
                 for x in self.nb.data:
                     x.calcFbulk(self.nb.cell, self.nb.bulk, self.nb.g_inv, database)
+            if self.nb.surface != []:
+                for x in self.nb.data:
+                    x.calc_fs(self.nb.runningDB, self.nb.g_inv)
+                    x.calc_q_ang(self.nb.g_inv)
    
             for i in range(len(self.nb.data)):
                 wx.StaticText(self.nb.MainControlPage, label = (str(int(self.nb.data[i].H))+' '+str(int(self.nb.data[i].K))+' L'), pos=(350,25*i+67), size=(40,20))
@@ -153,6 +157,10 @@ class wxCtrFitFrame(wx.Frame):
             self.dirname[2] = dlg.GetDirectory()
             self.nb.surface, self.nb.parameter_usage, self.nb.runningDB = read_surface(self.dirname[2]+'/'+self.filename[2], database)
             self.nb.MainControlPage.surfacefile.SetValue(self.filename[2])
+            if self.nb.data != []:
+                for x in self.nb.data:
+                    x.calc_fs(self.nb.runningDB, self.nb.g_inv)
+                    x.calc_q_ang(self.nb.g_inv)
             self.nb.SetSelection(0)
         dlg.Destroy()
 
@@ -296,6 +304,10 @@ class wxCtrFitFrame(wx.Frame):
             # read surface
             self.nb.surface, self.nb.parameter_usage, self.nb.runningDB = read_surface(self.dirname[2]+'/'+self.filename[2], database)
             self.nb.MainControlPage.surfacefile.SetValue(self.filename[2])
+            if self.nb.data != []:
+                for x in self.nb.data:
+                    x.calc_fs(self.nb.runningDB, self.nb.g_inv)
+                    x.calc_q_ang(self.nb.g_inv)
             # read parameters
             self.nb.parameter, self.nb.param_labels = read_parameters(self.dirname[3]+'/'+self.filename[3])
             self.nb.MainControlPage.parameterfile.SetValue(self.filename[3])
