@@ -213,7 +213,7 @@ class Fitting_Rod:
         self.F = Num.array([],float)
         self.Ferr = Num.array([],float)
         self.Lb = Num.array([],float)
-        self.Db = float
+        self.Db = Num.array([],float)
         self.q_ang = []
         self.fs = {}
 
@@ -350,11 +350,12 @@ def calcF(ctr,global_parms,Auc,surface,NLayers,use_bulk_water, RMS_flag, use_lay
         hkl = [ctr.H,ctr.K,ctr.L[i]]
         re_surf, im_surf = calc_Fsurf(hkl,surface,exp,low,dot,pi,cosinus,sinus,sqrt,U, fs, q_ang)
             
-        if ctr.L[i] > 0:
-            n = ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
-        else:
-            n = - ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
-        rough = (1-beta)/sqrt((1-beta)**2 + 4*beta*sinus(pi*(ctr.L[i] - n)/NLayers)**2)
+        #if ctr.L[i] > 0:
+        #    n = ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
+        #else:
+        #    n = - ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
+        #rough = (1-beta)/sqrt((1-beta)**2 + 4*beta*sinus(pi*(ctr.L[i] - n)/NLayers)**2)
+        rough = (1-beta)/sqrt((1-beta)**2 + 4*beta*sinus(pi*(ctr.L[i]-ctr.Lb[i])/ctr.Db[i])**2)
            
         if hkl[0] == 0.0 and hkl[1] == 0.0:
             if not use_bulk_water:
@@ -500,7 +501,7 @@ def read_data(datafile):
     tmp = Fitting_Rod()
     tmp.H = dat1[0][0]
     tmp.K = dat1[0][1]
-    tmp.Db = dat1[0][6]
+    #tmp.Db = dat1[0][6]
     for i in range(len(data)-z):
         one_rod = True
         if i>1:
@@ -511,17 +512,19 @@ def read_data(datafile):
             tmp.F = Num.append(tmp.F,dat1[i][3])
             tmp.Ferr = Num.append(tmp.Ferr,dat1[i][4])
             tmp.Lb = Num.append(tmp.Lb,dat1[i][5])
+            tmp.Db = Num.append(tmp.Db,dat1[i][6])
         else:
             dat.append(tmp)
             tmp = Fitting_Rod()
             tmp.H = dat1[i][0]
             tmp.K = dat1[i][1]
-            tmp.Db = dat1[i][6]
+            #tmp.Db = dat1[i][6]
                 
             tmp.L = Num.append(tmp.L,dat1[i][2])
             tmp.F = Num.append(tmp.F,dat1[i][3])
             tmp.Ferr = Num.append(tmp.Ferr,dat1[i][4])
             tmp.Lb = Num.append(tmp.Lb,dat1[i][5])
+            tmp.Db = Num.append(tmp.Db,dat1[i][6])
                     
     dat.append(tmp)
     return dat
