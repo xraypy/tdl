@@ -938,11 +938,9 @@ def image_point_F(scan,point,I='I',Inorm='io',Ierr='Ierr',Ibgr='Ibgr',
         d['F']    = 0.0
         d['Ferr'] = 0.0
     else:
-        yn     = scale*d['I']/d['Inorm']
-        yn_err = yn * num.sqrt( (d['Ierr']/d['I'])**2. + 1./d['Inorm'] )
-        d['F']    = num.sqrt(d['ctot']*yn)
-        d['Ferr'] = num.sqrt(d['ctot']*yn_err)
-    
+        scale = scale * d['ctot']/d['Inorm']
+        d['F']    = num.sqrt(scale*d['I'])
+        d['Ferr'] = 0.5 * scale**0.5 * d['Ierr']/d['I']**0.5
     return d
 
 ##############################################################################

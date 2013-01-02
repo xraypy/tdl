@@ -214,6 +214,8 @@ class Fitting_Rod:
         self.Ferr = Num.array([],float)
         self.Lb = Num.array([],float)
         self.Db = float
+        self.q_ang = []
+        self.fs = {}
 
         self.re_bulk = Num.array([],float)
         self.im_bulk = Num.array([],float)
@@ -236,6 +238,24 @@ class Fitting_Rod:
             re_UC , im_UC = calc_Fuc(hkl,bulk,g_inv,database)
             self.re_bulk[i] = re_ctr*re_UC - im_ctr*im_UC
             self.im_bulk[i] = re_UC*im_ctr + re_ctr*im_UC
+            
+    def calc_q_ang(self, g_inv):
+        for l in self.L:
+            q = Num.array([self.H * Num.sqrt(g_inv[0][0]), self.K * Num.sqrt(g_inv[1][1]), l* Num.sqrt(g_inv[2][2])], float)
+            self.q_ang.append(q)
+
+    def calc_fs(self, DB, g_inv):
+        for k in DB.keys():
+            if k not in self.fs.keys():
+                self.fs[k] = Num.array([],float)
+                for l in self.L:
+                    hkl = [self.H, self.K, l]
+                    q = Num.sqrt(Num.dot(Num.dot(hkl,g_inv),hkl))
+                    f_par = DB[k]
+                    f = (f_par[0]*Num.exp(-(q/4/Num.pi)**2*f_par[1]) + f_par[2]*Num.exp(-(q/4/Num.pi)**2*f_par[3]) +\
+                        f_par[4]*Num.exp(-(q/4/Num.pi)**2*f_par[5]) + f_par[6]*Num.exp(-(q/4/Num.pi)**2*f_par[7]) + f_par[8])
+                    self.fs[k] = Num.append(self.fs[k] , f)            
+                
 ####################################################################################################    
 def calc_Fuc(hkl,bulk,g_inv,database):
     a = 0
@@ -250,39 +270,29 @@ def calc_Fuc(hkl,bulk,g_inv,database):
         b = b + (f * Num.sin(2*Num.pi*(hkl[0]*bulk[i][1] + hkl[1]*bulk[i][2] + hkl[2]*bulk[i][3])))
     return a, b
 
-def Fatom(atom,database, U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus,sqrt):
-    f_par = database[low(atom[0])]
+def Fatom(atom,fs,U,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus,sqrt):
+    f = fs[low(atom[0])]
     U[0][0] = atom[4]
     U[0][1] = U[1][0] = atom[7]*sqrt((atom[4]*atom[5]))
     U[0][2] = U[2][0] = atom[8]*sqrt((atom[4]*atom[6]))
     U[1][1] = atom[5]
     U[1][2] = U[2][1] = atom[9]*sqrt((atom[5]*atom[6]))
     U[2][2] = atom[6]  
-    f = (f_par[0]*exp(-(qd4pi)**2*f_par[1]) + f_par[2]*exp(-(qd4pi)**2*f_par[3]) +\
-        f_par[4]*exp(-(qd4pi)**2*f_par[5]) + f_par[6]*exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
-        exp(-2* pi**2*(dot(q_Ang,dot(U,q_Ang)))) * atom[10]
+    f = f * exp(-2* pi**2*(dot(q_Ang,dot(U,q_Ang)))) * atom[10]
     x = 2*pi*(hkl[0]*atom[1] + hkl[1]*atom[2] + hkl[2]*atom[3])
     return [f*cosinus(x), f*sinus(x)]
     
-def calc_Fsurf(hkl,surface,g_inv,database,exp=Num.exp,low=str.lower,dot=Num.dot,pi=Num.pi,cosinus=Num.cos,\
-               sinus = Num.sin,sqrt = Num.sqrt,U= Num.ndarray((3,3),float)):
-    q_Ang = [hkl[0]*sqrt(g_inv[0][0]), hkl[1]*sqrt(g_inv[1][1]), hkl[2]*sqrt(g_inv[2][2])]
-    qd4pi = (sqrt(dot(dot(hkl,g_inv),hkl)))/4/pi
+def calc_Fsurf(hkl,surface,exp,low,dot,pi,cosinus,sinus,sqrt,U, fs, q_Ang):
     a = b = 0
-    jobs = [(atom, Fatom(atom,database,U,qd4pi,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus,sqrt)) for atom in surface]
+    jobs = [(atom, Fatom(atom,fs,U,pi,q_Ang,hkl,low,exp,dot,sinus,cosinus,sqrt)) for atom in surface]
     a=b=0
     for atom, job in jobs:
         a = a+job[0]
         b = b+job[1]
     return a,b
 
-def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
-    q = hkl[2]* Num.sqrt(g_inv[2][2])
-    qd4pi = q/4/Num.pi
-    Auc = cell[0]* Num.sin(Num.radians(cell[5]))* cell[1]
-    f = Auc * d * 0.033456 * (f_par[0]*Num.exp(-(qd4pi)**2*f_par[1]) + f_par[2]*Num.exp(-(qd4pi)**2*f_par[3]) +\
-            f_par[4]*Num.exp(-(qd4pi)**2*f_par[5]) + f_par[6]*Num.exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
-            Num.exp(-2 * Num.pi**2 * q**2 * sig)
+def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, Auc, f, q):
+    f = Auc * d * 0.033456 * f* Num.exp(-2 * Num.pi**2 * q**2 * sig)
     x = Num.pi * q * d
     al = 2 * Num.pi**2 * q**2 * sig_bar
     a = Num.exp(al)*Num.cos(2*x)-1
@@ -299,12 +309,8 @@ def calc_Fwater_layered(hkl, sig, sig_bar, d,zwater, g_inv, f_par, cell):
     im = f* (relayer * imz + imlayer * rez)
     return re, im
         
-def calc_F_layered_el(hkl, occ, K, sig, sig_bar, d, d0, g_inv, f_par):
-    q = hkl[2]* Num.sqrt(g_inv[2][2])
-    qd4pi = q/4/Num.pi
-    f = (f_par[0]*Num.exp(-(qd4pi)**2*f_par[1]) + f_par[2]*Num.exp(-(qd4pi)**2*f_par[3]) +\
-            f_par[4]*Num.exp(-(qd4pi)**2*f_par[5]) + f_par[6]*Num.exp(-(qd4pi)**2*f_par[7]) + f_par[8])*\
-            Num.exp(-2 * Num.pi**2 * q**2 * sig)*occ
+def calc_F_layered_el(hkl, occ, K, sig, sig_bar, d, d0, f, q):
+    f = f* Num.exp(-2 * Num.pi**2 * q**2 * sig)*occ
     x = Num.pi * q * d
     al = 2 * Num.pi**2 * q**2 * sig_bar + K * d
     a = Num.exp(al)*Num.cos(2*x)-1
@@ -321,7 +327,7 @@ def calc_F_layered_el(hkl, occ, K, sig, sig_bar, d, d0, g_inv, f_par):
     im = f* (relayer * imz + imlayer * rez)
     return re, im
         
-def calcF(ctr,global_parms,cell,surface,g_inv,NLayers,database, use_bulk_water, RMS_flag, use_lay_el, el):
+def calcF(ctr,global_parms,Auc,surface,NLayers,use_bulk_water, RMS_flag, use_lay_el, el):
     (occ_el, K,sig_el,sig_el_bar,d_el,d0_el,sig_water,sig_water_bar, d_water,zwater, Scale,specScale,beta) = global_parms
     ctr.bulk = Num.ndarray((len(ctr.L)),float)
     ctr.Fcalc = Num.ndarray((len(ctr.L)),float)
@@ -336,18 +342,19 @@ def calcF(ctr,global_parms,cell,surface,g_inv,NLayers,database, use_bulk_water, 
     sinus = Num.sin
     sqrt = Num.sqrt
     U = Num.ndarray((3,3),float)
-    f_par_water = database['o2-.']
-    if use_lay_el:
-        f_par_el = database[el]
     for i in range(len(ctr.L)):
+        fs = {}
+        for k in ctr.fs.keys():
+            fs[k] = float(ctr.fs[k][i])
+        q_ang = ctr.q_ang[i]
         hkl = [ctr.H,ctr.K,ctr.L[i]]
-        re_surf, im_surf = calc_Fsurf(hkl,surface,g_inv,database,exp,low,dot,pi,cosinus,sinus,sqrt,U)
+        re_surf, im_surf = calc_Fsurf(hkl,surface,exp,low,dot,pi,cosinus,sinus,sqrt,U, fs, q_ang)
             
         if ctr.L[i] > 0:
             n = ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
         else:
             n = - ctr.Lb[i] + round(ctr.L[i]/ctr.Db) * ctr.Db
-        rough = (1-beta)/Num.sqrt((1-beta)**2 + 4*beta*sinus(pi*(ctr.L[i] - n)/NLayers)**2)
+        rough = (1-beta)/sqrt((1-beta)**2 + 4*beta*sinus(pi*(ctr.L[i] - n)/NLayers)**2)
            
         if hkl[0] == 0.0 and hkl[1] == 0.0:
             if not use_bulk_water:
@@ -355,25 +362,25 @@ def calcF(ctr,global_parms,cell,surface,g_inv,NLayers,database, use_bulk_water, 
                 im_water = 0
                 ctr.water[i] = 0
             else:
-                re_water, im_water = calc_Fwater_layered(hkl, sig_water, sig_water_bar, d_water,zwater, g_inv, f_par_water, cell)
-                ctr.water[i] = specScale * Num.sqrt((re_water)**2 + (im_water)**2)
+                re_water, im_water = calc_Fwater_layered(hkl,sig_water,sig_water_bar,d_water,zwater,Auc, fs['o2-.'], q_ang[2])
+                ctr.water[i] = specScale * sqrt((re_water)**2 + (im_water)**2)
             if not use_lay_el:
                 re_el = 0
                 im_el = 0
             else:
-                re_el, im_el = calc_F_layered_el(hkl,occ_el,K, sig_el, sig_el_bar, d_el, d0_el, g_inv, f_par_el) 
+                re_el, im_el = calc_F_layered_el(hkl,occ_el,K, sig_el, sig_el_bar, d_el, d0_el, fs[el], q_ang[2]) 
                     
-            ctr.bulk[i] = specScale * Num.sqrt(ctr.re_bulk[i]**2 + ctr.im_bulk[i]**2)
-            ctr.Fcalc[i] = specScale * rough * Num.sqrt((ctr.re_bulk[i] + re_surf + re_water+ re_el)**2 + (ctr.im_bulk[i] + im_surf + im_water+ im_el)**2)
+            ctr.bulk[i] = specScale * sqrt(ctr.re_bulk[i]**2 + ctr.im_bulk[i]**2)
+            ctr.Fcalc[i] = specScale * rough * sqrt((ctr.re_bulk[i] + re_surf + re_water+ re_el)**2 + (ctr.im_bulk[i] + im_surf + im_water+ im_el)**2)
               
             ctr.rough[i] = rough * specScale
-            ctr.surf[i] = Num.sqrt(re_surf**2 + im_surf**2) * specScale
+            ctr.surf[i] = sqrt(re_surf**2 + im_surf**2) * specScale
         else:
             ctr.bulk[i] = Scale * Num.sqrt(ctr.re_bulk[i]**2 + ctr.im_bulk[i]**2)
             ctr.Fcalc[i] = Scale * rough * Num.sqrt((ctr.re_bulk[i] + re_surf)**2 + (ctr.im_bulk[i] + im_surf)**2)
             ctr.water[i] = 0
             ctr.rough[i] = rough * Scale
-            ctr.surf[i] = Num.sqrt(re_surf**2 + im_surf**2) * Scale                 
+            ctr.surf[i] = sqrt(re_surf**2 + im_surf**2) * Scale                 
     ctr.difference = ((ctr.F - ctr.Fcalc)/ctr.Ferr)**2
     
     return ctr
@@ -385,16 +392,19 @@ def calc_CTRs(parameter,param_usage, dat, cell, surface_tmp, NLayers, database,\
     global_parms, surface_new = param_unfold(parameter,param_usage,surface_tmp,\
                                              use_bulk_water, use_lay_el)
     surface_new = RB_update(rigid_bodies, surface_new, parameter, cell)
+    
+    Auc = cell[0]* Num.sin(Num.radians(cell[5]))* cell[1]
+    
     if parallel:
-        jobs = [(ctr, jobserver.submit(calcF, (ctr,global_parms,cell,\
-                 surface_new,g_inv,NLayers,database,use_bulk_water,RMS_flag,\
+        jobs = [(ctr, jobserver.submit(calcF, (ctr,global_parms,Auc,\
+                 surface_new,NLayers,use_bulk_water,RMS_flag,\
                  use_lay_el, el), (calc_Fsurf, calc_Fwater_layered,\
                  calc_F_layered_el, Fatom),("numpy as Num",)))for ctr in dat]
         dat = []
         for ctr, job in jobs:
             dat.append(job())
     else:
-        jobs = [(ctr,calcF(ctr,global_parms,cell,surface_new,g_inv,NLayers,database,\
+        jobs = [(ctr,calcF(ctr,global_parms,Auc,surface_new,NLayers,\
                         use_bulk_water,RMS_flag, use_lay_el, el)) for ctr in dat]
     RMS = 0
     n = 0
