@@ -122,7 +122,11 @@ def summarize(lines):
                             aborted = True
                     elif (len(ii) > 3):
                         nl_dat = nl_dat + 1
-                        point_data.append(map(float, ii.split()))
+                        try:
+                            point_data.append(map(float, ii.split()))
+                        except:
+                            aborted = True
+                            pass
                 ## append all the info...
                 L_pos = -1
                 L_start = '--'
