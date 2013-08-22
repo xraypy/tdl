@@ -58,19 +58,30 @@ def rigid_body_rotation(atoms, theta, phi, chi, cell):
     theta = Num.radians(theta)
     phi = Num.radians(phi)
     chi = Num.radians(chi)
-    R_theta = Num.array([[Num.cos(theta),Num.sin(theta),0],\
-                         [-Num.sin(theta),Num.cos(theta),0],[0,0,1]],float)
-    R_phi   = Num.array([[Num.cos(phi),0,Num.sin(phi)],[0,1,0],\
-                         [-Num.sin(phi),0,Num.cos(phi)]],float)
-    R_chi   = Num.array([[1,0,0],[0,Num.cos(chi),Num.sin(chi)],\
-                         [0,-Num.sin(chi),Num.cos(chi)]],float)
+    R_theta = Num.array([[Num.cos(theta),-Num.sin(theta),0],\
+                         [Num.sin(theta),Num.cos(theta),0],[0,0,1]],float)
+    R_phi   = Num.array([[Num.cos(phi),0,-Num.sin(phi)],[0,1,0],\
+                         [Num.sin(phi),0,Num.cos(phi)]],float)
+    R_chi   = Num.array([[1,0,0],[0,Num.cos(chi),-Num.sin(chi)],\
+                         [0,Num.sin(chi),Num.cos(chi)]],float)
     R  = Num.dot(R_theta,Num.dot(R_phi,R_chi))
-    P = Num.array([[cell[0],0,0],[0,cell[1],0],[0,0,cell[2]]],float)
-    R = Num.dot(Num.linalg.inv(P),Num.dot(R,P))
+    def calcM(cell):
+        alpha = Num.radians(cell[3])
+        beta = Num.radians(cell[4])
+        gamma = Num.radians(cell[5])
+        x = Num.cos(beta)*cell[2]
+        y = Num.cos(alpha)*cell[2]*Num.cos(Num.pi/2-gamma)
+        z = (cell[2]**2-x**2-y**2)**0.5
+        M = Num.array([[cell[0],0,0],\
+                       [Num.cos(gamma)*cell[1],Num.cos(Num.pi/2-gamma)*cell[1],0],\
+                       [x,y,z]],float)
+        return M
+    P = calcM(cell)
+    R = Num.dot(Num.dot(P,R),Num.linalg.inv(P))
     new_atoms = []
     for atom in atoms:
         coords = Num.array([atom[1],atom[2],atom[3]],float) - Center
-        coords = Num.dot(R, coords) + Center
+        coords = Num.dot(coords, R) + Center
         new_atom = [atom[0], coords[0], coords[1], coords[2], atom[4], atom[5],\
                     atom[6], atom[7], atom[8], atom[9], atom[10]]
         new_atoms.append(new_atom)
@@ -133,7 +144,15 @@ def BV_impact(BVclusters, surface):
     return impact
 ################################################################################
 ######################  Parameter handling  ####################################
+def param_equal(param):
+    keys = param.keys()
+    for key in keys:
+        if param[key][5] in keys:
+            param[key][0] = param[param[key][5]][0]
+    return param
+
 def param_unfold(param, param_use, surface, use_bulk_water, use_lay_el):
+    param = param_equal(param)
     if use_bulk_water:
         zwater = param['zwater'][0]
         sig_water = param['sig_water'][0]
@@ -536,11 +555,11 @@ def read_parameters(parameterfile):
         tmp = str.rsplit(i)
         if tmp[0] != '%':
             if len(tmp) == 5:
-                parameter[tmp[0]]= [float(tmp[1]),float(tmp[2]),float(tmp[3]),False, 0.]
+                parameter[tmp[0]]= [float(tmp[1]),float(tmp[2]),float(tmp[3]),False, 0., '']
                 if tmp[4] == 'True':
                     parameter[tmp[0]][3] = True
             elif len(tmp) == 6:
-                parameter[tmp[0]]= [float(tmp[1]),float(tmp[3]),float(tmp[4]),False, float(tmp[2])]
+                parameter[tmp[0]]= [float(tmp[1]),float(tmp[3]),float(tmp[4]),False, float(tmp[2]), '']
                 if tmp[5] == 'True':
                     parameter[tmp[0]][3] = True
                 
@@ -620,7 +639,8 @@ def write_surface(cell, surface,param,param_use, rigid_bodies, use_bulk_water, u
         line = "%5s %6.5f %6.5f %6.5f %6.5f %6.5f %6.5f %6.5f %6.5f %6.5f %6.5f\n" % (atom[0],atom[1],atom[2],atom[3],\
                                                                                       atom[4],atom[5],atom[6],atom[7],atom[8],atom[9],atom[10])
         f.write(line)    
-
+    f.close()
+    
 def write_cif(cell4, surface4,param4,param_use, rigid_bodies, use_bulk_water, use_lay_el, filename = 'surface.cif'):
     global_parms, surface4 = param_unfold(param4,param_use, surface4, use_bulk_water, use_lay_el)
     surface4 = RB_update(rigid_bodies, surface4, param4, cell4)
@@ -644,10 +664,11 @@ def write_cif(cell4, surface4,param4,param_use, rigid_bodies, use_bulk_water, us
     f.write('_atom_site_fract_y\n')
     f.write('_atom_site_fract_z\n')
     for i in range(len(surface4)):
-        f.write(str(surface4[i][0])+str(i+1)+'  '+str(surface4[i][1])+'  '+str(surface4[i][2])+'  '+str(surface4[i][3])+'\n')
-        f.write(str(surface4[i][0])+str(len(surface4)+i+1)+'  '+str(surface4[i][1]+1)+'  '+str(surface4[i][2])+'  '+str(surface4[i][3])+'\n')
-        f.write(str(surface4[i][0])+str(2*len(surface4)+i+1)+'  '+str(surface4[i][1])+'  '+str(surface4[i][2]+1)+'  '+str(surface4[i][3])+'\n')
-        f.write(str(surface4[i][0])+str(3*len(surface4)+i+1)+'  '+str(surface4[i][1]+1)+'  '+str(surface4[i][2]+1)+'  '+str(surface4[i][3])+'\n')
+        if surface4[i][10] >0:
+            f.write(str(surface4[i][0])+str(i+1)+'  '+str(surface4[i][1])+'  '+str(surface4[i][2])+'  '+str(surface4[i][3])+'\n')
+            f.write(str(surface4[i][0])+str(len(surface4)+i+1)+'  '+str(surface4[i][1]+1)+'  '+str(surface4[i][2])+'  '+str(surface4[i][3])+'\n')
+            f.write(str(surface4[i][0])+str(2*len(surface4)+i+1)+'  '+str(surface4[i][1])+'  '+str(surface4[i][2]+1)+'  '+str(surface4[i][3])+'\n')
+            f.write(str(surface4[i][0])+str(3*len(surface4)+i+1)+'  '+str(surface4[i][1]+1)+'  '+str(surface4[i][2]+1)+'  '+str(surface4[i][3])+'\n')
     f.write('loop_\n')
     f.write('_atom_site_aniso_label\n')
     f.write('_atom_site_aniso_U_11\n')
@@ -657,13 +678,14 @@ def write_cif(cell4, surface4,param4,param_use, rigid_bodies, use_bulk_water, us
     f.write('_atom_site_aniso_U_13\n')
     f.write('_atom_site_aniso_U_23\n')
     for i in range(len(surface4)):
-        uxy = surface4[i][7] * (surface4[i][4])**0.5 * (surface4[i][5])**0.5
-        uxz = surface4[i][8] * (surface4[i][4])**0.5 * (surface4[i][6])**0.5
-        uyz = surface4[i][9] * (surface4[i][5])**0.5 * (surface4[i][6])**0.5
-        f.write(str(surface4[i][0])+str(i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
-        f.write(str(surface4[i][0])+str(len(surface4)+i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
-        f.write(str(surface4[i][0])+str(2*len(surface4)+i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
-        f.write(str(surface4[i][0])+str(3*len(surface4)+i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
+        if surface4[i][10] >0:
+            uxy = surface4[i][7] * (surface4[i][4])**0.5 * (surface4[i][5])**0.5
+            uxz = surface4[i][8] * (surface4[i][4])**0.5 * (surface4[i][6])**0.5
+            uyz = surface4[i][9] * (surface4[i][5])**0.5 * (surface4[i][6])**0.5
+            f.write(str(surface4[i][0])+str(i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
+            f.write(str(surface4[i][0])+str(len(surface4)+i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
+            f.write(str(surface4[i][0])+str(2*len(surface4)+i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
+            f.write(str(surface4[i][0])+str(3*len(surface4)+i+1)+'  '+str(surface4[i][4])+'  '+str(surface4[i][5])+'  '+str(surface4[i][6])+'  '+str(uxy)+'  '+str(uxz)+'  '+str(uyz)+'\n')
     f.close()
 
 def write_par(parameter, param_labels, filename = 'parameters.new'):

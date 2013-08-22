@@ -23,10 +23,12 @@ class wxFourierFrame(wx.Frame):
         self.CreateStatusBar()
         self.menubar = wx.MenuBar()
         self.file = wx.Menu()
-        menusavefig = self.file.Append(wx.ID_ANY, '&Save',\
-                                       "Save the current figure") 
+        menusavefig = self.file.Append(wx.ID_ANY, '&Save figure',\
+                                       "Save the current figure")
+        menusavedat = self.file.Append(wx.ID_ANY, '&Save e-(z) data',\
+                                       "Save the e- density over z data")
         menuexit = self.file.Append(wx.ID_EXIT, \
-                                    '&Exit', u"Close \u03c0-surf Fourier Frame")
+                                    '&Exit', u"Close Fourier Frame")
         self.menubar.Append(self.file, '&File')
         self.SetMenuBar(self.menubar)
         
@@ -42,6 +44,7 @@ class wxFourierFrame(wx.Frame):
         self.SetSizer(self.sizer)
         self.SetMinSize((380, 400))
         self.Bind(wx.EVT_MENU, self._OnSave,menusavefig)
+        self.Bind(wx.EVT_MENU, self._OnSaveDat,menusavedat)
         self.Bind(wx.EVT_MENU, self._OnClose,menuexit)
     def _OnSave(self, event):
         dirname = ''
@@ -52,6 +55,28 @@ class wxFourierFrame(wx.Frame):
             dirname = dlg.GetDirectory()
             os.chdir(dirname)
             self.plot.figure.savefig(filename)
+            
+        dlg.Destroy()
+
+    def _OnSaveDat(self, event):
+        dirname = ''
+        dlg = wx.FileDialog(self, "Save the  e- density over z data to a file",\
+                            dirname, ".dat", "*.dat", wx.SAVE)
+        if dlg.ShowModal() == wx.ID_OK:
+            filename = dlg.GetFilename()
+            dirname = dlg.GetDirectory()
+            os.chdir(dirname)
+            
+            z = (Num.arange(self.choice.rho.shape[2], dtype = float)/self.choice.rho.shape[2]*self.choice.cell[2])\
+                +self.choice.zmin
+            image = Num.sum(self.choice.rho, axis = 1)
+            graph = Num.sum(image, axis = 0)
+            f = file(filename, 'w')
+            f.write("Fourier Synthesis Result \n sum of e-density (A**(-3)) over z (A)\n  z        e-density \n")
+            for i in range(len(z)):
+                line = " %6.5f  %6.5f\n" % (z[i], graph[i])
+                f.write(line)
+            f.close()
             
         dlg.Destroy()
 
@@ -225,6 +250,5 @@ class ChoicePanel(wx.Panel):
         fig.figure.canvas.draw()
 ################################################################################        
 def createfourierframe(parent, rho,cell,zmin):
-    frame = wxFourierFrame(parent,rho,cell,zmin,\
-                           u"\u03c0-surf Fourier Frame", (600,600))
+    frame = wxFourierFrame(parent,rho,cell,zmin,"Fourier Frame", (600,600))
     return frame
