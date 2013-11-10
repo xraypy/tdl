@@ -11,13 +11,23 @@ Frank Heberling (Frank.Heberling@kit.edu)
 import wx
 import os
 import time
+from thread import start_new_thread, allocate_lock
 import numpy as Num
+
+try:
+    import vtk
+    visualization = True
+except ImportError:
+    visualization = False
+    print """could not find VTK, \nVTK is necessary to run the structure viewer \n
+             integrated into python interface structure refinement"""
 
 from tdl.modules.sxrd.ctrfitcalcs import *
 from tdl.modules.sxrd.simplex import simplex, statistics, single_param_sensitivities
 from tdl.modules.sxrd.pisurf_resonant import ResonantDataPanel
 from tdl.modules.sxrd.pisurf_resonant import read_RSD, read_f1f2 
 from tdl.modules.sxrd.pisurf_resonant import RASD_Fourier, write_rids
+from tdl.modules.sxrd.pisurf_structure_viewer import createStructureRenderer,saveStructureScreenshot, atom_styles
 
 from tdl.modules.xtab.atomic import f0data as database
 ###############################################################################
@@ -117,8 +127,8 @@ class wxCtrFitFrame(wx.Frame):
             for i in range(len(self.nb.data)):
                 wx.StaticText(self.nb.MainControlPage, label = (str(int(self.nb.data[i].H))+' '+str(int(self.nb.data[i].K))+' L'), pos=(350,25*i+67), size=(40,20))
                 self.nb.MainControlPage.rodweight.append(wx.TextCtrl(self.nb.MainControlPage,1000+i, pos=(400,25*i+65), size=(30,20)))
-                self.nb.MainControlPage.rodweight[i].SetValue('1')
                 self.nb.MainControlPage.Rod_weight.append(1)
+                self.nb.MainControlPage.rodweight[i].SetValue('1')
                 self.Bind(wx.EVT_TEXT, self.nb.MainControlPage.setrodweight, self.nb.MainControlPage.rodweight[i])
             self.nb.SetSelection(0)
         dlg.Destroy()
@@ -280,8 +290,8 @@ class wxCtrFitFrame(wx.Frame):
             for i in range(len(self.nb.data)):
                 wx.StaticText(self.nb.MainControlPage, label = (str(int(self.nb.data[i].H))+' '+str(int(self.nb.data[i].K))+' L'), pos=(350,25*i+67), size=(40,20))
                 self.nb.MainControlPage.rodweight.append(wx.TextCtrl(self.nb.MainControlPage,1000+i, pos=(400,25*i+65), size=(30,20)))
-                self.nb.MainControlPage.rodweight[i].SetValue('1')
                 self.nb.MainControlPage.Rod_weight.append(1)
+                self.nb.MainControlPage.rodweight[i].SetValue('1')
                 self.Bind(wx.EVT_TEXT, self.nb.MainControlPage.setrodweight, self.nb.MainControlPage.rodweight[i])
             #read bulk
             self.nb.bulk, self.nb.cell, self.nb.NLayers = read_bulk(self.dirname[1]+'/'+self.filename[1])
@@ -538,7 +548,7 @@ class wxCtrFitFrame(wx.Frame):
             res_param_usage = []
             res_surface = []
             for i in range(len(self.nb.surface)):
-                if self.nb.surface[i][0] == self.nb.MainControlPage.el:
+                if self.nb.surface[i][0] == self.nb.ResonantDataPage.resel:
                     res_surface.append(self.nb.surface[i])
                     res_param_usage.append(self.nb.parameter_usage[i])
                     
@@ -604,7 +614,14 @@ class MainControlPanel(wx.Panel):
         self.simplex_params = [1.0,0.5,2.0,0.2,1e-6,10000, False]
 
         self.nb = self.GetParent()
-       
+        
+        if visualization:
+            self.structure_count = int(0)
+            self.renWin = vtk.vtkRenderWindow()
+            self.iren = vtk.vtkRenderWindowInteractor()
+            self.renderer = vtk.vtkRenderer()
+            self.atom_styles = atom_styles
+
         self.Figure1 = None
         self.Figure2 = None
         self.Figure3 = None
@@ -746,12 +763,20 @@ class MainControlPanel(wx.Panel):
                                      pos=(640, 305), size=(120,20),\
                                      choices=self.used_params,style=wx.CB_READONLY)
         self.Bind(wx.EVT_COMBOBOX, self.setparam, self.getparam)
+
+        ################## Structure Viewer ####################################################
+
+        self.StructureViewButton = wx.Button(self, label = 'Display Structure', pos =(520,490), size=(240,35))
+        self.Bind(wx.EVT_BUTTON, self.OnClickStructure, self.StructureViewButton)
+        self.StructureSaveButton = wx.Button(self, label = 'Save Structure Screenshot', pos =(580,530), size=(180,25))
+        self.Bind(wx.EVT_BUTTON, self.OnClickStructureScreenshot, self.StructureSaveButton)
         
         # Start and Stop Fit ###################################################################
         self.Startfitbutton = wx.Button(self, label = 'Start Fit', pos =(520,575), size=(170,60))
         self.Bind(wx.EVT_BUTTON, self.OnClickStartFit, self.Startfitbutton)
         self.Stopfitbutton = wx.Button(self, label = 'Stop Fit', pos =(700,575), size=(60,60))
         self.Bind(wx.EVT_BUTTON, self.OnClickStopFit, self.Stopfitbutton)
+
                                        
    ################################# Plotting options event functions #########################################
     def setplotdims(self, event):
@@ -932,10 +957,41 @@ class MainControlPanel(wx.Panel):
                             print self.used_params[i] + ' & ' + self.used_params[j] + ': ' + str(round(self.correl_matrix[i][j],5))
             if n == 0: print 'None \n'
             else: print '\n'
+            print 'statistics calculation finished, chi**2 = '+str(round(self.RMS,3))+'\n'
+            print 'number of used variables = '+str(b)
         self.nb.frame.SetStatusText(' statistics calculation finished, chi**2 = '+str(round(self.RMS,3)), 0)
         pass
     
     ################################################################################################################################
+    def OnClickStructure(self, e):
+        if visualization:
+            self.structure_count = self.structure_count + 1
+            if self.structure_count == 1:
+                self.renderer = createStructureRenderer(self.nb.surface, self.nb.cell, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.atom_styles)
+                self.renWin.AddRenderer(self.renderer)
+                self.iren.SetRenderWindow(self.renWin)
+                style = vtk.vtkInteractorStyleTrackballCamera()
+                self.iren.SetInteractorStyle(style)
+                self.iren.Initialize()
+                self.renWin.SetSize( 800, 800 )
+                self.renWin.Render()
+                self.iren.Start()
+            else:
+                self.renWin.RemoveRenderer(self.renderer)
+                self.renderer = createStructureRenderer(self.nb.surface, self.nb.cell, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.atom_styles)
+                self.renWin.AddRenderer(self.renderer)
+                self.renWin.Render()
+    def OnClickStructureScreenshot(self, e):
+        if visualization:
+            dirname = ''
+            dlg = wx.FileDialog(self, "Save structure viewer screenshot to .png file", dirname, ".png", "*.png", wx.SAVE)
+            if dlg.ShowModal() == wx.ID_OK:
+                filename = dlg.GetFilename()
+                dirname = dlg.GetDirectory()
+                os.chdir(dirname)
+                saveStructureScreenshot(self.renWin, filename)
+            dlg.Destroy()
+    #########################################################################################################################
     def OnClickStartFit(self,e):
         flag = check_model_consistency(self.nb.param_labels, self.nb.parameter, self.nb.parameter_usage, self.nb.rigid_bodies, self.UBW_flag, self.use_lay_el)
         if flag:
@@ -950,7 +1006,8 @@ class MainControlPanel(wx.Panel):
             self.Figure1.canvas.draw()
             check_vibes(self.nb.surface,self.nb.parameter, self.nb.parameter_usage)
             for i in range(len(self.nb.param_labels)):
-                self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
+                if self.nb.parameter[self.nb.param_labels[i]][3] and self.nb.parameter[self.nb.param_labels[i]][5] == '':
+                    self.nb.ParameterPage.control1[i].SetValue(str(round(self.nb.parameter[self.nb.param_labels[i]][0], 12)))
             self.nb.SetSelection(2)
     def OnClickStopFit(self,e):
         self.StopFit = True   
@@ -969,6 +1026,8 @@ class ParameterPanel(wx.ScrolledWindow):
         self.control7 = []
         self.control8 = []
         self.togglesteps = []
+
+        self.lock = allocate_lock()
 
         wx.StaticText(self, label = 'value', pos=(170, 10), size=(100, 20))
         wx.StaticText(self, label = 'std.-dev.', pos=(290, 10), size=(100, 20))
@@ -1009,8 +1068,17 @@ class ParameterPanel(wx.ScrolledWindow):
         item = event.GetId()-20000
         try:
             self.nb.parameter[self.nb.param_labels[item]][0] = float(event.GetString())
+            self.nb.parameter[self.nb.param_labels[item]][5] = ''
+            for key in self.nb.parameter.keys():
+                if self.nb.parameter[key][5] == self.nb.param_labels[item]:
+                    self.nb.parameter[key][0] = self.nb.parameter[self.nb.param_labels[item]][0]
         except ValueError:
-            pass        
+            try:
+                self.nb.parameter[self.nb.param_labels[item]][5] = event.GetString()
+                self.nb.parameter[self.nb.param_labels[item]][3] = False
+                self.control4[item].SetValue(False)
+            except ValueError:
+                pass
     def editparmin(self,event):
         item = event.GetId()-len(self.nb.param_labels)-20000
         try:
@@ -1025,11 +1093,19 @@ class ParameterPanel(wx.ScrolledWindow):
             pass        
     def editparstate(self,event):
         item = event.GetId()- 3*len(self.nb.param_labels)-20000
-        self.nb.parameter[self.nb.param_labels[item]][3] = self.control4[item].GetValue()
+        state = self.control4[item].GetValue()
+        self.nb.parameter[self.nb.param_labels[item]][3] = state 
+        if state and self.nb.parameter[self.nb.param_labels[item]][5] != '':
+            self.nb.parameter[self.nb.param_labels[item]][5] = ''
+            self.nb.ParameterPage.control1[item].SetValue(str(round(self.nb.parameter[self.nb.param_labels[item]][0], 12)))
     def toggleminus(self, event):
         item = event.GetId()-4*len(self.nb.param_labels)-20000
         step = self.togglesteps[item]
         self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] - step
+        for key in self.nb.parameter.keys():
+            if self.nb.parameter[key][5] == self.nb.param_labels[item]:
+                self.nb.parameter[key][0] = self.nb.parameter[self.nb.param_labels[item]][0] 
+        self.nb.parameter[self.nb.param_labels[item]][5] = ''    
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
         self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell,\
                                self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
@@ -1041,6 +1117,7 @@ class ParameterPanel(wx.ScrolledWindow):
         self.nb.MainControlPage.Figure2 = plot_edensity(self.nb.MainControlPage.Figure2, self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_lay_el, self.nb.ResonantDataPage.resel)
         self.nb.MainControlPage.Figure2.canvas.draw()
         check_vibes(self.nb.surface,self.nb.parameter, self.nb.parameter_usage)
+        self.nb.MainControlPage.OnClickStructure(event)
     def togglestep(self,event):
         item = event.GetId()-5*len(self.nb.param_labels)-20000
         try:
@@ -1051,6 +1128,10 @@ class ParameterPanel(wx.ScrolledWindow):
         item = event.GetId()-6*len(self.nb.param_labels)-20000
         step = self.togglesteps[item]
         self.nb.parameter[self.nb.param_labels[item]][0] = self.nb.parameter[self.nb.param_labels[item]][0] + step
+        for key in self.nb.parameter.keys():
+            if self.nb.parameter[key][5] == self.nb.param_labels[item]:
+                self.nb.parameter[key][0] = self.nb.parameter[self.nb.param_labels[item]][0]
+        self.nb.parameter[self.nb.param_labels[item]][5] = '' 
         self.control1[item].SetValue(str(self.nb.parameter[self.nb.param_labels[item]][0]))
         self.nb.data, self.nb.MainControlPage.RMS = calc_CTRs(self.nb.parameter,self.nb.parameter_usage, self.nb.data, self.nb.cell,\
                                self.nb.surface, self.nb.NLayers, database, self.nb.g_inv, self.nb.MainControlPage.Rod_weight, self.nb.rigid_bodies, \
@@ -1062,6 +1143,7 @@ class ParameterPanel(wx.ScrolledWindow):
         self.nb.MainControlPage.Figure2 = plot_edensity(self.nb.MainControlPage.Figure2,self.nb.surface, self.nb.parameter, self.nb.parameter_usage, self.nb.cell, database, self.nb.rigid_bodies, self.nb.MainControlPage.UBW_flag, self.nb.MainControlPage.use_lay_el,self.nb.ResonantDataPage.resel)
         self.nb.MainControlPage.Figure2.canvas.draw()
         check_vibes(self.nb.surface,self.nb.parameter, self.nb.parameter_usage)
+        self.nb.MainControlPage.OnClickStructure(event)
 ############################################################################################################
 ############################################################################################################
 def start():

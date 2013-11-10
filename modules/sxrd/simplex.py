@@ -299,8 +299,12 @@ def statistics(fpc, parameter,param_usage, dat, cell,surface_tmp, NLayers, datab
                     parameter[used_params[i]][4] = C[i][j]
                 else:
                     C[i][j] = V[i][j]/Num.sqrt(V[i][i]*V[j][j])
+        keys = parameter.keys()
+        for key in keys:
+            if parameter[key][5] in keys:
+                parameter[key][4] = parameter[parameter[key][5]][4]
     except:
-        print "There's a hole in the matrix !!! \n"
+        print "There's a hole in the matrix !!! Omit unused or insignificant parameters in the calculation.\n"
         
     return parameter, X, C, used_params, R
 
