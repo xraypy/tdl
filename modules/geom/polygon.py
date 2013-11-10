@@ -178,7 +178,7 @@ def line_intercept(p1,p2,p3,p4):
         flag = 0
     #check if the intersection point corresponds to an end point
     intercept = num.array([x,y])
-    def _same(p1,p2,prec=0.00001):
+    def _same(p1,p2,prec=0.0001):
         """ are two points the same """
         #return num.all(num.equal(p1,p2))
         t1 = num.fabs(p1[0]-p2[0]) < prec
@@ -328,7 +328,9 @@ def segment_area(p1,p2):
     #a = 0.5*cartesian_mag(num.cross(p1,p2))
     # This is the result of the cross product operation:
     a = (p1[0]*p2[1])**2. + (p2[0]*p1[1])**2. - (2.*p1[0]*p2[0]*p1[1]*p2[1])
-    a = 0.5 * num.sqrt(a)
+    if a < 0:
+        a = 0
+    else: a = 0.5 * num.sqrt(a)
     return a
 
 ##################################################################

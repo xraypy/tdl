@@ -5,22 +5,22 @@ import sys
 import time
 
 def auto_master(spec_dir):
-    spec_times = {}
-    while True: #spec_times == {}:
+    spec_sizes = {}
+    while True: #spec_sizes == {}:
         print 'Updating...'
         spec_files = os.listdir(spec_dir)
         spec_files = [item for item in spec_files if item.endswith('.spc')]
         for item in spec_files:
             full_item = os.path.join(spec_dir, item)
-            edit_time = os.path.getmtime(full_item)
-            if item not in spec_times:
-                spec_times[item] = edit_time
+            edit_size = os.path.getsize(full_item)
+            if item not in spec_sizes:
+                spec_sizes[item] = edit_size
                 subprocess.call([sys.executable,
                                  'C:\\apps\\tdl\\scripts\\spectohdf.py',
                                  full_item, '', '-a'])
             else:
-                if spec_times[item] < edit_time:
-                    spec_times[item] = edit_time
+                if spec_sizes[item] < edit_size:
+                    spec_sizes[item] = edit_size
                     subprocess.call([sys.executable,
                                     'C:\\apps\\tdl\\scripts\\spectohdf.py',
                                      full_item, '', '-a'])
