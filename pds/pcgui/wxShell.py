@@ -35,10 +35,10 @@ wx.Panel.__init__() and wx.Frame.__init__():
 from   PythonCard import model, dialog
 import wx, string, sys, os, time
 from   wx import stc
-from   pds.pcgui.wxUtil import wxUtil
-from   pds.pcgui.app_menu import menuApps
-import pds
-from   pds.shellutil import mod_import
+from  .wxUtil import wxUtil
+from  .app_menu import menuApps
+from tdl import pds
+from  ..shellutil import mod_import
 
 #######################################################################
 

@@ -35,11 +35,11 @@ try:
 except:
     pass
 
-from   pds.interpretor import Interpretor
-from   pds.shellutil   import set_path, show_more, show_list
-from   pds.shellutil   import PrintExceptErr, command2expr
-from   pds.shellutil   import split_args, trimstring, split_cmd_line
-from   pds.numshell    import _NumShell
+from  .interpretor import Interpretor
+from  .shellutil   import set_path, show_more, show_list
+from  .shellutil   import PrintExceptErr, command2expr
+from  .shellutil   import split_args, trimstring, split_cmd_line
+from  .numshell    import _NumShell
 
 ##########################################################################
 
@@ -880,6 +880,108 @@ def main(arg=''):
             do_shell = False
         elif o == '-h':
             show_usage()
+    
+    #################################################################
+    # Default paths. Assume the following layout:
+    #    pds_path  = root1/root2/pds
+    #    startup   = root1/root2/pds/startup.pds
+    #
+    # Here we try to make sure that the PYTHONPATH includes:
+    #    ".", "root1", "root1/root2", and "root1/root2/pds"
+    #
+    # Additional paths should be set in the startup files
+    #################################################################
+    #tmp = globals()
+    #__path__  = os.path.abspath(tmp['__file__'])
+    pds_path  = os.path.split(os.path.abspath(__file__))[0]
+    root2     = os.path.split(pds_path)[0]
+    root1     = os.path.split(root2)[0]
+
+    # Set Python Path
+    if verbose:
+        print ' == pds paths:'
+        print '    root1  = %s  ' % root1
+        print '    root2  = %s  ' % root2
+        print '    pds_path   = %s  ' % pds_path
+    set_path('.',recurse=False,verbose=verbose)
+    set_path(root2,recurse=False,verbose=verbose)
+    set_path(root1,recurse=False,verbose=verbose)
+    set_path(pds_path,recurse=False,verbose=verbose)
+
+    ##############################################################
+    # startup  files:
+    #   first site-wide ==> pds_path/startup.pds
+    #   then from user's home dir ==> ~/.pds
+    # files contains tuples of (file, Warn_If_Not_Exist_Flag)
+    ##############################################################
+    files = [(os.path.join(pds_path,'startup.pds'),False)]
+    user_home = os.path.expanduser('~')
+    files.append((os.path.join(user_home,'.pds'),False))
+
+    # the rest of the arg line are added files
+    if args is not None:
+        for f in args: files.append((f,True))
+
+    if verbose:
+        print " == Startup files:"
+        for f in files: print '    ', f
+
+    # create a dictionary of default system variables
+    sys_vars = {}
+    if sys.platform == 'win32':
+        pds_path  = pds_path.replace('\\','/')
+        root_path = root2.replace('\\','/')
+        user_home = user_home.replace('\\','/')
+    sys_vars['__pds__.__path__']     = pds_path
+    sys_vars['__pds__.__rootpath__'] = root_path
+    sys_vars['__home__']             = user_home
+    args = []
+    for var in sys_vars.keys():
+        s = "%s='%s'" % (var,sys_vars[var])
+        args.append(s)
+
+    ##########################################################
+    # run it
+    ##########################################################
+    if use_wxGui == False:
+        s = Shell(args=args,debug=debug,GUI='TkAgg')
+        for f,warn in files:
+            if os.path.exists(f) and os.path.isfile(f):
+                s.do_load(f)
+            elif warn:
+                print "\n  ***Cannot find file: %s" % f
+        if do_shell:
+            s.loop()
+    elif use_wxGui == True:
+        # pds gets started from within the wxGui
+        # looks like dir gets reset when call application
+        work_dir = os.getcwd()
+        from pds.pcgui import wxShell
+        wxShell.intro     = None
+        wxShell.debug     = debug
+        wxShell.files     = files
+        wxShell.args      = args
+        rsrc_path         = os.path.join(pds_path,'pcgui')
+        wxShell.rsrc_path = rsrc_path
+        rsrc = os.path.join(rsrc_path,'wxShell.rsrc.py')
+        gui  = wxShell.model.Application(wxShell.wxShell, aFileName=rsrc)
+        os.chdir(work_dir)
+        gui.MainLoop()
+
+        
+def rungui():
+    """
+    Startup the shell program
+    """
+    ##############################################################
+    # test for command line switches
+    ##############################################################
+    use_wxGui = True
+    debug     = False
+    verbose   = False
+    do_shell  = True
+    files     = []
+    args  = None
     
     #################################################################
     # Default paths. Assume the following layout:
