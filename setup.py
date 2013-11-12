@@ -59,6 +59,7 @@ package_data['tdl.lib'].append('gsl.lib')
 package_data['tdl.lib'].append('gslcblas.dll')
 
 # modules
+packages.append('tdl.modules.ana_upgrade')
 packages.append('tdl.modules.ana')
 packages.append('tdl.modules.geom')
 packages.append('tdl.modules.peak')
