@@ -956,7 +956,7 @@ def main(arg=''):
         # pds gets started from within the wxGui
         # looks like dir gets reset when call application
         work_dir = os.getcwd()
-        from pds.pcgui import wxShell
+        from tdl.pds.pcgui import wxShell
         wxShell.intro     = None
         wxShell.debug     = debug
         wxShell.files     = files
@@ -1058,7 +1058,7 @@ def rungui():
         # pds gets started from within the wxGui
         # looks like dir gets reset when call application
         work_dir = os.getcwd()
-        from pds.pcgui import wxShell
+        from tdl.pds.pcgui import wxShell
         wxShell.intro     = None
         wxShell.debug     = debug
         wxShell.files     = files

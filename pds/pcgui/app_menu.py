@@ -7,7 +7,7 @@ from PythonCard import model
 import wx, string, sys, os, time
 from wx import stc
 
-from pds.shellutil import mod_import
+from ..shellutil import mod_import
 
 #######################################################################
 class menuApps:
