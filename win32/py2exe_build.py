@@ -71,6 +71,22 @@ pycard_incs = ['PythonCard', 'PythonCard.model', 'PythonCard.dialog',
                'PythonCard.components.togglebutton',
                'PythonCard.components.tree']
 
+tdl_incs = ['tdl.modules.ana',
+            'tdl.modules.ana_upgrade',
+            'tdl.modules.geom',
+            'tdl.modules.peak',
+            'tdl.modules.specfile',
+            'tdl.modules.spectra',
+            'tdl.modules.sxrd',
+            'tdl.modules.utils',
+            'tdl.modules.xrd',
+            'tdl.modules.xrf',
+            'tdl.modules.xrr',
+            'tdl.modules.xtab',
+            'tdl.modules.xtal']
+            
+            
+            
 extra_files = ['TDL.ico']
 scipy_dlls = ['lib/site-packages/scipy/optimize/minpack2.pyd',
               'lib/site-packages/scipy/interpolate/dftipack.pyd',
@@ -169,6 +185,7 @@ py2exe_opts = {'optimize':1,
                                 'libgobject-2.0-0.dll', 'libzmq.dll']
                }
 py2exe_opts['includes'].extend(pycard_incs)
+py2exe_opts['includes'].extend(tdl_incs)
 setup(name = "TDL",
       windows = windows_apps,
       options = {'py2exe': py2exe_opts},
