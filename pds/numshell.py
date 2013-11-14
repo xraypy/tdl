@@ -113,10 +113,10 @@ def _import_pyplot(backend="WXAgg", verbose=False):
     # if verbose:
     #     sys.__stdout__.write(txt)
     #
-    if version < 950:
-        matplotlib.use(backend)
-    else:
-        matplotlib.use(backend,warn=False)
+    # if version < 950:
+    #    matplotlib.use(backend)
+    #else:
+    #    matplotlib.use(backend,warn=False)
     import matplotlib.pyplot as pyplot
     
     # do we need this??

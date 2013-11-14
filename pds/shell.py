@@ -35,11 +35,14 @@ try:
 except:
     pass
 
-from  .interpretor import Interpretor
-from  .shellutil   import set_path, show_more, show_list
-from  .shellutil   import PrintExceptErr, command2expr
-from  .shellutil   import split_args, trimstring, split_cmd_line
-from  .numshell    import _NumShell
+from .interpretor import Interpretor
+from .shellutil   import set_path, show_more, show_list
+from .shellutil   import PrintExceptErr, command2expr
+from .shellutil   import split_args, trimstring, split_cmd_line
+from .numshell    import _NumShell
+
+from .pcgui import wxShell
+from .wxShell_rsrc import data as r_wxShell
 
 ##########################################################################
 
@@ -623,7 +626,7 @@ class Shell(_NumShell):
         >>save fname      # save all to fname
         >>save data fname # save data to file
         """
-        from pds.shellutil import pickle_1 as pickle
+        from .shellutil import pickle_1 as pickle
         #from pds.shellutil import pickle_2 as pickle
 
         # parse input, get filename
@@ -657,7 +660,7 @@ class Shell(_NumShell):
         return SUCCESS 
 
     def _restore(self,fname):
-        from pds.shellutil import unpickle_1 as unpickle
+        from .shellutil import unpickle_1 as unpickle
         #from pds.shellutil import unpickle_2 as unpickle
 
         pdata = unpickle(fname)
@@ -956,15 +959,11 @@ def main(arg=''):
         # pds gets started from within the wxGui
         # looks like dir gets reset when call application
         work_dir = os.getcwd()
-        from tdl.pds.pcgui import wxShell
         wxShell.intro     = None
         wxShell.debug     = debug
         wxShell.files     = files
         wxShell.args      = args
-        rsrc_path         = os.path.join(pds_path,'pcgui')
-        wxShell.rsrc_path = rsrc_path
-        rsrc = os.path.join(rsrc_path,'wxShell.rsrc.py')
-        gui  = wxShell.model.Application(wxShell.wxShell, aFileName=rsrc)
+        gui  = wxShell.model.Application(wxShell.wxShell, rsrc=r_wxShell)
         os.chdir(work_dir)
         gui.MainLoop()
 
@@ -1058,15 +1057,12 @@ def rungui():
         # pds gets started from within the wxGui
         # looks like dir gets reset when call application
         work_dir = os.getcwd()
-        from tdl.pds.pcgui import wxShell
+        
         wxShell.intro     = None
         wxShell.debug     = debug
         wxShell.files     = files
         wxShell.args      = args
-        rsrc_path         = os.path.join(pds_path,'pcgui')
-        wxShell.rsrc_path = rsrc_path
-        rsrc = os.path.join(rsrc_path,'wxShell.rsrc.py')
-        gui  = wxShell.model.Application(wxShell.wxShell, aFileName=rsrc)
+        gui  = wxShell.model.Application(wxShell.wxShell, rsrc=r_wxShell)
         os.chdir(work_dir)
         gui.MainLoop()
 

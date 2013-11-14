@@ -14,10 +14,9 @@ import sys
 import types
 import time
 
-from pds.shellutil import show_list, show_more, datalen
-from pds.shellutil import set_path, unescape_string, list2array
-from pds.shellutil import mod_import
-from pds.shellutil import Group
+from .shellutil import show_list, show_more, datalen
+from .shellutil import set_path, unescape_string, list2array
+from .shellutil import mod_import, Group
 
 #####################################################################
 class PdsBuiltins:
