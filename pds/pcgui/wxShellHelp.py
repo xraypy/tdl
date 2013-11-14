@@ -8,8 +8,8 @@ import wx
 import os
 import types
 
-from  pds.pcgui.wxUtil import wxUtil
-from  pds.shell import HELP_STR, HELP_USE_STR
+from  .wxUtil import wxUtil
+from  ..shell import HELP_STR, HELP_USE_STR
 
 ########################################################################
 

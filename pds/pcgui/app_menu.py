@@ -9,88 +9,68 @@ from wx import stc
 
 from ..shellutil import mod_import
 
+from .wxPlotSelection_rsrc import data as r_wxPlotSelection
+from .wxXrf_rsrc           import data as r_wxXrf
+from .wxXrrBuilder_rsrc    import data as r_wxXrrBuilder
+from .wxXrrIntModel_rsrc   import data as r_wxXrrIntModel
+from .wxSpecData_rsrc      import data as r_wxSpecData
+from .wxCtrData_rsrc       import data as r_wxCtrData
+from .wxScanSelect_rsrc    import data as r_wxScanSelect
+
+from . import wxXrf, wxSpecData
+from . import wxPlotSelection, wxCtrData
+from . import wxFilter, wxScanSelect, wxIntegrator
+# from . import wxXrrBuilder, wxXrrIntModel
+
 #######################################################################
+def show_win(self, cls, rsrc):
+    win = model.childWindow(self, cls, rsrc=rsrc)
+    win.position = (200, 15)
+    win.visible = True
+    return win
+
 class menuApps:
-    
+
     def on_menuAppsPlotSelection_select(self, event):
-        from pds.pcgui.wxPlotSelection import wxPlotSelection
-        filename = os.path.join(self.rsrc_path,'wxPlotSelection.rsrc.py')
-        self.PlotSelectionWindow = model.childWindow(self, wxPlotSelection,
-                                                     filename=filename)
-        self.PlotSelectionWindow.position = (200, 5)
-        self.PlotSelectionWindow.visible = True
+        cls = mod_import(wxPlotSelection).wxPlotSelection
+        self.PlotSelectionWindow = show_win(self, cls, r_wxPlotSelection)
     
     def on_menuAppsXRF_select(self, event):
-        from pds.pcgui import wxXrf
-        wxXrf = mod_import(wxXrf)
-        wxXrf = wxXrf.wxXrf
-        filename = os.path.join(self.rsrc_path,'wxXrf.rsrc.py')
-        self.XrfWindow = model.childWindow(self, wxXrf,filename=filename)
-        self.XrfWindow.position = (200, 5)
-        self.XrfWindow.visible = True
+        cls = mod_import(wxXrf).wxXrf
+        self.wxXrfWindow = show_win(self, cls, rsrc=r_wxXrf)
 
     def on_menuAppsXRRBuild_select(self, event):
-        #__import__('wxXrr')
-        #from pds.pcgui.wxXrr import wxXrr
-        from pds.pcgui import wxXrrBuilder
-        wxXrrBuilder = mod_import(wxXrrBuilder)
-        wxXrrBuilder = wxXrrBuilder.wxXrrBuilder
-        filename = os.path.join(self.rsrc_path,'wxXrrBuilder.rsrc.py')
-        self.XrrBuildWindow = model.childWindow(self, wxXrrBuilder,
-                                                filename=filename)
-        self.XrrBuildWindow.position = (200, 5)
-        self.XrrBuildWindow.visible = True
-
+        code= """
+        cls = mod_import(wxXrrBuilder).wxXrrBuilder
+        self.wxXrrBuilder = show_win(self, cls, r_wxXrrBuilder)
+        """
+        
     def on_menuAppsXRRModel_select(self, event):
-        #__import__('wxXrr')
-        #from wxXrr import wxXrr
-        from pds.pcgui import wxXrrIntModel
-        wxXrrIntModel = mod_import(wxXrrIntModel)
-        wxXrrIntModel = wxXrrIntModel.wxXrrIntModel
-        filename = os.path.join(self.rsrc_path,'wxXrrIntModel.rsrc.py')
-        self.XrrIntModelWindow = model.childWindow(self, wxXrrIntModel,
-                                                   filename=filename)
-        self.XrrIntModelWindow.position = (200, 5)
-        self.XrrIntModelWindow.visible = True
-
+        code = """
+        cls = mod_import(wxXrrIntModel).wxXrrIntModel
+        self.wxXrrModl = show_win(self, cls, r_wxXrrIntModel)
+        """
+        
     def on_menuAppsSpecData_select(self, event):
-        from pds.pcgui import wxSpecData
-        wxSpecData = mod_import(wxSpecData)
-        wxSpecData = wxSpecData.wxSpecData
-        filename = os.path.join(self.rsrc_path,'wxSpecData.rsrc.py')
-        self.wxSpecData = model.childWindow(self, wxSpecData,
-                                            filename=filename)
-        self.wxSpecData.position = (200, 5)
-        self.wxSpecData.visible = True
+        cls = mod_import(wxSpecData).wxSpecData
+        self.wxSpecData = show_win(self, cls, r_wxSpecData)
 
     def on_menuAppsCtrData_select(self, event):
-        from pds.pcgui import wxCtrData
-        wxCtrData = mod_import(wxCtrData)
-        wxCtrData = wxCtrData.wxCtrData
-        filename = os.path.join(self.rsrc_path,'wxCtrData.rsrc.py')
-        self.wxCtrData = model.childWindow(self, wxCtrData,
-                                           filename=filename)
-        self.wxCtrData.position = (200, 5)
-        self.wxCtrData.visible = True
+        p = mod_import(wxCtrData).wxCtrData
+        self.wxCtrData = show_win(self, p, r_wxCtrData)     
     
     def on_menuAppsScanSelect_select(self, event):
-        from pds.pcgui import wxScanSelect
-        wxScanSelect = mod_import(wxScanSelect)
-        wxScanSelect = wxScanSelect.wxScanSelect
-        filename = os.path.join(self.rsrc_path,'wxScanSelect.rsrc.py')
-        self.wxScanSelect = model.childWindow(self, wxScanSelect,
-                                            filename=filename)
-        self.wxScanSelect.position = (200, 5)
-        self.wxScanSelect.visible = True
+        p = mod_import(wxScanSelect).wxScanSelect
+        self.wxScanSelect = show_win(self, p, r_wxScanSelect)
         
     def on_menuAppsFilter_select(self, event):
-        from pds.pcgui import wxFilter
+        from . import wxFilter
         wxFilter = mod_import(wxFilter)
         self.wxFilter = wxFilter.filterGUI(self)
         self.wxFilter.CenterOnScreen()
     
     def on_menuAppsIntegrator_select(self, event):
-        from pds.pcgui import wxIntegrator
+        from . import wxIntegrator
         wxIntegrator = mod_import(wxIntegrator, True)
         self.wxIntegrator = wxIntegrator.Integrator(self)
         self.wxIntegrator.CenterOnScreen()

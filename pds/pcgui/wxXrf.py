@@ -10,10 +10,12 @@ import os
 import types
 import numpy as num
 
-from   pds.pcgui.wxUtil import wxUtil
-from   pds.shellutil import mod_import
-from   tdl.modules.xtab import xrf_lookup
-from   tdl.modules.ana import xrf_data
+from .wxUtil import wxUtil
+from tdl.pds.shellutil import mod_import
+from tdl.modules.xtab import xrf_lookup
+from tdl.modules.ana import xrf_data
+
+from .wxXrfHelp_rsrc import data as r_wxXrfHelp
 
 #########################################################################
 
@@ -120,13 +122,12 @@ class wxXrf(model.Background, wxUtil):
         return
 
     def on_menuHelpParams_select(self,event): 
-        import wxXrfHelp
+        from . import wxXrfHelp
         wxXrfHelp = mod_import(wxXrfHelp)
         dir       = os.path.dirname(wxXrfHelp.__file__)
-        filename  = os.path.join(dir,'wxXrfHelp.rsrc.py')
-        #print filename
         wxXrfHelp = wxXrfHelp.wxXrfHelp
-        self.XrfHelpWindow = model.childWindow(self,wxXrfHelp,filename=filename)
+        self.XrfHelpWindow = model.childWindow(self,wxXrfHelp,
+                                               rsrc=r_wxXrfHelp)
         self.XrfHelpWindow.position = (200, 5)
         self.XrfHelpWindow.visible = True
     

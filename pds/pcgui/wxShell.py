@@ -40,13 +40,14 @@ from  .app_menu import menuApps
 from tdl import pds
 from  ..shellutil import mod_import
 
+from .wxShellHelp_rsrc import data as r_wxShellHelp
+
 #######################################################################
 
 intro = None
 debug = False
 files = []
 args  = None
-rsrc_path = '.'
 
 #######################################################################
 class wxShell(model.Background,menuApps,wxUtil):
@@ -71,7 +72,6 @@ class wxShell(model.Background,menuApps,wxUtil):
 
         #redir stdio
         #sys.stdin  = self.readline
-        self.rsrc_path = rsrc_path
         self.shell = pds.shell.Shell(args=args,
                                      stdin=self,stdout=self,
                                      GUI='WXAgg',debug=debug)
@@ -271,10 +271,9 @@ class wxShell(model.Background,menuApps,wxUtil):
         import wxShellHelp
         wxShellHelp = mod_import(wxShellHelp)
         dir       = os.path.dirname(wxShellHelp.__file__)
-        filename  = os.path.join(dir,'wxShellHelp.rsrc.py')
         wxShellHelp = wxShellHelp.wxShellHelp
-        self.wxShellHelp = model.childWindow(self,wxShellHelp,
-                                             filename=filename)
+        self.wxShellHelp = model.childWindow(self, wxShellHelp,
+                                             rsrc=r_wxShellHelp)
         self.wxShellHelp.position = (200, 5)
         self.wxShellHelp.visible = True
 

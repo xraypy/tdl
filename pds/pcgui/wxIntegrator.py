@@ -25,9 +25,9 @@ from tdl.modules.ana_upgrade import image_data
 from tdl.modules.ana_upgrade import ctr_data
 from tdl.modules.ana_upgrade import hdf_data
 from tdl.modules.geom import gonio_psic
-from pds.pcgui import wxHDFToTree
-from pds.pcgui.wxUtil import wxUtil
-from pds.shellutil import mod_import
+from . import wxHDFToTree
+from .wxUtil import wxUtil
+from ..shellutil import mod_import
 
 import wx.lib.inspection
 

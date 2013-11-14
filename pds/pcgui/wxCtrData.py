@@ -13,7 +13,7 @@ import time
 import numpy as num
 from matplotlib import pyplot
 
-from pds.pcgui.wxUtil import wxUtil
+from .wxUtil import wxUtil
 from tdl.modules      import ana as scandata 
 from tdl.modules.ana  import ctr_data
 from tdl.modules.ana  import image_data

@@ -12,9 +12,11 @@ import copy
 import time
 import numpy as num
 
-from   pds.pcgui.wxUtil import wxUtil
-from   pds.shellutil import mod_import
-from   tdl.modules.xrr import interface_model
+from .wxUtil import wxUtil
+from tdl.pds.shellutil import mod_import
+from tdl.modules.xrr import interface_model
+
+from .wxXrrIntModelHelp_rsrc import data as r_wxXrrIntModelHelp
 
 #########################################################################
 
@@ -82,13 +84,11 @@ class wxXrrIntModel(model.Background, wxUtil):
         self.close()
 
     def on_menuHelpParams_select(self,event): 
-        import wxXrrIntModelHelp
+        from . import wxXrrIntModelHelp
         wxXrrIntModelHelp = mod_import(wxXrrIntModelHelp)
-        dir       = os.path.dirname(wxXrrIntModelHelp.__file__)
-        filename  = os.path.join(dir,'wxXrrIntModelHelp.rsrc.py')
         wxXrrIntModelHelp = wxXrrIntModelHelp.wxXrrIntModelHelp
         self.wxXrrIntModelHelp = model.childWindow(self,wxXrrIntModelHelp,
-                                                   filename=filename)
+                                                   rsrc=r_wxXrrIntModelHelp)
         self.wxXrrIntModelHelp.position = (200, 5)
         self.wxXrrIntModelHelp.visible = True
 

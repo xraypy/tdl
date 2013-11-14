@@ -16,7 +16,7 @@ import wx.lib.agw.ultimatelistctrl as ULC
 from tdl.modules.ana_upgrade import file_locker
 import tdl.modules.specfile.filtertools as ft
 import tdl.modules.specfile.mastertoproject as mtp
-from pds.pcgui.wxUtil import wxUtil
+from .wxUtil import wxUtil
 
 POSSIBLE_ATTRIBUTES = ['bad_pixel_map', 'beam_slits', 'bgrflag',
                               'cnbgr', 'cpow', 'ctan', 'cwidth',
