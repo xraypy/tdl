@@ -40,7 +40,36 @@ matplotlib.use('WXAgg')
 mpl_data_files = matplotlib.get_py2exe_datafiles()
 # import wxmplot
 
-
+pycard_incs = ['PythonCard', 'PythonCard.model', 'PythonCard.dialog', 
+               'PythonCard.components.bitmapcanvas',
+               'PythonCard.components.button',
+               'PythonCard.components.calendar',
+               'PythonCard.components.checkbox',
+               'PythonCard.components.choice',
+               'PythonCard.components.codeeditor',
+               'PythonCard.components.combobox',
+               'PythonCard.components.container',
+               'PythonCard.components.floatcanvas',
+               'PythonCard.components.gauge',
+               'PythonCard.components.grid',
+               'PythonCard.components.htmlwindow',
+               'PythonCard.components.iehtmlwindow',
+               'PythonCard.components.image',
+               'PythonCard.components.imagebutton',
+               'PythonCard.components.list',
+               'PythonCard.components.multicolumnlist',
+               'PythonCard.components.notebook',
+               'PythonCard.components.passwordfield',
+               'PythonCard.components.radiogroup',
+               'PythonCard.components.slider',
+               'PythonCard.components.spinner',
+               'PythonCard.components.staticbox',
+               'PythonCard.components.staticline',
+               'PythonCard.components.statictext',
+               'PythonCard.components.textarea',
+               'PythonCard.components.textfield',
+               'PythonCard.components.togglebutton',
+               'PythonCard.components.tree']
 
 extra_files = ['TDL.ico']
 scipy_dlls = ['lib/site-packages/scipy/optimize/minpack2.pyd',
@@ -104,7 +133,7 @@ style_xml = """
 
 windows_apps = [{'script': 'runpds.py',
                  'icon_resources': [(0, 'TDL.ico')],
-                 # 'other_resources': [(24, 1, style_xml)],
+                 'other_resources': [(24, 1, style_xml)],
                  },
                 ]
 
@@ -112,7 +141,7 @@ windows_apps = [{'script': 'runpds.py',
 py2exe_opts = {'optimize':1,
                'bundle_files':2,
                'includes': ['ConfigParser', 'Image', 'ctypes', 
-                            'fpformat', 'h5py',
+                            'fpformat', 'h5py', 'Ifeffit', 
                             'h5py._objects', 'h5py._proxy', 'h5py.defs',
                             'h5py.utils', 'matplotlib', 'numpy', 'scipy',
                             'scipy.constants', 'scipy.fftpack',
@@ -139,7 +168,7 @@ py2exe_opts = {'optimize':1,
                                 'libgdk-win32-2.0-0.dll',
                                 'libgobject-2.0-0.dll', 'libzmq.dll']
                }
-
+py2exe_opts['includes'].extend(pycard_incs)
 setup(name = "TDL",
       windows = windows_apps,
       options = {'py2exe': py2exe_opts},
