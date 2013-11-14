@@ -1,4 +1,4 @@
-{'application':{'type':'Application',
+data = {'application':{'type':'Application',
           'name':'Template',
     'backgrounds': [
     {'type':'Background',
