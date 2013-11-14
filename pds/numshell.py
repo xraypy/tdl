@@ -90,7 +90,7 @@ def _modules(backend="TkAgg"):
     return (num,scipy,pyplot)
 
 #################################################################
-def _import_pyplot(backend="TkAgg",verbose=True):
+def _import_pyplot(backend="WXAgg", verbose=False):
     """import pyplot"""
     import matplotlib
     check = matplotlib.get_backend()
@@ -109,8 +109,9 @@ def _import_pyplot(backend="TkAgg",verbose=True):
         PLOT_ROOT = None
     #
     version = _parse_version(matplotlib.__version__)
-    txt = "    ** INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
-    if verbose: sys.__stdout__.write(txt)
+    txt = "  ** INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
+    # if verbose:
+    #     sys.__stdout__.write(txt)
     #
     if version < 950:
         matplotlib.use(backend)
