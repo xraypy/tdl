@@ -42,6 +42,8 @@ from  ..shellutil import mod_import
 
 from .wxShellHelp_rsrc import data as r_wxShellHelp
 
+from .readlinetextctrl import ReadlineTextCtrl
+
 #######################################################################
 
 intro = None
@@ -50,7 +52,7 @@ files = []
 args  = None
 
 #######################################################################
-class wxShell(model.Background,menuApps,wxUtil):
+class wxShell(model.Background, menuApps, wxUtil):
 
     def on_initialize(self, event):
         
@@ -73,7 +75,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         #redir stdio
         #sys.stdin  = self.readline
         self.shell = pds.shell.Shell(args=args,
-                                     stdin=self,stdout=self,
+                                     stdin=self, stdout=self,
                                      GUI='WXAgg',debug=debug)
         for f,warn in files:
             if os.path.exists(f) and os.path.isfile(f):
@@ -83,10 +85,7 @@ class wxShell(model.Background,menuApps,wxUtil):
 
         # run it, when done we've quit  
         self.run()
-        sys.__stdout__.write("\nExiting \n")
-        time.sleep(.5)
-        self.close()
-        sys.exit()
+
 
     ################################################
     def run(self,fname=''):
@@ -103,12 +102,12 @@ class wxShell(model.Background,menuApps,wxUtil):
     def write(self, text):
         #self.PostLineToShellText(text)
         self.components.ShellText.appendText(text)
-
+        
     def flush(self):
         self.input_text = ''
         
     def readline(self):
-        return(self.ReadInputLine())
+        pass # return (self.ReadInputLine())
     
     def raw_input(self, prompt=''):
         """Return string based on user input."""
@@ -129,7 +128,6 @@ class wxShell(model.Background,menuApps,wxUtil):
             time.sleep(.025)
             wx.YieldIfNeeded()
             #wx.Yield()
-        #print "here"
         input_text = str(self.input_text)
         self.input_text = ''
         #line = input_text.strip() + '\n'
@@ -168,7 +166,7 @@ class wxShell(model.Background,menuApps,wxUtil):
             indent = len(last_line) - len(tmp)
             if indent != self.indent:
                 self.indent = indent
-            if last_line[-1] == ':':
+            if last_line[-1] == ':'
                 self.indent = self.indent + 4
         if self.indent < 0: self.indent = 0
         padding = " " * self.indent
@@ -176,8 +174,12 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.components.ShellText.appendText(line)
     """
     
-    def PostLineToShellText(self,line):
-       self.components.ShellText.appendText(line)
+    def PostLineToShellText(self, line):
+        if not line.endswith('\n'):
+            line = '%s\n' % line
+        self.components.ShellText.appendText(line)
+        self.shell.exec_line(line)
+
        #self.components.ShellText.setInsertionPointEnd()
 
     ###########################################################
@@ -187,7 +189,6 @@ class wxShell(model.Background,menuApps,wxUtil):
     # note see app_menu.py for more...  
 
     def on_menuFileExit_select(self,event):
-        print "QUIT"
         #self.exec_line("quit")
         #self.shell.do_quit()
         #self.close()
@@ -283,51 +284,50 @@ class wxShell(model.Background,menuApps,wxUtil):
     ###########################################################
     #             EVENTS                                      #
     ###########################################################
-
-    def on_ShellCmd_keyDown(self, event):
-        #print "keyDown", event.keyCode, "\n"
-        #print event.shiftDown, event.controlDown, event.altDown
-        self.Process_Event(event)
-
-    def Process_Event(self, event):
-        """
-        """
-        #print dir(event)
-        keyCode = event.GetKeyCode()
-        #print keyCode
-        
-        #if keyCode == wx.WXK_CONTROL:
-        # 372 (old) 310 (new) is enter on the numeric keypad
-        if (keyCode == wx.WXK_RETURN) or (keyCode == wx.WXK_NUMPAD_ENTER):
-            self.input_text = self.components.ShellCmd.text
-            #self.input_text = self.components.ShellCmd2.text
-            self.input_text = self.input_text + '\n'
-            #tmp = self.prompt + self.input_text
-            tmp = self.input_text
-            self.PostLineToShellText(tmp)
-            self.components.ShellCmd.text = ''
-            self.isreading = False
-        # uparrow, 317 in old wx, 315 in newer: 
-        elif keyCode == wx.WXK_UP: 
-            self.cmd_idx=self.cmd_idx+1
-            if self.cmd_idx > self.cmd_count-1:
-                self.cmd_idx = self.cmd_count -1
-            self.components.ShellCmd.text = self.cmd_history[self.cmd_idx]
-            #self.components.ShellCmd.setInsertionPointEnd()
-            self.cmd_from_hist=True
-        # downarrow, 319 in old wx, 317 in new
-        elif keyCode == wx.WXK_DOWN: 
-            self.cmd_idx=self.cmd_idx+-1
-            if self.cmd_idx<0:
-                self.cmd_idx=0
-                self.cmd_from_hist=False
-            else:
-                self.cmd_from_hist=True             
-            self.components.ShellCmd.text = self.cmd_history[self.cmd_idx]
-            #self.components.ShellCmd.setInsertionPointEnd()
-            
-        else:
-            event.Skip()
+# 
+#     def on_ShellCmd_keyDown(self, event):
+#         print "keyDown", event.keyCode, "\n"
+#         #print event.shiftDown, event.controlDown, event.altDown
+#         self.Process_Event(event)
+# 
+#     def Process_Event(self, event):
+#         """
+#         """
+#         #print dir(event)
+#         keyCode = event.GetKeyCode()
+#         
+#         #if keyCode == wx.WXK_CONTROL:
+#         # 372 (old) 310 (new) is enter on the numeric keypad
+#         if (keyCode == wx.WXK_RETURN) or (keyCode == wx.WXK_NUMPAD_ENTER):
+#             self.input_text = self.components.ShellCmd.text
+#             #self.input_text = self.components.ShellCmd2.text
+#             self.input_text = self.input_text + '\n'
+#             #tmp = self.prompt + self.input_text
+#             tmp = self.input_text
+#             self.PostLineToShellText(tmp)
+#             self.components.ShellCmd.text = ''
+#             self.isreading = False
+#         # uparrow, 317 in old wx, 315 in newer: 
+#         elif keyCode == wx.WXK_UP: 
+#             self.cmd_idx=self.cmd_idx+1
+#             if self.cmd_idx > self.cmd_count-1:
+#                 self.cmd_idx = self.cmd_count -1
+#             self.components.ShellCmd.text = self.cmd_history[self.cmd_idx]
+#             #self.components.ShellCmd.setInsertionPointEnd()
+#             self.cmd_from_hist=True
+#         # downarrow, 319 in old wx, 317 in new
+#         elif keyCode == wx.WXK_DOWN: 
+#             self.cmd_idx=self.cmd_idx+-1
+#             if self.cmd_idx<0:
+#                 self.cmd_idx=0
+#                 self.cmd_from_hist=False
+#             else:
+#                 self.cmd_from_hist=True             
+#             self.components.ShellCmd.text = self.cmd_history[self.cmd_idx]
+#             #self.components.ShellCmd.setInsertionPointEnd()
+#             
+#         else:
+#             event.Skip()
 
     #####################################################
     def setupSizers( self ):
@@ -339,6 +339,9 @@ class wxShell(model.Background,menuApps,wxUtil):
         p6 = 0   #1   # 2 
         p7 = 30  # 50 
         comp = self.components
+        frame = wx.GetApp().TopWindow
+        frame.SetWindowStyle(wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL)
+
         # Create base sizers
         base_sizer = wx.BoxSizer( wx.VERTICAL )
         base_sizer_V = wx.BoxSizer( wx.VERTICAL )
@@ -349,14 +352,20 @@ class wxShell(model.Background,menuApps,wxUtil):
         shell_sizer_V.Add( comp.ShellText, p1, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
         shell_sizer_V.Add( comp.Sep1, p2, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
         
-        # here make horz sizer for prompt and cmd line
-        cmd_sizer_H = wx.BoxSizer( wx.HORIZONTAL )
-        cmd_sizer_H.Add( comp.Prompt, p3, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
-        cmd_sizer_H.Add( comp.ShellCmd, p4, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
-        
-        # Now add both of these to the base vert sizer
         base_sizer_V.Add(shell_sizer_V, p5, wx.ALL | wx.EXPAND,0 )
-        base_sizer_V.Add(cmd_sizer_H, p6, wx.ALL | wx.EXPAND,0)
+
+        # here make horz sizer for prompt and cmd line
+        # cmd_sizer_H = wx.BoxSizer( wx.HORIZONTAL )
+        # cmd_sizer_H.Add( comp.Prompt, p3, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+        # cmd_sizer_H.Add( comp.ShellCmd, p4, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+
+        # Now add both of these to the base vert sizer
+        # base_sizer_V.Add(cmd_sizer_H, p6, wx.ALL | wx.EXPAND,0)
+
+        parent = comp.ShellText._parent.GetParent()
+        inptext = self.InputPanel(parent)
+        
+        base_sizer_V.Add(inptext, 1, wx.ALL|wx.EXPAND,0)
 
         # Now add this to the base sizer        
         base_sizer.Add(base_sizer_V, p7, wx.ALL | wx.EXPAND ,5)
@@ -367,7 +376,46 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.panel.SetSizer( base_sizer )
         self.panel.SetAutoLayout( 1 )
         self.panel.Layout()
+
+        timer_id = wx.NewId()
+        self.ftimer = wx.Timer(self, timer_id)
+        wx.EVT_TIMER(self, timer_id, self.onTimer)
+        self.ftimer.Start(10000)
         self.visible = True
+
+    def onTimer(self, evt=None):
+        if self.FindFocus() == self.components.ShellText:
+            self.input.SetFocus()                    
+                
+    def InputPanel(self, parent):
+        panel = wx.Panel(parent, -1)
+        pstyle = wx.ALIGN_CENTER|wx.ALIGN_LEFT
+        self.prompt = wx.StaticText(panel, -1, 'PDS>',
+                                    size = (40,-1),
+                                    style = pstyle)
+        histFile  = 'TDL_HIST.txt'
+        self.input = ReadlineTextCtrl(panel, -1,  '', size=(500,-1),
+                                      historyfile=histFile, mode='emacs',
+                                      style=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER)
+        self.input.SetFocus()        
+        self.input.Bind(wx.EVT_TEXT_ENTER, self.onText)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizer.Add(self.prompt,  0, wx.BOTTOM|wx.CENTER)
+        sizer.Add(self.input,   1, wx.ALIGN_LEFT|wx.ALIGN_CENTER|wx.EXPAND)
+        panel.SetSizer(sizer)
+        sizer.Fit(panel)
+        return panel
+
+    def onText(self, event=None):
+        text =  event.GetString()
+        self.PostLineToShellText(text)
+        self.input.Clear()
+        if text.lower() in ('quit', 'exit'):
+            self.onClose()
+        else:
+            self.input.AddToHistory(text)
 
     #####################################################
     """
@@ -411,4 +459,3 @@ class wxShell(model.Background,menuApps,wxUtil):
 if __name__ == '__main__':
     app = model.Application(wxGui)
     app.MainLoop()
-
