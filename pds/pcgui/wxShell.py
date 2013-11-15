@@ -284,10 +284,14 @@ class wxShell(model.Background,menuApps,wxUtil):
     #             EVENTS                                      #
     ###########################################################
 
+    def on_ShellCmd_textUpdate(self, event):
+        event.Skip()  # pass # print "textUpdate", dir(event)
+
     def on_ShellCmd_keyDown(self, event):
-        #print "keyDown", event.keyCode, "\n"
+        # print " keyDown", event.keyCode, event.keyCode == wx.WXK_RETURN
         #print event.shiftDown, event.controlDown, event.altDown
         self.Process_Event(event)
+        event.Skip()
 
     def Process_Event(self, event):
         """
@@ -353,6 +357,9 @@ class wxShell(model.Background,menuApps,wxUtil):
         cmd_sizer_H = wx.BoxSizer( wx.HORIZONTAL )
         cmd_sizer_H.Add( comp.Prompt, p3, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
         cmd_sizer_H.Add( comp.ShellCmd, p4, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+
+        cstyle=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER
+        comp.ShellCmd._parent.SetWindowStyle(cstyle)
         
         # Now add both of these to the base vert sizer
         base_sizer_V.Add(shell_sizer_V, p5, wx.ALL | wx.EXPAND,0 )
@@ -370,15 +377,16 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.visible = True
 
     #####################################################
-    """
-    # some tests
 
-    #def on_ShellCmd_textUpdate(self, event):
-    #    print "textUpdate", event.keyCode, "\n"
-    #def on_ShellCmd_keyUp(self, event):
+
+    # def on_ShellCmd_keyUp(self, event):
     #    print "keyUp", event.keyCode, "\n"
     #def on_ShellCmd_keyPress(self, event):
     #    print "keyPress", event.keyCode, "\n"
+
+
+    """
+    # some tests
 
     # Use below to test other key bindings
     def _init_keys(self):
