@@ -1,9 +1,9 @@
 """
-Simple python shell program 
+Simple python shell program
 
 Authors / Modifications:
 ------------------------
-* Tom Trainor (tptrainor@alaska.edu ), 6-10-2006 
+* Tom Trainor (tptrainor@alaska.edu ), 6-10-2006
 * modified from tdl-0.2: Matt Newville (newvile@cars.uchicago.edu)
 * major revision 10/08 TPT
 
@@ -11,7 +11,7 @@ Notes:
 ------
 To start the pds shell program use the runpds.py script:
 (this script makes sure that the root directory of pds is
-on the sys.path so imports will work).  
+on the sys.path so imports will work).
 >>python runpds.py
 
 Or make sure that the pds directory is on your path and:
@@ -56,9 +56,9 @@ TEXT_WIDTH = 62
 
 # python keywords, make sure a command doesnt clash with these
 PYTHON_KEY_WORDS = ['and','as','del','for','is','raise',
-                    'assert','elif','from','lambda','return', 
+                    'assert','elif','from','lambda','return',
                     'break','else','global','not','None','try',
-                    'class','except','if','or','while',    
+                    'class','except','if','or','while',
                     'continue','exec','import','pass','yield',
                     'def','finally','in','print']
 PYTHON_KEY_WORDS.sort()
@@ -71,7 +71,7 @@ HELP_STR =  """\n
 >>help -u           # General useage notes
 >>help name         # Provide help on specified object
 
-===To list data and variables, use the show command: 
+===To list data and variables, use the show command:
 >>show              # List defined data/functions
 >>show name         # Detailed list
 >>help show         # For more show options
@@ -89,7 +89,7 @@ about python scripting start at:  http://www.python.org
 ** Startup / Default Configuration
 The main purpose of pds is to make interactive python work easier.
 This is in large part achieved by making sure the default namespace
-that you are working in at startup has defined all the modules you 
+that you are working in at startup has defined all the modules you
 commonly need.
 
 This can be customized via the startup files:
@@ -106,7 +106,7 @@ Command line syntax is the same as at the typical python interpretor prompt
 with some minor differences.  We have defined a list of 'commands' that can
 be called with a command syntax (see below).  You can also call the shell
 using the following syntax for example: '>>!dir'.  Finally modules and functions
-etc can be displayed in an organized format using the '>>show' command.  
+etc can be displayed in an organized format using the '>>show' command.
 
 ** Commands
 The list of commands (and other loaded objects) are displayed by typing
@@ -133,7 +133,7 @@ More information on pds and the overall project can be found at:
 http://cars9.uchicago.edu/ifeffit/tdl/Docs/Pds
 
 *****************************************************************\n
-""" 
+"""
 
 ##########################################################################
 class Shell(_NumShell):
@@ -143,7 +143,7 @@ class Shell(_NumShell):
     * Type 'help' to get started           *
     ****************************************
     """
-    
+
     max_save_lines = 500
 
     #############################################################
@@ -155,7 +155,7 @@ class Shell(_NumShell):
         # Prompt
         self.ps1 = "pds>"
         self.ps2 = "...>"
-        
+
         # Set stdin/out
         if stdin is not None:
             sys.stdin = self.stdin = stdin
@@ -201,7 +201,7 @@ class Shell(_NumShell):
                               'addcmd':self.do_addcmd,
                               'alias':self.do_addalias}
 
-        # run startup 
+        # run startup
         self.startup(args=args)
 
         # check
@@ -217,11 +217,11 @@ class Shell(_NumShell):
         """
         set up builtins and exec startup arguments
         """
-        
+
         # Builtins
         from builtins import __pdsbuiltins__
         self.interp.symbol_table.data["__pds__"] = __pdsbuiltins__
-        
+
         # add module functions to __builtins__
         startup = []
         startup.append("__builtins__.update({'group':__pds__.group})")
@@ -249,7 +249,7 @@ class Shell(_NumShell):
         if hasattr(self,'num_setup'):
             tmp = self.num_setup()
             startup = startup + tmp
-        
+
         # any other args add to queue
         if type(args) == types.ListType:
             for a in args:
@@ -272,7 +272,7 @@ class Shell(_NumShell):
     def loop(self,):
         """
         The prompt loop
-        
+
         Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.  Modified from cmd.Cmd.cmdloop.
@@ -307,7 +307,7 @@ class Shell(_NumShell):
                 stop = self.exec_line(s)
                 if stop == QUIT: break
         return SUCCESS
-    
+
     #############################################################
     def exec_queue(self):
         """
@@ -320,7 +320,7 @@ class Shell(_NumShell):
             lines = split_cmd_line(line)
             for s in lines:
                 stop = self.exec_line(s)
-                if stop == QUIT: 
+                if stop == QUIT:
                     self.queue = []
                     return QUIT
                 elif (stop == EXECERROR) and (self.error_break == True):
@@ -328,12 +328,12 @@ class Shell(_NumShell):
                     print "Error executing shell.queue"
                     return EXECERROR
         return SUCCESS
-    
+
     #############################################################
     def exec_line(self, line):
         """
         Exec a single line
-        
+
         This method first inspect the first token of the command line
             If its a '!' send it to the shell
             If its a 'command' call _exec_cmd()
@@ -342,7 +342,7 @@ class Shell(_NumShell):
         The return value from this method should always be one of:
             QUIT, SUCCESS, COMPLETE, CONTINUE, EXECERROR
         Exceptions from the interpretor are handled here.
-        
+
         Note for the python interpretor to work it is important that blank
         lines are passed in and that lines are not stripped entirely
         (ie leave left white space). We also let the interpretor handle
@@ -385,14 +385,14 @@ class Shell(_NumShell):
             # sys.exc_clear()
             self.interp.console.resetbuffer()
             return EXECERROR
-        
+
     #############################################################
     def _exec_cmd(self,cmd,arg):
         """
         execute commands
-        
+
         Note only call this from exec_line for proper
-        error / exception handling! 
+        error / exception handling!
         """
         ret = None
         # local commands
@@ -423,18 +423,18 @@ class Shell(_NumShell):
     #############################################################
     def do_quit(self,arg):
         """
-        Quit the shell 
+        Quit the shell
         """
         try:
             self.close_pyplot()
         except:
             pass
         return QUIT
-    
+
     #############################################################
     def do_debug(self,arg):
         """
-        Toggle debug flag 
+        Toggle debug flag
         """
         if self.debug == True:
             print "Debug off"
@@ -458,7 +458,7 @@ class Shell(_NumShell):
         """
         if fname[-4:] == '.sav':
             if self._restore(fname) == 1: return COMPLETE
-        
+
         if os.path.exists(fname) and os.path.isfile(fname):
             f = open(fname)
             lines = f.readlines()
@@ -508,7 +508,7 @@ class Shell(_NumShell):
     def do_addcmd(self,*arg):
         """
         Add a command interface to a function
-        
+
         Allows a function to be called with command syntax.
           >>addcmd mycmd, myfun
         results in
@@ -536,12 +536,12 @@ class Shell(_NumShell):
         if len(cmd_name) == 0 or len(func_name) == 0:
             print "Error parsing cmd/func names"
             return SUCCESS
-        
+
         # do a check
         if cmd_name in PYTHON_KEY_WORDS:
             print "Error: command '%s' is a python keyword" % cmd_name
             return SUCCESS
-        
+
         if cmd_name in self.pds_commands.keys():
             print "Error: command '%s' is a builtin keyword" % cmd_name
             return SUCCESS
@@ -611,12 +611,12 @@ class Shell(_NumShell):
     ##############################################################
     ## save / restore state and clear variables
     ##############################################################
-    
+
     ##############################################################
     def do_save(self,args):
         """
         Save program state to a file
-        
+
         Note this may fail since not all
         objects can be pickled... needs improvement!
 
@@ -643,21 +643,21 @@ class Shell(_NumShell):
                 fname = args[1]
             else:
                 return
-            
+
         # get data dictionary
         data = self.interp.symbol_table.get_data_dict(name=dname)
         if data == None: return SUCCESS
 
-        # pickle it    
+        # pickle it
         pickle(data,fname)
-        
+
     ##############################################################
     def do_restore(self,fname):
         """
         Restore state from a file that was created with save
         """
         self._restore(fname)
-        return SUCCESS 
+        return SUCCESS
 
     def _restore(self,fname):
         from .shellutil import unpickle_1 as unpickle
@@ -671,7 +671,7 @@ class Shell(_NumShell):
             self.interp.symbol_table.put_data_dict(pdata)
             return 1
         return 0
-    
+
     ##############################################################
     def do_clear(self,arg):
         """
@@ -696,7 +696,7 @@ class Shell(_NumShell):
     #############################################################
     ##  Help and Show
     #############################################################
-    
+
     ##############################################################
     def do_help(self,arg):
         """
@@ -710,7 +710,7 @@ class Shell(_NumShell):
             #print self.help_str
             print HELP_STR
             return SUCCESS
-        
+
         (opts, args) = getopt.getopt(arg.split(), "u",["use"])
         for key,val in opts:
             if key in ("-u", "--use"):
@@ -739,7 +739,7 @@ class Shell(_NumShell):
         --------
         -a = show all (include symbols with names that have a leading '_' )
         -b = show builtins (defined in __builtins__ ).  Note this option
-             trumps tunnel (ie -t is ignored).  
+             trumps tunnel (ie -t is ignored).
         -t = tunnel, display attributes within a class instance or module.
              Note modules are only displayed with one level of tunneling
              (ie -t option is ignored if a module is passed as an argument).
@@ -790,7 +790,7 @@ class Shell(_NumShell):
                 print "Symbol '%s' of uknown type" % symbol
                 print type(self.interp.symbol_table.get_symbol(symbol))
                 return SUCCESS
-        else: 
+        else:
             ty = None
             print "\n==== Commands ===="
             tmp = self.commands.keys()
@@ -837,7 +837,7 @@ class Shell(_NumShell):
         print "\n"
         return SUCCESS
 
-##################################################################################### 
+#####################################################################################
 #####################################################################################
 def show_usage():
     """
@@ -856,7 +856,7 @@ def show_usage():
     print '>pds -v  fname1 fname2   #verbose and execute files'
     print '>pds fname1 fname2       #defaults and execute files'
     sys.exit(1)
-    
+
 #####################################################################################
 def main(arg='', use_wx=False, debug=False):
     """
@@ -883,7 +883,7 @@ def main(arg='', use_wx=False, debug=False):
             do_shell = False
         elif o == '-h':
             show_usage()
-    
+
     #################################################################
     # Default paths. Assume the following layout:
     #    pds_path  = root1/root2/pds
@@ -931,7 +931,7 @@ def main(arg='', use_wx=False, debug=False):
 
     # create a dictionary of default system variables
     sys_vars = {}
-    if sys.platform == 'win32':
+    if True: # sys.platform == 'win32':
         pds_path  = pds_path.replace('\\','/')
         root_path = root2.replace('\\','/')
         user_home = user_home.replace('\\','/')
@@ -965,8 +965,9 @@ def main(arg='', use_wx=False, debug=False):
         wxShell.args      = args
         rsrc_path         = pds_path
         wxShell.rsrc_path = rsrc_path
-        rsrc = os.path.join(rsrc_path, 'wxShell.rsrc')
-        gui  = wxShell.model.Application(wxShell.wxShell, aFileName=rsrc)
+        # rsrc = os.path.join(rsrc_path, 'wxShell.rsrc')
+        from .wxShell_rsrc import data as app_rsrc
+        gui  = wxShell.model.Application(wxShell.wxShell, rsrc=app_rsrc)
         os.chdir(work_dir)
         gui.MainLoop()
 
