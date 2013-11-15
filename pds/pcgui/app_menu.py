@@ -25,7 +25,7 @@ from . import wxFilter, wxScanSelect, wxIntegrator
 #######################################################################
 def show_win(self, cls, rsrc):
     win = model.childWindow(self, cls, rsrc=rsrc)
-    win.CenterOnScreen()
+    win.Position = (150, 50) # win.CenterOnScreen()
     win.visible = True
     return win
 
