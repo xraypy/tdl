@@ -25,7 +25,7 @@ from . import wxFilter, wxScanSelect, wxIntegrator
 #######################################################################
 def show_win(self, cls, rsrc):
     win = model.childWindow(self, cls, rsrc=rsrc)
-    win.position = (200, 15)
+    win.CenterOnScreen()
     win.visible = True
     return win
 
@@ -34,43 +34,43 @@ class menuApps:
     def on_menuAppsPlotSelection_select(self, event):
         cls = mod_import(wxPlotSelection).wxPlotSelection
         self.PlotSelectionWindow = show_win(self, cls, r_wxPlotSelection)
-    
+
     def on_menuAppsXRF_select(self, event):
         cls = mod_import(wxXrf).wxXrf
         self.wxXrfWindow = show_win(self, cls, rsrc=r_wxXrf)
 
     def on_menuAppsXRRBuild_select(self, event):
-        code= """
+        code = """
         cls = mod_import(wxXrrBuilder).wxXrrBuilder
         self.wxXrrBuilder = show_win(self, cls, r_wxXrrBuilder)
         """
-        
+
     def on_menuAppsXRRModel_select(self, event):
         code = """
         cls = mod_import(wxXrrIntModel).wxXrrIntModel
         self.wxXrrModl = show_win(self, cls, r_wxXrrIntModel)
         """
-        
+
     def on_menuAppsSpecData_select(self, event):
         cls = mod_import(wxSpecData).wxSpecData
         self.wxSpecData = show_win(self, cls, r_wxSpecData)
 
     def on_menuAppsCtrData_select(self, event):
         p = mod_import(wxCtrData).wxCtrData
-        self.wxCtrData = show_win(self, p, r_wxCtrData)     
-    
+        self.wxCtrData = show_win(self, p, r_wxCtrData)
+
     def on_menuAppsScanSelect_select(self, event):
         p = mod_import(wxScanSelect).wxScanSelect
         self.wxScanSelect = show_win(self, p, r_wxScanSelect)
-        
+
     def on_menuAppsFilter_select(self, event):
         from . import wxFilter
-        wxFilter = mod_import(wxFilter)
-        self.wxFilter = wxFilter.filterGUI(self)
+        Filter = mod_import(wxFilter).filterGUI
+        self.wxFilter = Filter(self)
         self.wxFilter.CenterOnScreen()
-    
+
     def on_menuAppsIntegrator_select(self, event):
         from . import wxIntegrator
-        wxIntegrator = mod_import(wxIntegrator, True)
-        self.wxIntegrator = wxIntegrator.Integrator(self)
+        Integrator = mod_import(wxIntegrator, True).Integrator
+        self.wxIntegrator = Integrator(self)
         self.wxIntegrator.CenterOnScreen()
