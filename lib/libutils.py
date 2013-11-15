@@ -39,7 +39,7 @@ def get_dll(libname):
     _paths = {'PATH': '', 'LD_LIBRARY_PATH': '', 'DYLD_LIBRARY_PATH':''}
     _dylib_formats = {'win32': '%s.dll', 'linux2': 'lib%s.so',
                       'darwin': 'lib%s.dylib'}
-    thisdir = os.path.join(TDL_TOPDIR, 'dlls', get_dlldir()))
+    thisdir = os.path.join(TDL_TOPDIR, 'dlls', get_dlldir())
     thisdir = os.path.abspath(thisdir)
     dirs = [thisdir]
 
