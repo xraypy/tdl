@@ -40,7 +40,7 @@ matplotlib.use('WXAgg')
 mpl_data_files = matplotlib.get_py2exe_datafiles()
 # import wxmplot
 
-pycard_incs = ['PythonCard', 'PythonCard.model', 'PythonCard.dialog', 
+pycard_incs = ['PythonCard', 'PythonCard.model', 'PythonCard.dialog',
                'PythonCard.components.bitmapcanvas',
                'PythonCard.components.button',
                'PythonCard.components.calendar',
@@ -84,9 +84,9 @@ tdl_incs = ['tdl.modules.ana',
             'tdl.modules.xrr',
             'tdl.modules.xtab',
             'tdl.modules.xtal']
-            
-            
-            
+
+
+
 extra_files = ['TDL.ico']
 scipy_dlls = ['lib/site-packages/scipy/optimize/minpack2.pyd',
               'lib/site-packages/scipy/interpolate/dftipack.pyd',
@@ -156,25 +156,25 @@ windows_apps = [{'script': 'runpds.py',
 
 py2exe_opts = {'optimize':1,
                'bundle_files':2,
-               'includes': ['ConfigParser', 'Image', 'ctypes', 
-                            'fpformat', 'h5py', 'Ifeffit', 
+               'includes': ['ConfigParser', 'Image', 'ctypes',
+                            'fpformat', 'h5py', 'Ifeffit',
                             'h5py._objects', 'h5py._proxy', 'h5py.defs',
                             'h5py.utils', 'matplotlib', 'numpy', 'scipy',
                             'scipy.constants', 'scipy.fftpack',
                             'scipy.io.matlab.mio5_utils',
                             'scipy.io.matlab.streams', 'scipy.io.netcdf',
-                            'scipy.optimize', 'scipy.signal', 
+                            'scipy.optimize', 'scipy.signal',
                             'sqlite3', 'wx', 'wx._core',
                             'wx.lib', 'wx.lib.agw',
                             'wx.lib.agw.flatnotebook',
                             'wx.lib.colourselect', 'wx.lib.masked',
                             'wx.lib.mixins', 'wx.lib.mixins.inspection',
                             'wx.lib.agw.pycollapsiblepane',
-                            'wx.lib.newevent', 'wx.py', 
+                            'wx.lib.newevent', 'wx.py',
                             'wxversion', 'xdrlib', 'xml.etree',
                             'xml.etree.cElementTree'],
                'packages': ['h5py', 'scipy.optimize', 'scipy.signal', 'scipy.io',
-                            'numpy.random', 'xml.etree', 'xml.etree.cElementTree'], 
+                            'numpy.random', 'xml.etree', 'xml.etree.cElementTree'],
                'excludes': ['Tkinter', '_tkinter', 'Tkconstants', 'tcl',
                             '_imagingtk', 'PIL._imagingtk', 'ImageTk',
                             'PIL.ImageTk', 'FixTk''_gtkagg', '_tkagg',
@@ -190,7 +190,7 @@ setup(name = "TDL",
       windows = windows_apps,
       options = {'py2exe': py2exe_opts},
       data_files = mpl_data_files)
- 
+
 for fname in extra_files:
     path, name = os.path.split(fname)
     print fname, name
