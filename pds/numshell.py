@@ -47,10 +47,10 @@ def _parse_version(s):
     return version
 
 #################################################################
-def _modules(backend="TkAgg"):
+def _modules(backend="WXAgg"):
     """
     import numpy, scipy and pyplot - return as a tuple.
-    (num,scipy,pyplot) = Modules(backend="TkAgg")
+    (num,scipy,pyplot) = Modules(backend="WXAgg")
     """
     ## numpy
     num_version = 0
@@ -95,15 +95,18 @@ def _import_pyplot(backend="WXAgg", verbose=False):
     import matplotlib
     check = matplotlib.get_backend()
     #
+    
+    PLOT_ROOT = None
     if backend == "TkAgg":
         # below is kluge for compiled version, ie the way we are 
         # running py2exe -> basically forces WX as backend.
         #if check == "WXAgg":
         #    pass
         #else:
-        import Tkinter
-        PLOT_ROOT = Tkinter.Tk()
-        PLOT_ROOT.iconify()
+        # import Tkinter
+        #PLOT_ROOT = Tkinter.Tk()
+        # PLOT_ROOT.iconify()
+        pass
     elif backend == "WXAgg":
         import wx
         PLOT_ROOT = None
@@ -159,6 +162,7 @@ class _NumShell:
 
         #############        
         # add modules to symbol table
+    
         (num,scipy,pyplot) = _modules(backend=self.GUI)
 
         if num != None: 

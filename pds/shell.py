@@ -35,6 +35,9 @@ try:
 except:
     pass
 
+import matplotlib
+matplotlib.use('WXAgg')
+
 from .interpretor import Interpretor
 from .shellutil   import set_path, show_more, show_list
 from .shellutil   import PrintExceptErr, command2expr
@@ -145,10 +148,9 @@ class Shell(_NumShell):
     """
 
     max_save_lines = 500
-
     #############################################################
     def __init__(self,args=[],stdin=None,stdout=None,
-                 completekey='tab',intro=None,debug=False,GUI='TkAgg'):
+                 completekey='tab',intro=None,debug=False,GUI='WXAgg'):
         """
         Init
         """
@@ -947,7 +949,7 @@ def main(arg='', use_wx=False, debug=False):
     # run it
     ##########################################################
     if use_wxGui == False:
-        s = Shell(args=args,debug=debug,GUI='TkAgg')
+        s = Shell(args=args,debug=debug,GUI='WXAgg')
         for f,warn in files:
             if os.path.exists(f) and os.path.isfile(f):
                 s.do_load(f)
