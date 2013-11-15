@@ -46,7 +46,8 @@ from .numshell    import _NumShell
 
 from .pcgui import wxShell
 from .wxShell_rsrc import data as r_wxShell
-
+from .pds_builtins import PdsBuiltins
+        
 ##########################################################################
 
 # some global flags
@@ -221,8 +222,7 @@ class Shell(_NumShell):
         """
 
         # Builtins
-        from builtins import __pdsbuiltins__
-        self.interp.symbol_table.data["__pds__"] = __pdsbuiltins__
+        self.interp.symbol_table.data["__pds__"] = PdsBuiltins()
 
         # add module functions to __builtins__
         startup = []
