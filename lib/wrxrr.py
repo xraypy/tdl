@@ -17,6 +17,7 @@ Notes:
 import os, sys
 import ctypes as C
 import numpy as num
+from tdl.pds.libutils import get_dll
 
 #######################################################################
 
@@ -24,14 +25,11 @@ import numpy as num
 libspath = os.path.dirname(__file__)
 libspath = os.path.abspath(libspath)
 
-# import the dll 
-if sys.platform == 'win32':
-    xrrdll = num.ctypeslib.load_library('_xrr.dll',libspath)
-else:
-    xrrdll = num.ctypeslib.load_library('_xrr.so',libspath)
+# import the dll
+xrrdll = get_dll('xrr')
 
 #######################################################################
-xrrdll.wrxref.restype = C.c_int
+xrrdll.xref.restype = C.c_int
 
 argtypes = [C.c_int,                  # nlayer
             C.c_int,                  # nelem
@@ -66,9 +64,9 @@ argtypes = [C.c_int,                  # nlayer
             C.POINTER(C.c_double),    # Im_Ar
             C.POINTER(C.c_double),    # Re_g
             C.POINTER(C.c_double)]    # Im_g
-            
+
 # not sure how to deal with comp array in argtypes? Its a double **
-#xrrdll.wrxref.argtypes = argtypes
+#xrrdll.xref.argtypes = argtypes
 
 #######################################################################
 class _XrayRefl:
@@ -133,13 +131,13 @@ class _XrayRefl:
         self.calc_params[5] = 0.0     # aflag
         self.calc_params[6] = 0.0     # fy_idx
         self.calc_params[7] = 0.0     # fy energy (eV)
-        self.calc_params[8] = 90.0    # detang (deg) 
+        self.calc_params[8] = 90.0    # detang (deg)
         self.calc_params[9] = 1.0     # tnorm (deg)
         self.calc_params[10] = 1.0    # rflag
         self.calc_params[11] = 10.0   # del z (ang)
         self.calc_params[12] = 3.0    # pdeth
         self.calc_params[13] = 1.0    # rscale
-        
+
     ###################################################################
     def _init_calc_arrays(self):
         """
@@ -202,58 +200,58 @@ class _XrayRefl:
         self.Re_Ar_ptr       = self.Re_Ar.ctypes.data_as(dptr)
         self.Im_Ar_ptr       = self.Im_Ar.ctypes.data_as(dptr)
         self.Re_g_ptr        = self.Re_g.ctypes.data_as(dptr)
-        self.Im_g_ptr        = self.Im_g.ctypes.data_as(dptr) 
+        self.Im_g_ptr        = self.Im_g.ctypes.data_as(dptr)
 
     ###################################################################
     def _calc(self,init_ptrs=True,init_arrs=False):
         """
         Calculate reflectivity/yield
-        
+
         The C function has the following call:
-        _xref(int nlayer, int nelem, int nthet, double *calc_params,  
+        _xref(int nlayer, int nelem, int nthet, double *calc_params,
               double *d, double *rho, double *sigma, double **comp,
-              double *elem_z, double *fp, double *fpp, double *amu, 
-              double *mu_at, double *theta_arr, double *R, double *Y, 
+              double *elem_z, double *fp, double *fpp, double *amu,
+              double *mu_at, double *theta_arr, double *R, double *Y,
               double *del, double *bet, double *amu_t, double *mu_t,
-              double *Re_X, double *Im_X, double *Re_Ai, double *Im_Ai, 
+              double *Re_X, double *Im_X, double *Re_Ai, double *Im_Ai,
               double *Re_Ar, double *Im_Ar, double *Re_g, double *Im_g )
         """
         if init_arrs: self._init_calc_arrays()
         if init_ptrs: self._arr_ptrs()
-        
-        ret = xrrdll.wrxref( C.c_int(self.nlayer),
-                             C.c_int(self.nelem),
-                             C.c_int(self.nthet),
-                             self.calc_params_ptr,
-                             #
-                             self.d_ptr,
-                             self.rho_ptr,
-                             self.sigma_ptr,
-                             self.comp_ptr,
-                             #
-                             self.elem_z_ptr,
-                             self.fp_ptr,
-                             self.fpp_ptr,
-                             self.amu_ptr,
-                             self.mu_at_ptr,
-                             #
-                             self.theta_ptr,
-                             self.R_ptr,
-                             self.Y_ptr,
-                             #
-                             self.delta_ptr,
-                             self.beta_ptr,
-                             self.amu_t_ptr,
-                             self.mu_t_ptr,
-                             #
-                             self.Re_X_ptr,
-                             self.Im_X_ptr,
-                             self.Re_Ai_ptr,
-                             self.Im_Ai_ptr,
-                             self.Re_Ar_ptr,
-                             self.Im_Ar_ptr,
-                             self.Re_g_ptr,
-                             self.Im_g_ptr )
+
+        ret = xrrdll.xref( C.c_int(self.nlayer),
+                           C.c_int(self.nelem),
+                           C.c_int(self.nthet),
+                           self.calc_params_ptr,
+                           #
+                           self.d_ptr,
+                           self.rho_ptr,
+                           self.sigma_ptr,
+                           self.comp_ptr,
+                           #
+                           self.elem_z_ptr,
+                           self.fp_ptr,
+                           self.fpp_ptr,
+                           self.amu_ptr,
+                           self.mu_at_ptr,
+                           #
+                           self.theta_ptr,
+                           self.R_ptr,
+                           self.Y_ptr,
+                           #
+                           self.delta_ptr,
+                           self.beta_ptr,
+                           self.amu_t_ptr,
+                           self.mu_t_ptr,
+                           #
+                           self.Re_X_ptr,
+                           self.Im_X_ptr,
+                           self.Re_Ai_ptr,
+                           self.Im_Ai_ptr,
+                           self.Re_Ar_ptr,
+                           self.Im_Ar_ptr,
+                           self.Re_g_ptr,
+                           self.Im_g_ptr )
 
     ###################################################################
     def _show_ptrs(self):
@@ -298,4 +296,4 @@ class _XrayRefl:
 #######################################################################
 if __name__ == "__main__":
     print dir()
-    
+
