@@ -1,0 +1,9 @@
+X-ray reflectivity code by Tom Trainor
+
+Modifications:
+   18-Nov-2013  MNewville
+   replaced GSL complex routines with
+   complex number routines taken from
+   from http://www.netlib.org/cephes/
+
+   Needs testing!
