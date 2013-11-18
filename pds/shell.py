@@ -43,11 +43,11 @@ from .shellutil   import set_path, show_more, show_list
 from .shellutil   import PrintExceptErr, command2expr
 from .shellutil   import split_args, trimstring, split_cmd_line
 from .numshell    import _NumShell
-
+from .site_config import home_dir, user_pds_dir
 from .pcgui import wxShell
 from .wxShell_rsrc import data as r_wxShell
 from .pds_builtins import PdsBuiltins
-        
+
 ##########################################################################
 
 # some global flags
@@ -216,7 +216,7 @@ class Shell(_NumShell):
         self.completekey = completekey
 
     #############################################################
-    def startup(self,args=[]):
+    def startup(self, args=[]):
         """
         set up builtins and exec startup arguments
         """
@@ -937,9 +937,11 @@ def main(arg='', use_wx=False, debug=False):
         pds_path  = pds_path.replace('\\','/')
         root_path = root2.replace('\\','/')
         user_home = user_home.replace('\\','/')
+
     sys_vars['__pds__.__path__']     = pds_path
     sys_vars['__pds__.__rootpath__'] = root_path
-    sys_vars['__home__']             = user_home
+    sys_vars['__home__']             = home_dir
+    sys_vars['__userpdsdir__']       = user_pds_dir
     args = []
     for var in sys_vars.keys():
         s = "%s='%s'" % (var,sys_vars[var])
@@ -950,7 +952,7 @@ def main(arg='', use_wx=False, debug=False):
     ##########################################################
     if use_wxGui == False:
         s = Shell(args=args,debug=debug,GUI='WXAgg')
-        for f,warn in files:
+        for f, warn in files:
             if os.path.exists(f) and os.path.isfile(f):
                 s.do_load(f)
             elif warn:

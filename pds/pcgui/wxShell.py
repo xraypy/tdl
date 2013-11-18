@@ -53,7 +53,7 @@ args  = None
 class wxShell(model.Background,menuApps,wxUtil):
 
     def on_initialize(self, event):
-        
+
         # including sizer setup, do it here
         self.setupSizers()
 
@@ -62,7 +62,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.prompt = 'pds>'
         #self.components.Prompt.text = self.prompt
         self.save_file = None
-        
+
         self.isreading = False
         self.input_text = ''
         self.cmd_history=['']
@@ -75,13 +75,13 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.shell = pds.shell.Shell(args=args,
                                      stdin=self,stdout=self,
                                      GUI='WXAgg',debug=debug)
-        for f,warn in files:
+        for f, warn in files:
             if os.path.exists(f) and os.path.isfile(f):
                 self.shell.do_load(f)
             elif warn:
                 print "\n  ***Cannot find file: %s" % f
 
-        # run it, when done we've quit  
+        # run it, when done we've quit
         self.run()
         sys.__stdout__.write("\nExiting \n")
         time.sleep(.5)
@@ -106,15 +106,15 @@ class wxShell(model.Background,menuApps,wxUtil):
 
     def flush(self):
         self.input_text = ''
-        
+
     def readline(self):
         return(self.ReadInputLine())
-    
+
     def raw_input(self, prompt=''):
         """Return string based on user input."""
         if prompt:
             self.UpdatePrompt(prompt)
-        line = self.ReadInputLine()         
+        line = self.ReadInputLine()
         return(line)
 
     #########################################
@@ -134,7 +134,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.input_text = ''
         #line = input_text.strip() + '\n'
         line = input_text
-        
+
         #history
         if len(line)>1:
             # element zero always blank line
@@ -147,20 +147,20 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.cmd_idx = 0
         self.cmd_from_hist=False
         return (line)
-    
+
     """
     def PostLineToShellText(self,line):
         # is this too slow????
         # get the last line
         txtlines  = string.split(self.components.ShellText.text,'\n')
-        
+
         if txtlines:
             last_line = txtlines[len(txtlines)-2]
         else:
             last_line = ''
-                
+
         # auto-indent block
-        
+
         if len(string.strip(last_line)) == 0:
             self.indent = self.indent - 4
         else:
@@ -175,7 +175,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         line = padding + line
         self.components.ShellText.appendText(line)
     """
-    
+
     def PostLineToShellText(self,line):
        self.components.ShellText.appendText(line)
        #self.components.ShellText.setInsertionPointEnd()
@@ -183,8 +183,8 @@ class wxShell(model.Background,menuApps,wxUtil):
     ###########################################################
     #             Menus                                       #
     ###########################################################
-    
-    # note see app_menu.py for more...  
+
+    # note see app_menu.py for more...
 
     def on_menuFileExit_select(self,event):
         print "QUIT"
@@ -193,7 +193,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         #self.close()
         sys.exit()
 
-    def on_menuFile_CD_select(self,event):        
+    def on_menuFile_CD_select(self,event):
         cdir = self.eval_line("pwd()")
         result = dialog.directoryDialog(self, 'Open', cdir)
         #print result
@@ -207,7 +207,7 @@ class wxShell(model.Background,menuApps,wxUtil):
             self.post_message("Change Dir cancelled.")
             return
 
-    def on_menuFile_Restore_select(self,event):        
+    def on_menuFile_Restore_select(self,event):
         cdir = self.eval_line("pwd()")
         result = dialog.fileDialog(self, 'Open', cdir, '',"*")
         if result.accepted:
@@ -220,10 +220,10 @@ class wxShell(model.Background,menuApps,wxUtil):
         else:
             self.post_message("File selection cancelled.")
             return
-        
+
         #print dir, fname
         self.save_file = path
-        line = "restore %s" % path  
+        line = "restore %s" % path
         self.exec_line(line)
 
     def on_menuFile_SaveAs_select(self,event):
@@ -239,19 +239,19 @@ class wxShell(model.Background,menuApps,wxUtil):
         else:
             self.post_message("File selection cancelled.")
             return
-        
+
         #print dir, fname
         self.save_file = path
-        line = "save %s" % path  
+        line = "save %s" % path
         self.exec_line(line)
 
-    def on_menuFile_Save_select(self,event):        
+    def on_menuFile_Save_select(self,event):
         if self.save_file == None:
             self.exec_line("save")
         else:
-            line = "save %s" % self.save_file  
+            line = "save %s" % self.save_file
             self.exec_line(line)
-                
+
     def on_menuShellStart_select(self, event):
         # load shell is defined in model.Background (model.py)
         # it starts an instance of pycrust
@@ -261,12 +261,12 @@ class wxShell(model.Background,menuApps,wxUtil):
 
     def on_menuOptionsEditSiteStartup_select(self,event):
         self.exec_line("import os")
-        self.exec_line("edit os.path.join(__pds__.__path__,'startup.pds')")
+        self.exec_line("edit(os.path.join(__pds__.__path__,'startup.pds'))")
 
     def on_menuOptionsEditHomeStartup_select(self,event):
         self.exec_line("import os")
-        self.exec_line("edit os.path.join(__home__,'.pds')")
-        
+        self.exec_line("edit(os.path.join(__userpdsdir__,'startup.pds'))")
+
     def on_menuHelpUse_select(self, event):
         import wxShellHelp
         wxShellHelp = mod_import(wxShellHelp)
@@ -278,7 +278,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.wxShellHelp.visible = True
 
     def on_menuHelpDocumentation_select(self,event):
-        self.exec_line("web 'http://cars9.uchicago.edu/iffwiki/tdl/Pds'")
+        self.exec_line("web('http://cars9.uchicago.edu/iffwiki/tdl/Pds')")
 
     ###########################################################
     #             EVENTS                                      #
@@ -299,7 +299,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         #print dir(event)
         keyCode = event.GetKeyCode()
         #print keyCode
-        
+
         #if keyCode == wx.WXK_CONTROL:
         # 372 (old) 310 (new) is enter on the numeric keypad
         if (keyCode == wx.WXK_RETURN) or (keyCode == wx.WXK_NUMPAD_ENTER):
@@ -311,8 +311,8 @@ class wxShell(model.Background,menuApps,wxUtil):
             self.PostLineToShellText(tmp)
             self.components.ShellCmd.text = ''
             self.isreading = False
-        # uparrow, 317 in old wx, 315 in newer: 
-        elif keyCode == wx.WXK_UP: 
+        # uparrow, 317 in old wx, 315 in newer:
+        elif keyCode == wx.WXK_UP:
             self.cmd_idx=self.cmd_idx+1
             if self.cmd_idx > self.cmd_count-1:
                 self.cmd_idx = self.cmd_count -1
@@ -320,16 +320,16 @@ class wxShell(model.Background,menuApps,wxUtil):
             #self.components.ShellCmd.setInsertionPointEnd()
             self.cmd_from_hist=True
         # downarrow, 319 in old wx, 317 in new
-        elif keyCode == wx.WXK_DOWN: 
+        elif keyCode == wx.WXK_DOWN:
             self.cmd_idx=self.cmd_idx+-1
             if self.cmd_idx<0:
                 self.cmd_idx=0
                 self.cmd_from_hist=False
             else:
-                self.cmd_from_hist=True             
+                self.cmd_from_hist=True
             self.components.ShellCmd.text = self.cmd_history[self.cmd_idx]
             #self.components.ShellCmd.setInsertionPointEnd()
-            
+
         else:
             event.Skip()
 
@@ -340,8 +340,8 @@ class wxShell(model.Background,menuApps,wxUtil):
         p3 = 1   # 1
         p4 = 15  # 20
         p5 = 10  # 50
-        p6 = 0   #1   # 2 
-        p7 = 30  # 50 
+        p6 = 0   #1   # 2
+        p7 = 30  # 50
         comp = self.components
         # Create base sizers
         base_sizer = wx.BoxSizer( wx.VERTICAL )
@@ -352,7 +352,7 @@ class wxShell(model.Background,menuApps,wxUtil):
         shell_sizer_V = wx.BoxSizer(wx.VERTICAL)
         shell_sizer_V.Add( comp.ShellText, p1, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
         shell_sizer_V.Add( comp.Sep1, p2, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
-        
+
         # here make horz sizer for prompt and cmd line
         cmd_sizer_H = wx.BoxSizer( wx.HORIZONTAL )
         cmd_sizer_H.Add( comp.Prompt, p3, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
@@ -360,12 +360,12 @@ class wxShell(model.Background,menuApps,wxUtil):
 
         cstyle=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER
         comp.ShellCmd._parent.SetWindowStyle(cstyle)
-        
+
         # Now add both of these to the base vert sizer
         base_sizer_V.Add(shell_sizer_V, p5, wx.ALL | wx.EXPAND,0 )
         base_sizer_V.Add(cmd_sizer_H, p6, wx.ALL | wx.EXPAND,0)
 
-        # Now add this to the base sizer        
+        # Now add this to the base sizer
         base_sizer.Add(base_sizer_V, p7, wx.ALL | wx.EXPAND ,5)
 
         # Magic
