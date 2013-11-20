@@ -54,6 +54,7 @@ for tdl_mod in ('ana', 'ana_upgrade', 'geom', 'peak', 'specfile',
                  'xtal'):
     pycard_incs.append('tdl.modules.%s' % tdl_mod)
 
+pycard_incs.extend(['tdl.pds.pcgui', 'tdl.pds.menu'])
 
 exe_opts = {'packages': ['wx', 'numpy', 'scipy', 'matplotlib'],
             'includes': ['Carbon', 'Carbon.Appearance', 'ConfigParser',

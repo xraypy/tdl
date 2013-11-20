@@ -925,7 +925,7 @@ def main(arg='', use_wx=False, debug=False):
             startup_file = os.path.join(tdir, 'tdl', 'startup.pds')
         elif sys.platform.lower().startswith('darwin'):
             tdir, bdir = os.path.split(tdir)
-            startup_fule = os.path.join(toplevel, 'Resources', 'tdl', 'startup.pds')
+            startup_file = os.path.join(tdir, 'Resources', 'tdl', 'startup.pds')
 
     sys_pds_dir, fname = os.path.split(startup_file)
     files = [(startup_file, False)]
