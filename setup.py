@@ -17,6 +17,9 @@ When installed the resulting package should look like:
 
 import distutils
 from distutils.core import setup, Extension
+import os, sys
+import glob
+import site
 
 #from version import name,version,author,email,desc
 version = '0.4'
@@ -27,17 +30,10 @@ desc    = "tdl"
 
 #########################################################
 package_dir  = {'tdl':'',
-                'tdl.doc':'doc',
-                'tdl.lib':'lib',
                 'tdl.modules':'modules',
-                'tdl.pds':'pds',
-                'tdl.scripts':'scripts'}
-packages     = ['tdl',
-                'tdl.doc',
-                'tdl.lib',
-                'tdl.modules',
-                'tdl.pds',
-                'tdl.scripts']
+                'tdl.pds':'pds'}
+
+packages = package_dir.keys()
 
 # misc package data
 package_data = {}
@@ -45,18 +41,11 @@ package_data.update({'tdl.doc':['LICENSE.txt']})
 package_data.update({'tdl.scripts':['pds']})
 package_data['tdl.scripts'].append('pds.bat')
 package_data['tdl.scripts'].append('spectohdf.py')
-                
+
 #pds
 packages.append('tdl.pds.pcgui')
 packages.append('tdl.pds.menu')
 package_data.update({'tdl.pds':['startup.pds']})
-
-# tdl.lib
-package_data.update({'tdl.lib':['_xrr.dll']})
-package_data['tdl.lib'].append('_hello.lib')
-package_data['tdl.lib'].append('gsl.dll')
-package_data['tdl.lib'].append('gsl.lib')
-package_data['tdl.lib'].append('gslcblas.dll')
 
 # modules
 packages.append('tdl.modules.ana_upgrade')
@@ -75,16 +64,30 @@ packages.append('tdl.modules.xrr')
 packages.append('tdl.modules.xtab')
 packages.append('tdl.modules.xtal')
 
+#dlls
+data_files, archs = [], []
+if os.name == 'nt':
+    archs.extend(['win32', 'win64'])
+else:
+    if sys.platform.lower().startswith('linux'):
+        archs.extend(['linux32', 'linux64'])
+    elif sys.platform.lower().startswith('darwin'):
+        archs.append('darwin')
+
+dlldir = os.path.join(site.getsitepackages()[0], 'tdl', 'dlls')
+for dx in archs:
+    dllfiles = glob.glob('dlls/%s/*' % dx)
+    data_files.append((dlldir, dllfiles))
+
 ### call the setup command
-setup(
-    name = name,
-    version = version,
-    author =  author,
-    author_email = email,
-    description = desc,
-    license = 'Python',
-    package_dir = package_dir,
-    packages = packages,
-    package_data = package_data,
-    data_files  = []
+setup(name = name,
+      version = version,
+      author =  author,
+      author_email = email,
+      description = desc,
+      license = 'Python',
+      package_dir = package_dir,
+      packages = packages,
+      package_data = package_data,
+      data_files  = data_files,
 )

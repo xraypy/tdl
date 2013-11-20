@@ -1,7 +1,8 @@
 import os
 import sys
-import ctypes
+import ctypes, ctypes.util
 from platform import uname, architecture
+from site import getsitepackages
 
 TDL_TOPDIR = '.'
 
@@ -40,15 +41,19 @@ def get_dll(libname):
     _paths = {'PATH': '', 'LD_LIBRARY_PATH': '', 'DYLD_LIBRARY_PATH':''}
     _dylib_formats = {'win32': '%s.dll', 'linux2': 'lib%s.so',
                       'darwin': 'lib%s.dylib'}
-    thisdir = os.path.join(TDL_TOPDIR, 'dlls', get_dlldir())
-    thisdir = os.path.abspath(thisdir)
-    dirs = [thisdir]
+    dirs = [TDL_TOPDIR]
+    parents = [TDL_TOPDIR]
+    parents.extend(getsitepackages())
+    dlldir = get_dlldir()
+    for par in parents:
+        dirs.append(os.path.abspath(os.path.join(par, 'dlls')))
+        dirs.append(os.path.abspath(os.path.join(par, 'tdl', 'dlls')))
+        dirs.append(os.path.abspath(os.path.join(par, 'tdl', 'dlls', dlldir)))
+
 
     loaddll = ctypes.cdll.LoadLibrary
-
     if sys.platform == 'win32':
         loaddll = ctypes.windll.LoadLibrary
-        dirs.append(TDL_TOPDIR)
 
     if hasattr(sys, 'frozen'): # frozen with py2exe!!
         dirs.append(os.path.dirname(sys.executable))
@@ -57,13 +62,6 @@ def get_dll(libname):
         for d in dirs:
             _paths[key] = add2path(key, d)
 
-    # normally, we expect the dll to be here in the dlls tree
-    # if we find it there, use that one
-    fname = _dylib_formats[sys.platform] % libname
-    dllpath = os.path.join(thisdir, fname)
-    if os.path.exists(dllpath):
-        return loaddll(dllpath)
-
-    # if not found in the dlls tree, try your best!
+    # find and load the dlls tree, try your best!
     return loaddll(ctypes.util.find_library(libname))
 

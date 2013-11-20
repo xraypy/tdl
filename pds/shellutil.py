@@ -414,7 +414,7 @@ def command2expr(s,symtable=None):
     key   = s.split()[0].lower()
     s     = s[len(key):]
     if len(s.strip()) == 0: return "%s()" % key
-    
+
     words = split_list(s, delim = ' ')
     tmp = []
     for word in words:
@@ -492,7 +492,7 @@ def pickle_1(data,fname,check=True):
             if hasattr(data[dname],'__save__'):
                 data[dname].__save__()
             try:
-                # try to pickle to a string 
+                # try to pickle to a string
                 pstr = cPickle.dumps(data[dname])
             except:
                 data.pop(dname)
@@ -510,7 +510,7 @@ def pickle_1(data,fname,check=True):
     f = open(fname,'w')
     cPickle.dump(d,f)
     f.close()
-        
+
 def unpickle_1(fname):
     """
     read data made by pickle 1
@@ -519,7 +519,7 @@ def unpickle_1(fname):
 
     if not os.path.isfile(fname):
         print "File error: cannot find file '%s' " % fname
-        return None        
+        return None
 
     f = open(fname)
     d = cPickle.load(f)
@@ -582,7 +582,7 @@ def unpickle_2(fname):
 
     if not os.path.isfile(fname):
         print 'file error: cannot find file %s ' % fname
-        return None        
+        return None
 
     f = open(fname)
     lines = f.readlines()
@@ -613,7 +613,7 @@ def unpickle_2(fname):
             pdata.update({dname:dat})
         except:
             print "Could not restore object '%s'" % dname
-    
+
     if len(pdata) > 0:
         return pdata
     else:
@@ -629,7 +629,7 @@ def unpickle_2(fname):
 def mod_import(name,debug=False):
     """
     Wrapper for imports/reloads
-    
+
     given a module name, try reloading the module
     given a string name, try loading the given module
     Note if a str is passed the returned mod will point to
@@ -685,7 +685,7 @@ class  PrintExceptErr:
         except:
             print '  Error printing exception error '
         print '***********************************\n'
-        
+
 ##########################################################################
 class  PrintShortExcept:
     """
@@ -701,14 +701,16 @@ class  PrintShortExcept:
         except:
             print '  Error printing exception error '
         print '***********************************\n'
-        
+
 ##########################################################################
 def set_path(pth=None,recurse=False,verbose=False,clean=True):
     """
     modify or return python path
     """
-    if type(pth) == types.StringType: pth = pth.strip()
-    if not pth: return
+    if pth is None:
+        return
+    if isinstance(pth, str):
+        pth = pth.strip()
     if pth == ".":
         if '.' not in sys.path:
             sys.path.append('.')
@@ -726,7 +728,7 @@ def set_path(pth=None,recurse=False,verbose=False,clean=True):
                             sys.path.append(d)
         else:
             #if verbose: print "Path '%s' doesnt exist" % pth
-            print "Set path warning cant find path: '%s'" % pth
+            pass # print "Set path warning cant find path: '%s'" % pth
     if clean: clean_path()
     return
 
@@ -832,8 +834,8 @@ def gtline(pterm='>>',p0=None,p1=None,p2=None,valid=None,
     * valid   = list of valid entries
     * default = default ret value
     * rettype = typing function, ie function to force ret type
-    * retry   = retry on failure?  
-    
+    * retry   = retry on failure?
+
     """
     if p0 != None:
         print p0
@@ -873,7 +875,7 @@ def _gtline(prompt='',default=None,pterm='>>',rettype=None,valid=None):
     if valid != None:
         if ret not in valid:
             ret = None
-    return (ret) 
+    return (ret)
 
 ##########################################################################
 def get_str(prompt=None,default=None,valid=None,nlprompt=True):
@@ -907,7 +909,7 @@ def get_str(prompt=None,default=None,valid=None,nlprompt=True):
                 return ret
         except:
             pass
-    
+
 ##########################################################################
 def get_yn(prompt=None,default=None,nlprompt=True):
     """
@@ -942,7 +944,7 @@ def get_yn(prompt=None,default=None,nlprompt=True):
                                                             str(nlbl))
         except:
             pass
-    
+
 ##########################################################################
 def get_tf(prompt=None,default=None,nlprompt=True):
     """
@@ -983,7 +985,7 @@ def get_tf(prompt=None,default=None,nlprompt=True):
                                                          str(flbl))
         except:
             pass
-        
+
 ##########################################################################
 def get_int(prompt=None,default=None,valid=[],min=None,max=None,nlprompt=True):
     """
@@ -1020,7 +1022,7 @@ def get_int(prompt=None,default=None,valid=[],min=None,max=None,nlprompt=True):
                 return ret
         except:
             pass
-        
+
 ##########################################################################
 def get_flt(prompt=None,default=None,min=None,max=None,nlprompt=True):
     """
@@ -1082,7 +1084,7 @@ def get_flt_list(prompt=None,default=None,nlprompt=True):
 class Menu:
     """
     A menu driven interface
-    
+
     Given a set of menu labels
     and corresponding set of descriptions,
     loop until there is a match to one of the labels
@@ -1105,7 +1107,7 @@ class Menu:
         import numpy as num
 
         self.matchidx = matchidx
-        
+
         # add help
         if self.dohelp:
             if 'help' not in labels:
@@ -1136,7 +1138,7 @@ class Menu:
                 self.descr = num.array(self.descr)
                 self.descr = list(self.descr[idx][:])
 
-        # calc unique array 
+        # calc unique array
         # loop through chars of each item and determine
         # when it becomes unique relative to all others
         self.unique  = []
@@ -1244,7 +1246,7 @@ class Menu:
             if cmd != None:
                 cmd = self.match(cmd)
         return cmd
-       
+
 ##########################################################################
 ##########################################################################
 if __name__ == "__main__":
@@ -1262,4 +1264,4 @@ if __name__ == "__main__":
     print get_yn()
     print get_tf()
     print get_int()
-    
+
