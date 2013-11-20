@@ -109,4 +109,4 @@ except:
     pass
 sys("cp -pr ../modules   %s/Resources/tdl/." % (contents))
 #
-# sys("cp -pr ../dlls/darwin/* %s/MacOS/." % contents)
+sys("cp -pr ../dlls/darwin/* %s/MacOS/." % contents)
