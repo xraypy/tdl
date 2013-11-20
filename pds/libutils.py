@@ -2,7 +2,14 @@ import os
 import sys
 import ctypes, ctypes.util
 from platform import uname, architecture
-from site import getsitepackages
+
+HAS_SITE = False
+
+try:
+    from site import getsitepackages
+    HAS_SITE = True
+except:
+    HAS_SITE = False
 
 TDL_TOPDIR = '.'
 
@@ -43,7 +50,10 @@ def get_dll(libname):
                       'darwin': 'lib%s.dylib'}
     dirs = [TDL_TOPDIR]
     parents = [TDL_TOPDIR]
-    parents.extend(getsitepackages())
+    try:
+        parents.extend(getsitepackages())
+    except:
+        pass
     dlldir = get_dlldir()
     for par in parents:
         dirs.append(os.path.abspath(os.path.join(par, 'dlls')))
