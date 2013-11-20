@@ -15,13 +15,13 @@ For this module to work correctly you need to ensure that:
 
 Notes on the calculation:
 -------------------------
-This model calculates the electric field intensity at any point 
-within a multilayer structure as a function of incidence angle, and 
+This model calculates the electric field intensity at any point
+within a multilayer structure as a function of incidence angle, and
 the Reflectivity and fluorescent yield profile.
 
-We assume that the multilayer has 'nlayers' and each layer 
+We assume that the multilayer has 'nlayers' and each layer
 within the model has a homogeneous composition and density.
-Hence composition and density variations are modeled by 
+Hence composition and density variations are modeled by
 discrete layers with different properties.
 
 The functions/data structures assume j = 'nlayers - 1' is the top layer,
@@ -31,12 +31,12 @@ For e.g. a 4 layer model (nlayers=4) would have:
 
 
                Air
-          j = nlayers -1 = 3          
+          j = nlayers -1 = 3
  -------------------------------- interface 2
           j = nlayers -2 = 2
  -------------------------------- interface 1
           j = nlayers -3 = 1
- -------------------------------- interface 0 
+ -------------------------------- interface 0
           j = nlayers -4 = 0
              Substrate
                  |
@@ -44,38 +44,38 @@ For e.g. a 4 layer model (nlayers=4) would have:
                 \ /
                -inf
  ---------------------------------
-  
+
 We use the following conventions:
 
-The layer thickness are in angstroms and the 
+The layer thickness are in angstroms and the
 array is indexed as:
     d[3] = Air layer thickness (Layer 3)
     d[2] = Layer 2 thickness
     d[1] = Layer 1 thickness
     d[0] = Substrate thickness (Layer 0)
 
-Note that the thickness of the Air and Substrate layers are arbitraty 
+Note that the thickness of the Air and Substrate layers are arbitraty
 for the calculation of the field intensity and Reflectivity.
-The specified layer thicknesses for these layers currently determine how 
-deep in the layer (ie distance away from the interface) to calculate the 
+The specified layer thicknesses for these layers currently determine how
+deep in the layer (ie distance away from the interface) to calculate the
 field intensity for fluorescent yield calculations.  Note if the calc
 parameter pdepth is passed, d[0] is also ignored in the FY calcs,
 rather the depth is calculated as a multiple of the penetration depth...
 
-The densities are in g/cm^3: 
+The densities are in g/cm^3:
     rho[3] = Air layer density (Layer 3)
     rho[2] = Layer 2 density
     rho[1] = Layer 1 density
     rho[0] = Substrate density (Layer 0)
 
-The compositions are given as the elemental stiochiometric 
+The compositions are given as the elemental stiochiometric
 coefficients, or mole fractions.  The are given as:
-    comp[k][j] = fraction of element k in layer j 
+    comp[k][j] = fraction of element k in layer j
 
 The element Z's are passed in the array (len = nelem)
-    elem_z[k] = Z of element k  
+    elem_z[k] = Z of element k
 
-We also require that fp and fpp are passed in 
+We also require that fp and fpp are passed in
 (which we assume are calculated for the incident energy)
 These arrays are of len = nelem:
     fp[k]  = f prime (electrons/atom) of element k
@@ -96,17 +96,17 @@ Therefore for a given layer (density rho (g/cm^3)) and formula weight (MW):
     mu_t =  10^-8 *(rho/MW) * Sum( A[k] * mu_at[k] * x[k])
     att  = exp(-mu_t*thickness)
 
-The calculations also allow the inclusion of interface roughness through 
+The calculations also allow the inclusion of interface roughness through
 a simple Debye-Waller type model.  Note that in the above model there are
-3 interfaces.  Therefore the 'sigma' array should have three values, each 
+3 interfaces.  Therefore the 'sigma' array should have three values, each
 being the rms roughness value in angstroms:
     sigma[0] = layer0/layer1 interface roughness
     sigma[1] = layer1/layer2 interface roughness
     sigma[2] = layer2/layer3 interface roughness
 
-Note that the Debye-Waller model fails for high values of 
-sigma (e.g. > 20 angstroms).  For rougher interfaces, or for 
-rapidly varying compsition distributions, the best way to model these 
+Note that the Debye-Waller model fails for high values of
+sigma (e.g. > 20 angstroms).  For rougher interfaces, or for
+rapidly varying compsition distributions, the best way to model these
 is by generating a discretized model with many homogeneous layers
 that approximates the continuous distribution (e.g. density or composition
 profiles that follow an erf distribution)
@@ -120,10 +120,10 @@ References:
 5) Trainor, Templeton and Eng, J Electron Spec Rel Phenom (2006) V150, 66-85
 
 For information about scattering factors see (e.g.)
-6) Chantler, et al. (2005), X-Ray Form Factor, 
-7) Attenuation and Scattering Tables (version 2.1): 
-   http://physics.nist.gov/ffast 
-8) Chantler, C.T., J. Phys. Chem. Ref. Data V29, 597-1048 (2000) 
+6) Chantler, et al. (2005), X-Ray Form Factor,
+7) Attenuation and Scattering Tables (version 2.1):
+   http://physics.nist.gov/ffast
+8) Chantler, C.T., J. Phys. Chem. Ref. Data V29, 597-1048 (2000)
 9) Chantler, C.T., J. Phys. Chem. Ref. Data V24, 71-643 (1995).
 
 """
@@ -133,7 +133,7 @@ import numpy as num
 import exceptions
 
 from Ifeffit  import Ifeffit
-from tdl.lib  import wrxrr
+from .wrxrr import _XrayRefl
 from tdl.modules.utils import elements
 
 ###############################################################################
@@ -147,14 +147,14 @@ DEFAULT_PARAMS = {'energy':10000.,'wconv':0.01,
                   'delz':5.0,'pdepth':3.0,'rscale':1.0}
 
 ###############################################################################
-class RefModel(wrxrr._XrayRefl):
+class RefModel(_XrayRefl):
     """
     Reflectivity model
-    
+
     See wrxrr._XrayRefl for details
-    regarding the initialization - we need to make 
+    regarding the initialization - we need to make
     sure that the arrays/data are appropriate
-    to pass to the c library.  
+    to pass to the c library.
     """
     def __init__(self,d=[],rho=[],sigma=[],comp=[],elem_z=[],theta=[],params={}):
         """
@@ -177,7 +177,7 @@ class RefModel(wrxrr._XrayRefl):
         self.fpp       = []
         self.amu       = []
         self.mu_at     = []
-        
+
         self._init_params()
         # some flags
         self._init_en   = True
@@ -193,7 +193,7 @@ class RefModel(wrxrr._XrayRefl):
                    elem_z=None, theta=None):
         """
         Initialize/modify model data and arrays.
-        
+
         Note that arrays should be passed in as numpy arrays, and will
         be assigned by reference!! See wrxrr._XrayRefl._init_model for
         array creation
@@ -249,19 +249,19 @@ class RefModel(wrxrr._XrayRefl):
         Parameters:
         -----------
         * energy (eV) is the incident energy        # calc_params[0]
-        * wconv (degrees) is the concolution width  # calc_params[1] 
-        * slen  (mm) is the sample length           # calc_params[2] 
-        * bvert (mm) is the vertical beam dim       # calc_params[3] 
-        * bhorz (mm) is the horizontal beam dim     # calc_params[4] 
-        * aflag is a flag for area calcs            # calc_params[6]  
+        * wconv (degrees) is the concolution width  # calc_params[1]
+        * slen  (mm) is the sample length           # calc_params[2]
+        * bvert (mm) is the vertical beam dim       # calc_params[3]
+        * bhorz (mm) is the horizontal beam dim     # calc_params[4]
+        * aflag is a flag for area calcs            # calc_params[6]
         * fyidx is the index of the element for FY  # calc_params[6]
-        * fyenergy (eV) is the energy of FY         # calc_params[7]  
-        * adet  (deg) is the angle of the detector  # calc_params[8]  
-        * tnorm (deg) is the theta for normalizatio # calc_params[9]  
-        * rflag is the roughness flag               # calc_params[10]  
-        * delz (ang) is the delta z for integration # calc_params[11]  
-        * pdepth is the substrate FY clac flag      # calc_params[12]  
-        * rscale is a scale factor for reflectivity # calc_params[13]  
+        * fyenergy (eV) is the energy of FY         # calc_params[7]
+        * adet  (deg) is the angle of the detector  # calc_params[8]
+        * tnorm (deg) is the theta for normalizatio # calc_params[9]
+        * rflag is the roughness flag               # calc_params[10]
+        * delz (ang) is the delta z for integration # calc_params[11]
+        * pdepth is the substrate FY clac flag      # calc_params[12]
+        * rscale is a scale factor for reflectivity # calc_params[13]
         """
         if len(params) == 0: return
         if params.has_key('energy'):
@@ -345,7 +345,7 @@ class RefModel(wrxrr._XrayRefl):
         if len(self.mu_at) != self.nelem:
             self.mu_at = num.zeros(self.nelem, dtype=num.double)
             self._init_ptr  = True
-        
+
         #below is 2*Na*r_e*hc (in cm^2*eV*mole/atom)
         con = 4.20792637233e07
         fy_energy = self.calc_params[7]
@@ -370,7 +370,7 @@ class RefModel(wrxrr._XrayRefl):
         """
         Calc reflectivity
         """
-        # save fy_idx to reset 
+        # save fy_idx to reset
         tmp = self.calc_params[6]
         self.calc_params[6] = -1.0
         #
@@ -430,7 +430,7 @@ def test():
     pyplot.ion()
 
     # make a simple multilayer and calc R and FY
-    
+
     #### layer thicknesses
     # note the first layer is the base layer,
     # it is always assumed infiniteley thick
@@ -442,9 +442,9 @@ def test():
     # base layer is calc from this multiplier times the
     # penetration depth (which is angle dependant).  This is
     # much faster since it limits the integration range to small
-    # values at low angles.  
+    # values at low angles.
     # In either case you may have to play with these paramter
-    # to see when it no longer contributes to the FY 
+    # to see when it no longer contributes to the FY
     # (if the element of interest is in the base layer)
     # The top layer should be a low density layer
     # that approximates air
@@ -458,7 +458,7 @@ def test():
     # Debye-Waller type interface roughness parameters: r = r*exp(-(q*sigma)^2)
     # The first value is the 1/0 interface roughness
     # ie the interface between the first layer and the base layer
-    # there are nlayer - 1 total interfaces.  
+    # there are nlayer - 1 total interfaces.
     sigma = num.array([10, 10, 10],dtype=num.double)
 
     #this is the list of all elements that make up the multilayer composition
@@ -480,7 +480,7 @@ def test():
              [1.0,   0.0,   0.4,  0.0],  # Si
              [0.00001,   0.001, 0.1,  0.0]]  # Fe
     comp = num.array(comp,dtype = num.double)
-    
+
     # theta is the arrays of angles for the calculation
     theta = num.arange(0.01, 1.0, 0.01, dtype=num.double)
 
@@ -490,7 +490,7 @@ def test():
     # calc_params[2] = slen  (mm)
     # calc_params[3] = bvert (mm)
     # calc_params[4] = bhorz (mm)
-    # calc_params[6] = aflag 
+    # calc_params[6] = aflag
     # calc_params[6] = fyidx
     # calc_params[7] = fyenergy (eV)
     # calc_params[8] = adet  (deg)
@@ -517,20 +517,20 @@ def test():
     t = time.time()
     ref.calc_FY()
     print " Elapsed time = %f seconds\n" % (time.time() - t)
-    
+
     #FY
     pyplot.subplot(3,1,1)
     pyplot.plot(ref.theta,ref.R,'r')
     pyplot.subplot(3,1,2)
     pyplot.plot(ref.theta,ref.Y)
-    
+
     # hist of Fe dist
     #print comp
     pyplot.subplot(3,1,3)
     idx = num.arange(len(comp[4]))
     pyplot.bar(idx,comp[4])
 
-    return ref    
+    return ref
 
 
 ###############################################################################
@@ -538,4 +538,4 @@ def test():
 if __name__ == "__main__":
     ref = test()
     raw_input("hit enter to continue")
-    
+
