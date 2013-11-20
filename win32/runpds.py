@@ -10,7 +10,7 @@ if hasattr(sys, 'frozen'):
             tdir, exe = os.path.split(sys.executable)
             toplevel, bindir = os.path.split(tdir)
             sys.path.append(os.path.abspath(tdir))
-            sys.path.append(os.path.join(tdir, 'modules'))
+            sys.path.append(os.path.join(tdir, 'tdl', 'modules'))
         except:
             pass
     elif sys.platform.lower().startswith('darwin'):

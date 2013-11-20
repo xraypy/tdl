@@ -29,7 +29,10 @@ import scipy.io.netcdf
 from scipy.io.netcdf import netcdf_file
 import scipy.constants
 
+from tdl.pds import menu
+
 loadlib =  ctypes.windll.LoadLibrary
+
 
 # larch library bits...
 # from larch.larchlib import get_dll
@@ -79,11 +82,15 @@ tdl_incs = ['tdl.modules.ana',
             'tdl.modules.spectra',
             'tdl.modules.sxrd',
             'tdl.modules.utils',
+            'tdl.modules.utils.files',
+            'tdl.modules.utils.mpfit',
             'tdl.modules.xrd',
             'tdl.modules.xrf',
             'tdl.modules.xrr',
             'tdl.modules.xtab',
-            'tdl.modules.xtal']
+            'tdl.modules.xtal',
+            'tdl.pds.pcgui',
+            'tdl.pds.menu']
 
 
 
@@ -199,6 +206,20 @@ for fname in extra_files:
     except:
         pass
 
+
+
+def sys(cmd):
+    print ' >> ', cmd
+    os.system(cmd)
+
+try:
+    os.makedirs("dist/tdl/")
+    os.makedirs("dist/tdl/modules")
+except:
+    pass
+sys("cp -pr ../modules   dist/tdl/." )
+sys("cp -pr ../pds/startup.pds   dist/tdl/." )
+sys("cp -pr ../dlls/win32/* dist/.")
 
 if __name__ == '__main__':
     print 'usage:  python py2exe_build.py py2exe'
