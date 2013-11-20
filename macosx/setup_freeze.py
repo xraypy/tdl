@@ -105,5 +105,6 @@ try:
 except:
     pass
 sys("cp -pr ../modules   %s/Resources/tdl/." % (contents))
+sys("cp -pr ../pds/startup.pds   %s/Resources/tdl/." % (contents))
 #
 sys("cp -pr ../dlls/darwin/* %s/MacOS/." % contents)
