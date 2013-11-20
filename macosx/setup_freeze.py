@@ -76,11 +76,9 @@ exe_opts = {'packages': ['wx', 'numpy', 'scipy', 'matplotlib'],
                         '_imagingtk', 'PIL._imagingtk', 'ImageTk',
                         'PIL.ImageTk', 'FixTk''_gtkagg', '_tkagg',
                         'qt', 'PyQt4Gui', 'email', 'IPython'],
-            #'iconfile': ICONFILE,
             }
 
 exe_opts['includes'].extend(pycard_incs)
-print pycard_incs
 
 appname = 'PythonDataShell'
 appvers = '0.1'
@@ -92,7 +90,6 @@ setup(name = appname,
       executables = [Executable('runpds.py', base=None),
                      ])
 
-print ' ===== '
 
 contents = 'build/%s-%s.app/Contents' % (appname, appvers)
 contents = contents.replace(' ', '\ ')
@@ -101,7 +98,7 @@ def sys(cmd):
     print ' >> ', cmd
     os.system(cmd)
 
-sys("cp -pr TDL.icns  %s/." % contents)
+# sys("cp -pr TDL.icns  %s/icons.icns" % contents)
 
 try:
     os.makedirs("%s/Resources/tdl/" % contents)
