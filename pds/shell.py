@@ -49,7 +49,6 @@ from .wxShell_rsrc import data as r_wxShell
 from .pds_builtins import PdsBuiltins
 
 ##########################################################################
-
 # some global flags
 QUIT       = -1  # recieved a quit command
 SUCCESS    =  0  # all ok
@@ -919,7 +918,17 @@ def main(arg='', use_wx=False, debug=False):
     #   then from user's home dir ==> ~/.pds
     # files contains tuples of (file, Warn_If_Not_Exist_Flag)
     ##############################################################
-    files = [(os.path.join(pds_path,'startup.pds'),False)]
+    startup_file =  os.path.join(pds_path,'startup.pds')
+    if hasattr(sys, 'frozen'):
+        tdir, exe = os.path.split(sys.executable)
+        if os.name == 'nt':
+            startup_file = os.path.join(tdir, 'tdl', 'startup.pds')
+        elif sys.platform.lower().startswith('darwin'):
+            tdir, bdir = os.path.split(tdir)
+            startup_fule = os.path.join(toplevel, 'Resources', 'tdl', 'startup.pds')
+
+    sys_pds_dir, fname = os.path.split(startup_file)
+    files = [(startup_file, False)]
     user_home = os.path.expanduser('~')
     files.append((os.path.join(user_home,'.pds'),False))
 
@@ -932,16 +941,19 @@ def main(arg='', use_wx=False, debug=False):
         for f in files: print '    ', f
 
     # create a dictionary of default system variables
+    from .site_config import home_dir, user_pds_dir
+
     sys_vars = {}
-    if True: # sys.platform == 'win32':
-        pds_path  = pds_path.replace('\\','/')
-        root_path = root2.replace('\\','/')
-        user_home = user_home.replace('\\','/')
+    pds_path  = pds_path.replace('\\','/')
+    root_path = root2.replace('\\','/')
+    sys_pds_dir = sys_pds_dir.replace('\\','/')
+    user_pds_dir = user_pds_dir.replace('\\','/')
 
     sys_vars['__pds__.__path__']     = pds_path
     sys_vars['__pds__.__rootpath__'] = root_path
     sys_vars['__home__']             = home_dir
-    sys_vars['__userpdsdir__']       = user_pds_dir
+    sys_vars['__usrpdsdir__']        = user_pds_dir
+    sys_vars['__syspdsdir__']        = sys_pds_dir
     args = []
     for var in sys_vars.keys():
         s = "%s='%s'" % (var,sys_vars[var])

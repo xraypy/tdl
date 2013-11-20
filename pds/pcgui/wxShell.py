@@ -261,11 +261,11 @@ class wxShell(model.Background,menuApps,wxUtil):
 
     def on_menuOptionsEditSiteStartup_select(self,event):
         self.exec_line("import os")
-        self.exec_line("edit(os.path.join(__pds__.__path__,'startup.pds'))")
+        self.exec_line("edit(os.path.join(__syspdsdir__, 'startup.pds'))")
 
     def on_menuOptionsEditHomeStartup_select(self,event):
         self.exec_line("import os")
-        self.exec_line("edit(os.path.join(__userpdsdir__,'startup.pds'))")
+        self.exec_line("edit(os.path.join(__usrpdsdir__, 'startup.pds'))")
 
     def on_menuHelpUse_select(self, event):
         import wxShellHelp

@@ -13,9 +13,10 @@
 # instead of having to type
 # 'from tdl.modules import xtal'
 ##################################################
+import os
+
 try:
     # import tdl.modules as tdl
-    import os
     __tdlrootpath__ = os.path.split(__pds__.__rootpath__)[0]
     __tdllibpath__ = os.path.join(__pds__.__rootpath__,'lib')
     __tdlmodpath__ = os.path.join(__pds__.__rootpath__,'modules')
@@ -65,34 +66,7 @@ except:
 ## Default Imports
 ##################################################
 ## PDS menus
-from pds import menu
-
-## files
-from tdl.modules.utils.files.read_fmt import read_column as readcol
-
-## ana
-from tdl.modules import ana
-
-## peak
-#from tdl.modules import peak
-
-## specfile
-from tdl.modules import specfile
-
-## spectra
-#from tdl.modules import spectra
-
-## sxrd
-from tdl.modules import sxrd
-
-## xrf
-#from tdl.modules import xrf
-
-## xrr
-#from tdl.modules import xrr
-
-## xtal
-#from tdl.modules import xtal
+from tdl.pds import menu
 
 ##################################################
 ## Make sure help is defined
