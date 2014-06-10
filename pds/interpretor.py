@@ -43,7 +43,7 @@ try:
 except:
     num = None
 
-import pds.pyeval as eval
+from . import pyeval as eval
 
 ######################################################################
 """

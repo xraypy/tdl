@@ -13,8 +13,7 @@ import time
 import numpy as num
 from matplotlib import pyplot
 
-from pds.pcgui.wxUtil import wxUtil
-from pds.shellutil import mod_import
+from .wxUtil import wxUtil
 from tdl.modules import ana as scandata 
 
 ############################################################################
@@ -63,18 +62,7 @@ class wxSpecData(model.Background, wxUtil):
 
     def on_menuFileExit_select(self,event): 
         self.close()
-    """
-    def on_menuHelpParams_select(self,event): 
-        import wxXrayDataHelp
-        wxXrayDataHelp = mod_import(wxXrayDataHelp)
-        dir       = os.path.dirname(wxXrayDataHelp.__file__)
-        filename  = os.path.join(dir,'wxXrayDataHelp.rsrc.py')
-        wxXrayDataHelp = wxXrayDataHelp.wxXrayDataHelp
-        self.wxXrayDataHelp = model.childWindow(self,wxXrayDataHelp,
-                                                filename=filename)
-        self.wxXrayDataHelp.position = (200, 5)
-        self.wxXrayDataHelp.visible = True
-    """
+
     def on_menuHelpDocumentation_select(self,event):
         self.exec_line("web 'http://cars9.uchicago.edu/ifeffit/tdl/Pds/SpecGui'")
 

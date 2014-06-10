@@ -35,10 +35,12 @@ wx.Panel.__init__() and wx.Frame.__init__():
 from   PythonCard import model, dialog
 import wx, string, sys, os, time
 from   wx import stc
-from   pds.pcgui.wxUtil import wxUtil
-from   pds.pcgui.app_menu import menuApps
-import pds
-from   pds.shellutil import mod_import
+from  .wxUtil import wxUtil
+from  .app_menu import menuApps
+from tdl import pds
+from  ..shellutil import mod_import
+
+from .wxShellHelp_rsrc import data as r_wxShellHelp
 
 #######################################################################
 
@@ -46,7 +48,6 @@ intro = None
 debug = False
 files = []
 args  = None
-rsrc_path = '.'
 
 #######################################################################
 class wxShell(model.Background,menuApps,wxUtil):
@@ -71,7 +72,6 @@ class wxShell(model.Background,menuApps,wxUtil):
 
         #redir stdio
         #sys.stdin  = self.readline
-        self.rsrc_path = rsrc_path
         self.shell = pds.shell.Shell(args=args,
                                      stdin=self,stdout=self,
                                      GUI='WXAgg',debug=debug)
@@ -271,10 +271,9 @@ class wxShell(model.Background,menuApps,wxUtil):
         import wxShellHelp
         wxShellHelp = mod_import(wxShellHelp)
         dir       = os.path.dirname(wxShellHelp.__file__)
-        filename  = os.path.join(dir,'wxShellHelp.rsrc.py')
         wxShellHelp = wxShellHelp.wxShellHelp
-        self.wxShellHelp = model.childWindow(self,wxShellHelp,
-                                             filename=filename)
+        self.wxShellHelp = model.childWindow(self, wxShellHelp,
+                                             rsrc=r_wxShellHelp)
         self.wxShellHelp.position = (200, 5)
         self.wxShellHelp.visible = True
 
@@ -285,10 +284,14 @@ class wxShell(model.Background,menuApps,wxUtil):
     #             EVENTS                                      #
     ###########################################################
 
+    def on_ShellCmd_textUpdate(self, event):
+        event.Skip()  # pass # print "textUpdate", dir(event)
+
     def on_ShellCmd_keyDown(self, event):
-        #print "keyDown", event.keyCode, "\n"
+        # print " keyDown", event.keyCode, event.keyCode == wx.WXK_RETURN
         #print event.shiftDown, event.controlDown, event.altDown
         self.Process_Event(event)
+        event.Skip()
 
     def Process_Event(self, event):
         """
@@ -354,6 +357,9 @@ class wxShell(model.Background,menuApps,wxUtil):
         cmd_sizer_H = wx.BoxSizer( wx.HORIZONTAL )
         cmd_sizer_H.Add( comp.Prompt, p3, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
         cmd_sizer_H.Add( comp.ShellCmd, p4, wx.ALL | wx.EXPAND | wx.ALIGN_LEFT, 0 )
+
+        cstyle=wx.ALIGN_LEFT|wx.TE_PROCESS_ENTER
+        comp.ShellCmd._parent.SetWindowStyle(cstyle)
         
         # Now add both of these to the base vert sizer
         base_sizer_V.Add(shell_sizer_V, p5, wx.ALL | wx.EXPAND,0 )
@@ -371,15 +377,16 @@ class wxShell(model.Background,menuApps,wxUtil):
         self.visible = True
 
     #####################################################
-    """
-    # some tests
 
-    #def on_ShellCmd_textUpdate(self, event):
-    #    print "textUpdate", event.keyCode, "\n"
-    #def on_ShellCmd_keyUp(self, event):
+
+    # def on_ShellCmd_keyUp(self, event):
     #    print "keyUp", event.keyCode, "\n"
     #def on_ShellCmd_keyPress(self, event):
     #    print "keyPress", event.keyCode, "\n"
+
+
+    """
+    # some tests
 
     # Use below to test other key bindings
     def _init_keys(self):

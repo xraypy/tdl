@@ -1,9 +1,9 @@
-{'application':{'type':'Application',
+data = {'application':{'type':'Application',
           'name':'Template',
     'backgrounds': [
     {'type':'Background',
           'name':'bgTemplate',
-          'title':u'XRR Builder Help',
+          'title':'Standard Template with File->Exit menu',
           'size':(526, 624),
           'style':['resizeable'],
 

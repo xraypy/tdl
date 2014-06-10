@@ -1,10 +1,10 @@
-{'application':{'type':'Application',
+data = {'application':{'type':'Application',
           'name':'Template',
     'backgrounds': [
     {'type':'Background',
           'name':'bgTemplate',
-          'title':u'PDS Shell Help',
-          'size':(638, 724),
+          'title':u'XRR Builder Help',
+          'size':(526, 624),
           'style':['resizeable'],
 
         'menubar': {'type':'MenuBar',
@@ -26,7 +26,7 @@
 {'type':'TextArea', 
     'name':'HelpText', 
     'position':(10, 10), 
-    'size':(612, 643), 
+    'size':(500, 536), 
     'editable':False, 
     },
 

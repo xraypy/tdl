@@ -31,7 +31,7 @@ try:
     import CifFile
     import StarFile
 except:
-    print "    No Pycif module available"
+    pass  # print "    No Pycif module available"
 
 ##########################################################################
 class UnitCell:

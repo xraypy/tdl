@@ -1,10 +1,10 @@
-{'application':{'type':'Application',
+data = {'application':{'type':'Application',
           'name':'Template',
     'backgrounds': [
     {'type':'Background',
           'name':'bgTemplate',
-          'title':'Standard Template with File->Exit menu',
-          'size':(526, 624),
+          'title':u'PDS Shell Help',
+          'size':(638, 724),
           'style':['resizeable'],
 
         'menubar': {'type':'MenuBar',
@@ -26,7 +26,7 @@
 {'type':'TextArea', 
     'name':'HelpText', 
     'position':(10, 10), 
-    'size':(500, 536), 
+    'size':(612, 643), 
     'editable':False, 
     },
 

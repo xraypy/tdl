@@ -12,9 +12,11 @@ import os
 import math
 import wx.lib.mixins.listctrl as listmix
 
-from pds.pcgui.wxUtil import wxUtil
+from .wxUtil import wxUtil
 from tdl.modules.specfile.specfile import SpecFile
-from pds.shellutil import mod_import
+from ..shellutil import mod_import
+
+from . import wxIntegrator
 
 #Global variables, used to easily move parameters
 # to and from the child filter windows
@@ -395,8 +397,8 @@ class wxScanFilter(model.Background, wxUtil):
         #toSave = str(os.path.split(self.filename)[1]) + '\n' + '\n'.join(outStrings)
         #print toSave
         
-        from pds.pcgui import wxIntegrator
         self.childCount += 1
+        from . import wxIntegrator
         integrator = mod_import(wxIntegrator)
         integrator = wxIntegrator.Integrator(self, self.filename, outScans)
         self.integratorChildren[self.childCount] = integrator

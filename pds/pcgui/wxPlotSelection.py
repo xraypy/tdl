@@ -13,8 +13,8 @@ import wx
 import os
 import numpy as num
 
-from   pds.pcgui.wxUtil import wxUtil
-from   pds.shellutil import PrintExceptErr
+from .wxUtil import wxUtil
+from ..shellutil import PrintExceptErr
 
 #############################################################################
 

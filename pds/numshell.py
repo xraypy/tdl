@@ -23,7 +23,7 @@ The numerical/plotting modules are handled by the function call:
 
 import sys
 import types
-from   pds.shellutil import mod_import, show_more, PrintExceptErr
+from   .shellutil import mod_import, show_more, PrintExceptErr
 
 #################################################################
 
@@ -47,10 +47,10 @@ def _parse_version(s):
     return version
 
 #################################################################
-def _modules(backend="TkAgg"):
+def _modules(backend="WXAgg"):
     """
     import numpy, scipy and pyplot - return as a tuple.
-    (num,scipy,pyplot) = Modules(backend="TkAgg")
+    (num,scipy,pyplot) = Modules(backend="WXAgg")
     """
     ## numpy
     num_version = 0
@@ -90,32 +90,36 @@ def _modules(backend="TkAgg"):
     return (num,scipy,pyplot)
 
 #################################################################
-def _import_pyplot(backend="TkAgg",verbose=True):
+def _import_pyplot(backend="WXAgg", verbose=False):
     """import pyplot"""
     import matplotlib
     check = matplotlib.get_backend()
     #
+    
+    PLOT_ROOT = None
     if backend == "TkAgg":
         # below is kluge for compiled version, ie the way we are 
         # running py2exe -> basically forces WX as backend.
         #if check == "WXAgg":
         #    pass
         #else:
-        import Tkinter
-        PLOT_ROOT = Tkinter.Tk()
-        PLOT_ROOT.iconify()
+        # import Tkinter
+        #PLOT_ROOT = Tkinter.Tk()
+        # PLOT_ROOT.iconify()
+        pass
     elif backend == "WXAgg":
         import wx
         PLOT_ROOT = None
     #
     version = _parse_version(matplotlib.__version__)
-    txt = "    ** INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
-    if verbose: sys.__stdout__.write(txt)
+    txt = "  ** INIT MATPLOTLIB, backend = %s, version=%3.1f\n\n" % (backend,version)
+    # if verbose:
+    #     sys.__stdout__.write(txt)
     #
-    if version < 950:
-        matplotlib.use(backend)
-    else:
-        matplotlib.use(backend,warn=False)
+    # if version < 950:
+    #    matplotlib.use(backend)
+    #else:
+    #    matplotlib.use(backend,warn=False)
     import matplotlib.pyplot as pyplot
     
     # do we need this??
@@ -158,6 +162,7 @@ class _NumShell:
 
         #############        
         # add modules to symbol table
+    
         (num,scipy,pyplot) = _modules(backend=self.GUI)
 
         if num != None: 
