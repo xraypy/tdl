@@ -179,7 +179,9 @@ class wxXrf(model.Background, wxUtil):
             self.scan_data = False
             name = self.get_xrf_var_name(ignore_idx=True)
             m    = self.get_data(name)
-            if hasattr(m,'xrf'):
+            if m is None:
+                return False
+            if hasattr(m, 'xrf'):
                 node = self.components.Node.text + '.xrf.xrf'
                 self.components.Node.text = node
                 m = m.xrf.xrf
@@ -217,7 +219,6 @@ class wxXrf(model.Background, wxUtil):
             else:
                 self.is_scan = False
             self.ScanParamsToggle()
-
             if type(m) == types.InstanceType:
                 if hasattr(m,'get_energy'):
                     self.post_message("Valid XRF object: %s" % name)
@@ -226,11 +227,11 @@ class wxXrf(model.Background, wxUtil):
                     self.post_message("Invalid XRF object: %s" % name)
                     return False
             else:
-                self.post_message("Invalid XRF object")
+                self.post_message("Invalid XRF object (instance)")
                 return False
             
         except:
-            self.post_message("Invalid XRF object")
+            self.post_message("Invalid XRF object (check xrf var)")
             return False
 
     def get_scan_idx(self,):

@@ -43,13 +43,12 @@ from .shellutil   import set_path, show_more, show_list
 from .shellutil   import PrintExceptErr, command2expr
 from .shellutil   import split_args, trimstring, split_cmd_line
 from .numshell    import _NumShell
-
+from .site_config import home_dir, user_pds_dir
 from .pcgui import wxShell
 from .wxShell_rsrc import data as r_wxShell
 from .pds_builtins import PdsBuiltins
-        
-##########################################################################
 
+##########################################################################
 # some global flags
 QUIT       = -1  # recieved a quit command
 SUCCESS    =  0  # all ok
@@ -216,7 +215,7 @@ class Shell(_NumShell):
         self.completekey = completekey
 
     #############################################################
-    def startup(self,args=[]):
+    def startup(self, args=[]):
         """
         set up builtins and exec startup arguments
         """
@@ -919,7 +918,17 @@ def main(arg='', use_wx=False, debug=False):
     #   then from user's home dir ==> ~/.pds
     # files contains tuples of (file, Warn_If_Not_Exist_Flag)
     ##############################################################
-    files = [(os.path.join(pds_path,'startup.pds'),False)]
+    startup_file =  os.path.join(pds_path,'startup.pds')
+    if hasattr(sys, 'frozen'):
+        tdir, exe = os.path.split(sys.executable)
+        if os.name == 'nt':
+            startup_file = os.path.join(tdir, 'tdl', 'startup.pds')
+        elif sys.platform.lower().startswith('darwin'):
+            tdir, bdir = os.path.split(tdir)
+            startup_file = os.path.join(tdir, 'Resources', 'tdl', 'startup.pds')
+
+    sys_pds_dir, fname = os.path.split(startup_file)
+    files = [(startup_file, False)]
     user_home = os.path.expanduser('~')
     files.append((os.path.join(user_home,'.pds'),False))
 
@@ -932,14 +941,19 @@ def main(arg='', use_wx=False, debug=False):
         for f in files: print '    ', f
 
     # create a dictionary of default system variables
+    from .site_config import home_dir, user_pds_dir
+
     sys_vars = {}
-    if True: # sys.platform == 'win32':
-        pds_path  = pds_path.replace('\\','/')
-        root_path = root2.replace('\\','/')
-        user_home = user_home.replace('\\','/')
+    pds_path  = pds_path.replace('\\','/')
+    root_path = root2.replace('\\','/')
+    sys_pds_dir = sys_pds_dir.replace('\\','/')
+    user_pds_dir = user_pds_dir.replace('\\','/')
+
     sys_vars['__pds__.__path__']     = pds_path
     sys_vars['__pds__.__rootpath__'] = root_path
-    sys_vars['__home__']             = user_home
+    sys_vars['__home__']             = home_dir
+    sys_vars['__usrpdsdir__']        = user_pds_dir
+    sys_vars['__syspdsdir__']        = sys_pds_dir
     args = []
     for var in sys_vars.keys():
         s = "%s='%s'" % (var,sys_vars[var])
@@ -950,7 +964,7 @@ def main(arg='', use_wx=False, debug=False):
     ##########################################################
     if use_wxGui == False:
         s = Shell(args=args,debug=debug,GUI='WXAgg')
-        for f,warn in files:
+        for f, warn in files:
             if os.path.exists(f) and os.path.isfile(f):
                 s.do_load(f)
             elif warn:

@@ -20,7 +20,7 @@ from .wxScanSelect_rsrc    import data as r_wxScanSelect
 from . import wxXrf, wxSpecData
 from . import wxPlotSelection, wxCtrData
 from . import wxFilter, wxScanSelect, wxIntegrator
-# from . import wxXrrBuilder, wxXrrIntModel
+from . import wxXrrBuilder, wxXrrIntModel
 
 #######################################################################
 def show_win(self, cls, rsrc):
@@ -40,16 +40,12 @@ class menuApps:
         self.wxXrfWindow = show_win(self, cls, rsrc=r_wxXrf)
 
     def on_menuAppsXRRBuild_select(self, event):
-        code = """
         cls = mod_import(wxXrrBuilder).wxXrrBuilder
         self.wxXrrBuilder = show_win(self, cls, r_wxXrrBuilder)
-        """
 
     def on_menuAppsXRRModel_select(self, event):
-        code = """
         cls = mod_import(wxXrrIntModel).wxXrrIntModel
         self.wxXrrModl = show_win(self, cls, r_wxXrrIntModel)
-        """
 
     def on_menuAppsSpecData_select(self, event):
         cls = mod_import(wxSpecData).wxSpecData

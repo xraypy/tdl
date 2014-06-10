@@ -2,7 +2,7 @@
 # Default site startup file for tdl/pds.
 # Add paths, imports and other data that should be
 # defined for the site.
-# Individual users can place a .pds file in thier 
+# Individual users can place a .pds file in thier
 # home directories for additional startup options
 ##################################################
 
@@ -13,9 +13,10 @@
 # instead of having to type
 # 'from tdl.modules import xtal'
 ##################################################
+import os
+
 try:
     # import tdl.modules as tdl
-    import os
     __tdlrootpath__ = os.path.split(__pds__.__rootpath__)[0]
     __tdllibpath__ = os.path.join(__pds__.__rootpath__,'lib')
     __tdlmodpath__ = os.path.join(__pds__.__rootpath__,'modules')
@@ -65,34 +66,7 @@ except:
 ## Default Imports
 ##################################################
 ## PDS menus
-from pds import menu
-
-## files
-from tdl.modules.utils.files.read_fmt import read_column as readcol
-
-## ana
-from tdl.modules import ana
-
-## peak
-#from tdl.modules import peak
-
-## specfile
-from tdl.modules import specfile
-
-## spectra
-#from tdl.modules import spectra
-
-## sxrd
-from tdl.modules import sxrd
-
-## xrf
-#from tdl.modules import xrf
-
-## xrr
-#from tdl.modules import xrr
-
-## xtal
-#from tdl.modules import xtal
+from tdl.pds import menu
 
 ##################################################
 ## Make sure help is defined
@@ -104,42 +78,37 @@ if 'help' not in __builtins__.keys():
 ##################################################
 ## Editor
 ##################################################
-def __edit__(fname=''):
+def edit(fname=''):
     """
     Define an editor to call from command line
     Note the editor needs to be on your path...
     """
-    editor = 'notepad '
-    #import os
-    #s = editor + fname
-    #os.system(s)
-    #Spawn editor in new process
+    import os, sys
     from subprocess import Popen
-    pid = Popen([editor, fname]).pid
-addcmd 'edit', '__edit__'
+    cmd = 'nedit %s' % fname
+    if os.name == 'nt':
+        cmd = 'notepad %s' % fname
+    elif sys.platform.lower().startswith('darwin'):
+        cmd = 'open -e %s' % fname
+    pid = Popen(cmd.split())
+
+addcmd 'edit', 'edit'
 
 ##################################################
 ## Browser/Help
 ##################################################
-def __web__(path='',new_win=True):
+def web(path='', new_win=True):
     """
     Define a web browser to call from command line
     Note the browser needs to be on your path...
     """
-    browser = "C:\\\\Program Files\\\\Mozilla Firefox\\\\firefox.exe "
+    import webbrowser
     if path == '':
         path="  http://cars9.uchicago.edu/iffwiki/tdl"
-    import os
+    cmd = webbrowser.open
     if new_win:
-        s = '"%s"  %s' % (browser, "-new-window")
-    else:
-        s = '"%s"'  % (browser)
-    s = "%s  %s" % (s, path)
-    #print s
-    #os.system(s)
-    #spawn editor in new process
-    from subprocess import Popen
-    pid = Popen([browser, path]).pid
-addcmd 'web', '__web__'
+        cmd = webbrowser.open_new
+    cmd(path)
 
+addcmd 'web', 'web'
 ##################################################

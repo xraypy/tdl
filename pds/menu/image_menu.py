@@ -13,8 +13,8 @@ import copy
 import numpy as num
 from matplotlib import pyplot
 
-from   pds.shellutil import Menu, show_more 
-from   pds.shellutil import get_tf, get_yn, get_int, get_flt
+from   tdl.pds.shellutil import Menu, show_more 
+from   tdl.pds.shellutil import get_tf, get_yn, get_int, get_flt
 from   tdl.modules.utils.plotter import cursor
 from   tdl.modules.ana import image_data
 from   tdl.modules.ana import scan_data as data
