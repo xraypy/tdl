@@ -183,7 +183,11 @@ def read_image(file):
         # While numpy free, this seems to only be able to handle 1D arrays:
         #arr = array.array('L', im.tostring())
         # So we'll still have to use numpy for this
-        arr = num.fromstring(im.tostring(), dtype='int32')
+        if im.mode == "I": 
+            arr = num.fromstring(im.tostring(), dtype='int32')
+        elif im.mode == "I;16": 
+            arr = num.fromstring(im.tostring(), dtype='int16')
+        else: print "image mode not supported"
         arr.shape = (im.size[1], im.size[0])
         return arr
     except:

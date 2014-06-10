@@ -58,6 +58,14 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             self.saveHKLE = self.fileMenu.Append(-1, 'Save HKLEFFerr...',
                                                  'Write H, K, L, E, F, and\n' + 
                                                  'Ferr values to a file')
+            # JES add saveRIDS 5/1/2013
+            self.saveRIDS = self.fileMenu.Append(-1, 'Save RIDS...',
+                                                 'Write E, H, K, L, F, \n' + 
+                                                 'Ferr, alpha and beta to file')
+            # JES add saveII0Ibgr 2/28/2014                                                 
+            self.saveIIoIbgr = self.fileMenu.Append(-1, 'Save Intensities...',
+                                                 'Write H, K, L, F, \n' + 
+                                                 'Ferr, I, Io, Ibgr, Sec') 
             self.menuBar.Append(self.fileMenu, 'File')
             
             self.editMenu = wx.Menu()
@@ -854,6 +862,10 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
             
             # Menu bindings
             self.Bind(wx.EVT_MENU, self.saveHKLEFFerr, self.saveHKLE)
+            #JES add saveRIDS 5/1/2013
+            self.Bind(wx.EVT_MENU, self.saveRIDSdata, self.saveRIDS)
+            #JES add saveIIoIbgr 2/28/2014
+            self.Bind(wx.EVT_MENU, self.saveIdata, self.saveIIoIbgr)
             self.Bind(wx.EVT_MENU, self.saveHKLFFerr, self.saveHKL)
             self.Bind(wx.EVT_MENU, self.saveAttrFile, self.saveAttributes)
             self.Bind(wx.EVT_MENU, self.loadFileDialog, self.loadHDF)
@@ -2419,6 +2431,138 @@ class Integrator(wx.Frame, wx.Notebook, wxUtil):
                     oops.Destroy()
                     raise
             saveDialog.Destroy()
+        
+        # JES add saveRIDSdata to create file in format for Heberling code
+        # Write a file to the current directory containing the E, H, K,
+        # L, F, Ferr, alpha and beta values for each point
+        def saveRIDSdata(self, event):
+            self.customSelection.customTree.Expand(\
+                    self.customSelection.customRoot)
+            self.customSelection.CenterOnParent()
+            userReply = self.customSelection.ShowModal()
+            if userReply == wx.ID_CANCEL:
+                self.hdfTree.SetFocus()
+                return
+            treeSelections = self.customSelection.customTree.GetSelections()
+            saveThese = []
+            for selected in treeSelections:
+                saveThese.extend(self.customTreeObject.getRelevantChildren(\
+                                        self.customSelection.customTree,
+                                        self.hdfObject,
+                                        selected))
+            saveThese = list(set(saveThese))
+            saveThese.sort()
+            
+            saveDialog = wx.FileDialog(self, message='Save file as...',
+                                       defaultDir=os.getcwd(), defaultFile='',
+                                       wildcard='rsd files (*.rsd)|*.rsd|' + \
+                                                'All files (*.*)|*',
+                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+            if saveDialog.ShowModal() == wx.ID_OK:
+                fname = saveDialog.GetPath()
+                try:
+                    allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
+                                                      saveThese)
+                    allHs = self.hdfObject.get_all('H', saveThese)
+                    allKs = self.hdfObject.get_all('K', saveThese)
+                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allEs = self.hdfObject.get_all('Energy', saveThese)
+                    allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
+                    allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
+                                                      saveThese)
+                    allAlphas = self.hdfObject.get_all(('det_0', 'alpha'), saveThese)
+                    allBetas = self.hdfObject.get_all(('det_0', 'beta'), saveThese)
+                    f = open(fname, 'w')
+                    header = "#%5s %5s %5s %5s %7s %7s %7s %7s\n" % \
+                                  ('E','H','K','L','F','Ferr','alpha','beta')
+                    f.write(header)
+                    for iterData in saveThese:
+                        if not eval(allBadPs[iterData]):
+                            line = "%6.5f %3.2f %3.2f %6.2f %6.6g %6.6g %6.6g %6.6g\n" % \
+                                   (allEs[iterData],
+                                    allHs[iterData],
+                                    allKs[iterData],
+                                    allLs[iterData],
+                                    allFs[iterData],
+                                    allFerrs[iterData],
+                                    allAlphas[iterData],
+                                    allBetas[iterData])
+                            f.write(line)
+                    f.close()
+                except Exception:
+                    oops = wx.MessageDialog(self, 'Error saving file\n' + str(Exception))
+                    oops.ShowModal()
+                    oops.Destroy()
+                    raise
+            saveDialog.Destroy()
+            
+        # JES add saveIdata to create file that saves Intensity data
+        # Write a file to the current directory containing the  H, K, L,
+        # F, Ferr, I, Io, and Ibgr for each point
+        def saveIdata(self, event):
+            self.customSelection.customTree.Expand(\
+                    self.customSelection.customRoot)
+            self.customSelection.CenterOnParent()
+            userReply = self.customSelection.ShowModal()
+            if userReply == wx.ID_CANCEL:
+                self.hdfTree.SetFocus()
+                return
+            treeSelections = self.customSelection.customTree.GetSelections()
+            saveThese = []
+            for selected in treeSelections:
+                saveThese.extend(self.customTreeObject.getRelevantChildren(\
+                                        self.customSelection.customTree,
+                                        self.hdfObject,
+                                        selected))
+            saveThese = list(set(saveThese))
+            saveThese.sort()
+            
+            saveDialog = wx.FileDialog(self, message='Save file as...',
+                                       defaultDir=os.getcwd(), defaultFile='',
+                                       wildcard='int files (*.int)|*.int|' + \
+                                                'All files (*.*)|*',
+                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+            if saveDialog.ShowModal() == wx.ID_OK:
+                fname = saveDialog.GetPath()
+                try:
+                    allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
+                                                      saveThese)
+                    allHs = self.hdfObject.get_all('H', saveThese)
+                    allKs = self.hdfObject.get_all('K', saveThese)
+                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allIs = self.hdfObject.get_all(('det_0', 'I'), saveThese)
+                    allIos = self.hdfObject.get_all('io', saveThese)
+                    allIbgrs = self.hdfObject.get_all(('det_0', 'Ibgr'), saveThese)  
+                    allSecs =  self.hdfObject.get_all('Seconds', saveThese)                   
+                    allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
+                    allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
+                                                      saveThese)
+                    allAlphas = self.hdfObject.get_all(('det_0', 'alpha'), saveThese)
+                    allBetas = self.hdfObject.get_all(('det_0', 'beta'), saveThese)
+                    f = open(fname, 'w')
+                    header = "#%5s %5s %5s %7s %7s %7s %7s %7s %7s\n" % \
+                                  ('H','K','L','F','Ferr', 'I', 'Io', 'Ibgr', 'Seconds')                                  
+                    f.write(header)
+                    for iterData in saveThese:
+                        if not eval(allBadPs[iterData]):
+                            line = "%3.2f %3.2f %6.2f %6.6g %6.6g %6.6g %6.6g %6.6g %6.6g\n" % \
+                                   (allHs[iterData],
+                                    allKs[iterData],
+                                    allLs[iterData],
+                                    allFs[iterData],
+                                    allFerrs[iterData],
+                                    allIs[iterData],    
+                                    allIos[iterData],                                      
+                                    allIbgrs[iterData],
+                                    allSecs[iterData])
+                            f.write(line)
+                    f.close()                                    
+                except Exception:
+                    oops = wx.MessageDialog(self, 'Error saving file\n' + str(Exception))
+                    oops.ShowModal()
+                    oops.Destroy()
+                    raise
+            saveDialog.Destroy()                        
         
         # Resize the cancel button in the status bar
         def onSize(self, event):

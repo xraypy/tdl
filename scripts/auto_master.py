@@ -9,7 +9,7 @@ def auto_master(spec_dir):
     while True: #spec_times == {}:
         print 'Updating...'
         spec_files = os.listdir(spec_dir)
-        spec_files = [item for item in spec_files if item.endswith('.spc')]
+        spec_files = [item for item in spec_files if (item.endswith('.spc') or item.endswith('.spec') ]
         for item in spec_files:
             full_item = os.path.join(spec_dir, item)
             edit_time = os.path.getmtime(full_item)
